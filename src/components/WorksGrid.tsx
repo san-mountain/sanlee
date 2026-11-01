@@ -12,7 +12,18 @@ function Caption({ w }: { w: Work }) {
   const { t, lang } = useLang();
   return (
     <p className="caption">
-      <span className="ct">{lang === "ko" ? `〈${w.title.ko}〉` : <em>{w.title.en}</em>}</span>, {w.date.slice(0, 4)}
+      <span className="ct">
+        {lang === "ko" ? (
+          <>
+            <span className="br">〈</span>
+            {w.title.ko}
+            <span className="br">〉</span>
+          </>
+        ) : (
+          <em>{w.title.en}</em>
+        )}
+        , {w.date.slice(0, 4)}
+      </span>
       <br />
       <span className="cm">
         {t(w.medium)}, {t(w.size)}
@@ -33,6 +44,34 @@ const VIEWS: { id: View; label: { ko: string; en: string } }[] = [
   { id: "index", label: ui.workIndex },
   { id: "wall", label: ui.viewWall },
 ];
+
+// 보기 전환은 글자 대신 작은 아이콘: 위의 그림/조각/인터랙티브 탭과 같은 줄로 읽히지 않게
+function ViewIcon({ v }: { v: View }) {
+  const p = { width: 18, height: 18, viewBox: "0 0 18 18", fill: "none", stroke: "currentColor", strokeWidth: 1.4, "aria-hidden": true };
+  if (v === "grid")
+    return (
+      <svg {...p}>
+        <rect x="2.5" y="2.5" width="5" height="5" />
+        <rect x="10.5" y="2.5" width="5" height="5" />
+        <rect x="2.5" y="10.5" width="5" height="5" />
+        <rect x="10.5" y="10.5" width="5" height="5" />
+      </svg>
+    );
+  if (v === "index")
+    return (
+      <svg {...p}>
+        <path d="M2.5 4.5h13M2.5 9h13M2.5 13.5h13" />
+      </svg>
+    );
+  // 벽: 바닥선 위에 크기가 다른 그림 두 점
+  return (
+    <svg {...p}>
+      <rect x="2.5" y="3.5" width="6" height="8" />
+      <rect x="11" y="6" width="4.5" height="4" />
+      <path d="M1 15.5h16" />
+    </svg>
+  );
+}
 
 // "39.4 × 27.2 cm" (세로 × 가로) → [세로, 가로]
 function cm(w: Work): [number, number] | null {
@@ -146,8 +185,16 @@ export default function WorksGrid({ limit }: { limit?: number }) {
           {tab === "painting" && (
             <div className="view-toggle" role="group" aria-label="View">
               {VIEWS.map((o) => (
-                <button key={o.id} type="button" aria-pressed={view === o.id} className={view === o.id ? "on" : ""} onClick={() => selectView(o.id)}>
-                  {t(o.label)}
+                <button
+                  key={o.id}
+                  type="button"
+                  aria-pressed={view === o.id}
+                  aria-label={t(o.label)}
+                  title={t(o.label)}
+                  className={view === o.id ? "on" : ""}
+                  onClick={() => selectView(o.id)}
+                >
+                  <ViewIcon v={o.id} />
                 </button>
               ))}
             </div>

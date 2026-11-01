@@ -47,7 +47,7 @@ img { max-width: 100%; height: auto; display: block; }
 .nav-links::-webkit-scrollbar { display: none; }
 .nav-links a { color: var(--muted); font-size: var(--fs-meta); white-space: nowrap; padding: 4px 0; border-bottom: 1px solid transparent; }
 .nav-links a:hover { color: var(--ink); opacity: 1; }
-.nav-links a.active { color: var(--ink); border-bottom-color: var(--ink); }
+.nav-links a.active { color: var(--ink); font-weight: 600; }
 /* 네온사인: 어두운 간판 위에 분홍 관 글씨, 하늘색 테두리 관. 높이와 글줄은 옆 탭과 같게 */
 .nav-links { align-items: center; }
 .nav-links .nav-explore { position: relative; display: inline-block; padding: 3px 10px; margin: -1px 0; border: 1px solid #7ff6ff; border-radius: 4px;
@@ -532,7 +532,6 @@ img { max-width: 100%; height: auto; display: block; }
 /* 로고 옆 한자 이름: 명조, 같은 크기, 조금 옅게 */
 .nav-logo-han { margin-left: .5em; font-family: "Noto Serif KR", "Noto Serif CJK KR", "Songti SC", "Hiragino Mincho ProN", serif; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
 /* 맨 위 시 위의 선은 없앤다 */
-.poems .poem:first-of-type { border-top: 0; }
 
 /* 메일 주소: 누르면 복사되었다는 작은 표시 */
 .email-link { position: relative; }
@@ -795,7 +794,7 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .diary-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 0 0 6px; }
 .diary-head .diary-note { margin: 0; }
 .diary-sort { flex: none; background: none; border: 0; padding: 4px 0; font: 12px/1 var(--mono); letter-spacing: .04em; color: var(--muted); cursor: pointer; white-space: nowrap; }
-.diary-sort:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.diary-sort:hover { color: var(--ink); }
 .diary-sort:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .explore-root .diary-sort { color: var(--dim); }
 .explore-root .diary-sort:hover { color: var(--fg); }
@@ -815,3 +814,44 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
   border: 1.5px solid #b3261e; color: #b3261e; border-radius: 3px; font: 700 15px/1 var(--font-brush), var(--font-serif), serif;
   transform: rotate(-3deg); opacity: .85; user-select: none; }
 .explore-root .poem-seal { border-color: var(--pink); color: var(--pink); }
+
+/* Works: 보기 전환은 아이콘으로, 분류 탭과 한 줄에. 탭 아래 구분선 없음. 페이지 제목은 화면 크기와 상관없이 숨김(메뉴가 대신함) */
+.works-bar { border-bottom: 0; flex-wrap: nowrap; align-items: center; }
+.works-bar .cat-tabs { min-width: 0; }
+.view-toggle { gap: 10px; padding: 0 0 var(--s1); flex: none; }
+.view-toggle button { display: inline-flex; padding: 2px; color: var(--muted); opacity: .7; }
+.view-toggle button:hover { opacity: 1; }
+.view-toggle button.on { color: var(--ink); opacity: 1; text-decoration: none; }
+.page > h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
+@media (max-width: 520px) { .works-bar .cat-tabs { gap: 18px; } .view-toggle { gap: 6px; } }
+/* 〈제목〉: 전각 괄호의 빈 반쪽을 걷어 내 왼쪽이 다른 줄과 맞도록 */
+.caption .ct, .caption strong, .wi-title { font-feature-settings: "halt"; }
+
+/* 본문 전체가 private인 일기: 날짜는 보이고, 펼칠 수 없으며, 첫 줄 자리의 막대만 누를 수 있다 */
+.diary-withheld { display: block; padding: 0; cursor: default; }
+.diary-withheld-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); padding: var(--s2) 0; }
+.diary-withheld-row::before { content: "·"; font-family: ui-monospace, Menlo, monospace; color: var(--muted); width: 1em; flex: none; }
+.diary-withheld .poem-title { color: var(--muted); }
+.diary-withheld .poem-first { overflow: visible; }
+.diary-withheld .diary-withheld-bar { display: inline-block; vertical-align: middle; height: .95em; width: min(11em, 70%); }
+
+/* 본문 전체가 private인 일기는 날짜 줄만. 줄을 누르면 열기 창이 뜨고, 줄이 살짝 떨린다 */
+.diary-withheld-row { cursor: pointer; }
+.diary-withheld-row:hover .poem-title { color: var(--ink); }
+.diary-withheld-row:focus-visible { outline: 1px dashed var(--muted); outline-offset: 2px; }
+.diary-withheld-row.cracking { animation: rowRefuse .4s ease 1; }
+@keyframes rowRefuse { 0%, 100% { transform: none; } 20% { transform: translateX(-4px); } 40% { transform: translateX(3px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(1px); } }
+@media (prefers-reduced-motion: reduce) { .diary-withheld-row.cracking { animation: none; } }
+/* 모바일: 정렬 버튼은 ⇅만, 설명이 넓게 */
+@media (max-width: 520px) {
+  .diary-head { align-items: flex-start; gap: 12px; }
+  .diary-sort-label { display: none; }
+  .diary-sort { font-size: 16px; padding: 2px 4px; }
+}
+/* 모바일 상단 메뉴: DELETE SEOUL은 오른쪽 끝으로 */
+@media (max-width: 719px) { .nav-links .nav-explore { margin-left: auto; } }
+/* 캡션 첫 줄(제목, 연도)은 한 글꼴·한 굵기 */
+.caption .ct { font-variant-numeric: lining-nums; }
+/* 캡션 제목은 설명과 같은 본문 고딕. 〈〉만 명조의 반각 괄호를 빌려 와 양옆 빈 여백을 없앤다 */
+.caption .ct { font-family: inherit; font-weight: 400; }
+.caption .ct .br { font-family: var(--font-serif), serif; font-feature-settings: "halt"; }

@@ -4,9 +4,23 @@ export function unfold(d: HTMLDetailsElement, open: boolean) {
   const body = d.querySelector<HTMLElement>(".poem-body");
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (open) {
+    // 위에 열려 있던 글은 바로 닫고, 그만큼 스크롤을 되돌려 누른 제목이 제자리에 있게 한다.
+    // 아래에 열려 있던 글은 누른 제목의 위치에 영향이 없으니 평소처럼 접힌다.
+    const top0 = d.getBoundingClientRect().top;
+    let shifted = false;
     d.parentElement?.querySelectorAll<HTMLDetailsElement>(`details[data-group="${d.dataset.group}"][open]`).forEach((o) => {
-      if (o !== d) unfold(o, false);
+      if (o === d) return;
+      if (o.compareDocumentPosition(d) & Node.DOCUMENT_POSITION_FOLLOWING) {
+        o.querySelector<HTMLElement>(".poem-body")?.getAnimations().forEach((a) => a.cancel());
+        delete o.dataset.closing;
+        o.open = false;
+        shifted = true;
+      } else unfold(o, false);
     });
+    if (shifted) {
+      const dy = d.getBoundingClientRect().top - top0;
+      if (dy) scrollParent(d).scrollBy({ top: dy, behavior: "instant" });
+    }
   }
   if (!body || reduce || !body.animate) {
     d.open = open;
@@ -54,4 +68,12 @@ export function unfold(d: HTMLDetailsElement, open: boolean) {
       delete d.dataset.closing;
     };
   }
+}
+
+function scrollParent(el: HTMLElement): HTMLElement | Window {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const o = getComputedStyle(p).overflowY;
+    if ((o === "auto" || o === "scroll") && p.scrollHeight > p.clientHeight) return p;
+  }
+  return window;
 }
