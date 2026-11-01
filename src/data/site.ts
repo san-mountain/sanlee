@@ -10,8 +10,8 @@ export const profile = {
   name: "SAN LEE",
   displayName: { ko: "이산", en: "SAN LEE" },
   tagline: {
-    ko: "그림과 코드 사이에서 [나]들을 만드는 사람",
-    en: "Making my [selves] somewhere between drawing and code",
+    ko: "조각 · 그림 · 시",
+    en: "Sculpture · Painting · Poetry",
   },
 };
 
@@ -52,11 +52,11 @@ export const works: Work[] = [
   {
     title: { ko: "NEO-SEOUL 2087", en: "NEO-SEOUL 2087" },
     date: "2026. 11.",
-    medium: { ko: "웹, 3D, 드로잉, 콜라주, QR 코드", en: "Web, 3D, drawing, collage, QR code" },
+    medium: { ko: "인터랙티브 웹, 3D", en: "Interactive web, 3D" },
     size: { ko: "가변 크기", en: "Dimensions variable" },
     description: {
-      ko: "린 허쉬만 리슨의 《나의 [나]들》에서 출발한 작업. 드로잉 속 QR 코드는 이 포트폴리오를 사이버펑크 도시로 바꾼 페이지로 이어지고, 광장에는 끝까지 쿠키를 거부한 '나'의 동상이 서 있다.",
-      en: "A work that begins with Lynn Hershman Leeson's exhibition at SeMA. The QR code in the drawing leads to this portfolio rebuilt as a cyberpunk city, where a statue of the 'me' who rejected every cookie stands in the plaza.",
+      ko: "이 포트폴리오를 그대로 옮겨 지은 사이버펑크 도시. 방문자는 건물 사이를 걸으며 작업과 글을 둘러보고, 광장에는 끝까지 쿠키를 거부하다 굳어버린 작가의 동상이 서 있다.",
+      en: "This portfolio rebuilt as a cyberpunk city. Visitors wander between buildings to find the works and writing, while in the plaza stands a statue of the artist, frozen after rejecting every last cookie.",
     },
     link: "/explore",
   },
@@ -157,5 +157,11 @@ export const ui = {
   explore: { ko: "Explore ↗", en: "Explore ↗" },
   exploreCta: { ko: "이 사이트를 도시로 탐험하기 ↗", en: "Explore this site as a city ↗" },
   viewWork: { ko: "작품 보기 ↗", en: "View work ↗" },
+  selected: { ko: "최근 작업", en: "Recent works" },
+  allWorks: { ko: "전체 작업 보기 →", en: "All works →" },
+  close: { ko: "닫기", en: "Close" },
+  prev: { ko: "이전", en: "Previous" },
+  next: { ko: "다음", en: "Next" },
+  enter: { ko: "도시로 들어가기 ↗", en: "Enter the city ↗" },
   poemsNote: { ko: "", en: "Poems are presented in their original Korean." },
 };

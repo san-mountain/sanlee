@@ -20,8 +20,17 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
     return (
       <div className="poems">
         {lang === "en" && <p className="poems-note">{ui.poemsNote.en}</p>}
-        {poems.map((p) => (
-          <article key={p.title} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
+        {!inExplore && (
+          <ol className="poem-toc">
+            {poems.map((p, i) => (
+              <li key={p.title}>
+                <a href={`#poem-${i}`}>{p.title}</a> <span className="meta">{p.date}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+        {poems.map((p, i) => (
+          <article key={p.title} id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
             <h3>{p.title}</h3>
             <p className="meta">{p.date}</p>
             {p.body.split("\n\n").map((stanza, i) => (
