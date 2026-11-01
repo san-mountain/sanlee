@@ -73,6 +73,12 @@ img { max-width: 100%; height: auto; display: block; }
 .caption { word-break: keep-all; }
 .work-link { font-size: 14px; }
 
+.cat-nav { display: flex; gap: 18px; margin: -12px 0 clamp(28px, 4vw, 44px); font-size: 15px; }
+.cat-nav a { color: var(--muted, #777); text-decoration: none; }
+.cat-nav a:hover { color: var(--ink); }
+.cat-title { font-size: clamp(20px, 2.4vw, 26px); font-weight: 700; margin: clamp(40px, 6vw, 72px) 0 clamp(18px, 2.5vw, 28px); scroll-margin-top: 90px; }
+.cat-title:first-of-type { margin-top: 0; }
+.cat-empty { color: var(--muted, #777); margin: 0; }
 .feature-card { display: grid; grid-template-columns: 1fr; gap: 20px; text-decoration: none; margin-bottom: clamp(32px, 5vw, 64px);
   padding-bottom: clamp(32px, 5vw, 64px); border-bottom: 1px solid var(--rule); }
 .feature-card:hover { opacity: 1; }

@@ -163,5 +163,12 @@ export const ui = {
   prev: { ko: "이전", en: "Previous" },
   next: { ko: "다음", en: "Next" },
   enter: { ko: "도시로 들어가기 ↗", en: "Enter the city ↗" },
+  catPainting: { ko: "그림", en: "Painting" },
+  catSculpture: { ko: "조각", en: "Sculpture" },
+  catInteractive: { ko: "인터랙티브", en: "Interactive" },
+  sculptureEmpty: {
+    ko: "조각 작업은 지금 정리하고 있어요. 곧 이곳에 올릴게요.",
+    en: "Sculpture work is being documented and will appear here soon.",
+  },
   poemsNote: { ko: "", en: "Poems are presented in their original Korean." },
 };

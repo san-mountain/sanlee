@@ -48,8 +48,34 @@ export default function WorksGrid({ limit }: { limit?: number }) {
 
   return (
     <>
-      {!limit &&
-        feature.map((w) => (
+      {!limit && (
+        <nav className="cat-nav" aria-label="Categories">
+          <a href="#painting">{t(ui.catPainting)}</a>
+          <a href="#sculpture">{t(ui.catSculpture)}</a>
+          <a href="#interactive">{t(ui.catInteractive)}</a>
+        </nav>
+      )}
+
+      {!limit && <h2 id="painting" className="cat-title">{t(ui.catPainting)}</h2>}
+      <ul className="grid">
+        {shown.map((w, i) => (
+          <li key={w.title.en}>
+            <button type="button" className="grid-item" onClick={() => setOpen(i)} aria-label={t(w.title)}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={w.image} alt={t(w.title)} width={w.width} height={w.height} loading="lazy" decoding="async" />
+            </button>
+            <Caption w={w} />
+          </li>
+        ))}
+      </ul>
+
+      {!limit && (
+        <>
+          <h2 id="sculpture" className="cat-title">{t(ui.catSculpture)}</h2>
+          <p className="cat-empty">{t(ui.sculptureEmpty)}</p>
+
+          <h2 id="interactive" className="cat-title">{t(ui.catInteractive)}</h2>
+          {feature.map((w) => (
           <Link key={w.title.en} href={w.link ?? "#"} className="feature-card">
             <div className="feature-art" aria-hidden>
               <span>NEO-SEOUL</span>
@@ -62,18 +88,8 @@ export default function WorksGrid({ limit }: { limit?: number }) {
             </div>
           </Link>
         ))}
-
-      <ul className="grid">
-        {shown.map((w, i) => (
-          <li key={w.title.en}>
-            <button type="button" className="grid-item" onClick={() => setOpen(i)} aria-label={t(w.title)}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={w.image} alt={t(w.title)} width={w.width} height={w.height} loading="lazy" decoding="async" />
-            </button>
-            <Caption w={w} />
-          </li>
-        ))}
-      </ul>
+        </>
+      )}
 
       {cur && (
         <div className="lightbox" role="dialog" aria-modal="true" aria-label={t(cur.title)} onClick={() => setOpen(null)}>
