@@ -234,8 +234,8 @@ export const checkpoint = {
   ] as L[],
   title: { ko: "마지막 동의 요청", en: "FINAL CONSENT REQUEST" },
   sanWarn: {
-    ko: "동의하면 계속 기록돼. 그래서 몇 번이고 돌아올 수 있는 거야. 거부하면 기록이 지워져. 그럼 다음은 없어. 나처럼.",
-    en: "Consent, and they keep recording you. That's why you can keep coming back. Refuse, and the record is deleted. Then there's no next time. Like me.",
+    ko: "동의하면 계속 기록돼. 그래서 몇 번이고 돌아올 수 있는 거야. 거부하면 기록이 지워져. 그럼 쓰러져도 돌아올 수 없어. 내가 방공호에서 돌처럼 굳어 있었던 것처럼.",
+    en: "Consent, and they keep recording you. That's why you can keep coming back. Refuse, and the record is deleted. Then if you fall, you don't come back. Like I sat frozen in stone down in the shelter.",
   },
   acceptSub: { ko: "계속 기록됨 · 쓰러져도 복원", en: "Kept on record · restored if you fall" },
   rejectSub: { ko: "기록 삭제 · 복원 불가", en: "Record deleted · no restoring" },
