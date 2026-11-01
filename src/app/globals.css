@@ -122,3 +122,10 @@ a:hover { opacity: .6; }
 .explore-root .caption { color: var(--fg); }
 .explore-root .work-desc { color: var(--dim); }
 .explore-root .work-img { max-height: 46vh; }
+.poems-note { color: var(--muted); font-size: 13px; font-style: italic; }
+.poem { padding: 28px 0 36px; border-top: 1px solid var(--rule); }
+.poem h3 { margin: 0 0 2px; font-size: 19px; }
+.poem .stanza { white-space: pre-line; margin: 0 0 1.1em; line-height: 1.95; word-break: keep-all; }
+.poem.prose .stanza { white-space: normal; text-indent: 1em; line-height: 1.9; }
+.explore-root .poem { border-top-color: #2d2445; }
+.explore-root .poems-note { color: var(--dim); }

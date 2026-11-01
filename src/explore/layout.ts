@@ -13,9 +13,10 @@ export const LANDMARKS: {
   color: string;
   sub: { ko: string; en: string };
 }[] = [
-  { id: "about", pos: [-8, 0, -9], height: 11, color: "#22f0ff", sub: { ko: "소개", en: "who" } },
-  { id: "works", pos: [0, 0, -22], height: 17, color: "#ff2bd6", sub: { ko: "작업", en: "what" } },
-  { id: "contact", pos: [8, 0, -9], height: 9, color: "#ffe14d", sub: { ko: "연락처", en: "where" } },
+  { id: "about", pos: [-9, 0, -8], height: 11, color: "#22f0ff", sub: { ko: "소개", en: "who" } },
+  { id: "works", pos: [-4.5, 0, -22], height: 17, color: "#ff2bd6", sub: { ko: "작업", en: "what" } },
+  { id: "writing", pos: [5.5, 0, -20], height: 13, color: "#a77bff", sub: { ko: "글", en: "words" } },
+  { id: "contact", pos: [9, 0, -8], height: 9, color: "#ffe14d", sub: { ko: "연락처", en: "where" } },
 ];
 
 // 건물 앞, 광장 쪽에서 건물을 바라보는 카메라 위치

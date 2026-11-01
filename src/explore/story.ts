@@ -48,7 +48,7 @@ export const ui = {
   toPortfolio: { ko: "포트폴리오로 가기", en: "Go to the portfolio" },
 };
 
-// 방문한 건물 수(0~3)에 따라 동상 대사가 바뀝니다.
+// 방문한 건물 수(0~4)에 따라 동상 대사가 바뀝니다.
 export const statueLines: L[][] = [
   [
     { ko: "...쿠키... 거부... 합니다...", en: "...cookies... reject... all..." },
@@ -57,19 +57,23 @@ export const statueLines: L[][] = [
       en: "Oh, a human. I rejected every cookie in this city, and this is what happened.",
     },
     {
-      ko: "추적이 안 되니까 내 데이터가 건물 세 곳으로 흩어졌거든. 하나씩 둘러봐 줄래? 그러면 내가 조금씩 돌아올 거야.",
-      en: "Since nobody could track me, my data scattered into three buildings. Would you visit them? I'll come back bit by bit.",
+      ko: "추적이 안 되니까 내 데이터가 건물 네 곳으로 흩어졌거든. 하나씩 둘러봐 줄래? 그러면 내가 조금씩 돌아올 거야.",
+      en: "Since nobody could track me, my data scattered into four buildings. Would you visit them? I'll come back bit by bit.",
     },
   ],
   [
     { ko: "오, 머리가 돌아왔다. 생각이 좀 나기 시작해.", en: "Oh, my head's back. I can almost think again." },
     {
-      ko: "아직 두 곳이 남았어. 참고로 거부 버튼은 늘 오른쪽 아래에 있어.",
-      en: "Two more to go. Tip: the reject button is always in the bottom-right corner.",
+      ko: "아직 세 곳이 남았어. 참고로 거부 버튼은 늘 오른쪽 아래에 있어.",
+      en: "Three more to go. Tip: the reject button is always in the bottom-right corner.",
     },
   ],
   [
     { ko: "몸통까지 돌아왔어. 이제 거의 사람 같지?", en: "Torso's back too. Almost human now, right?" },
+    { ko: "두 곳 남았어. 천천히 봐. 나는 어차피 여기 서 있으니까.", en: "Two to go. Take your time. I'm not going anywhere." },
+  ],
+  [
+    { ko: "팔이 돌아왔다! 이제 쿠키를 더 힘차게 밀어낼 수 있어.", en: "My arms are back! Now I can push that cookie away properly." },
     { ko: "마지막 한 곳만 더. 동의 없이 따라가지는 않을게.", en: "Just one more. I won't follow you without consent." },
   ],
   [

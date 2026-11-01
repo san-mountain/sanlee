@@ -55,7 +55,7 @@ export default function ExploreClient() {
         try {
           localStorage.setItem(KEY, JSON.stringify(next));
         } catch {}
-        setToast(`${t(ui.restored)} · ${next.length}/3`);
+        setToast(`${t(ui.restored)} · ${next.length}/${sections.length}`);
         setTimeout(() => setToast(null), 2600);
         return next;
       });
@@ -89,7 +89,7 @@ export default function ExploreClient() {
     );
   }
 
-  const lines = statueLines[Math.min(visited.length, 3)];
+  const lines = statueLines[Math.min(visited.length, statueLines.length - 1)];
   const sectionMeta = panel?.kind === "section" ? sections.find((s) => s.id === panel.id)! : null;
 
   return (
@@ -133,7 +133,7 @@ export default function ExploreClient() {
         <Link href="/">{t(ui.home)}</Link>
         <span className="hud-title glitch">{t(ui.title)}</span>
         <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <span className="hud-progress">{visited.length}/3</span>
+          <span className="hud-progress">{visited.length}/{sections.length}</span>
           <LangToggle />
         </span>
       </div>

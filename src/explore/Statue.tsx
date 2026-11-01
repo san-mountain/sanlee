@@ -8,9 +8,9 @@ import { isTap } from "./Landmark";
 const GREY = new THREE.Color("#a6a3ad");
 const STONE_EMISSIVE = new THREE.Color("#000000");
 
-type Part = "head" | "torso" | "legs";
-const RESTORE_AT: Record<Part, number> = { head: 1, torso: 2, legs: 3 };
-const COLORS: Record<Part, string> = { head: "#ff2bd6", torso: "#22f0ff", legs: "#ffe14d" };
+type Part = "head" | "torso" | "arms" | "legs";
+const RESTORE_AT: Record<Part, number> = { head: 1, torso: 2, arms: 3, legs: 4 };
+const COLORS: Record<Part, string> = { head: "#ff2bd6", torso: "#22f0ff", arms: "#a77bff", legs: "#ffe14d" };
 
 // 회색으로 굳은 상태에서 방문한 건물 수만큼 부위별로 색이 돌아오는 재질
 function usePartMaterial(part: Part, restored: number) {
@@ -62,7 +62,7 @@ function Cookie() {
 }
 
 type Props = {
-  restored: number; // 0~3
+  restored: number; // 0~4
   onSelect: () => void;
 };
 
@@ -71,8 +71,9 @@ export default function Statue({ restored, onSelect }: Props) {
   const [hover, setHover] = useState(false);
   const head = usePartMaterial("head", restored);
   const torso = usePartMaterial("torso", restored);
+  const arms = usePartMaterial("arms", restored);
   const legs = usePartMaterial("legs", restored);
-  const complete = restored >= 3;
+  const complete = restored >= 4;
 
   // 완전히 복원되기 전에는 가끔 지직거림
   useFrame((s) => {
@@ -124,11 +125,11 @@ export default function Statue({ restored, onSelect }: Props) {
           <boxGeometry args={[1.05, 1.35, 0.6]} />
         </mesh>
         {/* 팔: 왼팔은 축 늘어지고, 오른팔은 쿠키를 향해 손바닥을 내밀며 '거부' */}
-        <mesh position={[-0.68, 2.05, 0]} rotation={[0, 0, -0.12]} material={torso}>
+        <mesh position={[-0.68, 2.05, 0]} rotation={[0, 0, -0.12]} material={arms}>
           <boxGeometry args={[0.28, 1.25, 0.32]} />
         </mesh>
         <group position={[0.62, 2.7, 0]} rotation={[-0.55, 0, -1.05]}>
-          <mesh position={[0, 0.6, 0]} material={torso}>
+          <mesh position={[0, 0.6, 0]} material={arms}>
             <boxGeometry args={[0.28, 1.2, 0.32]} />
           </mesh>
           {/* 손바닥 */}

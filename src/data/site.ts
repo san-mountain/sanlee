@@ -4,7 +4,7 @@
 
 export type Lang = "ko" | "en";
 export type L = { ko: string; en: string };
-export type SectionId = "about" | "works" | "contact";
+export type SectionId = "about" | "works" | "writing" | "contact";
 
 export const profile = {
   name: "SAN LEE",
@@ -143,6 +143,7 @@ export const contact = {
 export const sections: { id: SectionId; label: string; labelKo: string; href: string }[] = [
   { id: "about", label: "About", labelKo: "소개", href: "/about" },
   { id: "works", label: "Works", labelKo: "작업", href: "/works" },
+  { id: "writing", label: "Writing", labelKo: "글", href: "/writing" },
   { id: "contact", label: "Contact", labelKo: "연락처", href: "/contact" },
 ];
 
@@ -151,4 +152,5 @@ export const ui = {
   explore: { ko: "Explore ↗", en: "Explore ↗" },
   exploreCta: { ko: "이 사이트를 도시로 탐험하기 ↗", en: "Explore this site as a city ↗" },
   viewWork: { ko: "작품 보기 ↗", en: "View work ↗" },
+  poemsNote: { ko: "", en: "Poems are presented in their original Korean." },
 };
