@@ -236,15 +236,33 @@ type Shown = Exclude<DiaryEntry, { hidden: true }>;
 
 export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
   const { lang } = useLang();
-  const list = [...diary].reverse();
+  // 기본은 오래된 순(일기를 쓴 순서대로). 버튼으로 최신 순과 바꿀 수 있다.
+  const [newestFirst, setNewestFirst] = useState(false);
+  const list = newestFirst ? [...diary].reverse() : diary;
   const hiddenCount = diary.filter((d) => d.hidden).length;
   return (
     <div className="poems diary">
-      <p className="poems-note diary-note">
-        {lang === "ko"
-          ? `2023년부터 쓴 일기 ${diary.length}편. 검게 지운 곳은 private로 남겨 두었고, ${hiddenCount}편은 날짜까지 지웠다.`
-          : `${diary.length} diary entries since 2023, in their original Korean. Blacked-out passages stay private; ${hiddenCount} entries are withheld entirely.`}
-      </p>
+      <div className="diary-head">
+        <p className="poems-note diary-note">
+          {lang === "ko"
+            ? `2023년부터 쓴 일기 ${diary.length}편. 검게 지운 곳은 private로 남겨 두었고, ${hiddenCount}편은 날짜까지 지웠다.`
+            : `${diary.length} diary entries since 2023, in their original Korean. Blacked-out passages stay private; ${hiddenCount} entries are withheld entirely.`}
+        </p>
+        <button
+          type="button"
+          className="diary-sort"
+          onClick={() => setNewestFirst((v) => !v)}
+          aria-label={lang === "ko" ? "정렬 바꾸기" : "Change order"}
+        >
+          {newestFirst
+            ? lang === "ko"
+              ? "최신 순 ⇅"
+              : "Newest first ⇅"
+            : lang === "ko"
+              ? "오래된 순 ⇅"
+              : "Oldest first ⇅"}
+        </button>
+      </div>
       {list.map((d, i) => {
         if (d.hidden) {
           return (

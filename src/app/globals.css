@@ -532,3 +532,13 @@ img { max-width: 100%; height: auto; display: block; }
 .restore-keep { background: #e8e8e4; color: #111; border: 1px solid #e8e8e4; }
 .restore-buttons button:focus-visible { outline: 2px solid #ff8a8a; outline-offset: 2px; }
 .explore-root .restore-keep { background: var(--fg); color: var(--bg); }
+
+/* 시·일기 목록: 맨 위 항목 위 구분선은 없앤다 */
+.poems > .poem:not(.poem ~ .poem) { border-top: 0; }
+.diary-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 0 0 6px; }
+.diary-head .diary-note { margin: 0; }
+.diary-sort { flex: none; background: none; border: 0; padding: 4px 0; font: 12px/1 var(--mono); letter-spacing: .04em; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.diary-sort:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.diary-sort:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.explore-root .diary-sort { color: var(--dim); }
+.explore-root .diary-sort:hover { color: var(--fg); }
