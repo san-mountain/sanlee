@@ -495,6 +495,48 @@ function useCurls() {
   }, []);
 }
 
+// 얼굴 연출에 쓰는 도구들
+const Z_AXIS = new THREE.Vector3(0, 0, 1);
+const ARC_COUNT = 28;
+// 초승달 웃음: 윗선은 입꼬리가 치솟는 곡선, 아랫선은 깊게 처진 곡선 (너비 2W, 깊이 1)
+const GRIN_W = 3.2;
+const grinTop = (x: number) => 0.9 * Math.pow(x / GRIN_W, 4) * 1.4 - 0.15;
+const GRIN_TEETH: [number, number, number][] = Array.from({ length: 13 }, (_, i) => {
+  const x = -GRIN_W * 0.82 + (i / 12) * GRIN_W * 1.64;
+  return [x, grinTop(x) - 0.22, Math.PI]; // 윗니: 아래를 향한 삼각형
+});
+function useGrinGeometry() {
+  return useMemo(() => {
+    const sh = new THREE.Shape();
+    const N = 24;
+    for (let i = 0; i <= N; i++) {
+      const x = -GRIN_W + (i / N) * 2 * GRIN_W;
+      if (i === 0) sh.moveTo(x, grinTop(x));
+      else sh.lineTo(x, grinTop(x));
+    }
+    for (let i = N; i >= 0; i--) {
+      const x = -GRIN_W + (i / N) * 2 * GRIN_W;
+      const u = x / GRIN_W;
+      sh.lineTo(x, grinTop(x) - 1.6 * (1 - u * u) * (0.7 + 0.3 * Math.cos(u * 9) * 0.2));
+    }
+    return new THREE.ShapeGeometry(sh);
+  }, []);
+}
+function useGlowTexture() {
+  return useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const g = c.getContext("2d")!;
+    const r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, "rgba(255,255,255,1)");
+    r.addColorStop(0.25, "rgba(255,255,255,.55)");
+    r.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = r;
+    g.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  }, []);
+}
+
 function StandingBuddha() {
   const curls = useCurls();
   const curlRef = useRef<THREE.InstancedMesh>(null);
@@ -540,39 +582,118 @@ function StandingBuddha() {
   }, []);
   const petals = useMemo(() => Array.from({ length: 20 }, (_, i) => (i / 20) * Math.PI * 2), []);
 
-  // 얼굴: 시선 게이지에 따라 눈이 붉어지고, 입꼬리가 올라가고, 렌즈가 달아오른다
-  const eyeMat = useRef<THREE.MeshBasicMaterial>(null);
+  // 얼굴: 시선 게이지에 따라 눈에서 레이저가 지글거리고, 입이 찢어지게 웃고, 온몸이 붉게 달아오른다
+  const eyeMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#400808", toneMapped: false, fog: false }), []);
+  const glowTex = useGlowTexture();
+  const eyeGlowMat = useMemo(
+    () => new THREE.SpriteMaterial({ map: glowTex, color: "#ff2020", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }),
+    [glowTex]
+  );
+  const faceGlowMat = useMemo(
+    () => new THREE.SpriteMaterial({ map: glowTex, color: "#ff1010", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }),
+    [glowTex]
+  );
+  const arcMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffd0d0", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }), []);
+  const leakMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ff3020", transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false, side: THREE.DoubleSide }), []);
+  const arcs = useRef<THREE.InstancedMesh>(null);
+  const leaks = useRef<THREE.Group>(null);
   const lens = useRef<THREE.MeshBasicMaterial>(null);
   const lensRing = useRef<THREE.Mesh>(null);
   const lids = useRef<THREE.Group>(null);
+  const brows = useRef<THREE.Group>(null);
   const smile = useRef<THREE.Mesh>(null);
-  const mouth = useRef<THREE.Mesh>(null);
-  const mouthMat = useRef<THREE.MeshBasicMaterial>(null);
+  const grin = useRef<THREE.Group>(null);
+  const grinMat = useRef<THREE.MeshBasicMaterial>(null);
+  const teeth = useRef<THREE.InstancedMesh>(null);
+  const faceLight = useRef<THREE.PointLight>(null);
   const halo = useRef<THREE.Group>(null);
   const k = useRef(0);
+  const calmEmissive = useMemo(() => new THREE.Color("#24160a"), []);
+  const wrathEmissive = useMemo(() => new THREE.Color("#7a0604"), []);
+  const grinGeo = useGrinGeometry();
+  const teethPos = useMemo(() => GRIN_TEETH, []);
+  useLayoutEffect(() => {
+    teethPos.forEach(([x, y, r], i) => {
+      tmpM.compose(tmpV.set(x, y, 0.02), tmpQ.setFromAxisAngle(Z_AXIS, r), tmpS.set(1, 1, 1));
+      teeth.current!.setMatrixAt(i, tmpM);
+    });
+    teeth.current!.instanceMatrix.needsUpdate = true;
+  }, [teethPos]);
   useFrame((s, dt) => {
     const t = s.clock.elapsedTime;
-    const target = gaze.state === "fire" || gaze.state === "lock" ? 1 : gaze.meter / 100;
+    const hot = gaze.state === "fire" || gaze.state === "lock";
+    const target = hot ? 1 : gaze.meter / 100;
     k.current += (target - k.current) * Math.min(1, dt * 4);
     const v = k.current;
-    const flash = gaze.state === "lock" ? (Math.sin(t * 30) > 0 ? 1 : 0.4) : 1;
-    if (eyeMat.current) eyeMat.current.color.setRGB(0.25 + v * 1.4, 0.05 + (1 - v) * 0.15, 0.05).multiplyScalar(flash);
+    const rage = THREE.MathUtils.clamp((v - 0.35) / 0.65, 0, 1); // 의심부터 차오르는 분노
+    const sizzle = 0.75 + Math.random() * 0.5; // 지글거림
+    const flash = gaze.state === "lock" ? (Math.sin(t * 34) > 0 ? 1.6 : 0.5) : 1;
+
+    // 눈: 검붉은 → 새빨간 → 하얗게 타는 눈
+    if (hot) eyeMat.color.setRGB(3, 1.4 + Math.random() * 0.6, 1.2).multiplyScalar(flash);
+    else eyeMat.color.setRGB(0.25 + v * 2.6, 0.04 + rage * rage * 0.5, 0.04 + rage * 0.2).multiplyScalar(rage > 0.2 ? sizzle : 1);
+    eyeGlowMat.opacity = Math.min(1, rage * 0.9 * sizzle + (hot ? 0.4 : 0));
+    faceGlowMat.opacity = rage * 0.55 * (hot ? 1.3 : 1) * (0.85 + Math.random() * 0.3);
+    // 눈가에서 튀는 전기 불꽃
+    if (arcs.current) {
+      const n = ARC_COUNT;
+      for (let i = 0; i < n; i++) {
+        const side = i < n / 2 ? -1 : 1;
+        const on = Math.random() < rage * 0.85;
+        const len = on ? 0.6 + Math.random() * (1.2 + rage * 2.4) : 0.0001;
+        const ang = Math.random() * Math.PI * 2;
+        tmpV.set(side * 2.7 + Math.cos(ang) * 1.6, 81.2 + Math.sin(ang) * 0.8, 7.9);
+        tmpQ.setFromAxisAngle(Z_AXIS, ang + (Math.random() - 0.5) * 1.2);
+        tmpM.compose(tmpV, tmpQ, tmpS.set(len, 0.09 + Math.random() * 0.08, 1));
+        arcs.current.setMatrixAt(i, tmpM);
+      }
+      arcs.current.instanceMatrix.needsUpdate = true;
+    }
+    arcMat.opacity = rage > 0.05 ? 0.6 + Math.random() * 0.4 : 0;
+    // 눈에서 새어 나오는 짧은 레이저 줄기: 분노가 찰수록 길고 굵어진다
+    leakMat.opacity = rage * (0.45 + Math.random() * 0.4) + (hot ? 0.3 : 0);
+    if (leaks.current)
+      leaks.current.children.forEach((c, i) => {
+        const L = (2 + rage * 14 + (hot ? 10 : 0)) * (0.7 + Math.random() * 0.6);
+        c.scale.set(0.35 + rage * 0.5 + Math.random() * 0.2, L, 0.35 + rage * 0.5);
+        c.position.z = 7.6 + L / 2;
+        c.visible = rage > 0.08;
+        c.rotation.z = (i % 2 ? 1 : -1) * Math.random() * 0.04;
+      });
+
     if (lens.current) {
-      if (gaze.state === "lock" || gaze.state === "fire") lens.current.color.setRGB(2, 1.6, 1.6);
-      else lens.current.color.setRGB(0.5 + v * 1.5, 0.04, 0.08);
+      if (hot) lens.current.color.setRGB(3, 2.2, 2.2).multiplyScalar(flash);
+      else lens.current.color.setRGB(0.5 + v * 2.5, 0.04, 0.08);
     }
-    if (lensRing.current) lensRing.current.scale.setScalar(1 + v * 0.6 + (gaze.state === "charge" ? Math.sin(t * 12) * 0.1 : 0));
-    // 반쯤 감은 눈꺼풀이 위로 걷힌다
-    if (lids.current) lids.current.position.y = v * 0.55;
-    // 입: 평온한 일자 → 입꼬리가 치켜 올라간 미소 → 붉게 벌어진 웃음
-    if (smile.current) smile.current.scale.set(1 + v * 0.5, 0.15 + v * 1.1, 1);
-    if (mouth.current) {
-      const open = THREE.MathUtils.clamp((v - 0.6) / 0.4, 0, 1);
-      mouth.current.scale.set(1 + v * 0.5, 0.05 + open * 0.9, 1);
-      mouth.current.visible = open > 0.02;
+    if (lensRing.current) lensRing.current.scale.setScalar(1 + v * 0.9 + (gaze.state === "charge" ? Math.sin(t * 14) * 0.18 : 0));
+    // 눈꺼풀은 걷히고, 눈썹은 안쪽이 내려앉아 성난 얼굴이 된다
+    if (lids.current) lids.current.position.y = v * 0.8;
+    if (brows.current)
+      brows.current.children.forEach((c, i) => {
+        const sd = i === 0 ? -1 : 1;
+        c.rotation.z = sd * (-0.12 + rage * 0.55);
+        c.position.y = 83.1 - rage * 0.5;
+      });
+
+    // 입: 평온한 일자 → 입꼬리 치켜든 미소 → 이빨 드러낸 초승달 웃음 → 턱이 빠지게 벌어진 아가리
+    const openA = THREE.MathUtils.clamp((v - 0.45) / 0.3, 0, 1);
+    const openB = THREE.MathUtils.clamp((v - 0.8) / 0.2, 0, 1) + (hot ? 0.35 : 0);
+    if (smile.current) {
+      smile.current.scale.set(1 + v * 0.6, 0.15 + v * 1.3, 1);
+      smile.current.visible = openA < 0.6;
     }
-    if (mouthMat.current) mouthMat.current.color.setRGB(1.2 + v, 0.1, 0.1);
-    if (halo.current) halo.current.rotation.z = t * 0.03;
+    if (grin.current) {
+      grin.current.visible = openA > 0.02;
+      const jitter = hot ? (Math.random() - 0.5) * 0.12 : 0;
+      grin.current.scale.set(0.7 + openA * 0.7 + openB * 0.25, 0.25 + openA * 0.85 + openB * 1.1 + jitter, 1);
+    }
+    if (grinMat.current) grinMat.current.color.setRGB(1.6 + v * 1.6, 0.06 + (hot ? Math.random() * 0.4 : 0), 0.05);
+    if (teeth.current) teeth.current.visible = openA > 0.35;
+
+    // 청동 몸 전체가 붉게 달아오르고, 얼굴 앞 붉은 빛이 거세진다
+    bronze.emissive.copy(calmEmissive).lerp(wrathEmissive, rage * (0.85 + Math.random() * 0.15 * rage));
+    if (faceLight.current) faceLight.current.intensity = rage * 9000 * (hot ? 1.6 : 1) * (0.85 + Math.random() * 0.3);
+    if (halo.current) halo.current.rotation.z = t * (0.03 + rage * 0.4);
   });
 
   return (
@@ -691,11 +812,26 @@ function StandingBuddha() {
         </mesh>
         {/* 눈: 붉게 빛나는 눈동자와 그 위를 덮은 눈꺼풀 */}
         {[-1, 1].map((s) => (
-          <mesh key={s} position={[s * 2.7, 81.2, 7.35]} rotation={[0, s * 0.22, 0]} scale={[1.9, 0.75, 0.3]}>
+          <mesh key={s} position={[s * 2.7, 81.2, 7.35]} rotation={[0, s * 0.22, 0]} scale={[1.9, 0.75, 0.3]} material={eyeMat}>
             <sphereGeometry args={[1, 16, 10]} />
-            <meshBasicMaterial ref={s < 0 ? eyeMat : undefined} color="#400808" toneMapped={false} fog={false} />
           </mesh>
         ))}
+        {[-1, 1].map((s) => (
+          <sprite key={s} position={[s * 2.7, 81.2, 8.4]} scale={[9, 6, 1]} material={eyeGlowMat} />
+        ))}
+        <sprite position={[0, 79, 9]} scale={[34, 30, 1]} material={faceGlowMat} />
+        <instancedMesh ref={arcs} args={[undefined, arcMat, ARC_COUNT]} frustumCulled={false}>
+          <planeGeometry args={[1, 1]} />
+        </instancedMesh>
+        <group ref={leaks}>
+          {[-1, 1].flatMap((s) =>
+            [0, 1].map((j) => (
+              <mesh key={`${s}${j}`} position={[s * 2.7 + (j ? 0.25 : -0.25) * s, 81.2 + (j ? 0.1 : -0.1), 8]} rotation={[Math.PI / 2, 0, 0]} material={leakMat} visible={false}>
+                <coneGeometry args={[0.5, 1, 8, 1, true]} />
+              </mesh>
+            ))
+          )}
+        </group>
         <group ref={lids}>
           {[-1, 1].map((s) => (
             <mesh key={s} position={[s * 2.7, 81.45, 7.55]} rotation={[0, s * 0.22, 0]} scale={[2.1, 0.55, 0.45]} material={bronze}>
@@ -703,11 +839,13 @@ function StandingBuddha() {
             </mesh>
           ))}
         </group>
-        {[-1, 1].map((s) => (
-          <mesh key={s} position={[s * 2.8, 83.1, 7.3]} rotation={[0, 0, s * -0.12]} material={dark}>
-            <boxGeometry args={[3.6, 0.22, 0.4]} />
-          </mesh>
-        ))}
+        <group ref={brows}>
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 2.8, 83.1, 7.3]} rotation={[0, 0, s * -0.12]} material={dark}>
+              <boxGeometry args={[3.6, 0.3, 0.5]} />
+            </mesh>
+          ))}
+        </group>
         {/* 이마의 렌즈 (백호 자리) */}
         <mesh position={[0, 84, 8.25]}>
           <circleGeometry args={[0.85, 24]} />
@@ -717,15 +855,21 @@ function StandingBuddha() {
           <ringGeometry args={[1.0, 1.25, 32]} />
           <meshBasicMaterial color="#ff2a3d" toneMapped={false} fog={false} transparent opacity={0.8} />
         </mesh>
-        {/* 입: 미소 선 + 벌어지는 붉은 안쪽 */}
-        <mesh ref={mouth} position={[0, 75.4, 7.45]} visible={false}>
-          <circleGeometry args={[1.7, 24, Math.PI, Math.PI]} />
-          <meshBasicMaterial ref={mouthMat} color="#ff2020" toneMapped={false} fog={false} side={THREE.DoubleSide} />
-        </mesh>
+        {/* 입: 평온한 미소 선, 그리고 이빨이 드러나는 초승달 웃음 */}
         <mesh ref={smile} position={[0, 75.4, 7.55]} rotation={[0, 0, Math.PI]}>
           <torusGeometry args={[1.8, 0.18, 6, 24, Math.PI]} />
           <meshBasicMaterial color="#1a0a04" fog={false} />
         </mesh>
+        <group ref={grin} position={[0, 75.9, 7.6]} visible={false}>
+          <mesh geometry={grinGeo}>
+            <meshBasicMaterial ref={grinMat} color="#ff2020" toneMapped={false} fog={false} side={THREE.DoubleSide} />
+          </mesh>
+          <instancedMesh ref={teeth} args={[undefined, undefined, GRIN_TEETH.length]} frustumCulled={false}>
+            <coneGeometry args={[0.16, 0.5, 3]} />
+            <meshBasicMaterial color="#f2e6d0" fog={false} />
+          </instancedMesh>
+        </group>
+        <pointLight ref={faceLight} position={[0, 79, 16]} distance={70} color="#ff1a10" intensity={0} />
       </group>
       {/* 머리 뒤 광배: 성당의 장미창 모양 */}
       <group ref={halo} position={[0, 81, -7]}>

@@ -120,14 +120,7 @@ export const BUNKER: ZoneDef = {
       color: t.color,
       label: { ko: `${t.id.toUpperCase()} 터미널`, en: `${t.id.toUpperCase()} terminal` },
     })),
-    ...PAINTINGS.map<Interactable>((p) => ({
-      id: `painting-${p.work}`,
-      kind: "painting",
-      work: p.work,
-      pos: v(p.pos[0] - Math.sin(p.rotY) * -0.01, 2.2, p.pos[2]),
-      radius: 3.4,
-      label: p.w.title,
-    })),
+    // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "동상", en: "Statue" } },
     {
       id: "keeper",
@@ -401,7 +394,7 @@ export const CITY: ZoneDef = {
       radius: 2.4,
       label: { ko: "전망 망원경", en: "Viewing scope" },
     })),
-    { id: "checkpoint", kind: "checkpoint", pos: v(0, 1.6, EDGE.z0 + 7.5), radius: 4.5, label: { ko: "검문소", en: "Checkpoint" } },
+    { id: "checkpoint", kind: "checkpoint", pos: v(0, 1.6, EDGE.z0 + 4.5), radius: 5.5, label: { ko: "검문소", en: "Checkpoint" } },
     { id: "san", kind: "statue", pos: v(9999, 0, 9999), radius: 2.6, label: { ko: "이산", en: "San" } },
     { id: "patrol", kind: "npc", npc: "patrol", pos: v(6, 2, -10), radius: 3.4, label: { ko: "순찰 기계 P-3", en: "Patrol unit P-3" } },
     { id: "patrol2", kind: "npc", npc: "patrol2", pos: v(-6, 2, -10), radius: 3.4, label: { ko: "순찰 기계 P-3′", en: "Patrol unit P-3′" } },
