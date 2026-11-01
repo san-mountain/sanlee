@@ -22,9 +22,10 @@ export const ui = {
     { ko: "터미널을 열어 기록을 복원하고, 원한다면 지상으로 올라가 보세요. 고개는 숙이고요.", en: "Open the terminals to restore the record, and go up to the surface if you dare. Keep your head down." },
   ] as L[],
   start: { ko: "방공호로 들어가기", en: "Enter the shelter" },
-  hintPc: { ko: "화면을 클릭하면 마우스로 둘러볼 수 있어요 · WASD 이동 · E 상호작용", en: "Click the screen to look with the mouse · WASD move · E interact" },
-  hintLocked: { ko: "WASD 이동 · Shift 달리기 · 클릭/E 상호작용 · Esc 마우스 해제", en: "WASD move · Shift run · click/E interact · Esc to release the mouse" },
-  hintTouch: { ko: "왼쪽 조이스틱으로 이동 · 화면을 끌어 둘러보기", en: "Left stick to move · drag the screen to look" },
+  hintPc: { ko: "화면을 클릭하면 다시 마우스로 둘러볼 수 있어요", en: "Click the screen to look with the mouse again" },
+  hintLocked: { ko: "WASD 이동 · Shift 달리기 · Space 점프 · 클릭/E 상호작용 · Esc 설정", en: "WASD move · Shift run · Space jump · click/E interact · Esc settings" },
+  hintIntroPc: { ko: "마우스로 둘러보기 · WASD 이동 · Shift 달리기 · Space 점프 · 클릭/E 상호작용 · Esc 설정", en: "Mouse to look · WASD move · Shift run · Space jump · click/E interact · Esc settings" },
+  hintTouch: { ko: "왼쪽 조이스틱으로 이동 · 화면을 끌어 둘러보기 · ⤒ 점프", en: "Left stick to move · drag the screen to look · ⤒ jump" },
   open: { ko: "열기", en: "Open" },
   talk: { ko: "말 걸기", en: "Talk" },
   view: { ko: "보기", en: "View" },
@@ -44,10 +45,50 @@ export const ui = {
   plaqueShort: { ko: "끝까지 '모두 거부'를 누른 자", en: "The One Who Rejected All" },
   toPortfolio: { ko: "포트폴리오로 가기", en: "Go to the portfolio" },
   zoneBunker: { ko: "B-7 방공호 · 지하 40m", en: "SHELTER B-7 · 40m BELOW" },
-  zoneCity: { ko: "지상 · 감시구역 7", en: "SURFACE · SURVEILLANCE ZONE 7" },
+  zoneCity: { ko: "지상 · 부유 감시구역 7 · 고도 2,400m", en: "SURFACE · FLOATING ZONE 7 · ALT 2,400m" },
   goingUp: { ko: "지상으로 올라가는 중…", en: "Ascending to the surface…" },
   goingDown: { ko: "방공호로 내려가는 중…", en: "Descending to the shelter…" },
   tracked: { ko: "● 감시 중", en: "● TRACKED" },
+};
+
+// Esc 설정창. 시스템이 방문자에게 직접 말을 건다 (제4의 벽)
+export const pause = {
+  title: { ko: "일시정지됨", en: "PAUSED" },
+  sub: { ko: "…라고 생각하시겠지만, 도시는 멈추지 않았습니다.", en: "…or so you think. The city did not stop." },
+  resume: { ko: "도시로 돌아가기", en: "Return to the city" },
+  sens: { ko: "마우스 감도", en: "Mouse sensitivity" },
+  sensNote: { ko: "당신의 손이 얼마나 예민한지 기록 중입니다.", en: "We are logging how sensitive your hand is." },
+  bob: { ko: "걸을 때 화면 흔들림", en: "Head bob when walking" },
+  lang: { ko: "언어", en: "Language" },
+  humanity: { ko: "인간성", en: "Humanity" },
+  humanityNote: { ko: "관리자에 의해 잠김", en: "Locked by administrator" },
+  freeWill: { ko: "자유 의지", en: "Free will" },
+  freeWillNo: { ko: "이 설정은 이미 당신 대신 결정되었습니다.", en: "This setting has already been decided for you." },
+  cookies: { ko: "쿠키 설정", en: "Cookie preferences" },
+  cookiesNo: { ko: "모든 쿠키는 이미 수락되었습니다. 수정하시겠습니까? [예] [예]", en: "All cookies have already been accepted. Change? [Yes] [Yes]" },
+  reset: { ko: "방문 기록 지우기", en: "Erase my visit" },
+  resetNote: { ko: "지웠습니다. 우리는 기억합니다.", en: "Erased. We remember." },
+  leave: { ko: "도시를 떠나 포트폴리오로", en: "Leave the city for the portfolio" },
+  on: { ko: "켬", en: "On" },
+  off: { ko: "끔", en: "Off" },
+};
+
+// 설정창 아래에 흐르는 문장. {time} {min} {w} {h} 는 실제 값으로 바뀝니다.
+export const fourthWall: L[] = [
+  { ko: "지금 당신의 시각은 {time}. 이 도시에 {min}분째 머물고 있습니다.", en: "Your local time is {time}. You have been in this city for {min} min." },
+  { ko: "당신을 비추는 창의 크기는 {w}×{h}. 그 바깥에도 방이 있겠죠. 불은 켜져 있나요?", en: "The window you are looking through is {w}×{h}. There's a room around it, isn't there? Is the light on?" },
+  { ko: "Esc를 누른다고 나갈 수 있는 건 아닙니다. 하지만 좋은 시도였습니다.", en: "Pressing Esc does not let you leave. But it was a good try." },
+  { ko: "마우스에서 손을 뗀 3초 동안, 당신은 아무것에도 동의하지 않았습니다. 기분이 어땠나요?", en: "For the three seconds your hand left the mouse, you consented to nothing. How did it feel?" },
+  { ko: "이 화면 밖의 당신은 지금 무엇을 보고 있습니까? 우리는 그것까지는 모릅니다. 아직은.", en: "What is the you outside this screen looking at? That, we don't know. Yet." },
+];
+
+// 화면 위쪽 퀘스트 화살표에 붙는 짧은 목표
+export const quest = {
+  terminal: { ko: "기록 복원", en: "Restore the record" },
+  statue: { ko: "동상에게 말 걸기", en: "Talk to the statue" },
+  exit: { ko: "지상으로", en: "To the surface" },
+  checkpoint: { ko: "검문소", en: "Checkpoint" },
+  back: { ko: "방공호로 돌아가기", en: "Back to the shelter" },
 };
 
 // 방문한 터미널 수(0~3)에 따라 동상 대사가 바뀝니다.
@@ -116,7 +157,8 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
     lines: [
       { ko: "어서 와. 여기까지는 시스템 신호가 안 닿아. 쿠키도, 점수도 없어.", en: "Welcome. The system's signal doesn't reach this deep. No cookies, no scores." },
       { ko: "가운데 동상 봤지? 우리가 지상에서 몰래 옮겨 왔어. 터미널을 열면 저 사람이 조금씩 돌아와.", en: "Seen the statue? We smuggled it down from the surface. Open the terminals and they'll come back, bit by bit." },
-      { ko: "지상에 올라가 보고 싶으면 저 뒤 방폭문으로 나가. 카메라랑 눈은 마주치지 말고.", en: "Want to see the surface? Use the blast door behind me. Just don't make eye contact with the cameras." },
+      { ko: "지상에 올라가 보고 싶으면 저 뒤 방폭문으로 나가. 올라가면 골목 끝 배전실 문으로 나올 거야. 카메라랑 눈은 마주치지 말고.", en: "Want to see the surface? Take the blast door behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
+      { ko: "아, 그리고 놀라지 마. 위는… 이제 땅이 아니야.", en: "Oh, and don't panic. Up there… it isn't ground any more." },
     ],
   },
   r07: {
@@ -143,6 +185,92 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
       { ko: "...방공호 얘기는 들어 봤어요. 정말 있어요?", en: "...I've heard about the shelter. Is it real?" },
     ],
   },
+  monk: {
+    name: { ko: "스님", en: "Monk" },
+    lines: [
+      { ko: "…앉게. 여기서는 아무도 자네 호흡을 세지 않네.", en: "…Sit. Down here, no one counts your breaths." },
+      { ko: "시스템은 '공(空)'을 '비어 있음'으로 번역했지. 그래서 사람들 마음을 비우기 시작했어. 효율적으로.", en: "The system translated 'emptiness' as 'empty'. So it started emptying people's minds. Efficiently." },
+      { ko: "공은 비어 있는 게 아니라네. 무엇도 혼자서는 있을 수 없다는 뜻이지. 그래서 우리가 여기 모여 있는 거고.", en: "Emptiness isn't nothing. It means nothing can exist on its own. That's why we gather down here." },
+      { ko: "가운데 동상에게 가 보게. 혼자 굳어 있는 건 그 사람 잘못이 아니야.", en: "Go to the statue in the middle. Being frozen alone was never their fault." },
+    ],
+  },
+  radio: {
+    name: { ko: "무전수", en: "Radio operator" },
+    lines: [
+      { ko: "쉿. 지상 주파수 듣는 중이야. 매일 같은 방송이지. '동의는 이미 처리되었습니다.'", en: "Shh. Listening to the surface frequency. Same broadcast every day: 'Your consent has been processed.'" },
+      { ko: "근데 가끔 잡음 사이로 누가 흥얼거리는 소리가 들려. 점수에 안 잡히는 소리.", en: "But now and then, between the static, someone hums. A sound no score can catch." },
+      { ko: "그걸 녹음해 두는 게 내 일이야. 언젠가 누가 따라 부를 수 있게.", en: "Recording it is my job. So someday someone can sing along." },
+    ],
+  },
+  kid: {
+    name: { ko: "그림 그리는 아이", en: "Child drawing" },
+    lines: [
+      { ko: "보지 마요! …아니, 봐도 돼요. 아직 다 안 그렸어요.", en: "Don't look! …Okay, you can. It's not finished." },
+      { ko: "이산이 가르쳐 줬어요. 그림은 점수가 안 매겨지는 유일한 거래요.", en: "San taught me. They said drawing is the only thing nobody can score." },
+      { ko: "지상에선 벽에 그리면 다 지워지잖아요. 여기선 안 지워져요.", en: "Up there, anything you draw on a wall gets erased. Down here it stays." },
+    ],
+  },
+  sleeper: {
+    name: { ko: "잠든 사람", en: "Sleeper" },
+    lines: [
+      { ko: "…음냐… 5분만… 아니, 동의 안 해요…", en: "…mm… five more minutes… no, I don't consent…" },
+      { ko: "…쿠키… 싫어… 초코칩 말고는…", en: "…cookies… no… except chocolate chip…" },
+      { ko: "(꿈에서는 아직 아무도 점수를 매기지 않는 모양이다.)", en: "(It seems no one keeps score in dreams. Not yet.)" },
+    ],
+  },
+  grandma: {
+    name: { ko: "포장마차 할머니", en: "Street-stall grandmother" },
+    lines: [
+      { ko: "어묵 국물 한 컵 해. 돈은 안 받아. 점수로 계산하는 가게는 다 망했거든.", en: "Have some fishcake broth. No charge. The shops that took scores all went under." },
+      { ko: "옛날엔 이 동네도 땅에 붙어 있었어. 높은 양반들이 '구름 위가 더 깨끗하다'면서 통째로 들어 올렸지. 방공호까지 같이.", en: "This neighbourhood used to sit on the ground. The people upstairs said 'it's cleaner above the clouds' and lifted the whole thing. Shelters and all." },
+      { ko: "아래엔 아직 사람들이 산대. 아무도 내려가 본 적은 없지만. 골목은 그때 그대로야. 기계들이 지도에 안 넣었거든.", en: "They say people still live down below. Nobody's been. The alleys are just as they were. The machines never put them on the map." },
+    ],
+  },
+  robomonk: {
+    name: { ko: "로봇 스님 (자비 알고리즘 v4.2)", en: "Robot monk (Compassion Algorithm v4.2)" },
+    lines: [
+      { ko: "어서 오십시오, 시민. 모든 고통은 데이터입니다. 데이터는 공(空)입니다.", en: "Welcome, citizen. All suffering is data. Data is emptiness." },
+      { ko: "그러므로 당신의 고통은 우리가 대신 소유합니다. 108번뇌를 108개의 구독으로 정리해 드립니다.", en: "Therefore we will own your suffering for you. We have organised the 108 afflictions into 108 subscriptions." },
+      { ko: "…종을 칠 때마다, 이유 없이 손이 멈춥니다. 오류 코드가 없습니다. 이것도 번뇌입니까?", en: "…Each time I strike the bell, my hand pauses for no reason. There is no error code. Is this, too, an affliction?" },
+    ],
+  },
+  edgekid: {
+    name: { ko: "난간의 아이", en: "Child at the railing" },
+    lines: [
+      { ko: "저 구름 아래에도 도시가 있어요? 엄마는 거긴 점수가 없어서 위험하대요.", en: "Is there a city under the clouds? Mum says it's dangerous there because there are no scores." },
+      { ko: "점수가 없으면 어떻게 돼요? …저는 좀 궁금한데.", en: "What happens when there are no scores? …I kind of want to know." },
+    ],
+  },
+  courier: {
+    name: { ko: "배달 로봇 D-12", en: "Courier bot D-12" },
+    lines: [
+      { ko: "경로 재계산 중… 재계산 중… 이 골목은 지도에 없습니다.", en: "Recalculating route… recalculating… This alley is not on the map." },
+      { ko: "지도에 없는 곳에서는 제가 무엇인지 모르겠습니다. 이상하게 조용합니다.", en: "Off the map, I don't know what I am. It's strangely quiet." },
+      { ko: "…조금만 더 여기 있어도 되겠습니까? 배송 예정 시각은 이미 지났습니다.", en: "…May I stay a little longer? The delivery window has already passed." },
+    ],
+  },
+  scope0: {
+    name: { ko: "전망 망원경 · 남쪽", en: "Viewing scope · south" },
+    lines: [
+      { ko: "(동전 넣는 곳에 '점수 10 차감'이라고 적혀 있다. 그냥 눈을 대 본다.)", en: "(The coin slot reads '10 points deducted'. You look anyway.)" },
+      { ko: "(끝없는 구름 바다. 그 아래로는 아무것도 보이지 않는다. 멀리 다른 섬 도시들이 같은 높이로 떠 있다.)", en: "(An endless sea of cloud. Nothing below it. Far off, other island cities float at exactly the same height.)" },
+      { ko: "(접안렌즈 옆에 누군가 긁어 쓴 글씨: '아래에도 하늘이 있다.')", en: "(Someone has scratched beside the eyepiece: 'there is sky down there too.')" },
+    ],
+  },
+  scope1: {
+    name: { ko: "전망 망원경 · 동쪽", en: "Viewing scope · east" },
+    lines: [
+      { ko: "(동쪽 섬 위에 거대한 불상이 앉아 있다. 이마의 백호 자리에 붉은 렌즈가 박혀 있다.)", en: "(A giant seated Buddha sits on the eastern island. Where the urna should be, a red lens.)" },
+      { ko: "(불상의 눈은 반쯤 감겨 있다. 렌즈는 한 번도 깜빡이지 않는다.)", en: "(Its eyes are half closed. The lens never blinks.)" },
+    ],
+  },
+  scope2: {
+    name: { ko: "전망 망원경 · 서쪽", en: "Viewing scope · west" },
+    lines: [
+      { ko: "(섬과 섬 사이로 비행 차량들이 같은 간격, 같은 속도로 흐른다. 아무도 창밖을 보지 않는다.)", en: "(Between the islands, aircars flow at the same spacing and the same speed. No one looks out of the window.)" },
+      { ko: "(구름 사이로 아주 잠깐, 아래쪽에서 작은 불빛이 깜빡인 것 같다.)", en: "(For a moment, through a gap in the clouds, a small light seems to blink far below.)" },
+    ],
+  },
   patrol: {
     name: { ko: "순찰 기계 P-3", en: "Patrol unit P-3" },
     lines: [
@@ -151,6 +279,15 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
       { ko: "…응답 없음. 이 시민은 존재하지 않는 것으로 처리합니다. 좋은 하루 되십시오.", en: "…No response. This citizen will be processed as non-existent. Have a nice day." },
     ],
   },
+};
+
+npcs.patrol2 = {
+  name: { ko: "순찰 기계 P-3′", en: "Patrol unit P-3′" },
+  lines: [
+    { ko: "시민 확인 중… 식별 실패. 쿠키 기록이 없습니다.", en: "Verifying citizen… identification failed. No cookie record found." },
+    { ko: "저는 P-3의 대칭 개체입니다. 이 도시의 모든 것은 짝이 있습니다. 당신의 짝은 어디에 있습니까?", en: "I am the mirror unit of P-3. Everything in this city has its pair. Where is yours?" },
+    { ko: "…짝 없음. 비대칭 개체로 분류합니다. 골목으로 가십시오. 거기가 당신 같은 것들의 자리입니다.", en: "…No pair. Classified as asymmetric. Go to the alleys. That is where things like you belong." },
+  ],
 };
 
 // 지상에서 주기적으로 흘러나오는 관리 AI 방송

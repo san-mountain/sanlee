@@ -6,7 +6,26 @@ export const input = {
   // 이번 프레임까지 쌓인 시점 회전량(라디안)
   look: { yaw: 0, pitch: 0 },
   enabled: true,
+  // 점프 요청 (스페이스바·점프 버튼)
+  jump: false,
+  // 설정창에서 바꾸는 값
+  sens: 1,
+  bob: true,
 };
+
+// 설정은 브라우저에 저장해 둔다
+export function loadSettings() {
+  try {
+    const v = JSON.parse(localStorage.getItem("neo-settings") || "{}");
+    if (typeof v.sens === "number") input.sens = Math.max(0.3, Math.min(2.5, v.sens));
+    if (typeof v.bob === "boolean") input.bob = v.bob;
+  } catch {}
+}
+export function saveSettings() {
+  try {
+    localStorage.setItem("neo-settings", JSON.stringify({ sens: input.sens, bob: input.bob }));
+  } catch {}
+}
 
 export function moveVector() {
   const k = input.keys;

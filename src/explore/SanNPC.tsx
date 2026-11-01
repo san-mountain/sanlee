@@ -5,7 +5,8 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Human, Tap, type TapFn } from "./parts";
 import { player } from "./Player";
-import type { Interactable } from "./zones";
+import { CITY, type Interactable } from "./zones";
+import { resolve } from "./collide";
 
 // 복원된 산: 방공호에서는 동상 주위를 거닐고, 지상에서는 방문자 곁을 따라 걷는다
 const PATH: [number, number][] = [
@@ -35,12 +36,20 @@ export default function SanNPC({ mode, item, onTap, start, beside }: { mode: "wa
       tz = player.pos.z - cos * 1.7 - sin * 0.6;
       speed = 2.4;
     } else if (mode === "follow") {
-      // 방문자의 오른쪽 뒤, 1.6m 거리
-      const sin = Math.sin(player.yaw);
-      const cos = Math.cos(player.yaw);
-      tx = player.pos.x + cos * 1.1 + sin * 1.2;
-      tz = player.pos.z - sin * 1.1 + cos * 1.2;
-      speed = Math.min(6, 1.5 + Math.hypot(tx - S.x, tz - S.z) * 1.4);
+      // 목줄처럼 따라온다: 3m 넘게 멀어질 때만 다가오고, 가까우면 멈춰서 방문자를 바라본다.
+      // 그래서 돌아서면 언제든 마주할 수 있다.
+      if (dp > 3.2 || S.wp === 1) {
+        S.wp = dp > 2.2 ? 1 : 0;
+        const k = 2.0 / Math.max(dp, 0.001);
+        tx = player.pos.x + (S.x - player.pos.x) * k;
+        tz = player.pos.z + (S.z - player.pos.z) * k;
+        speed = Math.min(6.5, 1.6 + dp * 0.9);
+      }
+      // 너무 멀어지면 (다른 길로 돌아갔을 때) 가까이 다시 나타난다
+      if (dp > 16) {
+        S.x = player.pos.x + Math.sin(player.yaw) * 2.5;
+        S.z = player.pos.z + Math.cos(player.yaw) * 2.5;
+      }
     } else if (dp > 3) {
       const [wx, wz] = PATH[S.wp];
       tx = wx;
@@ -53,12 +62,14 @@ export default function SanNPC({ mode, item, onTap, start, beside }: { mode: "wa
     let moving = false;
     if (d > 0.15) {
       const step = Math.min(d, speed * dt);
-      S.x += (dx / d) * step;
-      S.z += (dz / d) * step;
+      const p = { x: S.x + (dx / d) * step, z: S.z + (dz / d) * step };
+      if (mode === "follow") resolve(p, 0.35, CITY.bounds, CITY.boxes, CITY.circles);
+      S.x = p.x;
+      S.z = p.z;
       S.yaw = Math.atan2(dx, dz);
       moving = true;
       S.bob += step * 5;
-    } else if (dp < 4 || beside) {
+    } else if (dp < 6 || beside) {
       S.yaw = Math.atan2(player.pos.x - S.x, player.pos.z - S.z);
     }
     g.position.set(S.x, moving ? Math.abs(Math.sin(S.bob)) * 0.05 : 0, S.z);

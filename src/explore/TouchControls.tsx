@@ -67,13 +67,40 @@ export function Joystick() {
   );
 }
 
+// 마우스 잠금 요청 (사용자 클릭 안에서만 성공한다)
+export function requestLock(el: HTMLElement | null) {
+  if (!el || !el.requestPointerLock || document.pointerLockElement === el) return;
+  try {
+    const r = el.requestPointerLock() as unknown as Promise<void> | undefined;
+    r?.catch?.(() => {});
+  } catch {}
+}
+
+// 모바일 점프 버튼
+export function JumpButton() {
+  return (
+    <button
+      type="button"
+      className="jump-btn"
+      aria-label="jump"
+      onPointerDown={(e) => {
+        e.preventDefault();
+        input.jump = true;
+      }}
+    >
+      ⤒
+    </button>
+  );
+}
+
 // 화면 어디든 끌면 고개를 돌린다 (마우스·터치 공통). 키보드 입력도 여기서 받는다.
 // PC에서는 화면을 클릭하면 마우스가 잠기고, 마우스를 움직이는 대로 시점이 돈다 (FPS 게임처럼). Esc로 해제.
 export function useLookAndKeys(
   target: React.RefObject<HTMLElement | null>,
   onInteract: () => void,
   active: boolean,
-  onLockChange?: (locked: boolean) => void
+  onLockChange?: (locked: boolean) => void,
+  holdLock = false
 ) {
   const cb = useRef(onInteract);
   cb.current = onInteract;
@@ -84,9 +111,10 @@ export function useLookAndKeys(
     if (!active) {
       input.keys.clear();
       input.joy.x = input.joy.y = 0;
-      if (document.pointerLockElement) document.exitPointerLock();
+      // 장면 전환 중에는 마우스를 잡아 둔다. 패널·설정창이 뜰 때만 놓아 준다
+      if (document.pointerLockElement && !holdLock) document.exitPointerLock();
     }
-  }, [active]);
+  }, [active, holdLock]);
   useEffect(() => {
     const el = target.current;
     if (!el) return;
@@ -98,19 +126,17 @@ export function useLookAndKeys(
         if (e.button === 0 && input.enabled) cb.current();
         return;
       }
-      if ((e.target as HTMLElement).closest(".joy-zone, button, a, .panel, .choice, .ending, .intro")) return;
-      if (e.pointerType === "mouse" && input.enabled && el.requestPointerLock) {
-        try {
-          const r = el.requestPointerLock() as unknown as Promise<void> | undefined;
-          r?.catch?.(() => {});
-        } catch {}
-      }
+      if ((e.target as HTMLElement).closest(".joy-zone, button, a, input, .panel, .choice, .ending, .intro, .pause")) return;
+      if (e.pointerType === "mouse" && input.enabled) requestLock(el);
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     };
     const mouseMove = (e: MouseEvent) => {
       if (!locked() || !input.enabled) return;
-      input.look.yaw -= e.movementX * 0.0022;
-      input.look.pitch -= e.movementY * 0.0022;
+      // 브라우저가 가끔 튀는 값을 보내므로 큰 값은 잘라낸다
+      const mx = Math.max(-200, Math.min(200, e.movementX));
+      const my = Math.max(-200, Math.min(200, e.movementY));
+      input.look.yaw -= mx * 0.0022 * input.sens;
+      input.look.pitch -= my * 0.0022 * input.sens;
     };
     const lockChange = () => {
       pts.clear();
@@ -120,7 +146,7 @@ export function useLookAndKeys(
       if (locked()) return;
       const p = pts.get(e.pointerId);
       if (!p || !input.enabled) return;
-      const k = e.pointerType === "touch" ? 0.0055 : 0.0038;
+      const k = (e.pointerType === "touch" ? 0.0055 : 0.0038) * input.sens;
       input.look.yaw -= (e.clientX - p.x) * k;
       input.look.pitch -= (e.clientY - p.y) * k;
       p.x = e.clientX;
@@ -129,9 +155,15 @@ export function useLookAndKeys(
     const up = (e: PointerEvent) => pts.delete(e.pointerId);
     const kd = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.("input, textarea")) return;
-      if (e.code === "KeyE" || e.code === "Enter" || e.code === "Space") {
-        if (input.enabled) cb.current();
-        if (e.code === "Space") e.preventDefault();
+      if (e.code === "Space") {
+        if (input.enabled) {
+          e.preventDefault();
+          if (!e.repeat) input.jump = true;
+        }
+        return;
+      }
+      if (e.code === "KeyE" || e.code === "Enter") {
+        if (input.enabled && !e.repeat) cb.current();
         return;
       }
       if (!input.enabled) return;

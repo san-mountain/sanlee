@@ -6,15 +6,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { announcements, checkpoint, npcs, plaque, sanCityLines, statueLines, ui } from "./story";
+import { announcements, checkpoint, npcs, plaque, quest, sanCityLines, statueLines, ui } from "./story";
 import { ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
-import { Joystick, useLookAndKeys } from "./TouchControls";
+import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
+import { loadSettings } from "./input";
+import PauseMenu from "./PauseMenu";
+import QuestArrow from "./QuestArrow";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
 const KEY = "sanlee-visited";
 const END_KEY = "sanlee-ending";
+const MET_KEY = "sanlee-met";
 
 function hasWebGL() {
   try {
@@ -49,6 +53,11 @@ export default function ExploreClient() {
   const [notice, setNotice] = useState<L | null>(null);
   const [ending, setEnding] = useState<Ending>(null);
   const [locked, setLocked] = useState(false);
+  const [paused, setPaused] = useState(false);
+  // 문을 지나 다른 구역에서 넘어왔는지 (처음 시작·다시 시작이면 false)
+  const [arrived, setArrived] = useState(false);
+  const [met, setMet] = useState(false);
+  const [since] = useState(() => Date.now());
   const rootRef = useRef<HTMLElement>(null);
   const labelEls = useRef<Record<string, HTMLDivElement | null>>({});
   const complete = visited.length >= sections.length;
@@ -56,6 +65,10 @@ export default function ExploreClient() {
   useEffect(() => {
     setWebgl(hasWebGL());
     setTouch(window.matchMedia("(pointer: coarse)").matches);
+    loadSettings();
+    try {
+      setMet(localStorage.getItem(MET_KEY) === "1");
+    } catch {}
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || "[]");
       if (Array.isArray(v)) setVisited(v.filter((x) => sections.some((s) => s.id === x)));
@@ -82,11 +95,12 @@ export default function ExploreClient() {
     [showToast, t]
   );
 
-  const goTo = useCallback((to: Zone) => {
+  const goTo = useCallback((to: Zone, viaDoor = true) => {
     setPanel(null);
     setFade(to === "city" ? "up" : "down");
     setTimeout(() => {
       setZone(to);
+      setArrived(viaDoor);
       setTracked(false);
       setTimeout(() => setFade(null), 500);
     }, 900);
@@ -105,7 +119,13 @@ export default function ExploreClient() {
         case "statue":
           if (it.id === "san") setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: sanCityLines, step: 0 });
           else if (complete) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: statueLines[statueLines.length - 1], step: 0 });
-          else setPanel({ kind: "dialog", name: plaque[0], lines: statueLines[Math.min(visited.length, statueLines.length - 2)], step: 0, plaque: true });
+          else {
+            setPanel({ kind: "dialog", name: plaque[0], lines: statueLines[Math.min(visited.length, statueLines.length - 2)], step: 0, plaque: true });
+            setMet(true);
+            try {
+              localStorage.setItem(MET_KEY, "1");
+            } catch {}
+          }
           break;
         case "npc": {
           const n = npcs[it.npc!];
@@ -128,14 +148,14 @@ export default function ExploreClient() {
   const onTap = useCallback(
     (id: string) => {
       // PC에서는 클릭이 마우스 잠금·상호작용(E)으로 쓰이므로 물체 직접 탭은 터치 화면에서만
-      if (!touch || panel || intro || fade || ending) return;
+      if (!touch || panel || intro || fade || ending || paused) return;
       const it = ZONES[zone].items.find((i) => i.id === id);
       if (!it) return;
       const d = Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z);
       if (d > 10) return;
       interact(it);
     },
-    [touch, panel, intro, fade, ending, zone, interact]
+    [touch, panel, intro, fade, ending, paused, zone, interact]
   );
 
   // 테스트용: 주소 끝에 ?debug 를 붙이면 콘솔에서 이동·복원을 조작할 수 있다
@@ -149,26 +169,69 @@ export default function ExploreClient() {
     };
   }, [goTo]);
 
-  const active = !intro && !panel && !fade && !ending;
+  const active = !intro && !panel && !fade && !ending && !paused;
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  const touchRef = useRef(touch);
+  touchRef.current = touch;
   const nearRef = useRef(near);
   nearRef.current = near;
+  const unlockAt = useRef(0);
+  // PC: 마우스 잠금이 풀리면(Esc, 창 전환) 그대로 설정창을 연다
+  const onLockChange = useCallback((l: boolean) => {
+    setLocked(l);
+    if (!l) {
+      unlockAt.current = performance.now();
+      if (activeRef.current && !touchRef.current) setPaused(true);
+    }
+  }, []);
   useLookAndKeys(
     rootRef,
     () => {
       if (nearRef.current) interact(nearRef.current);
     },
     active,
-    setLocked
+    onLockChange,
+    !!fade && !panel && !paused && !ending
   );
 
-  // Esc로 패널 닫기
+  const lock = useCallback(() => {
+    if (!touchRef.current) requestLock(rootRef.current);
+  }, []);
+  // 패널을 닫으면 곧바로 다시 마우스를 잠근다 (닫기 클릭 안에서 요청해야 브라우저가 허락)
+  const closePanel = useCallback(() => {
+    setPanel(null);
+    lock();
+  }, [lock]);
+  const resume = useCallback(() => {
+    setPaused(false);
+    lock();
+  }, [lock]);
+
+  // Esc: 패널 닫기 / 설정창 열고 닫기. E: 대화 넘기기
+  const panelRef = useRef(panel);
+  panelRef.current = panel;
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setPanel(null);
+      if (e.key === "Escape") {
+        if (performance.now() - unlockAt.current < 250) return; // 잠금 해제와 같은 Esc
+        if (panelRef.current) setPanel(null);
+        else if (pausedRef.current) resume();
+        else if (activeRef.current) setPaused(true);
+        return;
+      }
+      const p = panelRef.current;
+      if (e.code === "KeyE" && !e.repeat && p?.kind === "dialog") {
+        e.preventDefault();
+        if (p.step < p.lines.length - 1) setPanel({ ...p, step: p.step + 1 });
+        else closePanel();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [resume, closePanel]);
 
   // 지상에서는 관리 AI 방송이 주기적으로 흘러나옴
   useEffect(() => {
@@ -204,15 +267,45 @@ export default function ExploreClient() {
     } catch {}
   };
 
-  const restart = () => {
+  const resetProgress = () => {
     try {
       localStorage.removeItem(KEY);
       localStorage.removeItem(END_KEY);
+      localStorage.removeItem(MET_KEY);
     } catch {}
     setVisited([]);
-    setEnding(null);
-    goTo("bunker");
+    setMet(false);
   };
+  const restart = () => {
+    resetProgress();
+    setEnding(null);
+    goTo("bunker", false);
+    lock();
+  };
+
+  // 퀘스트 화살표의 목표
+  const items = ZONES[zone].items;
+  const find = (id: string) => items.find((i) => i.id === id) ?? null;
+  let questTarget: Interactable | null = null;
+  let questLabel = "";
+  if (!ending) {
+    if (zone === "bunker") {
+      if (!complete && !met && visited.length === 0) {
+        questTarget = find("statue");
+        questLabel = t(quest.statue);
+      } else if (!complete) {
+        const left = items.filter((i) => i.kind === "section" && !visited.includes(i.section!));
+        questTarget = left.sort((a, b) => Math.hypot(a.pos.x - player.pos.x, a.pos.z - player.pos.z) - Math.hypot(b.pos.x - player.pos.x, b.pos.z - player.pos.z))[0] ?? null;
+        questLabel = `${t(quest.terminal)} ${visited.length}/${sections.length}`;
+      } else {
+        questTarget = find("exit");
+        questLabel = t(quest.exit);
+      }
+    } else {
+      questTarget = complete ? find("checkpoint") : find("hatch");
+      questLabel = t(complete ? quest.checkpoint : quest.back);
+    }
+  }
 
   if (webgl === false) {
     return (
@@ -230,7 +323,7 @@ export default function ExploreClient() {
 
   const sectionMeta = panel?.kind === "section" ? sections.find((s) => s.id === panel.id)! : null;
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  const verb = near ? (near.kind === "npc" || near.kind === "statue" ? ui.talk : near.kind === "painting" ? ui.view : ui.open) : null;
+  const verb = near ? (near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
   const rootClass = [
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
@@ -242,7 +335,7 @@ export default function ExploreClient() {
     <main className={rootClass} ref={rootRef}>
       {webgl && (
         <div className="canvas-wrap">
-          <World zone={zone} lang={lang} visited={visited} onTap={onTap} onNear={setNear} onTracked={setTracked} labelEls={labelEls} sanBeside={ending?.kind === "reject" && ending.step >= 1} />
+          <World zone={zone} lang={lang} visited={visited} onTap={onTap} onNear={setNear} onTracked={setTracked} labelEls={labelEls} sanBeside={ending?.kind === "reject" && ending.step >= 1} arrived={arrived} />
         </div>
       )}
 
@@ -266,6 +359,9 @@ export default function ExploreClient() {
         <span className="hud-right">
           <span className="hud-progress">{visited.length}/{sections.length}</span>
           <LangToggle />
+          <button type="button" className="hud-gear" aria-label="settings" onClick={() => !intro && !ending && setPaused(true)}>
+            ⚙
+          </button>
         </span>
       </div>
       <div className="hud-zone">
@@ -287,7 +383,10 @@ export default function ExploreClient() {
 
       {active && !near && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
       {active && locked && <div className="crosshair" aria-hidden />}
+      {active && questTarget && <QuestArrow target={questTarget.pos} label={questLabel} />}
       {active && touch && <Joystick />}
+      {active && touch && <JumpButton />}
+      {paused && <PauseMenu onResume={resume} onReset={resetProgress} since={since} />}
 
       {panel?.kind === "section" && sectionMeta && (
         <div className="panel-wrap">
@@ -298,7 +397,7 @@ export default function ExploreClient() {
             </div>
             <SectionBody id={panel.id} inExplore />
             <div className="panel-actions">
-              <button className="btn" onClick={() => setPanel(null)}>
+              <button className="btn" onClick={closePanel}>
                 {t(ui.back)}
               </button>
               <Link className="btn" href={sectionMeta.href}>
@@ -320,7 +419,7 @@ export default function ExploreClient() {
               {t(painting.medium)}, {t(painting.size)}
             </p>
             <div className="panel-actions">
-              <button className="btn" onClick={() => setPanel(null)}>
+              <button className="btn" onClick={closePanel}>
                 {t(ui.close)}
               </button>
               <Link className="btn" href="/works">
@@ -345,7 +444,7 @@ export default function ExploreClient() {
             )}
             <p className="line">“{t(panel.lines[Math.min(panel.step, panel.lines.length - 1)])}”</p>
             <div className="panel-actions">
-              <button className="btn" onClick={() => setPanel(null)}>
+              <button className="btn" onClick={closePanel}>
                 {t(ui.close)}
               </button>
               {panel.step < panel.lines.length - 1 && (
@@ -412,9 +511,16 @@ export default function ExploreClient() {
             {ui.introLines.map((l, i) => (
               <p key={i}>{t(l)}</p>
             ))}
-            <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintPc)}</p>
+            <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
             <div className="panel-actions" style={{ justifyContent: "flex-end" }}>
-              <button className="btn primary" autoFocus onClick={() => setIntro(false)}>
+              <button
+                className="btn primary"
+                autoFocus
+                onClick={() => {
+                  setIntro(false);
+                  lock();
+                }}
+              >
                 {t(ui.start)}
               </button>
             </div>

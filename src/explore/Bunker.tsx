@@ -12,6 +12,7 @@ import { Human, Tap, useSign, type TapFn } from "./parts";
 import Statue, { Pedestal } from "./Statue";
 import SanNPC from "./SanNPC";
 import { BUNKER } from "./zones";
+import { LotusStrings } from "./CityAlleys";
 
 const W = 12; // 방의 반폭
 const LEN = BUNKER_Z1 - BUNKER_Z0;
@@ -455,6 +456,267 @@ function R07({ onTap }: { onTap: TapFn }) {
   );
 }
 
+/* ---------- 불단 앞에서 좌선하는 스님 ---------- */
+function Monk({ onTap }: { onTap: TapFn }) {
+  const { pos, rotY } = BUNKER_NPCS.monk;
+  const flame = useRef<THREE.PointLight>(null);
+  useFrame((s) => {
+    if (flame.current) flame.current.intensity = 5 + Math.sin(s.clock.elapsedTime * 13) * 0.8 + Math.sin(s.clock.elapsedTime * 7.3) * 0.6;
+  });
+  return (
+    <Tap id="monk" onTap={onTap}>
+      <group position={pos} rotation={[0, rotY, 0]}>
+        {/* 가부좌: 넓게 접은 다리 위에 몸통 */}
+        <mesh position={[0, 0.16, 0]} scale={[0.55, 0.16, 0.42]}>
+          <sphereGeometry args={[1, 20, 12]} />
+          <meshStandardMaterial color="#6e6a62" roughness={0.95} />
+        </mesh>
+        <mesh position={[0, 0.58, -0.04]}>
+          <cylinderGeometry args={[0.2, 0.32, 0.72, 16]} />
+          <meshStandardMaterial color="#6e6a62" roughness={0.95} />
+        </mesh>
+        <mesh position={[0, 0.6, 0]} rotation={[0, 0, 0.55]}>
+          <boxGeometry args={[0.1, 0.8, 0.5]} />
+          <meshStandardMaterial color="#8a3a1a" roughness={0.85} />
+        </mesh>
+        <mesh position={[0, 1.08, 0]}>
+          <sphereGeometry args={[0.13, 18, 14]} />
+          <meshStandardMaterial color="#c9a68a" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, 0.36, 0.22]} scale={[0.18, 0.06, 0.1]}>
+          <sphereGeometry args={[1, 10, 6]} />
+          <meshStandardMaterial color="#c9a68a" roughness={0.6} />
+        </mesh>
+      </group>
+      {/* 불단: 낮은 상, 작은 좌상의 실루엣, 초, 향 */}
+      <group position={[-9.6, 0, -19.3]}>
+        <mesh position={[0, 0.45, 0]}>
+          <boxGeometry args={[2.2, 0.9, 0.9]} />
+          <meshStandardMaterial color="#4a1c14" roughness={0.6} />
+        </mesh>
+        <mesh position={[0, 0.92, 0]}>
+          <boxGeometry args={[2.3, 0.05, 1]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.7} roughness={0.4} />
+        </mesh>
+        <group position={[0, 0.95, -0.15]}>
+          <mesh position={[0, 0.14, 0]} scale={[0.32, 0.12, 0.22]}>
+            <sphereGeometry args={[1, 14, 8]} />
+            <meshStandardMaterial color="#8a6a2a" metalness={0.8} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, 0.42, 0]}>
+            <cylinderGeometry args={[0.1, 0.16, 0.4, 12]} />
+            <meshStandardMaterial color="#8a6a2a" metalness={0.8} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, 0.72, 0]}>
+            <sphereGeometry args={[0.1, 14, 10]} />
+            <meshStandardMaterial color="#8a6a2a" metalness={0.8} roughness={0.35} />
+          </mesh>
+          <mesh position={[0, 0.66, -0.08]}>
+            <torusGeometry args={[0.22, 0.012, 6, 32]} />
+            <meshBasicMaterial color="#ffd08a" toneMapped={false} />
+          </mesh>
+        </group>
+        {[-0.75, 0.75].map((x) => (
+          <group key={x} position={[x, 0.95, 0.2]}>
+            <mesh position={[0, 0.1, 0]}>
+              <cylinderGeometry args={[0.04, 0.04, 0.2, 8]} />
+              <meshStandardMaterial color="#efe8d8" />
+            </mesh>
+            <mesh position={[0, 0.24, 0]}>
+              <sphereGeometry args={[0.025, 6, 4]} />
+              <meshBasicMaterial color="#ffcf6a" toneMapped={false} />
+            </mesh>
+          </group>
+        ))}
+        <pointLight ref={flame} position={[0, 1.4, 0.6]} distance={6} color="#ffb060" />
+        <Sparkles count={12} scale={[0.4, 1.4, 0.4]} position={[0.3, 1.7, 0.2]} size={6} speed={0.2} color="#ccc" opacity={0.3} />
+      </group>
+    </Tap>
+  );
+}
+
+/* ---------- 무전수: 헤드폰을 쓰고 지상 주파수를 듣는다 ---------- */
+function Radio({ onTap }: { onTap: TapFn }) {
+  const { pos, rotY } = BUNKER_NPCS.radio;
+  const led = useRef<THREE.MeshBasicMaterial>(null);
+  useFrame((s) => {
+    if (led.current) led.current.color.setRGB(1, 0.6, 0.1).multiplyScalar(Math.sin(s.clock.elapsedTime * 8) > 0.3 ? 1 : 0.2);
+  });
+  return (
+    <Tap id="radio" onTap={onTap}>
+      <Human position={pos} rotationY={rotY} color="#4a3a2a" skin="#c49a7a">
+        <mesh position={[0, 1.64, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <torusGeometry args={[0.13, 0.015, 6, 16, Math.PI]} />
+          <meshStandardMaterial color="#222" />
+        </mesh>
+        {[-1, 1].map((k) => (
+          <mesh key={k} position={[k * 0.13, 1.6, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.05, 0.05, 0.04, 12]} />
+            <meshStandardMaterial color="#222" />
+          </mesh>
+        ))}
+      </Human>
+      <group position={[10.9, 0, -16.8]}>
+        <mesh position={[0, 0.76, 0]}>
+          <boxGeometry args={[1.1, 0.06, 2.2]} />
+          <meshStandardMaterial color="#3a3026" roughness={0.8} />
+        </mesh>
+        <mesh position={[0, 0.38, 0]}>
+          <boxGeometry args={[0.9, 0.76, 2]} />
+          <meshStandardMaterial color="#26221c" roughness={0.9} />
+        </mesh>
+        <mesh position={[0.1, 1.0, 0]}>
+          <boxGeometry args={[0.5, 0.42, 0.9]} />
+          <meshStandardMaterial color="#5a5a4a" metalness={0.5} roughness={0.5} />
+        </mesh>
+        <mesh position={[-0.16, 1.02, 0.15]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[0.5, 0.18]} />
+          <meshBasicMaterial color="#ffb347" toneMapped={false} transparent opacity={0.85} />
+        </mesh>
+        <mesh position={[-0.16, 1.12, -0.28]}>
+          <sphereGeometry args={[0.025, 6, 4]} />
+          <meshBasicMaterial ref={led} color="#ff9a1a" toneMapped={false} />
+        </mesh>
+        <mesh position={[0.2, 1.65, -0.3]}>
+          <cylinderGeometry args={[0.01, 0.01, 0.9, 4]} />
+          <meshStandardMaterial color="#888" />
+        </mesh>
+      </group>
+    </Tap>
+  );
+}
+
+/* ---------- 벽에 분필 그림을 그리는 아이 ---------- */
+function useChalkTexture() {
+  return useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 512;
+    c.height = 256;
+    const g = c.getContext("2d")!;
+    g.strokeStyle = "rgba(240,236,220,0.85)";
+    g.lineWidth = 5;
+    g.lineCap = "round";
+    // 손잡은 사람 둘, 해, 집, 그리고 하늘에 뜬 섬
+    const person = (x: number, s: number) => {
+      g.beginPath();
+      g.arc(x, 150 - 40 * s, 14 * s, 0, Math.PI * 2);
+      g.moveTo(x, 150 - 26 * s);
+      g.lineTo(x, 150 + 20 * s);
+      g.moveTo(x - 20 * s, 150 - 6 * s);
+      g.lineTo(x + 20 * s, 150 - 6 * s);
+      g.moveTo(x, 150 + 20 * s);
+      g.lineTo(x - 14 * s, 150 + 50 * s);
+      g.moveTo(x, 150 + 20 * s);
+      g.lineTo(x + 14 * s, 150 + 50 * s);
+      g.stroke();
+    };
+    person(150, 1.1);
+    person(195, 0.8);
+    g.beginPath();
+    g.arc(420, 60, 26, 0, Math.PI * 2);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      g.moveTo(420 + Math.cos(a) * 34, 60 + Math.sin(a) * 34);
+      g.lineTo(420 + Math.cos(a) * 48, 60 + Math.sin(a) * 48);
+    }
+    g.stroke();
+    g.beginPath();
+    g.moveTo(260, 70);
+    g.lineTo(340, 70);
+    g.lineTo(300, 120);
+    g.closePath();
+    g.stroke();
+    g.font = "700 30px sans-serif";
+    g.fillStyle = "rgba(255,140,170,0.85)";
+    g.fillText("이산 ♡", 120, 240);
+    g.fillStyle = "rgba(140,220,255,0.85)";
+    g.fillText("모두 거부", 300, 220);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+}
+
+function Kid({ onTap }: { onTap: TapFn }) {
+  const { pos, rotY } = BUNKER_NPCS.kid;
+  const chalk = useChalkTexture();
+  const arm = useRef<THREE.Mesh>(null);
+  useFrame((s) => {
+    if (arm.current) arm.current.position.x = 0.18 + Math.sin(s.clock.elapsedTime * 3) * 0.06;
+  });
+  return (
+    <Tap id="kid" onTap={onTap}>
+      <group position={pos} rotation={[0, rotY, 0]} scale={0.62}>
+        <Human position={[0, 0, 0]} color="#c8402a" skin="#e0c4ac" hood="#1a1a1e" />
+        <mesh ref={arm} position={[0.18, 1.5, 0.28]} rotation={[-1.2, 0, 0]}>
+          <capsuleGeometry args={[0.05, 0.4, 4, 8]} />
+          <meshStandardMaterial color="#c8402a" />
+        </mesh>
+      </group>
+      <mesh position={[pos[0] - 0.3, 1.25, BUNKER_Z0 + 0.02]}>
+        <planeGeometry args={[3.2, 1.6]} />
+        <meshBasicMaterial map={chalk} transparent />
+      </mesh>
+    </Tap>
+  );
+}
+
+/* ---------- 간이침대에서 잠든 사람 ---------- */
+function Sleeper({ onTap }: { onTap: TapFn }) {
+  const { pos } = BUNKER_NPCS.sleeper;
+  const chest = useRef<THREE.Mesh>(null);
+  useFrame((s) => {
+    if (chest.current) chest.current.scale.y = 0.2 + Math.sin(s.clock.elapsedTime * 1.1) * 0.02;
+  });
+  return (
+    <Tap id="sleeper" onTap={onTap}>
+      <group position={[pos[0] - 0.15, 0, pos[2]]}>
+        <mesh position={[0, 0.45, 0]}>
+          <boxGeometry args={[0.95, 0.08, 2.1]} />
+          <meshStandardMaterial color="#4a5a3a" roughness={0.9} />
+        </mesh>
+        {[-0.42, 0.42].flatMap((x) =>
+          [-0.95, 0.95].map((z) => (
+            <mesh key={`${x}${z}`} position={[x, 0.22, z]}>
+              <boxGeometry args={[0.05, 0.44, 0.05]} />
+              <meshStandardMaterial color="#333" />
+            </mesh>
+          ))
+        )}
+        {/* 담요를 덮은 몸 */}
+        <mesh ref={chest} position={[0, 0.58, 0.15]} scale={[0.36, 0.2, 0.85]}>
+          <sphereGeometry args={[1, 16, 10]} />
+          <meshStandardMaterial color="#7a3a3a" roughness={0.95} />
+        </mesh>
+        <mesh position={[0, 0.6, -0.78]}>
+          <sphereGeometry args={[0.13, 14, 10]} />
+          <meshStandardMaterial color="#c49a7a" roughness={0.7} />
+        </mesh>
+        <mesh position={[0, 0.52, -0.82]} scale={[0.28, 0.08, 0.18]}>
+          <boxGeometry />
+          <meshStandardMaterial color="#d8d2c0" roughness={1} />
+        </mesh>
+      </group>
+    </Tap>
+  );
+}
+
+/* ---------- 천장에 건 연등 ---------- */
+function BunkerLotus() {
+  const strings = useMemo(
+    () =>
+      [-16, -9, 8].map((z, i) => ({
+        a: new THREE.Vector3(-11.8, 6.6, z),
+        b: new THREE.Vector3(11.8, 6.6, z),
+        sag: 1.1,
+        n: 13,
+        seed: i * 2,
+      })),
+    []
+  );
+  return <LotusStrings strings={strings} />;
+}
+
 function WallText({ lang }: { lang: Lang }) {
   const big = useSign([["B-7", 1]], { color: "#c9a227", w: 512, h: 256 });
   const warn = useSign(
@@ -496,6 +758,11 @@ export default function Bunker({ lang, visited, onTap }: { lang: Lang; visited: 
       <BlastDoor lang={lang} onTap={onTap} />
       <Keeper onTap={onTap} />
       <R07 onTap={onTap} />
+      <Monk onTap={onTap} />
+      <Radio onTap={onTap} />
+      <Kid onTap={onTap} />
+      <Sleeper onTap={onTap} />
+      <BunkerLotus />
       {visited.length >= TERMINALS.length ? (
         <>
           <Pedestal lang={lang} empty />

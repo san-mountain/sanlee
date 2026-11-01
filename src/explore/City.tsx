@@ -6,7 +6,9 @@ import { useFrame } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
 import { billboards, ticker } from "./story";
-import { AVENUE, BLOCKS, CAMERA_POLES, CITY, CITY_BOUNDS, CITY_NPCS, CROSS, HATCH, QUEUE_X, QUEUE_Z } from "./zones";
+import { AVENUE, CAMERA_POLES, CITY, CITY_NPCS, CROSS, EDGE, ISLANDS, LOTS, OVERSEER_ISLAND, QUEUE_X, QUEUE_Z } from "./zones";
+import { AirTraffic, Arks, Bridge, CloudSea, Islands, Platform, Sky, TwinBuddhas } from "./CityWorld";
+import { AlleyDecor, AlleyPeople, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
 import { citizenGeometry, roofGeometry, visorGeometry } from "./models";
 import { towerMaterial } from "./towerMaterial";
 import { concreteTexture, hazardTexture, signTexture } from "./textures";
@@ -26,89 +28,67 @@ const tmpE = new THREE.Euler();
 const tmpV = new THREE.Vector3();
 const tmpS = new THREE.Vector3();
 
-/* ---------- 하늘: 위는 검고, 지평선은 스모그에 붉게 물듦 ---------- */
-function Sky() {
-  const mat = useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        side: THREE.BackSide,
-        depthWrite: false,
-        fog: false,
-        vertexShader: `varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-        fragmentShader: `varying vec3 vP; void main(){
-          float h = vP.y;
-          vec3 top = vec3(0.012,0.014,0.03);
-          vec3 mid = vec3(0.06,0.05,0.08);
-          vec3 hor = vec3(0.22,0.07,0.09);
-          vec3 c = mix(hor, mid, smoothstep(0.0, 0.18, h));
-          c = mix(c, top, smoothstep(0.18, 0.6, h));
-          gl_FragColor = vec4(c, 1.0);
-        }`,
-      }),
-    []
-  );
-  const ref = useRef<THREE.Mesh>(null);
-  useFrame(({ camera }) => ref.current?.position.copy(camera.position));
-  return (
-    <mesh ref={ref} material={mat} renderOrder={-1}>
-      <sphereGeometry args={[400, 32, 16]} />
-    </mesh>
-  );
-}
-
 /* ---------- 빌딩 숲 ---------- */
-type Tower = { x: number; z: number; w: number; d: number; h: number };
+type Tower = { x: number; z: number; w: number; d: number; h: number; y0?: number };
 function useTowers() {
   return useMemo(() => {
     const r = rng(11);
     const towers: Tower[] = [];
     const roofs: Tower[] = [];
     const eaves: Tower[] = []; // 기와지붕을 얹을 자리
-    const add = (x: number, z: number, w: number, d: number, h: number) => {
-      // 위로 갈수록 좁아지는 2~3단
+    const spires: Tower[] = []; // 고딕 첨탑
+    // 오른쪽(x>0)에만 만들고 왼쪽은 거울에 비춘 듯 똑같이 복사한다
+    const add = (x: number, z: number, w: number, d: number, h: number, y0 = 0) => {
       let y = 0;
       let cw = w;
       let cd = d;
       const tiers = h > 40 ? 3 : h > 22 ? 2 : 1;
-      const hanok = r() < 0.55;
+      const style = r();
+      const hanok = style < 0.55;
+      const gothic = !hanok && h > 34;
       for (let i = 0; i < tiers; i++) {
         const th = i === tiers - 1 ? h - y : h * (0.45 + r() * 0.2) - y * 0.3;
-        towers.push({ x, z, w: cw, d: cd, h: th + y });
-        if (hanok) eaves.push({ x, z, w: cw * 1.22, d: cd * 1.22, h: th + y });
+        for (const m of [1, -1]) {
+          towers.push({ x: x * m, z, w: cw, d: cd, h: th + y, y0 });
+          if (hanok) eaves.push({ x: x * m, z, w: cw * 1.22, d: cd * 1.22, h: th + y, y0 });
+        }
         y += th;
         cw *= 0.62 + r() * 0.2;
         cd *= 0.62 + r() * 0.2;
       }
-      roofs.push({ x, z, w: cw, d: cd, h: y });
+      for (const m of [1, -1]) {
+        if (gothic) {
+          // 꼭대기와 네 귀퉁이에 뾰족한 첨탑
+          spires.push({ x: x * m, z, w: cw * 0.7, d: cw * 0.7, h: y + cw * 3.2, y0: y0 + y });
+          for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) spires.push({ x: x * m + sx * cw * 0.42, z: z + sz * cd * 0.42, w: cw * 0.16, d: cw * 0.16, h: cw * 1.4, y0: y0 + y });
+        } else roofs.push({ x: x * m, z, w: cw, d: cd, h: y, y0 });
+      }
     };
-    for (const b of BLOCKS) {
-      const lot = 11;
-      for (let x = b.x0 + lot / 2; x < b.x1; x += lot) {
-        for (let z = b.z0 + lot / 2; z < b.z1; z += lot) {
-          const w = Math.min(lot - 1.2, b.x1 - x + lot / 2 - 0.6) * (0.75 + r() * 0.25);
-          const d = Math.min(lot - 1.2, b.z1 - z + lot / 2 - 0.6) * (0.75 + r() * 0.25);
-          if (w < 3 || d < 3) continue;
-          const nearAvenue = Math.abs(x) < 24;
-          const h = (nearAvenue ? 24 : 14) + r() * r() * (nearAvenue ? 80 : 60);
-          add(x, z, w, d, h);
-        }
+    for (const l of LOTS) {
+      if (l.side < 0) continue;
+      const w = l.x1 - l.x0;
+      const d = l.z1 - l.z0;
+      const base = [24, 16, 12][l.col];
+      const extra = [76, 46, 30][l.col];
+      add((l.x0 + l.x1) / 2, (l.z0 + l.z1) / 2, w, d, base + r() * r() * extra);
+    }
+    // 떠 있는 섬 위의 건물들 (오른쪽 섬만 만들고 복사)
+    for (const isl of ISLANDS) {
+      if (isl.x < 0 || !isl.towers) continue;
+      const n = 7 + Math.floor(r() * 5);
+      for (let i = 0; i < n; i++) {
+        const a = r() * Math.PI * 2;
+        const rr = r() * isl.r * 0.7;
+        add(isl.x + Math.cos(a) * rr, isl.z + Math.sin(a) * rr, 6 + r() * 8, 6 + r() * 8, 18 + r() * r() * 90, isl.y);
       }
     }
-    // 경계 바깥의 먼 스카이라인
-    for (let i = 0; i < 120; i++) {
-      const a = r() * Math.PI * 2;
-      const dist = 90 + r() * 90;
-      const x = Math.cos(a) * dist;
-      const z = Math.sin(a) * dist - 30;
-      if (Math.abs(x) < 26 && z < -150) continue; // 관리 타워 앞은 비움
-      add(x, z, 8 + r() * 12, 8 + r() * 12, 30 + r() * r() * 110);
-    }
-    return { towers, roofs, eaves };
+    return { towers, roofs, eaves, spires };
   }, []);
 }
 
 function Towers() {
-  const { towers, roofs, eaves } = useTowers();
+  const { towers, roofs, eaves, spires } = useTowers();
+  const spireRef = useRef<THREE.InstancedMesh>(null);
   const roofGeo = roofGeometry();
   const eaveRef = useRef<THREE.InstancedMesh>(null);
   const trimRef = useRef<THREE.InstancedMesh>(null);
@@ -119,29 +99,36 @@ function Towers() {
 
   useLayoutEffect(() => {
     towers.forEach((t, i) => {
-      tmpM.compose(tmpV.set(t.x, t.h / 2, t.z), tmpQ.identity(), tmpS.set(t.w, t.h, t.d));
+      tmpM.compose(tmpV.set(t.x, (t.y0 ?? 0) + t.h / 2, t.z), tmpQ.identity(), tmpS.set(t.w, t.h, t.d));
       body.current!.setMatrixAt(i, tmpM);
     });
+    spires.forEach((t, i) => {
+      tmpM.compose(tmpV.set(t.x, (t.y0 ?? 0) + t.h / 2, t.z), tmpQ.setFromEuler(tmpE.set(0, Math.PI / 4, 0)), tmpS.set(t.w, t.h, t.d));
+      spireRef.current!.setMatrixAt(i, tmpM);
+    });
+    if (spires.length) spireRef.current!.instanceMatrix.needsUpdate = true;
     body.current!.instanceMatrix.needsUpdate = true;
     roofs.forEach((t, i) => {
-      tmpM.compose(tmpV.set(t.x + t.w * 0.3, t.h + 3, t.z), tmpQ.identity(), tmpS.set(0.25, 6, 0.25));
+      const y0 = t.y0 ?? 0;
+      tmpM.compose(tmpV.set(t.x + t.w * 0.3 * Math.sign(t.x || 1), y0 + t.h + 3, t.z), tmpQ.identity(), tmpS.set(0.25, 6, 0.25));
       antennas.current!.setMatrixAt(i, tmpM);
-      tmpM.compose(tmpV.set(t.x + t.w * 0.3, t.h + 6.1, t.z), tmpQ.identity(), tmpS.set(0.5, 0.5, 0.5));
+      tmpM.compose(tmpV.set(t.x + t.w * 0.3 * Math.sign(t.x || 1), y0 + t.h + 6.1, t.z), tmpQ.identity(), tmpS.set(0.5, 0.5, 0.5));
       lights.current!.setMatrixAt(i, tmpM);
     });
     antennas.current!.instanceMatrix.needsUpdate = true;
     eaves.forEach((t, i) => {
       const rh = Math.min(t.w, t.d) * 0.32;
-      tmpM.compose(tmpV.set(t.x, t.h - 0.05, t.z), tmpQ.identity(), tmpS.set(t.w, rh, t.d));
+      const y0 = t.y0 ?? 0;
+      tmpM.compose(tmpV.set(t.x, y0 + t.h - 0.05, t.z), tmpQ.identity(), tmpS.set(t.w, rh, t.d));
       eaveRef.current!.setMatrixAt(i, tmpM);
       // 처마 밑 단청 띠 (청록)
-      tmpM.compose(tmpV.set(t.x, t.h - 0.25, t.z), tmpQ.identity(), tmpS.set(t.w * 0.72, 0.4, t.d * 0.72));
+      tmpM.compose(tmpV.set(t.x, y0 + t.h - 0.25, t.z), tmpQ.identity(), tmpS.set(t.w * 0.72, 0.4, t.d * 0.72));
       trimRef.current!.setMatrixAt(i, tmpM);
     });
     eaveRef.current!.instanceMatrix.needsUpdate = true;
     trimRef.current!.instanceMatrix.needsUpdate = true;
     lights.current!.instanceMatrix.needsUpdate = true;
-  }, [towers, roofs, eaves]);
+  }, [towers, roofs, eaves, spires]);
 
   const blink = useRef<THREE.MeshBasicMaterial>(null);
   useFrame((s) => {
@@ -161,6 +148,10 @@ function Towers() {
         <boxGeometry />
         <meshBasicMaterial color="#1fa59a" toneMapped={false} />
       </instancedMesh>
+      <instancedMesh ref={spireRef} args={[undefined, undefined, Math.max(1, spires.length)]} frustumCulled={false}>
+        <coneGeometry args={[0.72, 1, 4]} />
+        <meshStandardMaterial color="#141418" metalness={0.75} roughness={0.35} emissive="#12060a" />
+      </instancedMesh>
       <instancedMesh ref={antennas} args={[undefined, undefined, roofs.length]} frustumCulled={false}>
         <cylinderGeometry args={[0.5, 1, 1, 6]} />
         <meshStandardMaterial color="#15171c" metalness={0.8} roughness={0.4} />
@@ -173,11 +164,19 @@ function Towers() {
   );
 }
 
-/* ---------- 바닥, 인도, 차선 ---------- */
+/* ---------- 바닥, 인도, 차선, 그리고 굳이 짝을 맞춘 얼룩들 ---------- */
+// 큰길에서는 물웅덩이·쓰레기·금까지 좌우가 똑같다
+const MIRROR_LITTER: [number, number, number, number][] = (() => {
+  const r = rng(77);
+  const out: [number, number, number, number][] = [];
+  for (let z = 12; z > -86; z -= 5 + r() * 6) out.push([2 + r() * 6.5, z, 0.5 + r() * 1.3, r() * 3]);
+  return out;
+})();
+
 function Ground() {
   const curb = useMemo(() => {
     const t = concreteTexture(4, 70);
-    t.repeat.set(20, 1);
+    t.repeat.set(1, 30);
     return t;
   }, []);
   const dashes = useMemo(() => {
@@ -185,16 +184,18 @@ function Ground() {
     for (let z = 26; z > -90; z -= 6) out.push([0, z]);
     return out;
   }, []);
+  const W = EDGE.x * 2 + 2;
+  const D = EDGE.z1 - EDGE.z0 + 2;
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -30]} receiveShadow>
-        <planeGeometry args={[260, 300]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, (EDGE.z1 + EDGE.z0) / 2]} receiveShadow>
+        <planeGeometry args={[W, D]} />
         <meshStandardMaterial color="#0c0d11" roughness={0.22} metalness={0.75} />
       </mesh>
-      {/* 블록 가장자리의 인도 */}
-      {BLOCKS.map((b, i) => (
-        <mesh key={i} position={[(b.x0 + b.x1) / 2, 0.08, (b.z0 + b.z1) / 2]}>
-          <boxGeometry args={[b.x1 - b.x0 + 4, 0.16, b.z1 - b.z0 + 4]} />
+      {/* 큰길 양옆 인도 */}
+      {[-1, 1].map((sd) => (
+        <mesh key={sd} position={[sd * (AVENUE + 1.25), 0.08, -37]}>
+          <boxGeometry args={[2.5, 0.16, 102]} />
           <meshStandardMaterial map={curb} color="#3a3c42" roughness={0.8} />
         </mesh>
       ))}
@@ -211,22 +212,34 @@ function Ground() {
           <meshBasicMaterial color="#ff2a3d" transparent opacity={0.08} />
         </mesh>
       ))}
+      {MIRROR_LITTER.flatMap(([x, z, sz, rot], i) =>
+        [1, -1].map((m) => (
+          <group key={`${i}${m}`}>
+            <mesh rotation={[-Math.PI / 2, 0, m * rot]} position={[m * x, 0.013, z]} scale={[sz * 1.5, sz, 1]}>
+              <circleGeometry args={[1, 16]} />
+              <meshStandardMaterial color="#08090c" roughness={0.04} metalness={0.95} transparent opacity={0.85} />
+            </mesh>
+            {i % 3 === 0 && (
+              <mesh position={[m * (x + 0.9), 0.06, z + 0.4]} rotation={[0, m * rot, 0.4]}>
+                <cylinderGeometry args={[0.035, 0.035, 0.12, 8]} />
+                <meshStandardMaterial color="#c8c8c8" metalness={0.8} roughness={0.3} />
+              </mesh>
+            )}
+            {i % 4 === 1 && (
+              <mesh rotation={[-Math.PI / 2, 0, m * (rot + 0.7)]} position={[m * (x - 0.6), 0.014, z - 0.8]}>
+                <planeGeometry args={[0.04, 2.2]} />
+                <meshBasicMaterial color="#000" />
+              </mesh>
+            )}
+          </group>
+        ))
+      )}
     </group>
   );
 }
 
-/* ---------- 경계 벽과 검문소 ---------- */
-function Walls({ lang }: { lang: Lang }) {
-  const tex = useMemo(() => {
-    const t = concreteTexture(9, 52);
-    t.repeat.set(30, 3);
-    return t;
-  }, []);
-  const hazard = useMemo(() => {
-    const t = hazardTexture();
-    t.repeat.set(40, 1);
-    return t;
-  }, []);
+/* ---------- 검문소: 레이저를 두른 성문 ---------- */
+function Gate({ lang }: { lang: Lang }) {
   const gateSign = useSign(
     [
       [lang === "ko" ? "통제 구역" : "RESTRICTED", 1.3],
@@ -245,28 +258,10 @@ function Walls({ lang }: { lang: Lang }) {
       ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(s.clock.elapsedTime * 8 + i) * 0.3;
     });
   });
-  const { x0, x1, z0, z1 } = CITY_BOUNDS;
-  const H = 14;
   return (
     <group>
-      {[
-        [x0 - 0.5, (z0 + z1) / 2, 1, z1 - z0],
-        [x1 + 0.5, (z0 + z1) / 2, 1, z1 - z0],
-        [0, z1 + 0.5, x1 - x0, 1],
-      ].map(([x, z, w, d], i) => (
-        <group key={i}>
-          <mesh position={[x, H / 2, z]}>
-            <boxGeometry args={[w, H, d]} />
-            <meshStandardMaterial map={tex} color="#4a4a50" roughness={0.9} />
-          </mesh>
-          <mesh position={[x, 1.2, z]}>
-            <boxGeometry args={[w + 0.05, 0.6, d + 0.05]} />
-            <meshStandardMaterial map={hazard} roughness={0.7} />
-          </mesh>
-        </group>
-      ))}
       {/* 검문소: 레이저를 두른 성문 */}
-      <group position={[0, 0, z0 + 0.5]}>
+      <group position={[0, 0, EDGE.z0 + 0.5]}>
         {/* 돌로 쌓은 기단과 홍예문 */}
         {[-1, 1].map((sd) => (
           <mesh key={sd} position={[sd * 8, 4.5, 0]}>
@@ -343,7 +338,47 @@ function Overseer() {
     if (ringMat.current) ringMat.current.opacity = 0.35 + Math.sin(t * 0.8) * 0.15;
   });
   return (
-    <group position={[0, 0, -175]}>
+    <group position={[OVERSEER_ISLAND.x, OVERSEER_ISLAND.y, OVERSEER_ISLAND.z]}>
+      {/* 네 귀퉁이의 고딕 첨탑: 사원과 성당이 섞인 탑 */}
+      {[-1, 1].flatMap((a) =>
+        [-1, 1].map((b) => (
+          <group key={`${a}${b}`} position={[a * 21, 0, b * 21]}>
+            <mesh position={[0, 22, 0]}>
+              <boxGeometry args={[4, 44, 4]} />
+              <meshStandardMaterial color="#120f12" metalness={0.7} roughness={0.4} emissive="#200407" emissiveIntensity={0.6} />
+            </mesh>
+            <mesh position={[0, 58, 0]} rotation={[0, Math.PI / 4, 0]}>
+              <coneGeometry args={[3, 28, 4]} />
+              <meshStandardMaterial color="#120f12" metalness={0.7} roughness={0.4} emissive="#200407" emissiveIntensity={0.6} />
+            </mesh>
+            <mesh position={[0, 30, b * 2.02]}>
+              <planeGeometry args={[1.2, 10]} />
+              <meshBasicMaterial color="#ff1030" toneMapped={false} side={THREE.DoubleSide} />
+            </mesh>
+          </group>
+        ))
+      )}
+      {/* 정면의 장미창: 눈동자처럼 생긴 둥근 스테인드글라스 */}
+      <group position={[0, 16, 18.1]}>
+        <mesh>
+          <circleGeometry args={[7, 48]} />
+          <meshBasicMaterial color="#3a0610" toneMapped={false} />
+        </mesh>
+        {Array.from({ length: 12 }, (_, i) => (
+          <mesh key={i} rotation={[0, 0, (i / 12) * Math.PI * 2]} position={[0, 0, 0.05]}>
+            <planeGeometry args={[0.3, 13.6]} />
+            <meshBasicMaterial color="#ffb02e" toneMapped={false} />
+          </mesh>
+        ))}
+        <mesh position={[0, 0, 0.08]}>
+          <ringGeometry args={[6.6, 7.2, 48]} />
+          <meshBasicMaterial color="#ffb02e" toneMapped={false} />
+        </mesh>
+        <mesh position={[0, 0, 0.1]}>
+          <circleGeometry args={[2, 32]} />
+          <meshBasicMaterial color="#ff1030" toneMapped={false} />
+        </mesh>
+      </group>
       {tiers.map((t, i) => (
         <group key={i} position={[0, t.y, 0]}>
           <mesh position={[0, t.h / 2, 0]}>
@@ -398,18 +433,18 @@ const SIGN_COLORS = ["#ff2a4d", "#22f0ff", "#ffe14d", "#7dff7a", "#ff2bd6", "#ff
 function VerticalSigns() {
   const signs = useMemo(() => {
     const r = rng(23);
-    const out: { pos: [number, number, number]; h: number; word: string; color: string; flip: boolean }[] = [];
+    const out: { pos: [number, number, number]; h: number; word: string; color: string; flip: boolean; pair: number }[] = [];
     let k = 0;
-    for (const b of BLOCKS) {
-      if (b.x1 < -AVENUE - 2.5 && b.x1 > -AVENUE - 3) {
-        /* 왼쪽 블록 */
-      }
-      const edgeX = b.x0 > 0 ? b.x0 - 2 : b.x1 + 2; // 인도 끝
-      const side = b.x0 > 0 ? 1 : -1;
-      for (let z = b.z1 - 3; z > b.z0 + 2; z -= 5 + r() * 4) {
+    // 큰길 쪽 벽(x=±11.5)에, 좌우 똑같은 자리·똑같은 글자로
+    for (const l of LOTS) {
+      if (l.side < 0 || l.col !== 0) continue;
+      for (let z = l.z1 - 2; z > l.z0 + 1.5; z -= 4.5 + r() * 3) {
         const word = SIGN_WORDS[k % SIGN_WORDS.length];
         const h = 1.1 * word.length + 0.6;
-        out.push({ pos: [edgeX + side * 0.2, 3.2 + r() * 7 + h / 2, z], h, word, color: SIGN_COLORS[k % SIGN_COLORS.length], flip: side < 0 });
+        const y = 3.2 + r() * 7 + h / 2;
+        const color = SIGN_COLORS[k % SIGN_COLORS.length];
+        out.push({ pos: [l.x0 - 1.2, y, z], h, word, color, flip: false, pair: k });
+        out.push({ pos: [-(l.x0 - 1.2), y, z], h, word, color, flip: true, pair: k });
         k++;
       }
     }
@@ -430,7 +465,9 @@ function VerticalSigns() {
     const t = s.clock.elapsedTime;
     mats.current.forEach((m, i) => {
       if (!m) return;
-      const dead = i % 7 === 3 && Math.sin(t * 17 + i) > 0.6;
+      // 지직거리는 순간까지 좌우 짝이 똑같다
+      const p = signs[i].pair;
+      const dead = p % 5 === 3 && Math.sin(t * 17 + p) > 0.6;
       m.color.setScalar(dead ? 0.15 : 1);
     });
   });
@@ -453,46 +490,29 @@ function VerticalSigns() {
   );
 }
 
-/* ---------- 청사초롱 줄과 엉킨 전깃줄 ---------- */
+/* ---------- 큰길을 가로지르는 연등 줄과 전깃줄 (좌우 대칭) ---------- */
 function Lanterns() {
-  const { lanterns, wires } = useMemo(() => {
-    const lanterns: THREE.Vector3[] = [];
-    const wires: THREE.TubeGeometry[] = [];
-    const r = rng(31);
+  const strings = useMemo(() => {
     const rows = [18, 10, 2, -8, -18, -44, -52, -78, -84];
-    rows.forEach((z, i) => {
+    return rows.map((z, i) => {
       const y = 7 + (i % 3) * 1.4;
-      const sag = 1.4 + r();
-      const a = new THREE.Vector3(-AVENUE - 2, y, z);
-      const b = new THREE.Vector3(AVENUE + 2, y + (r() - 0.5), z + (r() - 0.5) * 3);
-      const mid = a.clone().lerp(b, 0.5);
-      mid.y -= sag;
-      const curve = new THREE.QuadraticBezierCurve3(a, mid, b);
-      wires.push(new THREE.TubeGeometry(curve, 20, 0.03, 4, false));
-      if (i % 2 === 0) for (let k = 1; k < 10; k++) lanterns.push(curve.getPoint(k / 10).add(new THREE.Vector3(0, -0.45, 0)));
-      // 전깃줄 몇 가닥 더
+      return { a: new THREE.Vector3(-AVENUE - 2, y, z), b: new THREE.Vector3(AVENUE + 2, y, z), sag: 1.6, n: 11, seed: i };
+    });
+  }, []);
+  const wires = useMemo(() => {
+    const out: THREE.TubeGeometry[] = [];
+    [14, 6, -2, -14, -48, -74].forEach((z, i) => {
       for (let w = 0; w < 2; w++) {
-        const a2 = a.clone().add(new THREE.Vector3(0, 1 + w * 0.7 + r(), (r() - 0.5) * 4));
-        const b2 = b.clone().add(new THREE.Vector3(0, 0.5 + r() * 1.5, (r() - 0.5) * 4));
-        const m2 = a2.clone().lerp(b2, 0.5);
-        m2.y -= 1 + r() * 1.5;
-        wires.push(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(a2, m2, b2), 20, 0.022, 4, false));
+        const y = 9 + w * 0.8 + (i % 2) * 0.6;
+        const A = new THREE.Vector3(-AVENUE - 2, y, z);
+        const B = new THREE.Vector3(AVENUE + 2, y, z);
+        const M = A.clone().lerp(B, 0.5);
+        M.y -= 1.4 + w * 0.5;
+        out.push(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(A, M, B), 20, 0.022, 4, false));
       }
     });
-    return { lanterns, wires };
+    return out;
   }, []);
-  const body = useRef<THREE.InstancedMesh>(null);
-  const cap = useRef<THREE.InstancedMesh>(null);
-  useLayoutEffect(() => {
-    lanterns.forEach((p, i) => {
-      tmpM.compose(p, tmpQ.identity(), tmpS.set(1, 1, 1));
-      body.current!.setMatrixAt(i, tmpM);
-      tmpM.compose(tmpV.copy(p).add(new THREE.Vector3(0, 0.26, 0)), tmpQ.identity(), tmpS.set(1, 1, 1));
-      cap.current!.setMatrixAt(i, tmpM);
-    });
-    body.current!.instanceMatrix.needsUpdate = true;
-    cap.current!.instanceMatrix.needsUpdate = true;
-  }, [lanterns]);
   return (
     <group>
       {wires.map((g, i) => (
@@ -500,15 +520,7 @@ function Lanterns() {
           <meshBasicMaterial color="#050506" />
         </mesh>
       ))}
-      {/* 홍색 몸통, 청색 위 덮개 */}
-      <instancedMesh ref={body} args={[undefined, undefined, lanterns.length]} frustumCulled={false}>
-        <cylinderGeometry args={[0.2, 0.2, 0.42, 10]} />
-        <meshBasicMaterial color="#ff3a3a" toneMapped={false} />
-      </instancedMesh>
-      <instancedMesh ref={cap} args={[undefined, undefined, lanterns.length]} frustumCulled={false}>
-        <cylinderGeometry args={[0.12, 0.21, 0.12, 10]} />
-        <meshBasicMaterial color="#2a5cff" toneMapped={false} />
-      </instancedMesh>
+      <LotusStrings strings={strings} />
     </group>
   );
 }
@@ -516,22 +528,25 @@ function Lanterns() {
 /* ---------- 전광판 ---------- */
 function Billboards({ lang }: { lang: Lang }) {
   const spots = useMemo(() => {
-    // 큰길 쪽 블록 벽면 (x = ±(AVENUE+2))
-    const out: { pos: [number, number, number]; rotY: number; w: number; h: number }[] = [];
-    const zs = [6, -12, -44, -52, -78];
-    zs.forEach((z, i) => {
-      const s = i % 2 ? 1 : -1;
-      out.push({ pos: [s * (AVENUE + 1.85), 9 + (i % 3) * 4, z], rotY: (-s * Math.PI) / 2, w: 11, h: 5.5 });
+    // 큰길 쪽 건물 벽면 (x = ±11.35). 좌우 같은 높이, 같은 문구
+    const out: { pos: [number, number, number]; rotY: number; w: number; h: number; k: number }[] = [];
+    const rows: [number, number, number, number][] = [
+      [7, 10, 9, 4.5],
+      [-6, 14, 9, 4.5],
+      [-20, 22, 5, 11],
+      [-44, 11, 9, 4.5],
+      [-53, 19, 7, 3.5],
+      [-74, 12, 9, 4.5],
+    ];
+    rows.forEach(([z, y, w, h], k) => {
+      for (const s of [-1, 1]) out.push({ pos: [s * (AVENUE + 2.35), y, z], rotY: (-s * Math.PI) / 2, w, h, k });
     });
-    out.push({ pos: [AVENUE + 1.85, 7, 0], rotY: -Math.PI / 2, w: 7, h: 3.5 });
-    out.push({ pos: [-(AVENUE + 1.85), 20, -20], rotY: Math.PI / 2, w: 6, h: 12 });
-    out.push({ pos: [AVENUE + 1.85, 22, -30 + 4], rotY: -Math.PI / 2, w: 6, h: 12 });
     return out;
   }, []);
   const textures = useMemo(
     () =>
       spots.map((s, i) => {
-        const b = billboards[i % billboards.length];
+        const b = billboards[s.k % billboards.length];
         const [big, small] = b[lang];
         const tall = s.h > s.w;
         return signTexture(
@@ -556,7 +571,8 @@ function Billboards({ lang }: { lang: Lang }) {
     mats.current.forEach((m, i) => {
       if (!m) return;
       // 가끔 지직거리는 전광판
-      const g = Math.sin(t * 9 + i * 7) > 0.995 ? 0.3 : 1;
+      const k = spots[i].k;
+      const g = Math.sin(t * 9 + k * 7) > 0.995 ? 0.3 : 1;
       m.color.setScalar(0.9 * g);
     });
   });
@@ -621,7 +637,9 @@ function Cameras({ onTracked }: { onTracked: (v: boolean) => void }) {
     CAMERA_POLES.forEach(([x, , z], i) => {
       const h = heads.current[i];
       if (!h) return;
-      const d = Math.hypot(player.pos.x - x, player.pos.z - z);
+      // 골목은 지도에 없다: 큰길과 광장에 있을 때만 카메라가 따라온다
+      const onAvenue = Math.abs(player.pos.x) < AVENUE + 3 || player.pos.z > 14;
+      const d = onAvenue ? Math.hypot(player.pos.x - x, player.pos.z - z) : 99;
       if (d < 20) {
         any = true;
         target.set(player.pos.x, player.pos.y, player.pos.z);
@@ -726,14 +744,18 @@ function Drones() {
   const glow = useGlowTexture();
   const drones = useMemo(
     () =>
-      Array.from({ length: 6 }, (_, i) => ({
-        cx: (i % 2 ? 1 : -1) * (2 + (i % 3) * 3),
-        cz: -10 - i * 13,
-        r: 6 + (i % 3) * 3,
+      // 거울처럼 짝지어 반대 방향으로 똑같이 돈다
+      Array.from({ length: 4 }, (_, i) => ({
+        cx: 4 + (i % 2) * 2,
+        cz: -8 - i * 19,
+        r: 5 + (i % 3) * 2,
         y: 13 + (i % 3) * 4,
         speed: 0.25 + (i % 4) * 0.08,
         phase: i * 1.7,
-      })),
+      })).flatMap((d) => [
+        { ...d, m: 1 },
+        { ...d, m: -1 },
+      ]),
     []
   );
   const refs = useRef<(THREE.Group | null)[]>([]);
@@ -744,8 +766,8 @@ function Drones() {
       const g = refs.current[i];
       if (!g) return;
       const a = t * d.speed + d.phase;
-      g.position.set(d.cx + Math.cos(a) * d.r, d.y + Math.sin(t * 1.3 + i) * 0.4, d.cz + Math.sin(a) * d.r);
-      g.rotation.y = -a;
+      g.position.set(d.m * (d.cx + Math.cos(a) * d.r), d.y + Math.sin(t * 1.3 + (i >> 1)) * 0.4, d.cz + Math.sin(a) * d.r);
+      g.rotation.y = -a * d.m;
       const sp = spots.current[i];
       if (sp) sp.position.set(g.position.x, 0.03, g.position.z);
     });
@@ -798,7 +820,7 @@ function Queue() {
   const slots = useMemo(
     () =>
       QUEUE_X.flatMap((x) => QUEUE_Z.map((z) => [x, z] as [number, number])).filter(
-        ([x, z]) => !(x === CITY_NPCS.whisper.pos[0] && z === CITY_NPCS.whisper.pos[2])
+        ([x, z]) => !(Math.abs(x) === CITY_NPCS.whisper.pos[0] && z === CITY_NPCS.whisper.pos[2])
       ),
     []
   );
@@ -869,35 +891,50 @@ function Marchers() {
 }
 
 /* ---------- 순찰 기계 P-3 ---------- */
-function Patrol({ onTap }: { onTap: TapFn }) {
+// P-3과 그 거울상 P-3′는 완전히 같은 박자로 움직인다
+function Patrols({ onTap }: { onTap: TapFn }) {
+  return (
+    <group>
+      <Patrol onTap={onTap} id="patrol" m={1} />
+      <Patrol onTap={onTap} id="patrol2" m={-1} />
+    </group>
+  );
+}
+
+const patrolState = { z: -10, dir: -1, stop: false, t: 0 };
+function Patrol({ onTap, id, m }: { onTap: TapFn; id: string; m: number }) {
   const ref = useRef<THREE.Group>(null);
   const legL = useRef<THREE.Group>(null);
   const legR = useRef<THREE.Group>(null);
-  const item = CITY.items.find((i) => i.id === "patrol")!;
-  const st = useRef({ z: -10, dir: -1 });
+  const item = CITY.items.find((i) => i.id === id)!;
+  const st = { current: patrolState };
   useFrame((s, dt) => {
     const g = ref.current;
     if (!g) return;
-    const near = Math.hypot(player.pos.x - g.position.x, player.pos.z - g.position.z) < 4;
     const t = s.clock.elapsedTime;
+    // 둘 중 하나에게라도 가까이 가면 둘 다 멈춘다 (한 번만 계산)
+    if (m > 0) st.current.stop = Math.hypot(Math.abs(player.pos.x) - 6.2, player.pos.z - st.current.z) < 4;
+    const near = st.current.stop;
     if (!near) {
-      st.current.z += st.current.dir * dt * 1.6;
+      if (m > 0) st.current.z += st.current.dir * dt * 1.6;
       if (st.current.z < -84) st.current.dir = 1;
       if (st.current.z > 12) st.current.dir = -1;
-      g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, st.current.dir < 0 ? 0 : Math.PI, 0.05);
+      g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, st.current.dir < 0 ? 0 : Math.PI * m, 0.05);
       const sw = Math.sin(t * 5) * 0.4;
       if (legL.current) legL.current.rotation.x = sw;
       if (legR.current) legR.current.rotation.x = -sw;
     } else {
       // 멈춰서 플레이어를 바라봄 (모델 정면은 -z)
-      const a = Math.atan2(g.position.x - player.pos.x, g.position.z - player.pos.z);
-      g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, a, 0.1);
+      // 거울상은 당신이 아니라, 당신의 거울 위치를 바라본다
+      const a = Math.atan2(6.2 - player.pos.x, g.position.z - player.pos.z);
+      const yaw = m > 0 ? a : -a;
+      g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, yaw, 0.1);
     }
-    g.position.set(6.2, 0, st.current.z);
-    item.pos.set(6.2, 2, st.current.z);
+    g.position.set(6.2 * m, 0, st.current.z);
+    item.pos.set(6.2 * m, 2, st.current.z);
   });
   return (
-    <Tap id="patrol" onTap={onTap}>
+    <Tap id={id} onTap={onTap}>
       <group ref={ref}>
         {[-1, 1].map((k) => (
           <group key={k} ref={k < 0 ? legL : legR} position={[k * 0.28, 1.3, 0]}>
@@ -979,58 +1016,24 @@ function Vendor({ onTap }: { onTap: TapFn }) {
 function Whisper({ onTap }: { onTap: TapFn }) {
   const { pos } = CITY_NPCS.whisper;
   const head = useRef<THREE.Group>(null);
+  const twin = useRef<THREE.Group>(null);
   useFrame(() => {
     const near = Math.hypot(player.pos.x - pos[0], player.pos.z - pos[2]) < 3;
     if (head.current) head.current.rotation.y = THREE.MathUtils.lerp(head.current.rotation.y, near ? 0.9 : Math.PI, 0.04);
+    // 반대편 줄의 짝도 같은 순간 똑같이 (거울처럼) 고개를 돌린다
+    if (twin.current && head.current) twin.current.rotation.y = -head.current.rotation.y;
   });
   return (
-    <Tap id="whisper" onTap={onTap}>
-      <group ref={head} position={pos} rotation={[0, Math.PI, 0]}>
+    <group>
+      <Tap id="whisper" onTap={onTap}>
+        <group ref={head} position={pos} rotation={[0, Math.PI, 0]}>
+          <Human position={[0, 0, 0]} color="#5f626b" skin="#c0b4aa" visor="#7dff7a" />
+        </group>
+      </Tap>
+      <group ref={twin} position={[-pos[0], 0, pos[2]]} rotation={[0, -Math.PI, 0]}>
         <Human position={[0, 0, 0]} color="#5f626b" skin="#c0b4aa" visor="#7dff7a" />
       </group>
-    </Tap>
-  );
-}
-
-/* ---------- 방공호 입구 (배전실로 위장) ---------- */
-function Hatch({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
-  const sign = useSign([[lang === "ko" ? "배전실 7-B" : "SUBSTATION 7-B", 1], ["⚡ DANGER · 고압 주의", 0.6]], { color: "#e8e2c8", bg: "#1a1a14", w: 512, h: 200, border: true });
-  const tex = useMemo(() => {
-    const t = concreteTexture(15, 60);
-    t.repeat.set(2, 1);
-    return t;
-  }, []);
-  const lamp = useRef<THREE.MeshBasicMaterial>(null);
-  useFrame((s) => {
-    if (lamp.current) lamp.current.color.setRGB(0.2, 1, 0.5).multiplyScalar(0.6 + Math.sin(s.clock.elapsedTime * 2) * 0.4);
-  });
-  const [x, , z] = HATCH.pos;
-  return (
-    <Tap id="hatch" onTap={onTap}>
-      <group position={[x, 0, z + 0.5]}>
-        <mesh position={[0, 1.6, 0]}>
-          <boxGeometry args={[5.4, 3.2, 4.2]} />
-          <meshStandardMaterial map={tex} color="#77756e" roughness={0.9} />
-        </mesh>
-        <mesh position={[0, 3.3, 0]}>
-          <boxGeometry args={[5.8, 0.2, 4.6]} />
-          <meshStandardMaterial color="#2a2a2a" roughness={0.7} />
-        </mesh>
-        <mesh position={[0, 1.15, -2.11]}>
-          <boxGeometry args={[1.4, 2.3, 0.05]} />
-          <meshStandardMaterial color="#3a4a3a" metalness={0.6} roughness={0.5} />
-        </mesh>
-        <mesh position={[0, 2.75, -2.12]}>
-          <planeGeometry args={[2.4, 0.9]} />
-          <meshBasicMaterial map={sign} />
-        </mesh>
-        <mesh position={[0.9, 2.45, -2.13]}>
-          <circleGeometry args={[0.07, 12]} />
-          <meshBasicMaterial ref={lamp} color="#3f8" toneMapped={false} />
-        </mesh>
-        <pointLight position={[0, 2.6, -3]} intensity={6} distance={7} color="#66ff99" />
-      </group>
-    </Tap>
+    </group>
   );
 }
 
@@ -1100,16 +1103,23 @@ function CookieHolo() {
 export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: TapFn; onTracked: (v: boolean) => void }) {
   return (
     <group>
-      <fog attach="fog" args={["#140c12", 12, 120]} />
+      <fogExp2 attach="fog" args={["#1a0e18", 0.0062]} />
       <Sky />
-      <ambientLight intensity={0.3} color="#8a90b0" />
+      <CloudSea />
+      <ambientLight intensity={0.32} color="#8a90b0" />
       <hemisphereLight args={["#3a3050", "#05050a", 0.5]} />
       <directionalLight position={[-30, 60, 20]} intensity={0.25} color="#8aa0ff" />
-      <pointLight position={[0, 6, 14]} intensity={30} distance={26} color="#22f0ff" />
       <pointLight position={[0, 8, -40]} intensity={40} distance={30} color="#ff2bd6" />
+      <pointLight position={[0, 6, 10]} intensity={30} distance={26} color="#22f0ff" />
+      <Platform />
+      <Islands />
+      <Bridge />
+      <TwinBuddhas />
+      <AirTraffic />
+      <Arks />
       <Towers />
       <Ground />
-      <Walls lang={lang} />
+      <Gate lang={lang} />
       <Overseer />
       <Billboards lang={lang} />
       <VerticalSigns />
@@ -1120,14 +1130,24 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
       <Drones />
       <Queue />
       <Marchers />
-      <Patrol onTap={onTap} />
+      <Patrols onTap={onTap} />
       <Vendor onTap={onTap} />
+      <VendorReplica />
       <Whisper onTap={onTap} />
+      <AlleyDecor />
+      <AlleyPeople />
       <Hatch lang={lang} onTap={onTap} />
+      <Grandma lang={lang} onTap={onTap} />
+      <Courier onTap={onTap} />
+      <EdgeKid onTap={onTap} />
+      <RoboMonk onTap={onTap} />
+      <BellPavilion />
+      <StonePagoda />
+      <Scopes onTap={onTap} />
       <CookieHolo />
       <Rain />
       <Sparkles count={40} scale={[4, 3, 4]} position={[-5, 1.2, -20]} size={8} speed={0.4} color="#888" opacity={0.25} />
-      <Sparkles count={40} scale={[4, 3, 4]} position={[5, 1.2, -56]} size={8} speed={0.4} color="#888" opacity={0.25} />
+      <Sparkles count={40} scale={[4, 3, 4]} position={[5, 1.2, -20]} size={8} speed={0.4} color="#888" opacity={0.25} />
     </group>
   );
 }

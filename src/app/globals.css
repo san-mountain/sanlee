@@ -190,7 +190,7 @@ img { max-width: 100%; height: auto; display: block; }
 .cookie-popup .cp-reject { border-color: var(--pink); color: var(--pink); box-shadow: 0 0 8px #ff2bd6aa; }
 .plaque3d { pointer-events: none; font-family: var(--mono); font-size: 11px; color: var(--yellow); white-space: nowrap;
   background: #07030fcc; border: 1px solid #ffe14d88; padding: 3px 8px; }
-.toast { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 12px;
+.toast { position: absolute; top: 82px; left: 50%; transform: translateX(-50%); font-family: var(--mono); font-size: 12px;
   color: var(--yellow); border: 1px solid #ffe14d88; background: #07030fdd; padding: 8px 12px; white-space: nowrap; animation: panelIn .3s ease-out; }
 .work-img { width: 100%; height: auto; display: block; margin-bottom: 12px; }
 .hud, .hint, .toast { z-index: 30; }
@@ -316,3 +316,45 @@ img { max-width: 100%; height: auto; display: block; }
 .crosshair::before, .crosshair::after { content: ""; position: absolute; background: #ffffffb0; box-shadow: 0 0 4px #000; }
 .crosshair::before { left: 6px; top: 0; width: 2px; height: 14px; }
 .crosshair::after { top: 6px; left: 0; height: 2px; width: 14px; }
+
+/* ---------- explore v3: 설정창(제4의 벽), 퀘스트 화살표, 점프 버튼 ---------- */
+/* 설정창은 일부러 게임 화면과 어울리지 않는, 무표정한 시스템 창처럼 보이게 한다 */
+.pause-wrap { position: absolute; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px;
+  background: #0008; -webkit-backdrop-filter: blur(3px) grayscale(.6); backdrop-filter: blur(3px) grayscale(.6); }
+.pause { width: min(440px, 100%); max-height: 92vh; overflow: auto; background: #f2f2f0; color: #222; border-radius: 6px;
+  box-shadow: 0 20px 60px #000a; padding: 20px 20px 16px; font-size: 14px; animation: panelIn .25s ease-out; user-select: none; }
+.pause-head h2 { margin: 0; font-family: var(--mono); font-size: 15px; letter-spacing: .12em; color: #111; }
+.pause-head p { margin: 4px 0 14px; color: #777; font-size: 12px; }
+.pause-rows { border-top: 1px solid #ddd; }
+.pause-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid #e4e4e2; }
+.pause-row input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: #2a6cff; }
+.pause-row small { grid-column: 1 / -1; color: #888; font-size: 11px; font-family: var(--mono); }
+.pause-row.locked { opacity: .55; }
+.pause-note { margin: -4px 0 0; padding: 0 0 8px; font-size: 11px; color: #999; font-family: var(--mono); border-bottom: 1px solid #e4e4e2; }
+.pause .switch { font: inherit; font-family: var(--mono); font-size: 12px; min-width: 54px; padding: 5px 10px; border: 1px solid #bbb; background: #fff; color: #333; border-radius: 3px; cursor: pointer; }
+.pause .switch.on { background: #2a6cff; border-color: #2a6cff; color: #fff; }
+.pause .switch.danger { color: #c22; }
+.explore-root .pause .lang-toggle { color: #999; border-color: #bbb; background: #fff; }
+.explore-root .pause .lang-toggle .on { color: #111; }
+.pause-wall { min-height: 3.4em; margin: 14px 0 6px; font-family: var(--mono); font-size: 12px; line-height: 1.55; color: #b0202a; animation: panelIn .4s ease-out; }
+.pause-actions { display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; }
+.explore-root .pause .btn { color: #333; border-color: #bbb; background: #fff; border-radius: 3px; }
+.explore-root .pause .btn.primary { color: #fff; background: #2a6cff; border-color: #2a6cff; }
+.hud-gear { font: inherit; font-size: 15px; line-height: 1; background: transparent; color: var(--dim); border: 1px solid #4a3d6b; padding: 3px 7px; cursor: pointer; }
+.hud-gear:hover { color: var(--fg); }
+
+.quest { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); z-index: 30; pointer-events: none; display: flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 11px; color: var(--yellow); text-shadow: 0 0 6px #000; white-space: nowrap;
+  padding: 3px 10px; border: 1px solid #ffe14d55; background: #07030f99; transition: opacity .3s; }
+.quest-arrow { display: inline-block; font-size: 12px; transition: transform .08s linear; color: var(--yellow); }
+.quest-dist { color: var(--dim); }
+.quest.close { opacity: .35; }
+
+.jump-btn { position: absolute; right: 22px; bottom: 96px; z-index: 32; width: 58px; height: 58px; border-radius: 50%;
+  border: 1px solid #22f0ff88; background: #07030f88; color: var(--cyan); font-size: 22px; touch-action: none; }
+.jump-btn:active { background: #22f0ff33; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .quest { top: 30px; }
+  .jump-btn { bottom: 60px; right: 18px; width: 52px; height: 52px; }
+  .pause { max-height: 94vh; padding: 14px 16px 12px; }
+}

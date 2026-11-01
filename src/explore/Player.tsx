@@ -11,6 +11,8 @@ const EYE = 1.65;
 const WALK = 3.4;
 const RUN = 6.2;
 const RADIUS = 0.38;
+const JUMP_V = 6.2;
+const GRAVITY = 19;
 
 export const player = { pos: new THREE.Vector3(), yaw: 0 };
 // 디버그(?debug)에서 순간이동할 때 쓰는 요청
@@ -20,13 +22,14 @@ type Props = {
   zone: ZoneDef;
   zoneKey: string;
   onNear: (item: Interactable | null) => void;
+  arrived?: boolean;
 };
 
 // 1인칭 이동: 키보드·조이스틱으로 걷고, 드래그로 고개를 돌린다
-export default function Player({ zone, zoneKey, onNear }: Props) {
+export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const aspect = useThree((s) => s.size.width / s.size.height);
-  const st = useRef({ yaw: 0, pitch: 0, x: 0, z: 0, bob: 0, near: null as string | null });
+  const st = useRef({ yaw: 0, pitch: 0, x: 0, z: 0, bob: 0, near: null as string | null, y: 0, vy: 0 });
 
   useEffect(() => {
     camera.fov = aspect < 0.8 ? 78 : aspect < 1.2 ? 70 : 62;
@@ -35,15 +38,18 @@ export default function Player({ zone, zoneKey, onNear }: Props) {
 
   useEffect(() => {
     const s = st.current;
-    s.x = zone.spawn.pos[0];
-    s.z = zone.spawn.pos[2];
-    s.yaw = zone.spawn.yaw;
+    const sp = arrived && zone.entry ? zone.entry : zone.spawn;
+    s.x = sp.pos[0];
+    s.z = sp.pos[2];
+    s.yaw = sp.yaw;
     s.pitch = 0.04;
     s.near = null;
+    s.y = 0;
+    s.vy = 0;
     input.look.yaw = 0;
     input.look.pitch = 0;
     onNear(null);
-  }, [zoneKey, zone, onNear]);
+  }, [zoneKey, zone, onNear, arrived]);
 
   const fwd = useRef(new THREE.Vector3());
   const tmp = useRef(new THREE.Vector3());
@@ -78,10 +84,22 @@ export default function Player({ zone, zoneKey, onNear }: Props) {
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
     s.x = p.x;
     s.z = p.z;
-    s.bob += moved * (mv.run ? 2.2 : 2.6);
+    // 점프: 땅에 있을 때만
+    if (input.jump && s.y <= 0 && input.enabled) s.vy = JUMP_V;
+    input.jump = false;
+    if (s.y > 0 || s.vy > 0) {
+      s.vy -= GRAVITY * dt;
+      s.y += s.vy * dt;
+      if (s.y <= 0) {
+        s.y = 0;
+        s.vy = 0;
+      }
+    }
+    const grounded = s.y <= 0;
+    if (grounded) s.bob += moved * (mv.run ? 2.2 : 2.6);
 
-    const bobY = Math.sin(s.bob * 2) * 0.035 * Math.min(1, moved / (dt * 2 + 1e-4));
-    camera.position.set(s.x, EYE + bobY, s.z);
+    const bobY = input.bob && grounded ? Math.sin(s.bob * 2) * 0.035 * Math.min(1, moved / (dt * 2 + 1e-4)) : 0;
+    camera.position.set(s.x, EYE + s.y + bobY, s.z);
     camera.rotation.set(s.pitch, s.yaw, 0, "YXZ");
     player.pos.set(s.x, EYE, s.z);
     player.yaw = s.yaw;
