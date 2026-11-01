@@ -518,3 +518,8 @@ img { max-width: 100%; height: auto; display: block; }
 .work-index button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .wi-year, .wi-cat { color: var(--muted); font-size: var(--fs-meta); font-variant-numeric: tabular-nums; }
 .wi-title { word-break: keep-all; }
+
+/* 로고 옆 한자 이름: 명조, 같은 크기, 조금 옅게 */
+.nav-logo-han { margin-left: .5em; font-family: "Noto Serif KR", "Noto Serif CJK KR", "Songti SC", "Hiragino Mincho ProN", serif; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
+/* 맨 위 시 위의 선은 없앤다 */
+.poems .poem:first-of-type { border-top: 0; }

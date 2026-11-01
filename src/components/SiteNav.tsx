@@ -12,6 +12,7 @@ export default function SiteNav() {
     <header className="nav">
       <Link href="/" className="nav-logo">
         {profile.name}
+        <span className="nav-logo-han" lang="ko-Hani">李山</span>
       </Link>
       <nav className="nav-links" aria-label="Main">
         {sections.map((s) => (
