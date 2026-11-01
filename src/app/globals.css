@@ -233,9 +233,15 @@ img { max-width: 100%; height: auto; display: block; }
 .poem > summary::-webkit-details-marker { display: none; }
 .poem > summary::before { content: "+"; font-family: ui-monospace, Menlo, monospace; color: var(--muted); width: 1em; flex: none; }
 .poem[open] > summary::before { content: "−"; }
-.poem-title { flex: 1; font-size: 18px; font-weight: 600; }
+.poem-head { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.poem-title { font-size: 18px; font-weight: 600; }
+.poem-first { font-size: 14px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .2s; }
+.poem[open] .poem-first { display: none; }
+.poem-fold { display: block; margin: 8px 0 0; padding: 6px 0; background: none; border: 0; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; }
+.poem-fold:hover { color: inherit; text-decoration: underline; text-underline-offset: 4px; }
+.explore-root .poem-first, .explore-root .poem-fold { color: var(--dim); }
 .poem > summary .meta { white-space: nowrap; font-size: 13px; }
-.poem > summary:hover .poem-title { text-decoration: underline; text-underline-offset: 4px; }
+.poem > summary:hover .poem-title, .poem[open] > summary .poem-title { text-decoration: underline; text-underline-offset: 4px; }
 .poem-body { padding: 4px 0 30px 1.6em; animation: panelIn .3s ease-out; }
 .panel .panel-actions { position: sticky; bottom: -16px; margin: 14px -20px -16px; padding: 12px 20px 14px; background: linear-gradient(180deg, #07030fcc, #07030f 40%); border-top: 1px solid #2d2445; z-index: 2; }
 .explore-root .poem > summary .poem-title { color: var(--fg); }
