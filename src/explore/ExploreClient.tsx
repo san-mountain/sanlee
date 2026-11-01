@@ -212,6 +212,12 @@ export default function ExploreClient() {
   // Esc: 패널 닫기 / 설정창 열고 닫기. E: 대화 넘기기
   const panelRef = useRef(panel);
   panelRef.current = panel;
+  // 대화를 연 E 입력이 곧바로 첫 줄을 넘겨 버리지 않도록 잠깐 무시한다
+  const panelAt = useRef(0);
+  const hasPanel = !!panel;
+  useEffect(() => {
+    if (hasPanel) panelAt.current = performance.now();
+  }, [hasPanel]);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
   useEffect(() => {
@@ -224,7 +230,7 @@ export default function ExploreClient() {
         return;
       }
       const p = panelRef.current;
-      if (e.code === "KeyE" && !e.repeat && p?.kind === "dialog") {
+      if (e.code === "KeyE" && !e.repeat && p?.kind === "dialog" && performance.now() - panelAt.current > 250) {
         e.preventDefault();
         if (p.step < p.lines.length - 1) setPanel({ ...p, step: p.step + 1 });
         else closePanel();

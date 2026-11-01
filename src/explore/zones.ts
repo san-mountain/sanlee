@@ -128,7 +128,7 @@ export const BUNKER: ZoneDef = {
       radius: 3.4,
       label: p.w.title,
     })),
-    { id: "statue", kind: "statue", pos: v(0, 1.5, 2.2), radius: 3.6, label: { ko: "동상", en: "Statue" } },
+    { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "동상", en: "Statue" } },
     {
       id: "keeper",
       kind: "npc",
