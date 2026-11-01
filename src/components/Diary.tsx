@@ -39,37 +39,55 @@ const bar = {
       restore(e);
     }
   },
-  onAnimationEnd: (e: React.AnimationEvent<HTMLElement>) => e.currentTarget.classList.remove("cracking"),
+  onAnimationEnd: (e: React.AnimationEvent<HTMLElement>) =>
+    e.currentTarget.classList.remove("cracking"),
 };
 
 const LOGS: { ko: string[]; en: string[] }[] = [
   {
     ko: ["복원 요청 중…", "실패: 소유자가 private로 지정한 기록입니다."],
-    en: ["Requesting restore…", "Failed: the owner marked this record private."],
+    en: [
+      "Requesting restore…",
+      "Failed: the owner marked this record private.",
+    ],
   },
   {
     ko: ["백업 사본 검색 중…", "0건. 이 문장은 서버에 올라온 적이 없습니다."],
     en: ["Searching backups…", "0 found. This sentence was never uploaded."],
   },
-  { ko: ["접근 권한 확인 중…", "열람 가능: 작가 본인 1명"], en: ["Checking access…", "Readable by: the author (1)"] },
+  {
+    ko: ["접근 권한 확인 중…", "열람 가능: 작가 본인 1명"],
+    en: ["Checking access…", "Readable by: the author (1)"],
+  },
   {
     ko: ["해독 시도 중…", "해독 결과: (작가가 아직 읽히고 싶지 않음)"],
-    en: ["Attempting to decode…", "Result: (the author would rather not be read yet)"],
+    en: [
+      "Attempting to decode…",
+      "Result: (the author would rather not be read yet)",
+    ],
   },
   {
     ko: ["복원 요청 중…", "실패: 아직 쓰는 중인 문장입니다."],
-    en: ["Requesting restore…", "Failed: this sentence is still being written."],
+    en: [
+      "Requesting restore…",
+      "Failed: this sentence is still being written.",
+    ],
   },
 ];
-const KEEP = { ko: ["봉인 유지.", "고마워요."], en: ["Seal kept.", "Thank you."] };
+const KEEP = {
+  ko: ["봉인 유지.", "고마워요."],
+  en: ["Seal kept.", "Thank you."],
+};
 const DODGES = 5; // [열기]는 다섯 번 도망간 뒤에야 눌린다. 눌러도 열리진 않는다.
 
 // 가린 곳을 누르면 뜨는 작은 창: "열어 볼까요? [열기] [그대로 두기]"
 function RestoreDialog() {
   const { lang } = useLang();
-  const [phase, setPhase] = useState<null | { id: number; kind: "ask" } | { id: number; kind: "log"; lines: string[] }>(
-    null,
-  );
+  const [phase, setPhase] = useState<
+    | null
+    | { id: number; kind: "ask" }
+    | { id: number; kind: "log"; lines: string[] }
+  >(null);
   const [dodge, setDodge] = useState({ x: 0, y: 0, n: 0 });
   const last = useRef(-1);
   const justFled = useRef(false);
@@ -117,7 +135,12 @@ function RestoreDialog() {
   if (!phase) return null;
   if (phase.kind === "log")
     return (
-      <div key={phase.id} className="restore-log" role="status" aria-live="polite">
+      <div
+        key={phase.id}
+        className="restore-log"
+        role="status"
+        aria-live="polite"
+      >
         <span className="restore-line">
           <span className="restore-prompt">$</span> {phase.lines[0]}
         </span>
@@ -126,10 +149,17 @@ function RestoreDialog() {
     );
   const tired = dodge.n >= DODGES;
   return (
-    <div key={phase.id} className="restore-log restore-ask" role="dialog" aria-label="private">
+    <div
+      key={phase.id}
+      className="restore-log restore-ask"
+      role="dialog"
+      aria-label="private"
+    >
       <span className="restore-line">
         <span className="restore-prompt">$</span>{" "}
-        {lang === "ko" ? "private 기록입니다. 열어 볼까요?" : "This record is private. Open it?"}
+        {lang === "ko"
+          ? "private 기록입니다. 열어 볼까요?"
+          : "This record is private. Open it?"}
       </span>
       <span className="restore-buttons">
         <button
@@ -151,9 +181,20 @@ function RestoreDialog() {
             if (tired || e.detail === 0) fail();
           }}
         >
-          {lang === "ko" ? (tired ? "…열기" : "열기") : tired ? "…open" : "Open"}
+          {lang === "ko"
+            ? tired
+              ? "…열기"
+              : "열기"
+            : tired
+              ? "…open"
+              : "Open"}
         </button>
-        <button type="button" className="restore-keep" onClick={() => showLog(KEEP[lang])} autoFocus>
+        <button
+          type="button"
+          className="restore-keep"
+          onClick={() => showLog(KEEP[lang])}
+          autoFocus
+        >
           {lang === "ko" ? "그대로 두기" : "Leave it"}
         </button>
       </span>
@@ -177,7 +218,12 @@ function RedactedBlock({ n }: { n: number }) {
       {Array.from({ length: lines }, (_, i) => (
         <span
           key={i}
-          style={{ width: i === lines - 1 && lines > 1 ? `${35 + ((n * 7 + i * 13) % 50)}%` : undefined }}
+          style={{
+            width:
+              i === lines - 1 && lines > 1
+                ? `${35 + ((n * 7 + i * 13) % 50)}%`
+                : undefined,
+          }}
         />
       ))}
     </div>
@@ -187,7 +233,15 @@ function RedactedBlock({ n }: { n: number }) {
 function Inline({ text }: { text: string }) {
   const parts = text.split(MARK);
   return (
-    <>{parts.map((p, i) => (i % 2 === 1 ? <Redacted key={i} n={Number(p)} /> : <Fragment key={i}>{p}</Fragment>))}</>
+    <>
+      {parts.map((p, i) =>
+        i % 2 === 1 ? (
+          <Redacted key={i} n={Number(p)} />
+        ) : (
+          <Fragment key={i}>{p}</Fragment>
+        ),
+      )}
+    </>
   );
 }
 
@@ -226,7 +280,8 @@ function Body({ body }: { body: string }) {
 
 // 목록에 보이는 첫 줄: 가려진 곳은 짧은 막대 문자로
 function preview(body: string) {
-  const first = body.split("\n").find((l) => l.trim() && l.trim() !== "---") ?? "";
+  const first =
+    body.split("\n").find((l) => l.trim() && l.trim() !== "---") ?? "";
   return first.replace(MARK, "▇▇▇").replace(/^## /, "").trim();
 }
 
@@ -250,27 +305,35 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
           type="button"
           className="diary-sort"
           onClick={() => setNewestFirst((v) => !v)}
-          aria-label={lang === "ko" ? "정렬 바꾸기" : "Change order"}
+          aria-label={
+            lang === "ko"
+              ? `정렬 바꾸기 (지금: ${newestFirst ? "최신 순" : "오래된 순"})`
+              : `Change order (now: ${newestFirst ? "newest first" : "oldest first"})`
+          }
         >
-          {newestFirst
-            ? lang === "ko"
-              ? "최신 순 ⇅"
-              : "Newest first ⇅"
-            : lang === "ko"
-              ? "오래된 순 ⇅"
-              : "Oldest first ⇅"}
+          <span className="diary-sort-label">
+            {newestFirst
+              ? lang === "ko"
+                ? "최신 순"
+                : "Newest first"
+              : lang === "ko"
+                ? "오래된 순"
+                : "Oldest first"}
+          </span>{" "}
+          ⇅
         </button>
       </div>
       {list.map((d, i) => {
         if (d.hidden) {
           return (
             <div key={`h${d.date}`} className="poem diary-withheld" lang="ko">
-              <div className="diary-withheld-row">
+              <div
+                className="diary-withheld-row"
+                {...bar}
+                aria-label={`${d.date} · private`}
+              >
                 <span className="poem-head">
                   <span className="poem-title">{d.date}</span>
-                  <span className="poem-first">
-                    <span className="diary-withheld-bar" {...bar} />
-                  </span>
                 </span>
                 <span className="meta">private</span>
               </div>
@@ -282,14 +345,17 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
           <details
             key={`${e.date}-${e.title ?? ""}`}
             data-group="diary"
-            id={inExplore ? undefined : `diary-${e.date}${e.title ? `-${i}` : ""}`}
+            id={
+              inExplore ? undefined : `diary-${e.date}${e.title ? `-${i}` : ""}`
+            }
             className="poem diary-entry"
             lang="ko"
           >
             <summary
               onClick={(ev) => {
                 ev.preventDefault();
-                const det = ev.currentTarget.parentElement as HTMLDetailsElement;
+                const det = ev.currentTarget
+                  .parentElement as HTMLDetailsElement;
                 unfold(det, !det.open || det.dataset.closing === "1");
               }}
             >
@@ -313,7 +379,9 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
                   const det = ev.currentTarget.closest("details");
                   if (!det) return;
                   unfold(det, false);
-                  det.querySelector("summary")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                  det
+                    .querySelector("summary")
+                    ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
                 }}
               >
                 {lang === "ko" ? "↑ 접기" : "↑ Fold"}

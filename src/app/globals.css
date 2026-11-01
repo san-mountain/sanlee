@@ -834,3 +834,17 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .diary-withheld .poem-title { color: var(--muted); }
 .diary-withheld .poem-first { overflow: visible; }
 .diary-withheld .diary-withheld-bar { display: inline-block; vertical-align: middle; height: .95em; width: min(11em, 70%); }
+
+/* 본문 전체가 private인 일기는 날짜 줄만. 줄을 누르면 열기 창이 뜨고, 줄이 살짝 떨린다 */
+.diary-withheld-row { cursor: pointer; }
+.diary-withheld-row:hover .poem-title { color: var(--ink); }
+.diary-withheld-row:focus-visible { outline: 1px dashed var(--muted); outline-offset: 2px; }
+.diary-withheld-row.cracking { animation: rowRefuse .4s ease 1; }
+@keyframes rowRefuse { 0%, 100% { transform: none; } 20% { transform: translateX(-4px); } 40% { transform: translateX(3px); } 60% { transform: translateX(-2px); } 80% { transform: translateX(1px); } }
+@media (prefers-reduced-motion: reduce) { .diary-withheld-row.cracking { animation: none; } }
+/* 모바일: 정렬 버튼은 ⇅만, 설명이 넓게 */
+@media (max-width: 520px) {
+  .diary-head { align-items: flex-start; gap: 12px; }
+  .diary-sort-label { display: none; }
+  .diary-sort { font-size: 16px; padding: 2px 4px; }
+}
