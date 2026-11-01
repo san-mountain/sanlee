@@ -9,28 +9,23 @@ export default function Home() {
     <>
       <SiteNav />
       <main className="page wide home">
-        <section className="hero">
-          <h1>
-            <T s={profile.displayName} />
-          </h1>
+        <h1 className="sr-only">
+          <T s={profile.displayName} />
+        </h1>
+        <div className="home-bar">
           <p className="tagline">
             <T s={profile.tagline} />
           </p>
           <Link href="/explore" className="explore-cta">
             <T s={ui.exploreCta} />
           </Link>
-        </section>
-        <section className="home-works">
-          <div className="section-head">
-            <h2>
-              <T s={ui.selected} />
-            </h2>
-            <Link href="/works">
-              <T s={ui.allWorks} />
-            </Link>
-          </div>
-          <WorksGrid limit={6} />
-        </section>
+        </div>
+        <WorksGrid limit={6} />
+        <div className="home-more">
+          <Link href="/works">
+            <T s={ui.allWorks} />
+          </Link>
+        </div>
       </main>
     </>
   );

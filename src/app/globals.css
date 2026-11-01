@@ -45,11 +45,15 @@ img { max-width: 100%; height: auto; display: block; }
 .page.wide { max-width: 1280px; }
 .page h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 700; letter-spacing: -.01em; margin: 0 0 28px; line-height: 1.2; }
 
-.hero { padding: clamp(24px, 8vw, 96px) 0 clamp(32px, 6vw, 72px); }
-.hero h1 { font-size: clamp(48px, 11vw, 120px); letter-spacing: -.03em; margin: 0 0 8px; line-height: 1; }
-.tagline { color: var(--muted); font-size: clamp(16px, 2vw, 20px); margin: 0 0 32px; }
-.explore-cta { display: inline-block; padding: 12px 20px; border: 1px solid var(--ink); text-decoration: none; font-size: 15px; }
-.explore-cta:hover { background: var(--ink); color: var(--paper); opacity: 1; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.home-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 24px;
+  border-bottom: 1px solid var(--rule); padding: 4px 0 16px; margin: 0 0 clamp(24px, 4vw, 44px); }
+.tagline { color: var(--muted); font-size: 14px; margin: 0; letter-spacing: .02em; }
+.explore-cta { font-size: 14px; text-decoration: none; border-bottom: 1px solid var(--ink); padding-bottom: 1px; }
+.explore-cta:hover { opacity: .6; }
+.home-more { border-top: 1px solid var(--rule); padding-top: 16px; text-align: right; font-size: 14px; }
+.home-more a { text-decoration: none; color: var(--muted); }
+.home-more a:hover { color: var(--ink); opacity: 1; }
 .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
   border-top: 1px solid var(--ink); padding-top: 14px; margin-bottom: 24px; }
 .section-head h2 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .02em; }
@@ -218,4 +222,12 @@ img { max-width: 100%; height: auto; display: block; }
   .panel { width: min(460px, 40vw); max-height: calc(100vh - 96px); overflow: auto; }
   .intro .panel { width: min(520px, 90vw); }
   .hud { padding: 18px 24px; font-size: 13px; }
+}
+
+/* 메인: 이름 대신 작업이 먼저 보이도록 */
+.page.home { padding-top: 20px; }
+@media (max-width: 719px) {
+  .home .grid { columns: 2; column-gap: 14px; }
+  .home .grid li { margin-bottom: 22px; }
+  .home .caption { font-size: 12px; line-height: 1.5; }
 }
