@@ -643,3 +643,24 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 /* 게임 규칙 안내: 15초 동안 보이고, 마지막 1초에 천천히 사라진다 */
 .gaze-tip { animation: panelIn .3s ease-out, tipOut 1s ease-in 14s forwards; }
 @keyframes tipOut { to { opacity: 0; } }
+
+/* 마지막 동의 요청: 설정창(Esc)과 같은 시스템 단말 모양. 검문소의 붉은 경보색.
+   '동의'는 크게 빛나고 '거부'는 작고 흐리게 (도시가 원하는 쪽으로 기울어진 선택지) */
+.choice-wrap { background: radial-gradient(ellipse at center, #1a020699, #07030fee); -webkit-backdrop-filter: blur(4px) saturate(.5); backdrop-filter: blur(4px) saturate(.5); }
+.choice { position: relative; width: min(460px, 100%); background: linear-gradient(180deg, #14040af2, #05020bf2); color: var(--fg); border: 1px solid #ff2a3d;
+  border-radius: 0; padding: 26px 22px 18px; font-family: inherit; box-shadow: 0 0 34px #ff2a3d44, inset 0 0 50px #ff2a3d12; animation: panelIn .3s ease-out; overflow: hidden; }
+.choice::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, #ffffff06 0 1px, transparent 1px 3px); }
+.choice-sys { position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: 9px; letter-spacing: .1em; color: #ff2a3d88; }
+.choice-alert { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .12em; color: #ff4a5a; margin-bottom: 10px; animation: blink 1.4s steps(1) infinite; }
+.choice h2 { margin: 0 0 10px; font-family: var(--mono); font-size: 18px; letter-spacing: .14em; color: #ffd9dc; text-shadow: 0 0 10px #ff2a3d; }
+.choice p { margin: 0 0 20px; font-size: 14px; line-height: 1.7; color: #cfc6e2; word-break: keep-all; }
+.choice-actions { display: flex; gap: 12px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+.choice-actions button { font: inherit; font-family: var(--mono); cursor: pointer; border-radius: 0; }
+.choice-accept { order: 2; font-size: 14px !important; letter-spacing: .1em; padding: 12px 22px !important; background: #ff2a3d !important; color: #fff !important;
+  border: 1px solid #ff8a95 !important; font-weight: 700; box-shadow: 0 0 18px #ff2a3daa, inset 0 0 10px #ffffff33; animation: acceptPulse 1.6s ease-in-out infinite; }
+.choice-accept:hover { box-shadow: 0 0 28px #ff2a3d, inset 0 0 12px #ffffff55; }
+.choice-reject { order: 1; font-size: 11px !important; padding: 6px 8px !important; background: transparent !important; color: #6b6385 !important; border: 1px solid transparent !important;
+  text-decoration: underline; text-underline-offset: 3px; }
+.choice-reject:hover { color: var(--cyan) !important; text-shadow: 0 0 8px #22f0ff; }
+@keyframes acceptPulse { 0%, 100% { box-shadow: 0 0 14px #ff2a3d99, inset 0 0 10px #ffffff33; } 50% { box-shadow: 0 0 26px #ff2a3d, inset 0 0 12px #ffffff44; } }
+@media (prefers-reduced-motion: reduce) { .choice-accept, .choice-alert { animation: none; } }

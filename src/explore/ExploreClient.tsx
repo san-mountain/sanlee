@@ -544,7 +544,9 @@ export default function ExploreClient() {
 
       {panel?.kind === "choice" && (
         <div className="choice-wrap">
-          <div className="choice">
+          <div className="choice" role="dialog" aria-modal="true">
+            <span className="choice-sys">SYS://SEOUL/CHECKPOINT · GATE-01</span>
+            <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 등급 산정 불가" : "▲ RESPONSE REQUIRED · UNGRADED UNTIL ANSWERED"}</span>
             <h2>{t(checkpoint.title)}</h2>
             <p>{t(checkpoint.body)}</p>
             <div className="choice-actions">
