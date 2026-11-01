@@ -120,7 +120,16 @@ function WorksViewer({ list }: { list: Work[] }) {
       <div className="viewer-meta">
         <p className="caption">
           <span className="ct">
-            {lang === "ko" ? `〈${w.title.ko}〉` : <em>{w.title.en}</em>}, {w.date.slice(0, 4)}
+            {lang === "ko" ? (
+              <>
+                <span className="br">〈</span>
+                {w.title.ko}
+                <span className="br">〉</span>
+              </>
+            ) : (
+              <em>{w.title.en}</em>
+            )}
+            , {w.date.slice(0, 4)}
           </span>
           <br />
           <span className="cm">

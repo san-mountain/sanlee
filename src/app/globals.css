@@ -850,8 +850,8 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 }
 /* 모바일 상단 메뉴: DELETE SEOUL은 오른쪽 끝으로 */
 @media (max-width: 719px) { .nav-links .nav-explore { margin-left: auto; } }
-/* DELETE SEOUL은 로고 같은 대문자 이름이라 작품명 명조 대신 본문 고딕으로 (〈〉 괄호도 고딕에 맞춤) */
-.feature-card .caption .ct { font-family: inherit; }
-.feature-card .caption .ct .br { font-family: var(--font-serif), serif; }
 /* 캡션 첫 줄(제목, 연도)은 한 글꼴·한 굵기 */
 .caption .ct { font-variant-numeric: lining-nums; }
+/* 캡션 제목은 설명과 같은 본문 고딕. 〈〉만 명조의 반각 괄호를 빌려 와 양옆 빈 여백을 없앤다 */
+.caption .ct { font-family: inherit; font-weight: 400; }
+.caption .ct .br { font-family: var(--font-serif), serif; font-feature-settings: "halt"; }
