@@ -166,7 +166,7 @@ function Pillars() {
 }
 
 function Terminal({ id, pos, rotY, color, lang, visited, onTap }: { id: SectionId; pos: [number, number, number]; rotY: number; color: string; lang: Lang; visited: boolean; onTap: TapFn }) {
-  const ko = { about: "소개", works: "작업", writing: "글", contact: "연락처" }[id];
+  const ko = { about: "소개", works: "작업", writing: "글" }[id];
   const screen = useSign(
     [
       [id.toUpperCase(), 2.2],
