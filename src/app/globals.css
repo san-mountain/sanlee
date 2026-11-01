@@ -33,7 +33,7 @@ img { max-width: 100%; height: auto; display: block; }
 .nav a { text-decoration: none; }
 .nav-logo { grid-area: logo; font-weight: 700; letter-spacing: .04em; font-size: 15px; }
 .nav-lang { grid-area: lang; }
-.nav-links { grid-area: links; display: flex; gap: 20px; overflow-x: auto; scrollbar-width: none;
+.nav-links { grid-area: links; display: flex; flex-wrap: wrap; gap: 4px 20px; overflow-x: auto; scrollbar-width: none;
   margin: 0 calc(var(--gutter) * -1); padding: 2px var(--gutter); }
 .nav-links::-webkit-scrollbar { display: none; }
 .nav-links a { color: var(--muted); font-size: 14px; white-space: nowrap; padding: 4px 0; border-bottom: 1px solid transparent; }
@@ -46,11 +46,6 @@ img { max-width: 100%; height: auto; display: block; }
 .page h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 700; letter-spacing: -.01em; margin: 0 0 28px; line-height: 1.2; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.home-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px 24px;
-  border-bottom: 1px solid var(--rule); padding: 4px 0 16px; margin: 0 0 clamp(24px, 4vw, 44px); }
-.tagline { color: var(--muted); font-size: 14px; margin: 0; letter-spacing: .02em; }
-.explore-cta { font-size: 14px; text-decoration: none; border-bottom: 1px solid var(--ink); padding-bottom: 1px; }
-.explore-cta:hover { opacity: .6; }
 .home-more { border-top: 1px solid var(--rule); padding-top: 16px; text-align: right; font-size: 14px; }
 .home-more a { text-decoration: none; color: var(--muted); }
 .home-more a:hover { color: var(--ink); opacity: 1; }
@@ -225,7 +220,7 @@ img { max-width: 100%; height: auto; display: block; }
 }
 
 /* 메인: 이름 대신 작업이 먼저 보이도록 */
-.page.home { padding-top: 20px; }
+.page.home { padding-top: 24px; }
 @media (max-width: 719px) {
   .home .grid { columns: 2; column-gap: 14px; }
   .home .grid li { margin-bottom: 22px; }

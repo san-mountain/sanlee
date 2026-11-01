@@ -154,7 +154,7 @@ export const sections: { id: SectionId; label: string; labelKo: string; href: st
 
 // 화면에 고정으로 나오는 짧은 문구들
 export const ui = {
-  explore: { ko: "Explore ↗", en: "Explore ↗" },
+  explore: { ko: "도시로 탐험하기 ↗", en: "Explore as a city ↗" },
   exploreCta: { ko: "이 사이트를 도시로 탐험하기 ↗", en: "Explore this site as a city ↗" },
   viewWork: { ko: "작품 보기 ↗", en: "View work ↗" },
   selected: { ko: "최근 작업", en: "Recent works" },

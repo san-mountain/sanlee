@@ -12,14 +12,6 @@ export default function Home() {
         <h1 className="sr-only">
           <T s={profile.displayName} />
         </h1>
-        <div className="home-bar">
-          <p className="tagline">
-            <T s={profile.tagline} />
-          </p>
-          <Link href="/explore" className="explore-cta">
-            <T s={ui.exploreCta} />
-          </Link>
-        </div>
         <WorksGrid limit={6} />
         <div className="home-more">
           <Link href="/works">
