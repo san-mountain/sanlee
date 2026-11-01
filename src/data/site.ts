@@ -165,6 +165,7 @@ export const ui = {
   contactTitle: { ko: "연락처", en: "Contact" },
   catPainting: { ko: "그림", en: "Painting" },
   workIndex: { ko: "목록", en: "Index" },
+  view: { ko: "보기", en: "View" },
   viewGrid: { ko: "그리드", en: "Grid" },
   viewWall: { ko: "벽", en: "Wall" },
   wallNote: { ko: "실제 크기 비율로 건 벽 · 사람 키 170cm 기준", en: "Hung at true relative scale · figure 170 cm" },
