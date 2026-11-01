@@ -87,7 +87,7 @@ img { max-width: 100%; height: auto; display: block; }
 .home-more a { text-decoration: none; color: var(--muted); }
 .home-more a:hover { color: var(--ink); opacity: 1; }
 .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
-  border-top: 1px solid var(--rule-head); padding-top: var(--s2); margin-bottom: var(--s3); }
+  padding-top: 0; margin-bottom: var(--s3); }
 .section-head h2 { font-size: var(--fs-body); font-weight: 600; margin: 0; letter-spacing: .02em; }
 .section-head a { font-size: var(--fs-meta); color: var(--muted); text-decoration: none; }
 
@@ -279,7 +279,7 @@ img { max-width: 100%; height: auto; display: block; }
   .home .grid li { margin-bottom: var(--s3); }
   .home .caption { line-height: 1.5; }
 }
-.contact-title { font-size: var(--fs-body); font-weight: 600; letter-spacing: .02em; margin: var(--s4) 0 var(--s1); padding-top: var(--s2); border-top: 1px solid var(--rule-head); scroll-margin-top: 90px; }
+.contact-title { font-size: var(--fs-body); font-weight: 600; letter-spacing: .02em; margin: var(--s4) 0 var(--s1); padding-top: 0; scroll-margin-top: 90px; }
 /* ---------- DELETE SEOUL v2: 1인칭 이동 ---------- */
 .explore-root { height: 100dvh; overscroll-behavior: none; }
 .canvas-wrap { position: absolute; inset: 0; transition: filter 2.4s ease; }
@@ -511,7 +511,7 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* 작업 목록: 연도 · 제목 · 분류. 줄은 오른쪽 칸 끝까지 */
 .work-index { margin-top: var(--s4); }
-.work-index h2 { font-size: var(--fs-body); font-weight: 600; letter-spacing: .02em; margin: 0; padding: var(--s2) 0 var(--s1); border-top: 1px solid var(--rule-head); }
+.work-index h2 { font-size: var(--fs-body); font-weight: 600; letter-spacing: .02em; margin: 0; padding: 0 0 var(--s1); }
 .work-index ol { list-style: none; margin: 0; padding: 0; }
 .work-index li { border-top: 1px solid var(--rule); }
 .work-index li:last-child { border-bottom: 1px solid var(--rule); }
