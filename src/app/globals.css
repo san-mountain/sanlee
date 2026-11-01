@@ -848,3 +848,5 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
   .diary-sort-label { display: none; }
   .diary-sort { font-size: 16px; padding: 2px 4px; }
 }
+/* 모바일 상단 메뉴: DELETE SEOUL은 오른쪽 끝으로 */
+@media (max-width: 719px) { .nav-links .nav-explore { margin-left: auto; } }
