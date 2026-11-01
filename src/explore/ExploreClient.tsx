@@ -143,6 +143,11 @@ export default function ExploreClient() {
     (it: Interactable) => {
       switch (it.kind) {
         case "section":
+          // 동상과 먼저 이야기해야 기록 터미널이 열린다
+          if (!met && !complete && visited.length === 0) {
+            setPanel({ kind: "dialog", name: it.label, lines: ui.terminalLocked, step: 0 });
+            break;
+          }
           setPanel({ kind: "section", id: it.section! });
           markVisited(it.section!);
           break;
@@ -186,7 +191,7 @@ export default function ExploreClient() {
           break;
       }
     },
-    [complete, goTo, markVisited, visited.length]
+    [complete, goTo, markVisited, visited.length, met]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});

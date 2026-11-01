@@ -91,7 +91,7 @@ export function Pedestal({ lang, empty }: { lang: Lang; empty?: boolean }) {
   const plate = useSign(
     [
       [lang === "ko" ? "이산 (보관 처리됨)" : "SAN LEE (ARCHIVED)", 1],
-      [empty ? (lang === "ko" ? "— 걸어 나감 —" : "— WALKED AWAY —") : lang === "ko" ? "끝까지 '모두 거부'를 누른 자" : "THE ONE WHO REJECTED ALL", 0.7],
+      [empty ? (lang === "ko" ? "— 걸어 나감 —" : "— WALKED AWAY —") : lang === "ko" ? "끝까지 '모두 거부'를 누른 사람" : "THE ONE WHO REJECTED ALL", 0.7],
     ],
     { color: "#2a1d08", w: 512, h: 144 }
   );

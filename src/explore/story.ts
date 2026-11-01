@@ -3,23 +3,23 @@ import type { L } from "@/data/site";
 
 export const plaque: L[] = [
   { ko: "이산 (보관 처리됨)", en: "SAN LEE (ARCHIVED)" },
-  { ko: "끝까지 '모두 거부'를 누른 자", en: "The One Who Pressed 'Reject All' to the End" },
+  { ko: "끝까지 '모두 거부'를 누른 사람", en: "The One Who Pressed 'Reject All' to the End" },
   {
-    ko: "2087년 서울에서 모든 쿠키를 거부한 유일한 시민.",
-    en: "The only citizen of Seoul, 2087, who rejected every single cookie.",
+    ko: "2087년 서울에서 모든 쿠키를 거부한 단 한 명의 시민.",
+    en: "The only citizen of Seoul, 2087, who rejected every cookie.",
   },
   {
-    ko: "추적할 수 없게 되자, 시스템은 이 시민을 '보관 처리'했다. 남은 사람들이 동상을 이곳 지하로 옮겨 왔다.",
-    en: "Unable to track them, the system archived them. The few who remained carried the statue down here.",
+    ko: "백업이 없어 복원되지 못한 채 그대로 굳었다. 남은 사람들이 몰래 이곳 지하로 옮겨 왔다.",
+    en: "With no backup to restore from, this citizen hardened where they stood. Those who remained carried them down here in secret.",
   },
 ];
 
 export const ui = {
   title: { ko: "DELETE SEOUL", en: "DELETE SEOUL" },
   introLines: [
-    { ko: "2087년, 지상은 기계가 관리합니다. 모든 시민은 매 순간 동의하고, 기록되고, A부터 F까지 등급이 매겨집니다.", en: "2087. The surface is managed by machines. Every citizen consents, is logged and graded from A to F, every second." },
-    { ko: "여기는 지하 40m, 방공호 B-7. 시스템이 지우려 한 한 사람의 기록이 숨겨져 있습니다.", en: "This is Shelter B-7, forty metres underground, where the record of one erased person is hidden." },
-    { ko: "터미널을 열어 기록을 복원하고, 원한다면 지상으로 올라가 보세요. 고개는 숙이고요.", en: "Open the terminals to restore the record, and go up to the surface if you dare. Keep your head down." },
+    { ko: "2087년 서울. 지상은 기계가 다스립니다. 시민의 모든 움직임은 기록되고, 그 기록으로 A부터 F까지 등급이 매겨집니다.", en: "Seoul, 2087. Machines rule the surface. Every move a citizen makes is recorded, and the record grades them from A to F." },
+    { ko: "이곳은 지하 40m, 신호가 닿지 않는 방공호 B-7. 시스템이 지운 한 사람이 동상이 되어 남아 있습니다.", en: "This is Shelter B-7, forty metres down, where the signal cannot reach. One person the system erased remains here as a statue." },
+    { ko: "먼저 가운데 동상에게 말을 걸어 보세요.", en: "Start by speaking to the statue in the middle." },
   ] as L[],
   start: { ko: "방공호로 들어가기", en: "Enter the shelter" },
   goBack: { ko: "돌아가기", en: "Go back" },
@@ -43,7 +43,11 @@ export const ui = {
   popup: { ko: "이 도시는 시민을 추적하기 위해 쿠키를 사용합니다.", en: "This city uses cookies to track its citizens." },
   accept: { ko: "모두 수락", en: "Accept all" },
   reject: { ko: "모두 거부", en: "Reject all" },
-  plaqueShort: { ko: "끝까지 '모두 거부'를 누른 자", en: "The One Who Rejected All" },
+  plaqueShort: { ko: "끝까지 '모두 거부'를 누른 사람", en: "The One Who Rejected All" },
+  terminalLocked: [
+    { ko: "[기록 잠김] 접근 승인자 없음.", en: "[RECORD LOCKED] No authorising party." },
+    { ko: "누구의 기록인지부터 알아야 할 것 같다. 가운데 동상에게 먼저 말을 걸어 보자.", en: "First, find out whose record this is. Speak to the statue in the middle." },
+  ] as L[],
   toPortfolio: { ko: "웹사이트로 가기", en: "Go to the website" },
   zoneBunker: { ko: "B-7 방공호 · 지하 40m", en: "SHELTER B-7 · 40m BELOW" },
   zoneCity: { ko: "지상 · 부유 감시구역 7 · 고도 2,400m", en: "SURFACE · FLOATING ZONE 7 · ALT 2,400m" },
@@ -150,11 +154,15 @@ export const quest = {
 // 방문한 터미널 수(0~3)에 따라 동상 대사가 바뀝니다.
 export const statueLines: L[][] = [
   [
-    { ko: "...쿠키... 거부... 합니다...", en: "...cookies... reject... all..." },
-    { ko: "아, 사람이다. 나는 지상의 모든 쿠키를 거부했다가 이렇게 굳어버렸어.", en: "Oh, a human. I rejected every cookie up there, and this is what happened." },
+    { ko: "…쿠키를… 거부… 합니다…", en: "…I reject… all… cookies…" },
+    { ko: "…누구야? 사람 목소리는 오랜만이네.", en: "…Who's there? It's been a long time since I heard a voice." },
     {
-      ko: "내 기록은 이 방의 터미널 세 대에 나뉘어 숨겨져 있어. 하나씩 열어 줄래? 그러면 내가 조금씩 돌아올 거야.",
-      en: "My record is split across the three terminals in this room. Would you open them? I'll come back bit by bit.",
+      ko: "나는 지상에서 쿠키를 전부 거부했어. 그래서 시스템에 내 백업이 없었고, 보관 처리되자 이렇게 굳어 버렸지.",
+      en: "Up there, I rejected every cookie. So the system had no backup of me, and when I was archived, I hardened like this.",
+    },
+    {
+      ko: "내 기록은 이 방 터미널 세 대에 나뉘어 숨겨져 있어. 하나씩 열어 줄래? 그럼 조금씩 돌아올 수 있을 거야.",
+      en: "My record is hidden across the three terminals in this room. Would you open them, one by one? Then I can come back, bit by bit.",
     },
   ],
   [
