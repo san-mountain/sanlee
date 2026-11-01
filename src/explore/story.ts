@@ -206,7 +206,7 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
     name: { ko: "그림 그리는 아이", en: "Child drawing" },
     lines: [
       { ko: "보지 마요! …아니, 봐도 돼요. 아직 다 안 그렸어요.", en: "Don't look! …Okay, you can. It's not finished." },
-      { ko: "이산이 가르쳐 줬어요. 그림은 점수가 안 매겨지는 유일한 거래요.", en: "San taught me. They said drawing is the only thing nobody can score." },
+      { ko: "이산이 가르쳐 줬어요. 그림은 자유를 밖으로 꺼내 보이는 거래요.", en: "San taught me. They said drawing is how you let your freedom out where people can see it." },
       { ko: "지상에선 벽에 그리면 다 지워지잖아요. 여기선 안 지워져요.", en: "Up there, anything you draw on a wall gets erased. Down here it stays." },
     ],
   },

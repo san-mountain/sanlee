@@ -10,7 +10,7 @@ import { announcements, checkpoint, npcs, plaque, quest, sanCityLines, statueLin
 import { ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
-import { loadSettings } from "./input";
+import { input, loadSettings } from "./input";
 import PauseMenu from "./PauseMenu";
 import QuestArrow from "./QuestArrow";
 
@@ -166,6 +166,7 @@ export default function ExploreClient() {
       tp: (x: number, z: number, yaw = 0) => (teleport.req = { x, z, yaw }),
       restore: () => setVisited(sections.map((s) => s.id)),
       pos: () => [player.pos.x, player.pos.z, player.yaw],
+      look: (pitch: number) => (input.look.pitch += pitch),
     };
   }, [goTo]);
 

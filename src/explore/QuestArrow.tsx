@@ -33,7 +33,10 @@ export default function QuestArrow({ target, label }: { target: THREE.Vector3 | 
   return (
     <div className="quest" ref={ref} aria-hidden>
       <span className="quest-arrow" ref={arrow}>
-        ▲
+        {/* 끝이 뾰족하고 꼬리가 있는 화살표: 위쪽이 앞 */}
+        <svg width="16" height="16" viewBox="0 0 16 16">
+          <path d="M8 1 L13.5 9 L9.6 9 L9.6 15 L6.4 15 L6.4 9 L2.5 9 Z" fill="currentColor" />
+        </svg>
       </span>
       <span className="quest-label">{label}</span>
       <span className="quest-dist" ref={dist} />

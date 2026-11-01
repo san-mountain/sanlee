@@ -346,7 +346,7 @@ img { max-width: 100%; height: auto; display: block; }
 .quest { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); z-index: 30; pointer-events: none; display: flex; align-items: center; gap: 8px;
   font-family: var(--mono); font-size: 11px; color: var(--yellow); text-shadow: 0 0 6px #000; white-space: nowrap;
   padding: 3px 10px; border: 1px solid #ffe14d55; background: #07030f99; transition: opacity .3s; }
-.quest-arrow { display: inline-block; font-size: 12px; transition: transform .08s linear; color: var(--yellow); }
+.quest-arrow { display: inline-flex; width: 16px; height: 16px; transition: transform .08s linear; color: var(--yellow); }
 .quest-dist { color: var(--dim); }
 .quest.close { opacity: .35; }
 

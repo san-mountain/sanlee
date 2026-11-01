@@ -627,8 +627,6 @@ function useChalkTexture() {
     g.closePath();
     g.stroke();
     g.font = "700 30px sans-serif";
-    g.fillStyle = "rgba(255,140,170,0.85)";
-    g.fillText("이산 ♡", 120, 240);
     g.fillStyle = "rgba(140,220,255,0.85)";
     g.fillText("모두 거부", 300, 220);
     const t = new THREE.CanvasTexture(c);

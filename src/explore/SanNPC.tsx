@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Human, Tap, type TapFn } from "./parts";
@@ -19,6 +19,13 @@ const PATH: [number, number][] = [
 export default function SanNPC({ mode, item, onTap, start, beside }: { mode: "wander" | "follow"; item: Interactable; onTap: TapFn; start: [number, number]; beside?: boolean }) {
   const ref = useRef<THREE.Group>(null);
   const st = useRef({ x: start[0], z: start[1], wp: 0, yaw: 0, bob: 0 });
+  // 이산이 사라지면(다시 시작 등) 상호작용 위치를 원래 자리로 되돌린다. 안 그러면 동상에게 말을 걸 수 없다.
+  useEffect(() => {
+    const home = item.pos.clone();
+    return () => {
+      item.pos.copy(home);
+    };
+  }, [item]);
   useFrame((s, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
     const g = ref.current;

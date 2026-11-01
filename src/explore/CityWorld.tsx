@@ -7,7 +7,6 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { BUDDHAS, EDGE, ISLANDS, OVERSEER_ISLAND } from "./zones";
 import { roofGeometry } from "./models";
-import { player } from "./Player";
 
 const tmpM = new THREE.Matrix4();
 const tmpQ = new THREE.Quaternion();
@@ -455,116 +454,146 @@ export function AirTraffic() {
   );
 }
 
-/* ---------- 거대한 사원 비행선: 기와지붕을 층층이 얹은 선체가 머리 위를 천천히 가로지른다 ---------- */
+/* ---------- 거대한 사원 비행선: 금속 기낭 아래에 기와지붕 전각을 매단 비행선 ---------- */
 function Ark({ len }: { len: number }) {
   const roof = roofGeometry();
-  const hull = useMemo(() => new THREE.MeshStandardMaterial({ color: "#16141a", metalness: 0.75, roughness: 0.4, emissive: "#0a0608", side: THREE.DoubleSide }), []);
+  const R = len * 0.13; // 기낭 반지름
+  const env = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2a2730", metalness: 0.7, roughness: 0.45, emissive: "#140c12" }), []);
+  const hull = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a181e", metalness: 0.75, roughness: 0.4, emissive: "#0c0608" }), []);
   const roofMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1c1d22", metalness: 0.5, roughness: 0.5, emissive: "#0b1214" }), []);
+  const amber = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffb02e", toneMapped: false }), []);
   const red = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ff2a3d", toneMapped: false }), []);
   const teal = useMemo(() => new THREE.MeshBasicMaterial({ color: "#1fa59a", toneMapped: false }), []);
-  const amber = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffb02e", toneMapped: false }), []);
+  const blink = useRef<THREE.MeshBasicMaterial>(null);
   const eye = useRef<THREE.Group>(null);
-  const beam = useRef<THREE.Mesh>(null);
   useFrame((s) => {
     const t = s.clock.elapsedTime;
-    if (eye.current) eye.current.rotation.x = Math.sin(t * 0.2) * 0.35;
-    if (beam.current) ((beam.current.material as THREE.MeshBasicMaterial).opacity = 0.05 + Math.sin(t * 0.7) * 0.015);
+    if (blink.current) blink.current.opacity = Math.sin(t * 3) > 0.6 ? 1 : 0.1;
+    if (eye.current) eye.current.rotation.x = Math.sin(t * 0.25) * 0.35;
   });
-  const W = len * 0.22;
+  const ribs = Array.from({ length: 9 }, (_, i) => (i / 8 - 0.5) * 0.86);
+  const G = len * 0.5; // 곤돌라 길이
   return (
     <group>
-      {/* 선체: 길이 방향(z)으로 눕힌 반원기둥, 둥근 쪽이 아래 */}
-      <mesh rotation={[Math.PI / 2, 0, 0]} scale={[W / 2, 1, W * 0.45]} material={hull}>
-        <cylinderGeometry args={[1, 1, len, 18, 1, true, -Math.PI / 2, Math.PI]} />
+      {/* 기낭: 길쭉한 타원체, 빛나는 늑골 */}
+      <mesh scale={[R, R * 0.92, len / 2]} material={env}>
+        <sphereGeometry args={[1, 32, 20]} />
       </mesh>
-      {/* 갑판과 붉은 띠 */}
-      <mesh position={[0, 0.2, 0]} material={hull}>
-        <boxGeometry args={[W, 0.6, len]} />
-      </mesh>
-      <mesh position={[0, -0.6, 0]} material={red}>
-        <boxGeometry args={[W + 0.4, 0.5, len * 0.98]} />
-      </mesh>
-      {/* 갑판 위의 전각들: 가운데 높은 탑, 앞뒤로 대칭 */}
-      {[-0.32, -0.16, 0, 0.16, 0.32].map((k, i) => {
-        const tall = i === 2 ? 3 : i % 2 ? 1 : 2;
-        const bw = W * (i === 2 ? 0.7 : 0.55);
+      {ribs.map((k) => {
+        const rr = R * Math.sqrt(Math.max(0, 1 - (2 * k) ** 2)) * 1.01;
         return (
-          <group key={k} position={[0, 0.5, k * len]}>
-            {Array.from({ length: tall }, (_, j) => {
-              const w = bw * Math.pow(0.78, j);
-              const y = j * w * 0.5;
-              return (
-                <group key={j} position={[0, y, 0]}>
-                  <mesh position={[0, w * 0.2, 0]} material={hull}>
-                    <boxGeometry args={[w * 0.7, w * 0.4, w * 0.7]} />
-                  </mesh>
-                  <mesh position={[0, w * 0.27, 0]} material={amber}>
-                    <boxGeometry args={[w * 0.71, w * 0.05, w * 0.71]} />
-                  </mesh>
-                  <mesh position={[0, w * 0.38, 0]} material={teal}>
-                    <boxGeometry args={[w * 0.75, w * 0.03, w * 0.75]} />
-                  </mesh>
-                  <mesh geometry={roof} position={[0, w * 0.38, 0]} scale={[w * 1.3, w * 0.32, w * 1.3]} material={roofMat} />
-                </group>
-              );
-            })}
-          </group>
+          <mesh key={k} position={[0, 0, k * len]} scale={[1, 0.92, 1]} material={amber}>
+            <torusGeometry args={[rr, R * 0.012, 4, 40]} />
+          </mesh>
         );
       })}
-      {/* 고딕 첨탑 두 개 (뱃머리와 꼬리) */}
-      {[-0.46, 0.46].map((k) => (
-        <mesh key={k} position={[0, W * 0.5, k * len]} material={hull}>
-          <coneGeometry args={[W * 0.07, W * 1.1, 4]} />
+      {/* 등줄기의 붉은 점멸등과 아래쪽 띠 */}
+      <mesh position={[0, R * 0.93, 0]} material={red}>
+        <boxGeometry args={[R * 0.03, R * 0.03, len * 0.8]} />
+      </mesh>
+      {[-0.45, 0, 0.45].map((k) => (
+        <mesh key={k} position={[0, R * 0.95, k * len]}>
+          <sphereGeometry args={[R * 0.05, 8, 6]} />
+          <meshBasicMaterial ref={k === 0 ? blink : undefined} color="#ff1030" toneMapped={false} transparent />
         </mesh>
       ))}
-      {/* 배 밑의 거대한 눈과 탐조등 */}
-      <group ref={eye} position={[0, -W * 0.42, 0]}>
-        <mesh>
-          <sphereGeometry args={[W * 0.12, 20, 14]} />
-          <meshStandardMaterial color="#d8d4cf" roughness={0.25} emissive="#2a1a1a" />
-        </mesh>
-        <mesh position={[0, -W * 0.115, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[W * 0.06, 24]} />
-          <meshBasicMaterial color="#ff1030" toneMapped={false} side={THREE.DoubleSide} />
-        </mesh>
-        <mesh ref={beam} position={[0, -70, 0]}>
-          <coneGeometry args={[W * 0.9, 140, 24, 1, true]} />
-          <meshBasicMaterial color="#ff9a9a" transparent opacity={0.05} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} />
-        </mesh>
-      </group>
-      {/* 선체 옆 둥근 창 + 매달린 연등 */}
-      {Array.from({ length: 14 }, (_, i) => (i / 13 - 0.5) * len * 0.85).flatMap((z) =>
-        [-1, 1].map((s) => (
-          <mesh key={`${z}${s}`} position={[s * (W / 2 + 0.05), -W * 0.12, z]} rotation={[0, (s * Math.PI) / 2, 0]}>
-            <circleGeometry args={[W * 0.035, 12]} />
-            <meshBasicMaterial color="#ffd08a" toneMapped={false} side={THREE.DoubleSide} />
+      <mesh position={[0, -R * 0.55, 0]} rotation={[0, 0, 0]} material={teal}>
+        <boxGeometry args={[R * 1.5, R * 0.015, len * 0.6]} />
+      </mesh>
+      {/* 꼬리 날개 네 장 */}
+      {[0, Math.PI / 2, Math.PI, -Math.PI / 2].map((r) => (
+        <group key={r} position={[0, 0, -len * 0.44]} rotation={[0, 0, r]}>
+          <mesh position={[0, R * 0.95, -len * 0.02]} material={hull}>
+            <boxGeometry args={[R * 0.04, R * 0.9, len * 0.13]} />
           </mesh>
-        ))
-      )}
-      {/* 꼬리의 추진 고리 */}
-      {[-1, 1].map((s) => (
-        <group key={s} position={[s * W * 0.32, -W * 0.15, -len / 2]}>
-          <mesh rotation={[0, 0, 0]}>
-            <torusGeometry args={[W * 0.1, W * 0.02, 8, 24]} />
-            <meshBasicMaterial color="#22f0ff" toneMapped={false} />
-          </mesh>
-          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -W * 0.5]}>
-            <coneGeometry args={[W * 0.1, W, 16, 1, true]} />
-            <meshBasicMaterial color="#22f0ff" transparent opacity={0.12} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} />
+          <mesh position={[0, R * 1.38, -len * 0.02]} material={red}>
+            <boxGeometry args={[R * 0.05, R * 0.04, len * 0.13]} />
           </mesh>
         </group>
       ))}
+      {/* 꼬리 추진 고리 */}
+      <group position={[0, 0, -len * 0.5]}>
+        <mesh>
+          <torusGeometry args={[R * 0.35, R * 0.05, 8, 32]} />
+          <meshBasicMaterial color="#22f0ff" toneMapped={false} />
+        </mesh>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -R * 1.2]}>
+          <coneGeometry args={[R * 0.33, R * 2.4, 20, 1, true]} />
+          <meshBasicMaterial color="#22f0ff" transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} />
+        </mesh>
+      </group>
+      {/* 기낭 꼭대기의 탑 */}
+      {[0, 1, 2].map((j) => {
+        const w = R * 0.7 * Math.pow(0.72, j);
+        return (
+          <group key={j} position={[0, R * 0.88 + j * w * 0.55, 0]}>
+            <mesh position={[0, w * 0.2, 0]} material={hull}>
+              <boxGeometry args={[w * 0.6, w * 0.4, w * 0.6]} />
+            </mesh>
+            <mesh geometry={roof} position={[0, w * 0.38, 0]} scale={[w * 1.2, w * 0.3, w * 1.2]} material={roofMat} />
+          </group>
+        );
+      })}
+      {/* 매달린 사원 곤돌라 */}
+      <group position={[0, -R * 1.18, 0]}>
+        {[-0.3, 0.3].map((k) => (
+          <mesh key={k} position={[0, R * 0.12, k * G]} material={hull}>
+            <boxGeometry args={[R * 0.12, R * 0.3, R * 0.12]} />
+          </mesh>
+        ))}
+        <mesh material={hull}>
+          <boxGeometry args={[R * 0.7, R * 0.22, G]} />
+        </mesh>
+        {/* 창문 띠 */}
+        {[-1, 1].map((sd) => (
+          <mesh key={sd} position={[sd * R * 0.351, 0, 0]} rotation={[0, (sd * Math.PI) / 2, 0]}>
+            <planeGeometry args={[G * 0.92, R * 0.06]} />
+            <meshBasicMaterial color="#ffd08a" toneMapped={false} side={THREE.DoubleSide} />
+          </mesh>
+        ))}
+        {/* 곤돌라 아래로 뒤집혀 매달린 전각 지붕들 */}
+        {[-0.3, -0.1, 0.1, 0.3].map((k, i) => (
+          <group key={k} position={[0, -R * 0.11, k * G]}>
+            <mesh position={[0, -R * 0.18, 0]} material={hull}>
+              <boxGeometry args={[R * 0.45, R * 0.3, R * 0.45]} />
+            </mesh>
+            <mesh position={[0, -R * 0.2, 0]} material={i % 2 ? teal : amber}>
+              <boxGeometry args={[R * 0.46, R * 0.03, R * 0.46]} />
+            </mesh>
+            <mesh geometry={roof} position={[0, -R * 0.33, 0]} rotation={[Math.PI, 0, 0]} scale={[R * 0.8, R * 0.22, R * 0.8]} material={roofMat} />
+            <mesh position={[0, -R * 0.62, 0]} material={red}>
+              <sphereGeometry args={[R * 0.04, 8, 6]} />
+            </mesh>
+          </group>
+        ))}
+        {/* 맨 아래 거대한 눈과 탐조등 */}
+        <group ref={eye} position={[0, -R * 0.75, 0]}>
+          <mesh>
+            <sphereGeometry args={[R * 0.16, 20, 14]} />
+            <meshStandardMaterial color="#d8d4cf" roughness={0.25} emissive="#2a1a1a" />
+          </mesh>
+          <mesh position={[0, -R * 0.155, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <circleGeometry args={[R * 0.08, 24]} />
+            <meshBasicMaterial color="#ff1030" toneMapped={false} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, -45, 0]}>
+            <coneGeometry args={[R * 0.9, 90, 24, 1, true]} />
+            <meshBasicMaterial color="#ff9a9a" transparent opacity={0.045} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} />
+          </mesh>
+        </group>
+      </group>
+      <pointLight position={[0, -R * 2, 0]} intensity={900} distance={R * 8} color="#ffb070" />
     </group>
   );
 }
 
-// 두 척이 도시 위에서 X자로 교차한다 (서로의 거울상). 한 번 지나가는 데 몇 분이 걸린다.
+// 세 척이 도시 위에서 교차한다. 두 척은 서로의 거울상으로 X자를 그린다.
 export function Arks() {
   const paths = useMemo(
     () => [
-      { a: new THREE.Vector3(-420, 120, 160), b: new THREE.Vector3(420, 120, -260), len: 240, period: 420, phase: 0 },
-      { a: new THREE.Vector3(420, 150, 160), b: new THREE.Vector3(-420, 150, -260), len: 200, period: 420, phase: 0.5 },
-      { a: new THREE.Vector3(0, 230, 420), b: new THREE.Vector3(0, 230, -520), len: 320, period: 560, phase: 0.25 },
+      { a: new THREE.Vector3(-380, 72, 120), b: new THREE.Vector3(380, 72, -220), len: 190, period: 95, phase: 0.1 },
+      { a: new THREE.Vector3(380, 72, 120), b: new THREE.Vector3(-380, 72, -220), len: 190, period: 95, phase: 0.1 },
+      { a: new THREE.Vector3(0, 115, 360), b: new THREE.Vector3(0, 115, -460), len: 260, period: 140, phase: 0.55 },
     ],
     []
   );
@@ -576,13 +605,13 @@ export function Arks() {
       if (!g) return;
       const u = (t / p.period + p.phase) % 1;
       g.position.copy(p.a).lerp(p.b, u);
-      g.position.y += Math.sin(t * 0.1 + i) * 2;
+      // 두 척이 교차할 때 부딪히지 않도록 한 척은 살짝 위로
+      g.position.y += i === 1 ? 26 : 0;
+      g.position.y += Math.sin(t * 0.3 + i) * 1.5;
       g.rotation.y = Math.atan2(p.b.x - p.a.x, p.b.z - p.a.z);
-      g.rotation.z = Math.sin(t * 0.07 + i) * 0.02;
+      g.rotation.z = Math.sin(t * 0.2 + i) * 0.02;
     });
   });
-  // 플레이어 위치는 쓰지 않지만, 눈이 아래를 훑는 느낌을 위해 player를 import해 둔다
-  void player;
   return (
     <group>
       {paths.map((p, i) => (
