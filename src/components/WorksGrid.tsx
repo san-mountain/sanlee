@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { deleteCrossing } from "./deleteCrossing";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { ui, works, type Work } from "@/data/site";
@@ -59,6 +61,7 @@ function morph(update: () => void, from?: HTMLElement | null, to?: () => HTMLEle
 // 일반 Works 페이지: 그리드 / 목록 / 벽 세 가지 보기, 사진을 누르면 크게 보기
 export default function WorksGrid({ limit }: { limit?: number }) {
   const { t } = useLang();
+  const router = useRouter();
   const feature = works.filter((w) => !w.image);
   const images = works.filter((w) => w.image);
   const shown = limit ? images.slice(0, limit) : images;
@@ -196,7 +199,17 @@ export default function WorksGrid({ limit }: { limit?: number }) {
       {tab === "interactive" && (
         <>
           {feature.map((w) => (
-            <Link key={w.title.en} href={w.link ?? "#"} className="feature-card">
+            <Link
+              key={w.title.en}
+              href={w.link ?? "#"}
+              className="feature-card"
+              onClick={(e) => {
+                // 왼쪽 네온사인과 같은 진입: 페이지 글자가 지워지고 어두워진 뒤 들어간다
+                if (!w.link || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+                e.preventDefault();
+                deleteCrossing(() => router.push(w.link!));
+              }}
+            >
               <div className="feature-art" aria-hidden>
                 <span>DELETE</span>
                 <span>SEOUL</span>

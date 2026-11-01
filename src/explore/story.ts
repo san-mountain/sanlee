@@ -34,7 +34,7 @@ export const ui = {
   normalPage: { ko: "일반 페이지로 보기 ↗", en: "Open as a normal page ↗" },
   next: { ko: "다음 ▸", en: "Next ▸" },
   close: { ko: "닫기", en: "Close" },
-  home: { ko: "← 웹사이트", en: "← Website" },
+  home: { ko: "← 로그아웃", en: "← Log out" },
   restored: { ko: "기록 조각이 동상으로 돌아갔어요", en: "A fragment returned to the statue" },
   noWebgl: {
     ko: "이 기기에서는 3D 도시를 열 수 없어요. 대신 일반 웹사이트로 안내할게요.",
@@ -69,7 +69,7 @@ export const pause = {
   cookiesNo: { ko: "모든 쿠키는 이미 수락되었습니다. 수정하시겠습니까? [예] [예]", en: "All cookies have already been accepted. Change? [Yes] [Yes]" },
   reset: { ko: "방문 기록 지우기", en: "Erase my visit" },
   resetNote: { ko: "지웠습니다. 우리는 기억합니다.", en: "Erased. We remember." },
-  leave: { ko: "도시를 떠나 웹사이트로", en: "Leave the city for the website" },
+  leave: { ko: "로그아웃", en: "Log out" },
   bunker: { ko: "방공호로 돌아가기", en: "Back to the shelter" },
   bunkerNote: { ko: "배전실 7-B의 문은 아무도 모르게 다시 닫힙니다.", en: "The door of Substation 7-B closes again, unnoticed." },
   on: { ko: "켬", en: "On" },
@@ -173,7 +173,7 @@ export const checkpoint = {
     { ko: "끝까지 거부한 사람 곁에, 이번에는 누군가 서 있었다.", en: "This time, someone stood beside the one who refused." },
   ] as L[],
   again: { ko: "처음부터 다시", en: "Start over" },
-  toPortfolio: { ko: "포트폴리오 보기", en: "View the portfolio" },
+  toPortfolio: { ko: "로그아웃", en: "Log out" },
   endingAccept: { ko: "결말: 수락", en: "ENDING: ACCEPT" },
   endingReject: { ko: "결말: 거부", en: "ENDING: REJECT" },
 };
