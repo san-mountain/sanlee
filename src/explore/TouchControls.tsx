@@ -190,10 +190,16 @@ export function useLookAndKeys(
       }
       if (!input.enabled) return;
       if (e.code.startsWith("Arrow")) e.preventDefault();
+      if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !e.repeat) {
+        input.runLatch = true;
+        input.shiftAt = e.timeStamp;
+      }
       input.keys.add(e.code);
     };
     const ku = (e: KeyboardEvent) => {
       if (e.code === "Space") input.jumpHeld = false;
+      // 길게 눌렀다 떼면 걷기로, 톡 눌렀다 떼면 계속 달린다
+      if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && e.timeStamp - input.shiftAt > 450) input.runLatch = false;
       input.keys.delete(e.code);
     };
     const blur = () => {

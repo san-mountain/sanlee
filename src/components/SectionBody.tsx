@@ -1,6 +1,7 @@
 "use client";
 
-import { about, contact, ui, works, type SectionId } from "@/data/site";
+import { useEffect, useState } from "react";
+import { about, contact, ui, works, type SectionId, type Work } from "@/data/site";
 import { poems } from "@/data/poems";
 import { useLang } from "./LangProvider";
 import EmailLink from "./EmailLink";
@@ -38,8 +39,14 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
         {poems.map((p, i) => {
           const first = p.body.split("\n").find((l) => l.trim()) ?? "";
           return (
-            <details key={p.title} name="poems" id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
-              <summary>
+            <details key={p.title} data-group="poems" id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
+              <summary
+                onClick={(e) => {
+                  e.preventDefault();
+                  const d = e.currentTarget.parentElement as HTMLDetailsElement;
+                  unfold(d, !d.open || d.dataset.closing === "1");
+                }}
+              >
                 <span className="poem-head">
                   <span className="poem-title">{p.title}</span>
                   <span className="poem-first">{first.trim()}</span>
@@ -58,7 +65,7 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
                   onClick={(e) => {
                     const d = e.currentTarget.closest("details");
                     if (!d) return;
-                    d.open = false;
+                    unfold(d, false);
                     d.querySelector("summary")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
                   }}
                 >
@@ -71,6 +78,7 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
       </div>
     );
   }
+  if (id === "works" && inExplore) return <WorksViewer list={works} />;
   if (id === "works") {
     return (
       <ul className="works">
@@ -107,4 +115,146 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
     );
   }
   return null;
+}
+
+// 3D 도시의 작업 터미널: 한 번에 한 점씩 크게 보고, 화살표·스와이프·아래 썸네일로 넘긴다
+function WorksViewer({ list }: { list: Work[] }) {
+  const { t, lang } = useLang();
+  const [i, setI] = useState(0);
+  const n = list.length;
+  const go = (d: number) => setI((v) => (v + d + n) % n);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") setI((v) => (v + 1) % n);
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") setI((v) => (v - 1 + n) % n);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [n]);
+  const [x0, setX0] = useState<number | null>(null);
+  const w = list[i];
+  return (
+    <div className="viewer">
+      <div
+        className="viewer-stage"
+        onPointerDown={(e) => setX0(e.clientX)}
+        onPointerUp={(e) => {
+          if (x0 !== null && Math.abs(e.clientX - x0) > 40) go(e.clientX < x0 ? 1 : -1);
+          setX0(null);
+        }}
+      >
+        {w.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={w.image} className="viewer-img" src={w.image} alt={t(w.title)} width={w.width} height={w.height} decoding="async" />
+        ) : (
+          // 이 작품은 지금 보고 있는 바로 그 작품: 그림 대신 '현재 위치' 표시
+          <div className="viewer-here">
+            <span className="vh-badge">{lang === "ko" ? "● 현재 관람 중" : "● NOW VIEWING"}</span>
+            <span className="vh-title">DELETE SEOUL</span>
+            <span className="vh-pin">{lang === "ko" ? "▼ 당신은 여기에 있습니다" : "▼ YOU ARE HERE"}</span>
+          </div>
+        )}
+        <button type="button" className="viewer-nav prev" aria-label={t(ui.prev)} onClick={() => go(-1)}>
+          ‹
+        </button>
+        <button type="button" className="viewer-nav next" aria-label={t(ui.next)} onClick={() => go(1)}>
+          ›
+        </button>
+      </div>
+      <div className="viewer-meta">
+        <p className="caption">
+          <span className="ct">{lang === "ko" ? `〈${w.title.ko}〉` : <em>{w.title.en}</em>}</span>, {w.date.slice(0, 4)}
+          <br />
+          <span className="cm">
+            {t(w.medium)}, {t(w.size)}
+          </span>
+        </p>
+        {!w.image && (
+          <p className="viewer-here-note">
+            {lang === "ko"
+              ? "축하합니다. 당신은 이미 이 작품 안에 있습니다. 액자는 없고, 관람객이 곧 재료입니다. 관람 시간: 진행 중 · 쿠키: 거부됨 · 출구: 각자 찾을 것."
+              : "Congratulations: you're already inside this one. No frame; the visitor is the medium. Viewing time: ongoing · Cookies: rejected · Exit: find your own."}
+          </p>
+        )}
+        <span className="viewer-count">
+          {String(i + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}
+        </span>
+      </div>
+      <div className="viewer-strip" role="tablist">
+        {list.map((o, k) => (
+          <button key={o.title.en} type="button" role="tab" aria-selected={k === i} aria-label={t(o.title)} className={k === i ? "on" : ""} onClick={() => setI(k)}>
+            {o.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={o.image} alt="" loading="lazy" decoding="async" />
+            ) : (
+              <span className="vh-thumb">空</span>
+            )}
+          </button>
+        ))}
+      </div>
+      {/* 다음 그림을 미리 받아 둔다 */}
+      {list[(i + 1) % n].image && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="viewer-preload" src={list[(i + 1) % n].image} alt="" aria-hidden />
+      )}
+    </div>
+  );
+}
+
+// 시 펼치기·접기: 종이가 아래로 풀려 내려가듯 높이가 늘어나며 위에서부터 드러나고, 연이 차례로 맺힌다.
+// 한 번에 시 하나만 펼쳐 둔다. 움직임 줄이기 설정이면 바로 열고 닫는다.
+function unfold(d: HTMLDetailsElement, open: boolean) {
+  const body = d.querySelector<HTMLElement>(".poem-body");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (open) {
+    d.parentElement?.querySelectorAll<HTMLDetailsElement>('details[data-group="poems"][open]').forEach((o) => {
+      if (o !== d) unfold(o, false);
+    });
+  }
+  if (!body || reduce || !body.animate) {
+    d.open = open;
+    return;
+  }
+  body.getAnimations().forEach((a) => a.cancel());
+  if (open) {
+    delete d.dataset.closing;
+    d.open = true;
+    const h = body.scrollHeight;
+    const dur = Math.min(1100, Math.max(450, h * 0.7));
+    body.style.overflow = "hidden";
+    const a = body.animate(
+      [
+        { height: "0px", clipPath: "inset(0 0 100% 0)" },
+        { height: `${h}px`, clipPath: "inset(0 0 0% 0)" },
+      ],
+      { duration: dur, easing: "cubic-bezier(.22,.8,.24,1)" }
+    );
+    a.onfinish = () => (body.style.overflow = "");
+    body.querySelectorAll<HTMLElement>(".stanza").forEach((s, i) => {
+      s.animate(
+        [
+          { opacity: 0, transform: "translateY(-6px)" },
+          { opacity: 1, transform: "none" },
+        ],
+        { duration: 520, delay: Math.min(i * 90, dur * 0.8), easing: "ease-out", fill: "backwards" }
+      );
+    });
+  } else {
+    if (!d.open) return;
+    d.dataset.closing = "1";
+    const h = body.offsetHeight;
+    body.style.overflow = "hidden";
+    const a = body.animate(
+      [
+        { height: `${h}px`, clipPath: "inset(0 0 0% 0)", opacity: 1 },
+        { height: "0px", clipPath: "inset(0 0 100% 0)", opacity: 0.4 },
+      ],
+      { duration: Math.min(700, Math.max(320, h * 0.4)), easing: "cubic-bezier(.4,0,.6,1)" }
+    );
+    a.onfinish = () => {
+      body.style.overflow = "";
+      if (d.dataset.closing === "1") d.open = false;
+      delete d.dataset.closing;
+    };
+  }
 }

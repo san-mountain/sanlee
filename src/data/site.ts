@@ -91,11 +91,11 @@ export const works: Work[] = [
     height: 953,
   },
   {
-    title: { ko: "비명", en: "Scream" },
+    title: { ko: "상실", en: "Loss" },
     date: "2026. 10.",
     medium: { ko: "종이에 수채, 오일파스텔, 콜라주", en: "Watercolor, oil pastel and collage on paper" },
     size: PAPER_PORTRAIT,
-    image: "/works/sanlee_2026_scream.webp",
+    image: "/works/sanlee_2026_loss.webp",
     width: 960,
     height: 1400,
   },

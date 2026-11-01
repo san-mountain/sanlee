@@ -10,6 +10,9 @@ export const input = {
   jump: false,
   // 점프 키·버튼을 누르고 있는 중 (누르고 있으면 착지할 때마다 다시 뛴다)
   jumpHeld: false,
+  // Shift를 톡 누르면 켜지는 달리기 (멈추면 꺼진다). 한국어 입력기에서 Shift+Space가 한/영 전환에 먹히는 문제를 피한다
+  runLatch: false,
+  shiftAt: 0,
   // 설정창에서 바꾸는 값
   sens: 1,
   bob: true,
@@ -42,7 +45,9 @@ export function moveVector() {
     x /= len;
     y /= len;
   }
-  const run = k.has("ShiftLeft") || k.has("ShiftRight") || Math.hypot(input.joy.x, input.joy.y) > 0.92;
+  // 움직임이 없으면 달리기 고정을 푼다
+  if (len < 0.05) input.runLatch = false;
+  const run = input.runLatch || k.has("ShiftLeft") || k.has("ShiftRight") || Math.hypot(input.joy.x, input.joy.y) > 0.92;
   return { x, y, run };
 }
 

@@ -22,9 +22,10 @@ export const ui = {
     { ko: "터미널을 열어 기록을 복원하고, 원한다면 지상으로 올라가 보세요. 고개는 숙이고요.", en: "Open the terminals to restore the record, and go up to the surface if you dare. Keep your head down." },
   ] as L[],
   start: { ko: "방공호로 들어가기", en: "Enter the shelter" },
+  goBack: { ko: "돌아가기", en: "Go back" },
   hintPc: { ko: "화면을 클릭하면 다시 마우스로 둘러볼 수 있어요", en: "Click the screen to look with the mouse again" },
-  hintLocked: { ko: "WASD 이동 · Shift 달리기 · Space 점프 · 클릭/E 상호작용 · Esc 설정", en: "WASD move · Shift run · Space jump · click/E interact · Esc settings" },
-  hintIntroPc: { ko: "마우스로 둘러보기 · WASD 이동 · Shift 달리기 · Space 점프 · 클릭/E 상호작용 · Esc 설정", en: "Mouse to look · WASD move · Shift run · Space jump · click/E interact · Esc settings" },
+  hintLocked: { ko: "WASD 이동 · Shift 톡: 달리기 · Space 점프 · 클릭/E 상호작용 · Esc 설정", en: "WASD move · tap Shift: run · Space jump · click/E interact · Esc settings" },
+  hintIntroPc: { ko: "마우스로 둘러보기 · WASD 이동 · Shift 톡: 달리기 · Space 점프 · 클릭/E 상호작용 · Esc 설정", en: "Mouse to look · WASD move · tap Shift: run · Space jump · click/E interact · Esc settings" },
   hintTouch: { ko: "왼쪽 조이스틱으로 이동 · 화면을 끌어 둘러보기 · ⤒ 점프", en: "Left stick to move · drag the screen to look · ⤒ jump" },
   open: { ko: "열기", en: "Open" },
   talk: { ko: "말 걸기", en: "Talk" },
@@ -110,6 +111,7 @@ export const jabiUi = {
 export const quest = {
   terminal: { ko: "기록 복원", en: "Restore the record" },
   statue: { ko: "동상에게 말 걸기", en: "Talk to the statue" },
+  san: { ko: "이산에게 말 걸기", en: "Talk to San" },
   exit: { ko: "지상으로", en: "To the surface" },
   checkpoint: { ko: "검문소", en: "Checkpoint" },
   back: { ko: "방공호로 돌아가기", en: "Back to the shelter" },
@@ -176,7 +178,8 @@ export const checkpoint = {
   endingReject: { ko: "결말: 거부", en: "ENDING: REJECT" },
 };
 
-export const npcs: Record<string, { name: L; lines: L[] }> = {
+// after: 이산이 석상에서 풀려난 뒤(터미널 셋 복원)의 대사. 없으면 같은 대사를 쓴다
+export const npcs: Record<string, { name: L; lines: L[]; after?: L[] }> = {
   keeper: {
     name: { ko: "방공호 관리인", en: "Shelter keeper" },
     lines: [
@@ -184,6 +187,11 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
       { ko: "가운데 동상 봤지? 우리가 지상에서 몰래 옮겨 왔어. 터미널을 열면 저 사람이 조금씩 돌아와.", en: "Seen the statue? We smuggled it down from the surface. Open the terminals and they'll come back, bit by bit." },
       { ko: "지상에 올라가 보고 싶으면 저 뒤 방폭문으로 나가. 올라가면 골목 끝 배전실 문으로 나올 거야. 카메라랑 눈은 마주치지 말고.", en: "Want to see the surface? Take the blast door behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
       { ko: "아, 그리고 놀라지 마. 위는… 이제 땅이 아니야.", en: "Oh, and don't panic. Up there… it isn't ground any more." },
+    ],
+    after: [
+      { ko: "봤어? 동상이 일어났어. 몇 년을 저렇게 앉아 있었는데.", en: "Did you see? The statue stood up. Years, it sat like that." },
+      { ko: "이산이 지상에 올라가겠대. 혼자 보내긴 싫고… 네가 같이 가 주면 좋겠어.", en: "San says they're going up to the surface. I don't want them going alone… I'd like you to go with them." },
+      { ko: "방폭문은 저 뒤야. 올라가면 골목 끝 배전실 문으로 나와. 카메라랑 눈은 마주치지 말고.", en: "The blast door's behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
     ],
   },
   r07: {
@@ -218,6 +226,11 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
       { ko: "공은 비어 있는 게 아니라네. 무엇도 혼자서는 있을 수 없다는 뜻이지. 그래서 우리가 여기 모여 있는 거고.", en: "Emptiness isn't nothing. It means nothing can exist on its own. That's why we gather down here." },
       { ko: "가운데 동상에게 가 보게. 혼자 굳어 있는 건 그 사람 잘못이 아니야.", en: "Go to the statue in the middle. Being frozen alone was never their fault." },
     ],
+    after: [
+      { ko: "…앉게. 여기서는 아무도 자네 호흡을 세지 않네.", en: "…Sit. Down here, no one counts your breaths." },
+      { ko: "그 사람이 풀려났군. 자네가 기록을 열어서가 아니라, 누군가 곁에 와 주어서일세.", en: "So they've been freed. Not because you opened the records, but because someone came and stood beside them." },
+      { ko: "공은 비어 있는 게 아니라네. 무엇도 혼자서는 있을 수 없다는 뜻이지. 이제 알겠나?", en: "Emptiness isn't nothing. It means nothing can exist on its own. Do you see it now?" },
+    ],
   },
   radio: {
     name: { ko: "무전수", en: "Radio operator" },
@@ -233,6 +246,11 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
       { ko: "보지 마요! …아니, 봐도 돼요. 아직 다 안 그렸어요.", en: "Don't look! …Okay, you can. It's not finished." },
       { ko: "이산이 가르쳐 줬어요. 그림은 자유를 밖으로 꺼내 보이는 거래요.", en: "San taught me. They said drawing is how you let your freedom out where people can see it." },
       { ko: "지상에선 벽에 그리면 다 지워지잖아요. 여기선 안 지워져요.", en: "Up there, anything you draw on a wall gets erased. Down here it stays." },
+    ],
+    after: [
+      { ko: "이산이 움직여요! 아까 제 그림 보고 웃었어요.", en: "San can move! They looked at my drawing and smiled." },
+      { ko: "그림은 자유를 밖으로 꺼내 보이는 거래요. 이산은 이제 자기가 밖으로 나가 보겠대요.", en: "Drawing is how you let your freedom out, they said. Now they want to let themselves out." },
+      { ko: "올라가면… 지워지지 않게 조심하세요.", en: "Up there… be careful not to get erased." },
     ],
   },
   sleeper: {

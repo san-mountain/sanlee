@@ -23,6 +23,7 @@ const World = dynamic(() => import("./World"), { ssr: false });
 const KEY = "sanlee-visited";
 const END_KEY = "sanlee-ending";
 const MET_KEY = "sanlee-met";
+const TALK_KEY = "sanlee-san-talked";
 
 function hasWebGL() {
   try {
@@ -61,10 +62,17 @@ export default function ExploreClient() {
   // 문을 지나 다른 구역에서 넘어왔는지 (처음 시작·다시 시작이면 false)
   const [arrived, setArrived] = useState(false);
   const [met, setMet] = useState(false);
+  // 세 기록을 모두 복원한 뒤, 풀려난 이산과 이야기했는지
+  const [talked, setTalked] = useState(false);
   const [since] = useState(() => Date.now());
   const rootRef = useRef<HTMLElement>(null);
   const labelEls = useRef<Record<string, HTMLDivElement | null>>({});
   const complete = visited.length >= sections.length;
+
+  // 일반 페이지에서 DELETE SEOUL로 지워지며 들어왔다면 그 흔적(그림 숨김 등)을 풀어 준다
+  useEffect(() => {
+    document.body.classList.remove("deleting");
+  }, []);
 
   useEffect(() => {
     setWebgl(hasWebGL());
@@ -72,6 +80,7 @@ export default function ExploreClient() {
     loadSettings();
     try {
       setMet(localStorage.getItem(MET_KEY) === "1");
+      setTalked(localStorage.getItem(TALK_KEY) === "1");
     } catch {}
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || "[]");
@@ -122,7 +131,13 @@ export default function ExploreClient() {
           break;
         case "statue":
           if (it.id === "san") setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: sanCityLines, step: 0 });
-          else if (complete) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: statueLines[statueLines.length - 1], step: 0 });
+          else if (complete) {
+            setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: statueLines[statueLines.length - 1], step: 0 });
+            setTalked(true);
+            try {
+              localStorage.setItem(TALK_KEY, "1");
+            } catch {}
+          }
           else {
             setPanel({ kind: "dialog", name: plaque[0], lines: statueLines[Math.min(visited.length, statueLines.length - 2)], step: 0, plaque: true });
             setMet(true);
@@ -133,7 +148,7 @@ export default function ExploreClient() {
           break;
         case "npc": {
           const n = npcs[it.npc!];
-          setPanel({ kind: "dialog", name: n.name, lines: n.lines, step: 0 });
+          setPanel({ kind: "dialog", name: n.name, lines: complete && n.after ? n.after : n.lines, step: 0 });
           break;
         }
         case "door":
@@ -170,6 +185,7 @@ export default function ExploreClient() {
       tp: (x: number, z: number, yaw = 0) => (teleport.req = { x, z, yaw }),
       restore: () => setVisited(sections.map((s) => s.id)),
       pos: () => [player.pos.x, player.pos.z, player.yaw, player.air],
+      input,
       look: (pitch: number) => (input.look.pitch += pitch),
       gaze,
     };
@@ -245,6 +261,12 @@ export default function ExploreClient() {
         e.preventDefault();
         if (p.step < p.lines.length - 1) setPanel({ ...p, step: p.step + 1 });
         else closePanel();
+        return;
+      }
+      // 작업·글·소개 패널과 그림 보기는 E로 바로 닫는다 (닫기 버튼과 같음)
+      if (e.code === "KeyE" && !e.repeat && p && (p.kind === "section" || p.kind === "painting") && performance.now() - panelAt.current > 250) {
+        e.preventDefault();
+        closePanel();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -293,6 +315,7 @@ export default function ExploreClient() {
     } catch {}
     setVisited([]);
     setMet(false);
+    setTalked(false);
   };
   const restart = () => {
     resetProgress();
@@ -322,10 +345,14 @@ export default function ExploreClient() {
         for (const it of left) if (Math.hypot(it.pos.x - px, it.pos.z - pz) < Math.hypot(best.pos.x - px, best.pos.z - pz)) best = it;
         return best ? { pos: best.pos, label: `${t(quest.terminal)} ${visited.length}/${sections.length}` } : null;
       }
+      if (!talked) {
+        const it = find("statue");
+        return it ? { pos: it.pos, label: t(quest.san) } : null;
+      }
       const ex = find("exit");
       return ex ? { pos: ex.pos, label: t(quest.exit) } : null;
     }
-    if (!complete) {
+    if (!complete || !talked) {
       const h = find("hatch");
       return h ? { pos: h.pos, label: t(quest.back) } : null;
     }
@@ -571,6 +598,10 @@ export default function ExploreClient() {
             ))}
             <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
             <div className="panel-actions" style={{ justifyContent: "flex-end" }}>
+              {/* 들어가지 않고 웹사이트로 돌아가는 보조 선택지 */}
+              <Link href="/" className="btn ghost">
+                {t(ui.goBack)}
+              </Link>
               <button
                 className="btn primary"
                 autoFocus
