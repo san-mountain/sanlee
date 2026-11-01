@@ -3,6 +3,7 @@
 import { about, contact, ui, works, type SectionId } from "@/data/site";
 import { poems } from "@/data/poems";
 import { useLang } from "./LangProvider";
+import EmailLink from "./EmailLink";
 
 // 일반 페이지와 3D 도시의 홀로그램 패널이 같이 쓰는 본문
 export default function SectionBody({ id, inExplore = false }: { id: SectionId; inExplore?: boolean }) {
@@ -17,7 +18,7 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
           {t(ui.contactTitle)}
         </h2>
         <p>
-          <a href={`mailto:${contact.email}`}>{contact.email}</a>
+          <EmailLink />
         </p>
         {contact.links.map((l) => (
           <p key={l.href}>

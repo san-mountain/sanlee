@@ -523,3 +523,9 @@ img { max-width: 100%; height: auto; display: block; }
 .nav-logo-han { margin-left: .5em; font-family: "Noto Serif KR", "Noto Serif CJK KR", "Songti SC", "Hiragino Mincho ProN", serif; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
 /* 맨 위 시 위의 선은 없앤다 */
 .poems .poem:first-of-type { border-top: 0; }
+
+/* 메일 주소: 누르면 복사되었다는 작은 표시 */
+.email-link { position: relative; }
+.email-copied { margin-left: var(--s1); font-size: var(--fs-meta); color: var(--muted); opacity: 0; transition: opacity .2s; }
+.email-copied.on { opacity: 1; }
+.explore-root .email-copied { color: var(--dim); }
