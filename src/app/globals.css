@@ -66,8 +66,9 @@ img { max-width: 100%; height: auto; display: block; }
   92% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .nav-explore, .ne-dead, .ne-text::before, .ne-text::after { animation: none; } }
 
-.page { max-width: 760px; margin: 0 auto; padding: 32px var(--gutter) 96px; line-height: 1.8; }
-.page.wide { max-width: 1280px; }
+/* 모든 페이지가 같은 틀: 제목은 내비의 로고와 같은 왼쪽 선에서 시작하고, 글은 읽기 좋은 폭(760px)으로만 줄인다 */
+.page { max-width: 1280px; margin: 0 auto; padding: 32px var(--gutter) 96px; line-height: 1.8; }
+.page:not(.wide) > *:not(h1) { max-width: 760px; }
 .page h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 700; letter-spacing: -.01em; margin: 0 0 28px; line-height: 1.2; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

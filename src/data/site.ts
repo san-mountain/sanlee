@@ -61,7 +61,7 @@ export const works: Work[] = [
     link: "/explore",
   },
   {
-    title: { ko: "인간도 人間圖", en: "Ingando (A Diagram of Humans)" },
+    title: { ko: "인간도人間圖", en: "Ingando (A Diagram of Humans)" },
     date: "2026. 10.",
     medium: { ko: "캔버스에 먹, 아크릴, 마커, 오일파스텔", en: "Ink, acrylic, marker and oil pastel on canvas" },
     size: { ko: "53.0\u00a0×\u00a045.5\u00a0cm", en: "53.0\u00a0×\u00a045.5\u00a0cm" },
