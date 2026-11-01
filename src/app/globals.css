@@ -856,3 +856,13 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 /* 캡션 제목은 설명과 같은 본문 고딕. 〈〉만 명조의 반각 괄호를 빌려 와 양옆 빈 여백을 없앤다 */
 .caption .ct { font-family: inherit; font-weight: 400; }
 .caption .ct .br { font-family: var(--font-serif), serif; font-feature-settings: "halt"; }
+/* 좁은 폰(380px 미만): 메뉴와 DELETE SEOUL을 한 줄에 두기 위해 간격을 줄이고 空 글자는 뺀다.
+   Works 분류 탭도 아이콘과 겹치지 않게 간격을 줄인다. */
+@media (max-width: 379px) {
+  .nav-links { flex-wrap: nowrap; gap: 4px 12px; }
+  .nav-links .ne-han { display: none; }
+  .works-bar { flex-wrap: wrap; row-gap: 6px; }
+  .works-bar .cat-tabs { gap: 14px; }
+  .works-bar .cat-tabs button { font-size: 15px; }
+  .view-toggle { gap: 4px; margin-left: auto; }
+}
