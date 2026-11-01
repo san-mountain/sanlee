@@ -18,12 +18,16 @@ export const profile = {
 export const about = {
   paragraphs: [
     {
-      ko: "안녕하세요, San입니다. 이 문단은 자기소개로 바꿔 주세요.",
-      en: "Hi, I'm San. Replace this paragraph with your introduction.",
+      ko: "이산은 동국대학교 조소과에 재학 중이며, 조각과 그림, 시를 오가며 작업한다.",
+      en: "San Lee is a sculpture student at Dongguk University who moves between sculpture, painting and poetry.",
     },
     {
-      ko: "관심 있는 것, 작업하는 방식, 지금 공부하고 있는 것을 두세 문장으로 적으면 좋아요.",
-      en: "Two or three sentences on what you care about, how you work, and what you're studying now.",
+      ko: "삶은 끝을 향해 조금씩 기운다. 인간의 유한함은 남은 선택들에 무게를 싣는다. 작가에게 의미란 거창한 성취보다, 주어진 조건 안에서 스스로를 배반하지 않는 선택을 거듭하는 데에 있다.",
+      en: "Life leans, little by little, toward its end. Human finitude lends weight to the choices that remain. For San, meaning lies less in grand achievement than in making, again and again, choices that do not betray oneself within the conditions one is given.",
+    },
+    {
+      ko: "그러나 작가는 신념의 자율성을 순진하게 믿지 않는다. 사유는 신체의 화학 앞에서 쉽게 무력해지고, 의지는 생각보다 자주 그 바깥의 것에 기대어 선다. 작업은 그 무력함을 부정하지 않은 채, 그럼에도 끝내 남는 것이 무엇인지를 더듬어 간다.",
+      en: "Yet San does not naively trust the autonomy of conviction. Thought is easily disarmed by the chemistry of the body, and the will leans on what lies outside it more often than we admit. Without denying that helplessness, the work feels its way toward what still remains.",
     },
   ] as L[],
 };

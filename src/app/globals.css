@@ -129,3 +129,4 @@ a:hover { opacity: .6; }
 .poem.prose .stanza { white-space: normal; text-indent: 1em; line-height: 1.9; }
 .explore-root .poem { border-top-color: #2d2445; }
 .explore-root .poems-note { color: var(--dim); }
+.section-body p { word-break: keep-all; }
