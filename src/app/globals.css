@@ -39,16 +39,20 @@ img { max-width: 100%; height: auto; display: block; }
 .nav-links a { color: var(--muted); font-size: 14px; white-space: nowrap; padding: 4px 0; border-bottom: 1px solid transparent; }
 .nav-links a:hover { color: var(--ink); opacity: 1; }
 .nav-links a.active { color: var(--ink); border-bottom-color: var(--ink); }
-.nav-links .nav-explore { position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px 4px 4px; border: 1px solid #ff2bd6;
-  background: #0b0614; color: #22f0ff; font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; font-size: 13px; letter-spacing: .04em;
-  box-shadow: 0 0 0 1px #0b0614, 0 0 12px #ff2bd655, inset 0 0 10px #22f0ff22; text-shadow: 0 0 6px #22f0ffaa; overflow: hidden; }
-.nav-links .nav-explore:hover { color: #fff; border-color: #22f0ff; box-shadow: 0 0 0 1px #0b0614, 0 0 18px #22f0ff88, inset 0 0 12px #ff2bd633; opacity: 1; }
-.nav-links .nav-explore::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, #ffffff0a 0 1px, transparent 1px 3px); }
-.ne-seal { display: inline-grid; place-items: center; width: 20px; height: 20px; background: #c8102e; color: #fff3e0; font-size: 12px; font-weight: 700;
-  font-family: "Noto Serif KR", "Noto Serif CJK KR", serif; text-shadow: none; border-radius: 2px; box-shadow: inset 0 0 0 1px #ff6a7a; }
-.ne-text { position: relative; }
-.ne-text::before, .ne-text::after { content: attr(data-text); position: absolute; left: 0; top: 0; width: 100%; overflow: hidden; opacity: 0; }
-.ne-text::before { color: #ff2bd6; animation: neGlitchA 4.2s infinite steps(1); }
+/* 네온사인: 어두운 간판 위에 분홍 관 글씨, 하늘색 테두리 관. 높이와 글줄은 옆 탭과 같게 */
+.nav-links { align-items: center; }
+.nav-links .nav-explore { position: relative; display: inline-block; padding: 3px 10px; margin: -1px 0; border: 1px solid #7ff6ff; border-radius: 4px;
+  background: #0d0716; color: #ffe6fb; font-size: 14px; font-weight: 600; letter-spacing: .14em; line-height: inherit;
+  text-shadow: 0 0 2px #fff, 0 0 6px #ff4fd8, 0 0 12px #ff2bd6, 0 0 22px #ff2bd6aa;
+  box-shadow: 0 0 4px #22f0ff, 0 0 10px #22f0ff88, inset 0 0 6px #22f0ff66; animation: neHum 6s infinite; }
+.nav-links .nav-explore:hover { color: #fff; opacity: 1; border-bottom-color: #7ff6ff;
+  text-shadow: 0 0 2px #fff, 0 0 8px #ff4fd8, 0 0 16px #ff2bd6, 0 0 30px #ff2bd6; box-shadow: 0 0 6px #22f0ff, 0 0 18px #22f0ffaa, inset 0 0 8px #22f0ff88; }
+.ne-text { position: relative; display: inline-block; }
+.ne-dead { animation: neDead 5.3s infinite steps(1); }
+@keyframes neDead { 0%, 61%, 66%, 100% { opacity: 1; } 62% { opacity: .15; text-shadow: none; } 63% { opacity: .8; } 64% { opacity: .1; text-shadow: none; } 65% { opacity: .6; } }
+@keyframes neHum { 0%, 96%, 100% { filter: none; } 97% { filter: brightness(.6); } 98% { filter: brightness(1.15); } }
+.ne-text::before, .ne-text::after { content: attr(data-text); position: absolute; left: 0; top: 0; width: 100%; overflow: hidden; opacity: 0; text-shadow: none; }
+.ne-text::before { color: #22f0ff; animation: neGlitchA 4.2s infinite steps(1); }
 .ne-text::after { color: #ffe14d; animation: neGlitchB 4.2s infinite steps(1); }
 .nav-explore:hover .ne-text::before, .nav-explore:hover .ne-text::after { animation-duration: .9s; }
 @keyframes neGlitchA { 0%, 86%, 100% { opacity: 0; transform: none; clip-path: inset(0 0 0 0); }
@@ -60,8 +64,7 @@ img { max-width: 100%; height: auto; display: block; }
   88% { opacity: .8; transform: translate(2px, 1px); clip-path: inset(60% 0 5% 0); }
   90% { opacity: .8; transform: translate(-2px, 0); clip-path: inset(10% 0 65% 0); }
   92% { opacity: 0; } }
-.nav-explore .ne-text { animation: neFlicker 4.2s infinite steps(1); }
-@keyframes neFlicker { 0%, 86%, 94%, 100% { opacity: 1; } 87% { opacity: .4; transform: translateX(1px); } 89% { opacity: .9; transform: translateX(-1px); } 91% { opacity: .3; } 92% { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .nav-explore, .ne-dead, .ne-text::before, .ne-text::after { animation: none; } }
 
 .page { max-width: 760px; margin: 0 auto; padding: 32px var(--gutter) 96px; line-height: 1.8; }
 .page.wide { max-width: 1280px; }
@@ -442,3 +445,8 @@ img { max-width: 100%; height: auto; display: block; }
 .jump-btn.act .act-label { font-family: var(--mono); font-size: 9.5px; line-height: 1.15; max-height: 3.5em; overflow: hidden; word-break: keep-all; text-align: center; }
 @keyframes actPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
 @media (orientation: landscape) and (max-height: 520px) { .jump-btn.act { width: 70px; height: 70px; bottom: 50px; right: 12px; } }
+/* 좁은 화면: 네온 간판도 탭과 같은 줄에 */
+@media (max-width: 480px) {
+  .nav-links { gap: 4px 16px; }
+  .nav-links .nav-explore { padding: 3px 7px; letter-spacing: .06em; font-size: 13px; }
+}

@@ -19,13 +19,10 @@ export default function SiteNav() {
             {s.label}
           </Link>
         ))}
-        {/* 3D 도시 입구: 붉은 인장 + 지직거리는 네온 글씨 */}
-        <Link href="/explore" className="nav-explore">
-          <span className="ne-seal" aria-hidden>
-            入
-          </span>
-          <span className="ne-text" data-text={t(ui.explore)}>
-            {t(ui.explore)}
+        {/* 3D 도시 작품 입구: 작품 제목을 네온사인처럼. SEOUL의 O 하나는 고장 난 관처럼 깜빡인다 */}
+        <Link href="/explore" className="nav-explore" aria-label={t(ui.explore)} title={t(ui.explore)}>
+          <span className="ne-text" data-text="NEO-SEOUL 2087" aria-hidden>
+            NEO-SE<span className="ne-dead">O</span>UL 2087
           </span>
         </Link>
       </nav>
