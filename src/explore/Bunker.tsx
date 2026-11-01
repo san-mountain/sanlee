@@ -11,6 +11,7 @@ import { BUNKER_H, BUNKER_NPCS, BUNKER_Z0, BUNKER_Z1, PAINTINGS, PILLARS, TERMIN
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import Statue, { Pedestal } from "./Statue";
 import SanNPC from "./SanNPC";
+import { player } from "./Player";
 import { BUNKER } from "./zones";
 import { LotusStrings } from "./CityAlleys";
 
@@ -42,17 +43,6 @@ function Room() {
         <planeGeometry args={[W * 2, LEN]} />
         <meshStandardMaterial map={floor} roughness={0.55} metalness={0.15} color="#9a9a9a" />
       </mesh>
-      {/* 바닥의 물웅덩이: 반사가 강한 얇은 판 */}
-      {[
-        [-3, 7, 2.2, 1.3],
-        [4.5, -6, 1.6, 2.4],
-        [-7.5, -15, 2.4, 1.2],
-      ].map(([x, z, w, d], i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, i]} position={[x, 0.006, z]} scale={[w, d, 1]}>
-          <circleGeometry args={[1, 24]} />
-          <meshStandardMaterial color="#0d0f12" roughness={0.05} metalness={0.9} transparent opacity={0.8} />
-        </mesh>
-      ))}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, BUNKER_H, MIDZ]}>
         <planeGeometry args={[W * 2, LEN]} />
         <meshStandardMaterial map={ceil} roughness={1} color="#777" />
@@ -225,7 +215,7 @@ function Terminal({ id, pos, rotY, color, lang, visited, onTap }: { id: SectionI
   );
 }
 
-function Paintings({ onTap }: { onTap: TapFn }) {
+function Paintings({ lang }: { lang: Lang }) {
   const tex = useTexture(PAINTINGS.map((p) => p.w.image!));
   tex.forEach((t) => {
     t.colorSpace = THREE.SRGBColorSpace;
@@ -240,8 +230,9 @@ function Paintings({ onTap }: { onTap: TapFn }) {
         const pw = ratio >= 1 ? max : max * ratio;
         const ph = ratio >= 1 ? max / ratio : max;
         return (
-          <Tap key={p.work} id={`painting-${p.work}`} onTap={onTap}>
+          <group key={p.work}>
             <group position={p.pos} rotation={[0, p.rotY, 0]}>
+              <HoloCaption work={p.work} lang={lang} x={pw / 2 + 0.85} />
               <mesh position={[0, 0, 0.03]}>
                 <boxGeometry args={[pw + 0.16, ph + 0.16, 0.06]} />
                 <meshStandardMaterial color="#141414" roughness={0.6} metalness={0.3} />
@@ -264,9 +255,83 @@ function Paintings({ onTap }: { onTap: TapFn }) {
                 <meshBasicMaterial color="#fff2d0" transparent opacity={0.018} depthWrite={false} side={THREE.DoubleSide} />
               </mesh>
             </group>
-          </Tap>
+          </group>
         );
       })}
+    </group>
+  );
+}
+
+// 그림 옆 벽에 떠오르는 홀로그램 캡션: 가까이 가면 켜지고, 멀어지면 꺼진다
+function captionTexture(work: number, lang: Lang) {
+  const w = works[work];
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 320;
+  const g = c.getContext("2d")!;
+  g.clearRect(0, 0, 512, 320);
+  g.fillStyle = "rgba(10,40,60,0.35)";
+  g.fillRect(0, 0, 512, 320);
+  g.strokeStyle = "rgba(127,246,255,0.9)";
+  g.lineWidth = 3;
+  g.strokeRect(6, 6, 500, 308);
+  g.fillStyle = "rgba(127,246,255,0.9)";
+  g.fillRect(6, 6, 60, 6);
+  g.textBaseline = "top";
+  g.shadowColor = "#22f0ff";
+  g.shadowBlur = 12;
+  g.fillStyle = "#e8feff";
+  const title = lang === "ko" ? `〈${w.title.ko}〉` : w.title.en;
+  g.font = `600 ${lang === "ko" ? 50 : 44}px "Noto Sans KR", system-ui, sans-serif`;
+  g.fillText(title, 30, 44, 452);
+  g.font = `400 30px "Noto Sans KR", system-ui, sans-serif`;
+  g.fillStyle = "#bdf9ff";
+  g.fillText(`${w.date.slice(0, 4)}`, 30, 128, 452);
+  g.fillText(w.medium[lang], 30, 172, 452);
+  g.fillText(w.size[lang], 30, 216, 452);
+  g.shadowBlur = 0;
+  g.fillStyle = "rgba(127,246,255,0.08)";
+  for (let y = 0; y < 320; y += 4) g.fillRect(0, y, 512, 1);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+function HoloCaption({ work, lang, x }: { work: number; lang: Lang; x: number }) {
+  const tex = useMemo(() => captionTexture(work, lang), [work, lang]);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  const beam = useRef<THREE.MeshBasicMaterial>(null);
+  const ref = useRef<THREE.Group>(null);
+  const k = useRef(0);
+  const wp = useMemo(() => new THREE.Vector3(), []);
+  useFrame((_, dt) => {
+    const g = ref.current;
+    if (!g) return;
+    g.getWorldPosition(wp);
+    const d = Math.hypot(wp.x - player.pos.x, wp.z - player.pos.z);
+    const target = d < 4.2 ? 1 : 0;
+    k.current += (target - k.current) * Math.min(1, dt * 5);
+    const flick = k.current > 0.05 && Math.random() < 0.04 ? 0.45 : 1;
+    if (mat.current) mat.current.opacity = k.current * 0.95 * flick;
+    if (beam.current) beam.current.opacity = k.current * 0.05;
+    g.scale.y = 0.2 + k.current * 0.8;
+    g.visible = k.current > 0.01;
+  });
+  return (
+    <group ref={ref} position={[x, -0.15, 0.12]}>
+      <mesh>
+        <planeGeometry args={[1.25, 0.78]} />
+        <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+      </mesh>
+      {/* 아래 벽의 작은 투사기와 빛줄기 */}
+      <mesh position={[0, -0.75, -0.04]}>
+        <boxGeometry args={[0.3, 0.05, 0.1]} />
+        <meshStandardMaterial color="#1c2a30" metalness={0.8} roughness={0.3} emissive="#0a3a44" />
+      </mesh>
+      <mesh position={[0, -0.57, 0]}>
+        <planeGeometry args={[1.0, 0.32]} />
+        <meshBasicMaterial ref={beam} color="#22f0ff" transparent opacity={0} depthWrite={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+      </mesh>
     </group>
   );
 }
@@ -738,7 +803,7 @@ function WallText({ lang }: { lang: Lang }) {
   );
 }
 
-export default function Bunker({ lang, visited, onTap }: { lang: Lang; visited: SectionId[]; onTap: TapFn }) {
+export default function Bunker({ lang, visited, onTap, secondStatue }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -752,7 +817,7 @@ export default function Bunker({ lang, visited, onTap }: { lang: Lang; visited: 
       {TERMINALS.map((t) => (
         <Terminal key={t.id} {...t} lang={lang} visited={visited.includes(t.id)} onTap={onTap} />
       ))}
-      <Paintings onTap={onTap} />
+      <Paintings lang={lang} />
       <BlastDoor lang={lang} onTap={onTap} />
       <Keeper onTap={onTap} />
       <R07 onTap={onTap} />
@@ -761,7 +826,17 @@ export default function Bunker({ lang, visited, onTap }: { lang: Lang; visited: 
       <Kid onTap={onTap} />
       <Sleeper onTap={onTap} />
       <BunkerLotus />
-      {visited.length >= TERMINALS.length ? (
+      {secondStatue ? (
+        <>
+          {/* 거부 결말: 이산도 다시 보관 처리되어 굳었다. 그 곁에 두 번째 동상이 나란히 앉아 있다 */}
+          <group position={[-2.3, 0, 0]} rotation={[0, 0.12, 0]}>
+            <Statue restored={0} lang={lang} />
+          </group>
+          <group position={[2.3, 0, 0]} rotation={[0, -0.12, 0]}>
+            <Statue restored={0} lang={lang} second />
+          </group>
+        </>
+      ) : visited.length >= TERMINALS.length ? (
         <>
           <Pedestal lang={lang} empty />
           <SanNPC mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[0, 3]} />

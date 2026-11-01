@@ -1,5 +1,5 @@
 // 사이트의 모든 내용은 이 파일 하나에서 관리합니다.
-// 일반 포트폴리오 페이지와 /explore 3D 도시가 둘 다 이 데이터를 읽어요.
+// 일반 포트폴리오 페이지와 /deleteseoul 3D 도시가 둘 다 이 데이터를 읽어요.
 // 각 문장은 { ko: 한국어, en: 영어 } 쌍으로 적어 주세요.
 
 export type Lang = "ko" | "en";
@@ -50,7 +50,7 @@ const PAPER_PORTRAIT: L = { ko: "8절, 39.4\u00a0×\u00a027.2\u00a0cm", en: "39.
 
 export const works: Work[] = [
   {
-    title: { ko: "SEOUL 2087", en: "SEOUL 2087" },
+    title: { ko: "DELETE SEOUL", en: "DELETE SEOUL" },
     date: "2026. 11.",
     medium: { ko: "인터랙티브 웹, 3D", en: "Interactive web, 3D" },
     size: { ko: "가변 크기", en: "Dimensions variable" },
@@ -58,10 +58,10 @@ export const works: Work[] = [
       ko: "이 포트폴리오를 지하 방공호와 그 위의 감시 도시로 옮겨 지은 3D 작업. 방문자는 직접 걸으며 흩어진 기록을 복원하고, 끝까지 쿠키를 거부하다 굳어버린 작가의 동상을 다시 움직이게 한다. 마지막에는 선택 하나가 남는다.",
       en: "This portfolio rebuilt as an underground shelter and the surveillance city above it. Visitors walk through it to restore a scattered record and bring back the statue of an artist who froze after rejecting every last cookie. In the end, one choice remains.",
     },
-    link: "/explore",
+    link: "/deleteseoul",
   },
   {
-    title: { ko: "인간도(人間圖)", en: "Ingando (A Diagram of Humans)" },
+    title: { ko: "인간도人間圖", en: "Ingando (A Diagram of Humans)" },
     date: "2026. 10.",
     medium: { ko: "캔버스에 먹, 아크릴, 마커, 오일파스텔", en: "Ink, acrylic, marker and oil pastel on canvas" },
     size: { ko: "53.0\u00a0×\u00a045.5\u00a0cm", en: "53.0\u00a0×\u00a045.5\u00a0cm" },
@@ -70,11 +70,11 @@ export const works: Work[] = [
     height: 1400,
   },
   {
-    title: { ko: "무력함", en: "Helplessness" },
+    title: { ko: "울분", en: "Indignation" },
     date: "2026. 10.",
     medium: { ko: "종이에 먹, 아크릴, 오일파스텔", en: "Ink, acrylic and oil pastel on paper" },
     size: PAPER_PORTRAIT,
-    image: "/works/sanlee_2026_helplessness.webp",
+    image: "/works/sanlee_2026_indignation.webp",
     width: 984,
     height: 1400,
   },
@@ -91,11 +91,11 @@ export const works: Work[] = [
     height: 953,
   },
   {
-    title: { ko: "괴물", en: "Monster" },
+    title: { ko: "상실", en: "Loss" },
     date: "2026. 10.",
     medium: { ko: "종이에 수채, 오일파스텔, 콜라주", en: "Watercolor, oil pastel and collage on paper" },
     size: PAPER_PORTRAIT,
-    image: "/works/sanlee_2026_monster.webp",
+    image: "/works/sanlee_2026_loss.webp",
     width: 960,
     height: 1400,
   },
@@ -153,7 +153,7 @@ export const sections: { id: SectionId; label: string; labelKo: string; href: st
 
 // 화면에 고정으로 나오는 짧은 문구들
 export const ui = {
-  explore: { ko: "SEOUL 2087 · 3D 도시로 들어가기", en: "SEOUL 2087 · enter the 3D city" },
+  explore: { ko: "DELETE SEOUL · 3D 도시로 들어가기", en: "DELETE SEOUL · enter the 3D city" },
   exploreCta: { ko: "이 사이트를 도시로 탐험하기 ↗", en: "Explore this site as a city ↗" },
   viewWork: { ko: "작품 보기 ↗", en: "View work ↗" },
   selected: { ko: "최근 작업", en: "Recent works" },
@@ -164,6 +164,10 @@ export const ui = {
   enter: { ko: "도시로 들어가기 ↗", en: "Enter the city ↗" },
   contactTitle: { ko: "연락처", en: "Contact" },
   catPainting: { ko: "그림", en: "Painting" },
+  workIndex: { ko: "목록", en: "Index" },
+  viewGrid: { ko: "그리드", en: "Grid" },
+  viewWall: { ko: "벽", en: "Wall" },
+  wallNote: { ko: "실제 크기 비율로 건 벽 · 사람 키 170cm 기준", en: "Hung at true relative scale · figure 170 cm" },
   catSculpture: { ko: "조각", en: "Sculpture" },
   catInteractive: { ko: "인터랙티브", en: "Interactive" },
   sculptureEmpty: {

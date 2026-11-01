@@ -1,4 +1,5 @@
 import SiteNav from "@/components/SiteNav";
+import SiteFooter from "@/components/SiteFooter";
 import WorksGrid from "@/components/WorksGrid";
 
 export const metadata = { title: "Works · SAN LEE" };
@@ -11,6 +12,7 @@ export default function WorksPage() {
         <h1>Works</h1>
         <WorksGrid />
       </main>
+      <SiteFooter />
     </>
   );
 }

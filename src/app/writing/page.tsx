@@ -1,4 +1,5 @@
 import SiteNav from "@/components/SiteNav";
+import SiteFooter from "@/components/SiteFooter";
 import SectionBody from "@/components/SectionBody";
 
 export const metadata = { title: "Writing · SAN LEE" };
@@ -11,6 +12,7 @@ export default function WritingPage() {
         <h1>Writing</h1>
         <SectionBody id="writing" />
       </main>
+      <SiteFooter />
     </>
   );
 }

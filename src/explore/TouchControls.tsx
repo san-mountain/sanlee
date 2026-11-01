@@ -76,6 +76,20 @@ export function requestLock(el: HTMLElement | null) {
   } catch {}
 }
 
+// 주소 끝에 ?keys 를 붙이면 화면 왼쪽 아래에 마지막 키 입력을 보여 준다 (키보드 문제 확인용)
+function logKey(kind: string, e: KeyboardEvent) {
+  if (typeof location === "undefined" || !location.search.includes("keys")) return;
+  let el = document.getElementById("key-log");
+  if (!el) {
+    el = document.createElement("pre");
+    el.id = "key-log";
+    el.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:99;margin:0;padding:6px 8px;font:11px/1.4 monospace;color:#7dff7a;background:#000c;pointer-events:none;white-space:pre";
+    document.body.appendChild(el);
+  }
+  const line = `${kind} code=${e.code} key=${JSON.stringify(e.key)} kc=${e.keyCode} shift=${e.shiftKey}`;
+  el.textContent = [line, ...(el.textContent ?? "").split("\n")].slice(0, 8).join("\n");
+}
+
 // 모바일 점프 버튼
 // 모바일 오른쪽 아래 버튼: 평소엔 점프, 상호작용할 수 있는 것 가까이에 가면 그 행동 버튼으로 바뀐다
 export function JumpButton({ action }: { action?: { label: string; color?: string; run: () => void } | null }) {
@@ -103,7 +117,11 @@ export function JumpButton({ action }: { action?: { label: string; color?: strin
       onPointerDown={(e) => {
         e.preventDefault();
         input.jump = true;
+        input.jumpHeld = true;
       }}
+      onPointerUp={() => (input.jumpHeld = false)}
+      onPointerCancel={() => (input.jumpHeld = false)}
+      onPointerLeave={() => (input.jumpHeld = false)}
     >
       ⤒
     </button>
@@ -170,12 +188,18 @@ export function useLookAndKeys(
       p.y = e.clientY;
     };
     const up = (e: PointerEvent) => pts.delete(e.pointerId);
+    // 점프 키: 스페이스. 한국어 입력기 등에서 key가 "Process"로 오거나 keyCode만 오는 경우도 받는다
+    const isJump = (e: KeyboardEvent) => e.code === "Space" || e.key === " " || e.key === "Spacebar" || e.keyCode === 32;
+    let spaceDown = false;
     const kd = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.("input, textarea")) return;
-      if (e.code === "Space") {
+      logKey("down", e);
+      if (isJump(e)) {
         if (input.enabled) {
           e.preventDefault();
           if (!e.repeat) input.jump = true;
+          input.jumpHeld = true;
+          spaceDown = true;
         }
         return;
       }
@@ -185,10 +209,28 @@ export function useLookAndKeys(
       }
       if (!input.enabled) return;
       if (e.code.startsWith("Arrow")) e.preventDefault();
+      if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !e.repeat) {
+        input.runLatch = true;
+        input.shiftAt = e.timeStamp;
+      }
       input.keys.add(e.code);
     };
-    const ku = (e: KeyboardEvent) => input.keys.delete(e.code);
-    const blur = () => input.keys.clear();
+    const ku = (e: KeyboardEvent) => {
+      logKey("up", e);
+      if (isJump(e)) {
+        // 누름은 운영체제가 가로채고 뗌만 들어온 경우(Shift+Space 한/영 전환 등): 떼는 순간에라도 뛴다
+        if (!spaceDown && input.enabled) input.jump = true;
+        spaceDown = false;
+        input.jumpHeld = false;
+      }
+      // 길게 눌렀다 떼면 걷기로, 톡 눌렀다 떼면 계속 달린다
+      if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && e.timeStamp - input.shiftAt > 450) input.runLatch = false;
+      input.keys.delete(e.code);
+    };
+    const blur = () => {
+      input.keys.clear();
+      input.jumpHeld = false;
+    };
     el.addEventListener("pointerdown", down);
     window.addEventListener("mousemove", mouseMove);
     document.addEventListener("pointerlockchange", lockChange);

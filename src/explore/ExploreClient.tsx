@@ -6,8 +6,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { announcements, checkpoint, npcs, plaque, quest, sanCityLines, statueLines, ui } from "./story";
-import { ZONES, type Interactable, type Zone } from "./zones";
+import { announcements, checkpoint, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
+import { CITY, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
 import { input, loadSettings } from "./input";
@@ -15,14 +15,17 @@ import PauseMenu from "./PauseMenu";
 import Minimap from "./Minimap";
 import QuestArrow, { type QuestTarget } from "./QuestArrow";
 import GazeHUD from "./GazeHUD";
-import { gaze, resetGaze } from "./gaze";
-import { restoreCovers } from "./Jabi";
+import { autoWalk, gaze, resetGaze } from "./gaze";
+import { finalBeam, restoreCovers } from "./Jabi";
+import BackupLine from "./BackupLine";
+import { getBackup, saveBackup, wipeBackup } from "./backup";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
 const KEY = "sanlee-visited";
 const END_KEY = "sanlee-ending";
 const MET_KEY = "sanlee-met";
+const TALK_KEY = "sanlee-san-talked";
 
 function hasWebGL() {
   try {
@@ -40,7 +43,17 @@ type Panel =
   | { kind: "choice" }
   | null;
 
-type Ending = { kind: "accept" | "reject"; step: number } | null;
+type EndKind = "accept" | "reject" | "ghost";
+type Ending = { kind: EndKind; step: number; a: number; r: number; slots: number[] } | null;
+// 결말 대본의 각 줄이 머무는 시간(ms). 마지막 줄 다음에 버튼이 나온다
+const BEAT_MS: Record<EndKind, number[]> = {
+  accept: [2600, 3200, 3800, 3200],
+  reject: [2800, 3800, 4800, 3400],
+  ghost: [2600, 3600, 5600, 4400],
+};
+// 수락한 시민이 다시 들어오면 서게 되는 줄 속 자리
+// 줄 한가운데, 두 사람 사이. 여기서는 문 너머로 금빛이 된 대자비의 얼굴이 보인다
+const LINE_SPOT = { x: 3.6, z: (QUEUE_Z[44] + QUEUE_Z[45]) / 2 };
 
 export default function ExploreClient() {
   const { t, lang } = useLang();
@@ -61,10 +74,22 @@ export default function ExploreClient() {
   // 문을 지나 다른 구역에서 넘어왔는지 (처음 시작·다시 시작이면 false)
   const [arrived, setArrived] = useState(false);
   const [met, setMet] = useState(false);
+  // 세 기록을 모두 복원한 뒤, 풀려난 이산과 이야기했는지
+  const [talked, setTalked] = useState(false);
   const [since] = useState(() => Date.now());
+  // 수락 결말을 본 사람: 다시 오면 방공호가 아니라 줄 속에서 시작한다
+  const [accepted, setAccepted] = useState(false);
+  // 입장 전 쿠키 창: ask → busy(처리 중…) → yes(수락됨) → done
+  const [cookie, setCookie] = useState<"ask" | "busy" | "yes" | "done">("ask");
+  const [cookiePick, setCookiePick] = useState<"accept" | "reject" | null>(null);
   const rootRef = useRef<HTMLElement>(null);
   const labelEls = useRef<Record<string, HTMLDivElement | null>>({});
   const complete = visited.length >= sections.length;
+
+  // 일반 페이지에서 DELETE SEOUL로 지워지며 들어왔다면 그 흔적(그림 숨김 등)을 풀어 준다
+  useEffect(() => {
+    document.body.classList.remove("deleting");
+  }, []);
 
   useEffect(() => {
     setWebgl(hasWebGL());
@@ -72,6 +97,8 @@ export default function ExploreClient() {
     loadSettings();
     try {
       setMet(localStorage.getItem(MET_KEY) === "1");
+      setTalked(localStorage.getItem(TALK_KEY) === "1");
+      setAccepted(localStorage.getItem(END_KEY) === "accept");
     } catch {}
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || "[]");
@@ -106,6 +133,8 @@ export default function ExploreClient() {
       setZone(to);
       setArrived(viaDoor);
       setTracked(false);
+      // 배전실 문을 나서는 순간 백업이 만들어진다
+      if (to === "city" && viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
       setTimeout(() => setFade(null), 500);
     }, 900);
   }, []);
@@ -114,6 +143,11 @@ export default function ExploreClient() {
     (it: Interactable) => {
       switch (it.kind) {
         case "section":
+          // 동상과 먼저 이야기해야 기록 터미널이 열린다
+          if (!met && !complete && visited.length === 0) {
+            setPanel({ kind: "dialog", name: it.label, lines: ui.terminalLocked, step: 0 });
+            break;
+          }
           setPanel({ kind: "section", id: it.section! });
           markVisited(it.section!);
           break;
@@ -121,8 +155,15 @@ export default function ExploreClient() {
           setPanel({ kind: "painting", work: it.work! });
           break;
         case "statue":
-          if (it.id === "san") setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: sanCityLines, step: 0 });
-          else if (complete) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: statueLines[statueLines.length - 1], step: 0 });
+          if (it.id === "san")
+            setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: getBackup().deaths > 0 ? [...sanCityLines, sanAfterDeath] : sanCityLines, step: 0 });
+          else if (complete) {
+            setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: statueLines[statueLines.length - 1], step: 0 });
+            setTalked(true);
+            try {
+              localStorage.setItem(TALK_KEY, "1");
+            } catch {}
+          }
           else {
             setPanel({ kind: "dialog", name: plaque[0], lines: statueLines[Math.min(visited.length, statueLines.length - 2)], step: 0, plaque: true });
             setMet(true);
@@ -133,20 +174,27 @@ export default function ExploreClient() {
           break;
         case "npc": {
           const n = npcs[it.npc!];
-          setPanel({ kind: "dialog", name: n.name, lines: n.lines, step: 0 });
+          const base = complete && n.after ? n.after : n.lines;
+          // 한 번이라도 보관 처리됐다면 관리인은 알아본다
+          const lines = it.npc === "keeper" && getBackup().deaths > 0 ? [keeperAfterDeath, ...base] : base;
+          setPanel({ kind: "dialog", name: n.name, lines, step: 0 });
           break;
         }
         case "door":
           goTo(it.to!);
           break;
         case "checkpoint":
-          if (complete) setPanel({ kind: "choice" });
+          // 백업을 지우고 한 번도 죽지 않은 사람: 검문소가 알아보지 못한다
+          if (complete && getBackup().deleted) startEndingRef.current("ghost");
+          else if (complete) setPanel({ kind: "choice" });
           else setPanel({ kind: "dialog", name: it.label, lines: checkpoint.locked, step: 0 });
           break;
       }
     },
-    [complete, goTo, markVisited, visited.length]
+    [complete, goTo, markVisited, visited.length, met]
   );
+
+  const startEndingRef = useRef<(k: EndKind) => void>(() => {});
 
   // 3D 물체를 직접 탭한 경우: 너무 멀면 무시
   const onTap = useCallback(
@@ -169,9 +217,11 @@ export default function ExploreClient() {
       goTo,
       tp: (x: number, z: number, yaw = 0) => (teleport.req = { x, z, yaw }),
       restore: () => setVisited(sections.map((s) => s.id)),
-      pos: () => [player.pos.x, player.pos.z, player.yaw],
+      pos: () => [player.pos.x, player.pos.z, player.yaw, player.air],
+      input,
       look: (pitch: number) => (input.look.pitch += pitch),
       gaze,
+      end: (k: EndKind) => startEndingRef.current(k),
     };
   }, [goTo]);
 
@@ -209,6 +259,17 @@ export default function ExploreClient() {
     setPanel(null);
     lock();
   }, [lock]);
+  // Esc로 설정창을 닫고 돌아오면 브라우저가 Esc 입력으로는 마우스 잠금을 허락하지 않는다.
+  // 그래서 돌아온 뒤 처음 누르는 키(이동 키 등)에서 바로 다시 화면 가운데에 마우스를 잠근다.
+  useEffect(() => {
+    if (!active || locked || touch) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === "Escape" || e.repeat) return;
+      lock();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active, locked, touch, lock]);
   const resume = useCallback(() => {
     setPaused(false);
     lock();
@@ -245,6 +306,12 @@ export default function ExploreClient() {
         e.preventDefault();
         if (p.step < p.lines.length - 1) setPanel({ ...p, step: p.step + 1 });
         else closePanel();
+        return;
+      }
+      // 작업·글·소개 패널과 그림 보기는 E로 바로 닫는다 (닫기 버튼과 같음)
+      if (e.code === "KeyE" && !e.repeat && p && (p.kind === "section" || p.kind === "painting") && performance.now() - panelAt.current > 250) {
+        e.preventDefault();
+        closePanel();
       }
     };
     window.addEventListener("keydown", onKey);
@@ -271,42 +338,139 @@ export default function ExploreClient() {
   }, [zone, ending]);
 
   // 결말 문장이 차례로 나타남
+  const endStep = ending ? `${ending.kind}:${ending.step}` : "";
   useEffect(() => {
-    if (!ending || ending.step >= 2) return;
-    const id = setTimeout(() => setEnding((e) => (e ? { ...e, step: e.step + 1 } : e)), ending.step === 0 ? 2600 : 3200);
+    if (!ending) return;
+    const ms = BEAT_MS[ending.kind][ending.step];
+    if (ms === undefined) return;
+    const id = setTimeout(() => setEnding((e) => (e ? { ...e, step: e.step + 1 } : e)), ms);
     return () => clearTimeout(id);
-  }, [ending]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endStep]);
 
-  const choose = (kind: "accept" | "reject") => {
+  // 결말 연출: 줄마다 장면이 바뀐다
+  const [secondStatue, setSecondStatue] = useState(false);
+  const [flash, setFlash] = useState(false);
+  const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    if (!ending) return;
+    const { kind, step } = ending;
+    if (kind === "accept") {
+      if (step === 0) {
+        gaze.mood = "calm";
+        // 줄 옆을 따라 걸어가 빈자리에 들어선다
+        autoWalk.to = { x: 2.3, z: LINE_SPOT.z, speed: 3.6, pitch: 0.2 };
+        sceneTimer.current = setTimeout(() => (autoWalk.to = { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.6, pitch: 0.42 }), 6800);
+      }
+      if (step === 4)
+        try {
+          localStorage.setItem(END_KEY, "accept");
+        } catch {}
+    } else if (kind === "reject") {
+      if (step === 0) {
+        finalBeam();
+        sceneTimer.current = setTimeout(() => setFlash(true), 1500);
+      }
+      if (step === 2) {
+        // 장면이 방공호로: 사람들이 두 번째 동상을 옮겨 놓았다
+        setFlash(false);
+        setSecondStatue(true);
+        goTo("bunker", false);
+      }
+      if (step === 4) {
+        // 이 결말은 저장되지 않는다: 진행 기록을 실제로 지운다
+        try {
+          [KEY, END_KEY, MET_KEY, TALK_KEY].forEach((k) => localStorage.removeItem(k));
+        } catch {}
+        wipeBackup();
+      }
+    } else if (kind === "ghost") {
+      if (step === 0) gaze.mood = "blind";
+      if (step === 2) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endStep]);
+
+  const startEnding = (kind: EndKind) => {
     setPanel(null);
-    setEnding({ kind, step: 0 });
-    try {
-      localStorage.setItem(END_KEY, kind);
-    } catch {}
+    const b = getBackup();
+    const slots = Array.from({ length: Math.min(b.n, 12) }, (_, i) => b.n - i);
+    setEnding({ kind, step: 0, a: b.deaths, r: b.restores, slots });
   };
+  startEndingRef.current = startEnding;
+  const choose = (kind: "accept" | "reject") => startEnding(kind);
 
   const resetProgress = () => {
     try {
       localStorage.removeItem(KEY);
       localStorage.removeItem(END_KEY);
       localStorage.removeItem(MET_KEY);
+      localStorage.removeItem(TALK_KEY);
     } catch {}
     setVisited([]);
     setMet(false);
+    setTalked(false);
+  };
+  const clearScene = () => {
+    clearTimeout(sceneTimer.current);
+    autoWalk.to = null;
+    gaze.mood = "";
+    setSecondStatue(false);
+    setFlash(false);
   };
   const restart = () => {
     resetProgress();
+    wipeBackup();
     resetGaze();
     restoreCovers();
+    clearScene();
+    setAccepted(false);
     setEnding(null);
     goTo("bunker", false);
     lock();
+  };
+  // 설정창의 '방문 기록 지우기': 수락한 시민에게는 줄 밖으로 돌아가는 유일한 길
+  const onReset = () => {
+    resetProgress();
+    if (accepted) {
+      setPaused(false);
+      restart();
+    }
+  };
+  // 백업이 없는 사람이 레이저에 맞으면: 처음부터 다시
+  const onGone = useCallback(() => {
+    try {
+      [KEY, MET_KEY, TALK_KEY].forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    wipeBackup();
+    setVisited([]);
+    setMet(false);
+    setTalked(false);
+    resetGaze();
+    restoreCovers();
+    goTo("bunker", false);
+    setTimeout(() => setIntro(true), 900);
+  }, [goTo]);
+
+  // 입장: 수락한 시민은 곧장 줄 속에서 깨어난다
+  const enter = () => {
+    setIntro(false);
+    if (accepted) {
+      gaze.mood = "calm";
+      teleport.req = { x: LINE_SPOT.x, z: QUEUE_Z[30], yaw: 0 };
+      setZone("city");
+      setArrived(false);
+      setTimeout(() => {
+        teleport.req = { x: LINE_SPOT.x, z: QUEUE_Z[30], yaw: 0 };
+        setNotice(ui.welcomeB);
+      }, 400);
+    }
   };
 
   // 퀘스트 화살표의 목표: 매 프레임 플레이어 위치에 따라 고른다
   const questRef = useRef<() => QuestTarget>(() => null);
   questRef.current = () => {
-    if (ending) return null;
+    if (ending || accepted) return null;
     const items = ZONES[zone].items;
     const find = (id: string) => items.find((i) => i.id === id);
     const px = player.pos.x;
@@ -322,10 +486,14 @@ export default function ExploreClient() {
         for (const it of left) if (Math.hypot(it.pos.x - px, it.pos.z - pz) < Math.hypot(best.pos.x - px, best.pos.z - pz)) best = it;
         return best ? { pos: best.pos, label: `${t(quest.terminal)} ${visited.length}/${sections.length}` } : null;
       }
+      if (!talked) {
+        const it = find("statue");
+        return it ? { pos: it.pos, label: t(quest.san) } : null;
+      }
       const ex = find("exit");
       return ex ? { pos: ex.pos, label: t(quest.exit) } : null;
     }
-    if (!complete) {
+    if (!complete || !talked) {
       const h = find("hatch");
       return h ? { pos: h.pos, label: t(quest.back) } : null;
     }
@@ -343,12 +511,12 @@ export default function ExploreClient() {
 
   // 대자비의 시선은 지상에서 자유롭게 움직일 때만 작동한다
   useEffect(() => {
-    gaze.enabled = zone === "city" && active;
+    gaze.enabled = zone === "city" && active && !accepted;
     if (zone !== "city") {
       resetGaze();
       restoreCovers();
     }
-  }, [zone, active]);
+  }, [zone, active, accepted]);
 
   if (webgl === false) {
     return (
@@ -371,6 +539,7 @@ export default function ExploreClient() {
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
     ending?.kind === "reject" && ending.step >= 2 ? "thaw" : "",
+    flash ? "final-flash" : "",
     tracked && !ending ? "is-tracked" : "",
   ].join(" ");
 
@@ -378,7 +547,19 @@ export default function ExploreClient() {
     <main className={rootClass} ref={rootRef}>
       {webgl && (
         <div className="canvas-wrap">
-          <World zone={zone} lang={lang} visited={visited} onTap={onTap} onNear={setNear} onTracked={setTracked} labelEls={labelEls} sanBeside={ending?.kind === "reject" && ending.step >= 1} arrived={arrived} />
+          <World
+            zone={zone}
+            lang={lang}
+            visited={visited}
+            onTap={onTap}
+            onNear={setNear}
+            onTracked={setTracked}
+            labelEls={labelEls}
+            sanMode={ending?.kind === "accept" ? "stay" : ending?.kind === "ghost" && ending.step >= 3 ? "beside" : undefined}
+            hideSan={accepted}
+            secondStatue={secondStatue}
+            arrived={arrived}
+          />
         </div>
       )}
 
@@ -410,6 +591,7 @@ export default function ExploreClient() {
       <div className="hud-zone">
         {t(zone === "bunker" ? ui.zoneBunker : ui.zoneCity)}
         {tracked && !ending && <span className="tracked">{t(ui.tracked)}</span>}
+        {!intro && !ending && !accepted && <BackupLine zone={zone} />}
       </div>
 
       {toast && <div className="toast">{toast}</div>}
@@ -428,7 +610,7 @@ export default function ExploreClient() {
       {active && locked && <div className="crosshair" aria-hidden />}
       {active && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
-      {zone === "city" && !ending && <GazeHUD rootRef={rootRef} />}
+      {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} />}
       {active && touch && <Joystick />}
       {active && touch && (
         <JumpButton
@@ -446,9 +628,10 @@ export default function ExploreClient() {
       {paused && (
         <PauseMenu
           onResume={resume}
-          onReset={resetProgress}
-          onBunker={zone === "city" && !ending ? backToBunker : undefined}
+          onReset={onReset}
+          onBunker={zone === "city" && !ending && !accepted ? backToBunker : undefined}
           since={since}
+          inBunker={zone === "bunker"}
         />
       )}
 
@@ -517,7 +700,9 @@ export default function ExploreClient() {
 
       {panel?.kind === "choice" && (
         <div className="choice-wrap">
-          <div className="choice">
+          <div className="choice" role="dialog" aria-modal="true">
+            <span className="choice-sys">SYS://SEOUL/CHECKPOINT · GATE-01</span>
+            <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 등급 산정 불가" : "▲ RESPONSE REQUIRED · UNGRADED UNTIL ANSWERED"}</span>
             <h2>{t(checkpoint.title)}</h2>
             <p>{t(checkpoint.body)}</p>
             <div className="choice-actions">
@@ -535,18 +720,47 @@ export default function ExploreClient() {
       {ending && (
         <div className={`ending ending-${ending.kind}`}>
           <div className="ending-inner">
-            {(ending.kind === "accept" ? checkpoint.accept : checkpoint.reject).slice(0, ending.step + 1).map((l, i) => (
-              <p key={i} className={i === 2 ? "final" : ""}>
-                {t(l)}
-              </p>
-            ))}
-            {ending.step >= 2 && (
+            {(checkpoint[ending.kind] as Beat[]).slice(0, ending.step + 1).map((l, i, arr) => {
+              // 거부 결말이 방공호로 넘어가면 앞 장면의 글은 거둔다
+              if (ending.kind === "reject" && ending.step >= 2 && i < 2) return null;
+              // 숨은 결말은 대자비의 얼굴을 가리지 않도록 마지막 두 줄만 아래에
+              if (ending.kind === "ghost" && i < ending.step - 1) return null;
+              const last = i === (checkpoint[ending.kind] as Beat[]).length - 1;
+              const cls = [last ? "final" : "", l.say ? "say" : "", l.plaque ? "plaque-line" : "", i < arr.length - 1 && !last ? "past" : ""].join(" ");
+              if (l.slots)
+                return (
+                  <div key={i} className="slots">
+                    {ending.slots.length ? (
+                      ending.slots.map((n, k) => (
+                        <span key={n} style={{ animationDelay: `${0.25 + k * 0.22}s` }}>
+                          BACKUP #{n} <b>{t(checkpoint.slotErased)}</b>
+                        </span>
+                      ))
+                    ) : (
+                      <span>{t(checkpoint.noSlots)}</span>
+                    )}
+                  </div>
+                );
+              return (
+                <p key={i} className={cls}>
+                  {l.say && <span className="say-name">{lang === "ko" ? "이산" : "San"}</span>}
+                  {l.say ? `“${t(l)}”` : t(l).replace("{a}", String(ending.a)).replace("{r}", String(ending.r))}
+                </p>
+              );
+            })}
+            {ending.step >= (checkpoint[ending.kind] as Beat[]).length - 1 && (
               <div className="ending-actions">
-                <small>{t(ending.kind === "accept" ? checkpoint.endingAccept : checkpoint.endingReject)}</small>
+                <small>{t(ending.kind === "accept" ? checkpoint.endingAccept : ending.kind === "reject" ? checkpoint.endingReject : checkpoint.endingGhost)}</small>
                 <div>
-                  <button className="btn" onClick={restart}>
-                    {t(checkpoint.again)}
-                  </button>
+                  {ending.kind === "accept" ? (
+                    <button className="btn" onClick={() => location.reload()}>
+                      {t(checkpoint.reconnect)}
+                    </button>
+                  ) : (
+                    <button className="btn" onClick={restart}>
+                      {t(checkpoint.again)}
+                    </button>
+                  )}
                   <Link className="btn primary" href="/">
                     {t(checkpoint.toPortfolio)}
                   </Link>
@@ -566,16 +780,52 @@ export default function ExploreClient() {
               <h2 className="glitch">{t(ui.title)}</h2>
               <LangToggle />
             </div>
-            {ui.introLines.map((l, i) => (
-              <p key={i}>{t(l)}</p>
-            ))}
-            <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
+            {cookie !== "done" ? (
+              // 입장 전 쿠키 창: 무엇을 누르든 '수락됨'으로 끝난다
+              <div className="intro-cookie" role="dialog" aria-label={t(ui.cookieTitle)}>
+                <span className="choice-sys">{t(ui.cookieTitle)}</span>
+                <p>{t(ui.cookieBody)}</p>
+                {cookie === "ask" ? (
+                  <div className="intro-cookie-actions">
+                    {(["accept", "reject"] as const).map((k) => (
+                      <button
+                        key={k}
+                        className={`btn ${k === "accept" ? "primary" : ""}`}
+                        autoFocus={k === "accept"}
+                        onClick={() => {
+                          setCookiePick(k);
+                          setCookie("busy");
+                          setTimeout(() => setCookie("yes"), 1100);
+                          setTimeout(() => setCookie("done"), 2300);
+                        }}
+                      >
+                        {t(k === "accept" ? ui.accept : ui.reject)}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={`intro-cookie-status ${cookie}`}>
+                    {cookiePick === "reject" && <s>{t(ui.reject)}</s>} {cookie === "busy" ? t(ui.processing) : `✓ ${t(ui.acceptedAll)}`}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <>
+                {accepted ? <p>{t(ui.welcomeB)}</p> : ui.introLines.map((l, i) => <p key={i}>{t(l)}</p>)}
+                <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
+              </>
+            )}
             <div className="panel-actions" style={{ justifyContent: "flex-end" }}>
+              {/* 들어가지 않고 웹사이트로 돌아가는 보조 선택지 */}
+              <Link href="/" className="btn ghost">
+                {t(ui.goBack)}
+              </Link>
               <button
                 className="btn primary"
                 autoFocus
+                hidden={cookie !== "done"}
                 onClick={() => {
-                  setIntro(false);
+                  enter();
                   // 휴대폰: 시작 버튼을 누르는 순간 전체화면으로 (안드로이드 크롬 등에서 주소창이 사라진다)
                   if (touch && !document.fullscreenElement) {
                     document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
@@ -583,7 +833,7 @@ export default function ExploreClient() {
                   lock();
                 }}
               >
-                {t(ui.start)}
+                {t(accepted ? ui.startLine : ui.start)}
               </button>
             </div>
           </div>

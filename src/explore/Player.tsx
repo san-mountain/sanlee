@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
-import { gaze } from "./gaze";
+import { autoWalk, gaze } from "./gaze";
 import type { Interactable, ZoneDef } from "./zones";
 
 const EYE = 1.65;
@@ -15,7 +15,7 @@ const RADIUS = 0.38;
 const JUMP_V = 6.2;
 const GRAVITY = 19;
 
-export const player = { pos: new THREE.Vector3(), yaw: 0 };
+export const player = { pos: new THREE.Vector3(), yaw: 0, air: 0 };
 // 디버그(?debug)에서 순간이동할 때 쓰는 요청
 export const teleport: { req: { x: number; z: number; yaw: number } | null } = { req: null };
 
@@ -54,6 +54,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
 
   const fwd = useRef(new THREE.Vector3());
   const tmp = useRef(new THREE.Vector3());
+  const jumpBuf = useRef(0);
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
@@ -81,13 +82,34 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     const dx = (mv.x * cos - mv.y * sin) * speed * dt;
     const dz = (-mv.x * sin - mv.y * cos) * speed * dt;
     const p = { x: s.x + dx, z: s.z + dz };
-    resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
+    const aw = autoWalk.to;
+    if (aw) {
+      // 결말: 시점이 스스로 걸어간다. 길을 향해 고개를 돌리고, 다 오면 앞(북쪽)을 본다
+      const ax = aw.x - s.x;
+      const az = aw.z - s.z;
+      const ad = Math.hypot(ax, az);
+      const k = Math.min(1, dt * 2.2);
+      const want = ad > 0.6 ? Math.atan2(-ax, -az) : 0;
+      let dy = want - s.yaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      s.yaw += dy * k;
+      if (aw.pitch !== undefined) s.pitch += (aw.pitch - s.pitch) * Math.min(1, dt * 1.2);
+      const st = Math.min(ad, aw.speed * dt);
+      p.x = ad > 1e-4 ? s.x + (ax / ad) * st : s.x;
+      p.z = ad > 1e-4 ? s.z + (az / ad) * st : s.z;
+    } else resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
     s.x = p.x;
     s.z = p.z;
-    // 점프: 땅에 있을 때만
-    if (input.jump && s.y <= 0 && input.enabled) s.vy = JUMP_V;
+    // 점프: 달리거나 걷는 중에도 언제든. 착지 직전에 누른 것도 0.15초 동안 기억했다가 닿자마자 뛰고,
+    // 누르고 있으면 착지할 때마다 이어서 뛴다
+    if (input.jump) jumpBuf.current = 0.15;
     input.jump = false;
+    jumpBuf.current -= dt;
+    if ((jumpBuf.current > 0 || input.jumpHeld) && s.y <= 0 && s.vy <= 0 && input.enabled) {
+      s.vy = JUMP_V;
+      jumpBuf.current = 0;
+    }
     if (s.y > 0 || s.vy > 0) {
       s.vy -= GRAVITY * dt;
       s.y += s.vy * dt;
@@ -112,6 +134,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     }
     player.pos.set(s.x, EYE, s.z);
     player.yaw = s.yaw;
+    player.air = s.y;
 
     // 가까이 있는 상호작용 대상 찾기 (앞쪽에 있는 것 우선)
     camera.getWorldDirection(fwd.current);
