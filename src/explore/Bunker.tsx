@@ -7,7 +7,7 @@ import { Sparkles, useTexture, RoundedBox } from "@react-three/drei";
 import type { Lang, SectionId } from "@/data/site";
 import { works } from "@/data/site";
 import { concreteTexture, hazardTexture } from "./textures";
-import { BUNKER_H, BUNKER_NPCS, BUNKER_Z0, BUNKER_Z1, PAINTINGS, PILLARS, TERMINALS } from "./zones";
+import { BACKUP_RACK, BUNKER_H, BUNKER_NPCS, BUNKER_Z0, BUNKER_Z1, PAINTINGS, PILLARS, TERMINALS } from "./zones";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import Statue, { Pedestal } from "./Statue";
 import SanNPC from "./SanNPC";
@@ -725,6 +725,58 @@ function Kid({ onTap }: { onTap: TapFn }) {
 }
 
 /* ---------- 간이침대에서 잠든 사람 ---------- */
+/* ---------- 끊긴 백업 단말: 서버 랙 하나, 붉은 불빛만 깜빡인다 ---------- */
+function BackupRack({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
+  const { pos, rotY } = BACKUP_RACK;
+  const screen = useSign(
+    [
+      ["BACKUP", 1.6],
+      [lang === "ko" ? "신호 끊김" : "SIGNAL LOST", 0.9],
+    ],
+    { color: "#ff4a5a", bg: "#0a0204", mono: true, glow: true, w: 512, h: 256 }
+  );
+  const leds = useRef<THREE.Group>(null);
+  useFrame((s) => {
+    leds.current?.children.forEach((c, i) => {
+      ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = Math.sin(s.clock.elapsedTime * (3 + i * 0.7) + i) > 0.2 ? 1 : 0.15;
+    });
+  });
+  return (
+    <Tap id="backup" onTap={onTap}>
+      <group position={pos} rotation={[0, rotY, 0]}>
+        <mesh position={[0, 0.9, 0]}>
+          <boxGeometry args={[1.0, 1.8, 0.8]} />
+          <meshStandardMaterial color="#1a1c20" metalness={0.7} roughness={0.45} />
+        </mesh>
+        {[0.35, 0.65, 0.95, 1.25].map((y) => (
+          <mesh key={y} position={[0, y, 0.41]}>
+            <boxGeometry args={[0.86, 0.22, 0.02]} />
+            <meshStandardMaterial color="#2a2d33" metalness={0.6} roughness={0.5} />
+          </mesh>
+        ))}
+        <group ref={leds}>
+          {[0.35, 0.65, 0.95, 1.25].map((y, i) => (
+            <mesh key={y} position={[0.32, y, 0.43]}>
+              <boxGeometry args={[0.05, 0.05, 0.01]} />
+              <meshBasicMaterial color={i % 2 ? "#ff2a3d" : "#ffb02e"} transparent toneMapped={false} />
+            </mesh>
+          ))}
+        </group>
+        <mesh position={[0, 1.62, 0.42]}>
+          <planeGeometry args={[0.8, 0.4]} />
+          <meshBasicMaterial map={screen} toneMapped={false} />
+        </mesh>
+        {/* 뽑혀 늘어진 케이블 */}
+        <mesh position={[-0.3, 0.05, 0.7]} rotation={[0, 0.4, Math.PI / 2]}>
+          <cylinderGeometry args={[0.025, 0.025, 0.9, 6]} />
+          <meshStandardMaterial color="#111" />
+        </mesh>
+        <pointLight position={[0, 1.4, 0.9]} intensity={4} distance={3.5} color="#ff3040" />
+      </group>
+    </Tap>
+  );
+}
+
 function Sleeper({ onTap }: { onTap: TapFn }) {
   const { pos } = BUNKER_NPCS.sleeper;
   const chest = useRef<THREE.Mesh>(null);
@@ -825,6 +877,7 @@ export default function Bunker({ lang, visited, onTap, secondStatue }: { lang: L
       <Radio onTap={onTap} />
       <Kid onTap={onTap} />
       <Sleeper onTap={onTap} />
+      <BackupRack lang={lang} onTap={onTap} />
       <BunkerLotus />
       {secondStatue ? (
         <>

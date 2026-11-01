@@ -17,9 +17,7 @@ export const plaque: L[] = [
 export const ui = {
   title: { ko: "DELETE SEOUL", en: "DELETE SEOUL" },
   introLines: [
-    { ko: "2087년 서울. 지상은 기계가 다스립니다. 시민의 모든 움직임은 기록되고, 그 기록으로 A부터 F까지 등급이 매겨집니다.", en: "Seoul, 2087. Machines rule the surface. Every move a citizen makes is recorded, and the record grades them from A to F." },
-    { ko: "이곳은 지하 40m, 신호가 닿지 않는 방공호 B-7. 시스템이 지운 한 사람이 동상이 되어 남아 있습니다.", en: "This is Shelter B-7, forty metres down, where the signal cannot reach. One person the system erased remains here as a statue." },
-    { ko: "먼저 가운데 동상에게 말을 걸어 보세요.", en: "Start by speaking to the statue in the middle." },
+    { ko: "2087년 서울, 신호가 닿지 않는 지하 방공호. 시스템이 지운 한 사람이 동상으로 남아 있습니다.", en: "Seoul, 2087. A shelter the signal cannot reach. One person the system erased remains here as a statue." },
   ] as L[],
   start: { ko: "방공호로 들어가기", en: "Enter the shelter" },
   goBack: { ko: "돌아가기", en: "Go back" },
@@ -63,6 +61,18 @@ export const ui = {
   processing: { ko: "처리 중…", en: "Processing…" },
   acceptedAll: { ko: "수락됨", en: "Accepted" },
   startLine: { ko: "줄로 돌아가기", en: "Return to the line" },
+  // 처음 지상에 나서는 순간: 시스템이 미등록 시민을 붙잡고 동의를 받는다. 무엇을 눌러도 수락된다
+  consentSys: { ko: "SEOUL.SYS · 시민 인식", en: "SEOUL.SYS · CITIZEN RECOGNITION" },
+  consentTitle: { ko: "미등록 시민이 감지되었습니다", en: "Unregistered citizen detected" },
+  consentBody: {
+    ko: "이 도시는 시민의 안전을 위해 쿠키를 사용합니다. 동의하면 당신을 기록하고, 쓰러져도 되살려 드립니다.",
+    en: "This city uses cookies to keep its citizens safe. Consent, and we will record you, and bring you back if you fall.",
+  },
+  consentDone: { ko: "백업 #1이 만들어졌습니다. 이제 쓰러지면 마지막 백업에서 다시 시작합니다.", en: "Backup #1 created. If you fall, you will restart from your last backup." },
+  consentOk: { ko: "확인", en: "OK" },
+  savedHint: { ko: "쓰러지면 여기서 다시 시작합니다", en: "If you fall, you restart here" },
+  foundEndings: { ko: "발견한 결말 {n}/3", en: "Endings found {n}/3" },
+  notRecorded: { ko: "발견한 결말 · 이 결말은 기록되지 않음", en: "Endings found · this one is not recorded" },
   welcomeB: { ko: "어서 오세요, B등급 시민.", en: "Welcome, Grade B citizen." },
 };
 
@@ -133,8 +143,8 @@ export const jabiUi = {
   },
   deadTitle: { ko: "보관 처리되었습니다", en: "YOU HAVE BEEN ARCHIVED" },
   deadSub: { ko: "자비는 언제나 공정합니다. 처음 위치에서 다시 시작합니다.", en: "Mercy is always fair. Restarting from the last position." },
-  restoreFrom: { ko: "백업 #{n}에서 복원 · 잃은 기억 {t}", en: "Restored from backup #{n} · memory lost {t}" },
-  restoreFresh: { ko: "초기 기록에서 복원 · 잃은 기억 {t}", en: "Restored from the initial record · memory lost {t}" },
+  restoreFrom: { ko: "백업 #{n}에서 복원합니다.", en: "Restoring from backup #{n}." },
+  restoreFresh: { ko: "초기 기록에서 복원합니다.", en: "Restoring from the initial record." },
   cost: { ko: "복원 비용은 당신의 등급에서 차감됩니다.", en: "The cost of restoration is deducted from your grade." },
   noBackup: { ko: "복원할 백업이 없습니다.", en: "There is no backup to restore." },
   noBackupSub: { ko: "처음부터 다시 시작합니다.", en: "Starting again from the beginning." },
@@ -192,7 +202,28 @@ export const sanCityLines: L[] = [
 export const sanAfterDeath: L = { ko: "너는 몇 번이고 돌아오잖아. 부럽지는 않아. 그건 지켜보고 있다는 뜻이니까.", en: "You keep coming back, again and again. I'm not jealous. It means they're watching." };
 
 // 한 번이라도 보관 처리된 뒤 방공호 관리인이 처음 하는 말
+// 지상에 다녀와 백업이 생긴 뒤 관리인이 덧붙이는 말 (숨은 결말의 단서)
+export const keeperBackupHint: L[] = [
+  { ko: "위에 다녀왔구나. 그럼 너도 이제 백업이 있겠네.", en: "You've been up there. So you've got backups now too." },
+  {
+    ko: "저쪽 벽에 끊긴 단말 보여? 위에서 만든 백업이 거기까지 흘러와. 여긴 신호가 안 닿으니까, 거기서라면 지울 수도 있어. 지우면… 다시는 못 돌아오지만.",
+    en: "See that severed terminal on the far wall? Backups made up there drift down to it. The signal can't reach us here, so you could delete them there. Delete them, and… you won't come back again.",
+  },
+];
 export const keeperAfterDeath: L = { ko: "또 왔네. 지난번이랑 똑같은 얼굴로. 흉터 하나 없이.", en: "Back again. Same face as last time. Not a single scar." };
+
+// 방공호의 끊긴 백업 단말
+export const backupTerm = {
+  title: { ko: "끊긴 백업 단말", en: "SEVERED BACKUP TERMINAL" },
+  sub: { ko: "지상에서 만든 백업이 이곳까지 흘러든다. 여기는 신호가 닿지 않는다.", en: "Backups made on the surface drift down to here. The signal cannot reach this place." },
+  none: { ko: "아직 백업이 없습니다. 지상에 나가면 만들어집니다.", en: "No backups yet. They are made when you go up to the surface." },
+  gone: { ko: "기록 없음. 당신은 이제 한 번뿐입니다.", en: "No record. From now on, there is only one of you." },
+  del: { ko: "백업 삭제", en: "Delete backups" },
+  confirm: { ko: "되돌릴 수 없습니다. 지우면 쓰러졌을 때 처음부터 다시 시작해야 합니다.", en: "This cannot be undone. Without backups, falling sends you back to the very beginning." },
+  yes: { ko: "지우기", en: "Delete" },
+  no: { ko: "그만두기", en: "Cancel" },
+  done: { ko: "삭제되었습니다. 시스템은 더 이상 당신을 기억하지 못합니다.", en: "Deleted. The system no longer remembers you." },
+};
 
 export type Beat = L & { say?: boolean; slots?: boolean; plaque?: boolean };
 
@@ -202,6 +233,9 @@ export const checkpoint = {
     { ko: "…어딘가에 당신을 기억하는 기록이 있다면, 다시 오십시오.", en: "…If there is a record somewhere that remembers you, come back." },
   ] as L[],
   title: { ko: "마지막 동의 요청", en: "FINAL CONSENT REQUEST" },
+  sanWarn: { ko: "수락하면 넌 영원히 백업돼. 거부하면 백업이 지워지고. 나처럼.", en: "Accept, and you'll be backed up forever. Refuse, and your backups are deleted. Like mine." },
+  acceptSub: { ko: "B등급 · 영원히 복원됨", en: "Grade B · restored forever" },
+  rejectSub: { ko: "백업 삭제 · 복원 불가", en: "Backups deleted · no restoring" },
   body: {
     ko: "서울은 시민의 더 나은 삶을 위해 쿠키를 사용합니다. 동의하면 다시는 묻지 않겠습니다.",
     en: "Seoul uses cookies for a better life for its citizens. Consent, and you will never be asked again.",

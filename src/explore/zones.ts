@@ -8,7 +8,7 @@ export type Zone = "bunker" | "city";
 
 export type Interactable = {
   id: string;
-  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint";
+  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup";
   pos: THREE.Vector3; // NPC처럼 움직이는 것은 컴포넌트가 이 값을 갱신
   radius: number;
   label: L;
@@ -60,6 +60,9 @@ const SLOTS: { pos: Vec3; rotY: number }[] = [
 ];
 export const PAINTINGS = imageWorks.slice(0, SLOTS.length).map(({ w, i }, k) => ({ work: i, w, ...SLOTS[k] }));
 
+// 끊긴 백업 단말: 지상에서 만든 백업이 흘러드는 곳. 신호가 안 닿는 여기서만 지울 수 있다
+export const BACKUP_RACK = { pos: [11.3, 0, -7.6] as Vec3, rotY: -Math.PI / 2 };
+
 export const PILLARS: Vec3[] = [
   [-6.5, 0, 6],
   [6.5, 0, 6],
@@ -98,6 +101,7 @@ export const BUNKER: ZoneDef = {
     ...PILLARS.map(([x, , z]) => box(x, z, 1.2, 1.2)),
     ...TERMINALS.map((t) => (Math.abs(t.pos[0]) > 1 ? box(t.pos[0] + Math.sign(t.pos[0]) * 0.3, t.pos[2], 1.4, 1.6) : box(t.pos[0], t.pos[2] + 0.3, 1.6, 1.4))),
     box(-4.6, -18.6, 2.8, 1.2), // 관리인 책상
+    box(BACKUP_RACK.pos[0], BACKUP_RACK.pos[2], 0.9, 1.1), // 끊긴 백업 단말
     box(-9.6, -19.3, 2.4, 1.1), // 불단
     box(10.9, -16.8, 1.2, 2.4), // 무전 탁자
     box(-10.75, 11.4, 1.1, 2.3), // 간이침대
@@ -142,6 +146,7 @@ export const BUNKER: ZoneDef = {
     bnpc("radio", { ko: "무전수", en: "Radio operator" }),
     bnpc("kid", { ko: "그림 그리는 아이", en: "Child drawing" }, 0.9, 2.4),
     bnpc("sleeper", { ko: "잠든 사람", en: "Sleeper" }, 0.6, 2.4),
+    { id: "backup", kind: "backup", pos: v(BACKUP_RACK.pos[0] - 0.9, 1.3, BACKUP_RACK.pos[2]), radius: 2.4, label: { ko: "끊긴 백업 단말", en: "Severed backup terminal" } },
     { id: "exit", kind: "door", to: "city", pos: v(0, 1.6, -19), radius: 3.6, label: { ko: "지상으로 올라가기", en: "Go up to the surface" } },
   ],
 };

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { announcements, checkpoint, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
+import { announcements, backupTerm, checkpoint, keeperAfterDeath, keeperBackupHint, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
 import { CITY, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -17,8 +17,8 @@ import QuestArrow, { type QuestTarget } from "./QuestArrow";
 import GazeHUD from "./GazeHUD";
 import { autoWalk, gaze, resetGaze } from "./gaze";
 import { finalBeam, restoreCovers } from "./Jabi";
-import BackupLine from "./BackupLine";
-import { getBackup, saveBackup, wipeBackup } from "./backup";
+import SaveToast from "./BackupLine";
+import { clock, deleteBackup, getBackup, saveBackup, wipeBackup } from "./backup";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -26,6 +26,7 @@ const KEY = "sanlee-visited";
 const END_KEY = "sanlee-ending";
 const MET_KEY = "sanlee-met";
 const TALK_KEY = "sanlee-san-talked";
+const FOUND_KEY = "sanlee-endings-found";
 
 function hasWebGL() {
   try {
@@ -41,6 +42,8 @@ type Panel =
   | { kind: "painting"; work: number }
   | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean }
   | { kind: "choice" }
+  | { kind: "consent"; step: "ask" | "busy" | "done"; pick?: "accept" | "reject" }
+  | { kind: "backup"; step: "view" | "confirm" | "done" }
   | null;
 
 type EndKind = "accept" | "reject" | "ghost";
@@ -80,9 +83,8 @@ export default function ExploreClient() {
   // 수락 결말을 본 사람: 다시 오면 방공호가 아니라 줄 속에서 시작한다
   const [accepted, setAccepted] = useState(false);
   // 입장 전 쿠키 창: ask → busy(처리 중…) → yes(수락됨) → done
-  // 입장 전 쿠키 창은 뺐다: 시작 버튼 하나로 바로 들어간다
-  const [cookie, setCookie] = useState<"ask" | "busy" | "yes" | "done">("done");
-  const [cookiePick, setCookiePick] = useState<"accept" | "reject" | null>(null);
+  // 발견한 결말 (거부 결말은 기록을 지우므로 남지 않는다)
+  const [found, setFound] = useState<string[]>([]);
   const rootRef = useRef<HTMLElement>(null);
   const labelEls = useRef<Record<string, HTMLDivElement | null>>({});
   const complete = visited.length >= sections.length;
@@ -100,6 +102,8 @@ export default function ExploreClient() {
       setMet(localStorage.getItem(MET_KEY) === "1");
       setTalked(localStorage.getItem(TALK_KEY) === "1");
       setAccepted(localStorage.getItem(END_KEY) === "accept");
+      const f = JSON.parse(localStorage.getItem(FOUND_KEY) || "[]");
+      if (Array.isArray(f)) setFound(f);
     } catch {}
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || "[]");
@@ -135,7 +139,12 @@ export default function ExploreClient() {
       setArrived(viaDoor);
       setTracked(false);
       // 배전실 문을 나서는 순간 백업이 만들어진다
-      if (to === "city" && viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
+      // 처음 지상에 나서면 시스템이 붙잡고 동의를 받는다. 그다음부터는 문을 나설 때마다 조용히 백업
+      if (to === "city" && viaDoor) {
+        const b = getBackup();
+        if (b.n === 0 && !b.deleted) setTimeout(() => setPanel({ kind: "consent", step: "ask" }), 900);
+        else setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
+      }
       setTimeout(() => setFade(null), 500);
     }, 900);
   }, []);
@@ -177,12 +186,18 @@ export default function ExploreClient() {
           const n = npcs[it.npc!];
           const base = complete && n.after ? n.after : n.lines;
           // 한 번이라도 보관 처리됐다면 관리인은 알아본다
-          const lines = it.npc === "keeper" && getBackup().deaths > 0 ? [keeperAfterDeath, ...base] : base;
+          const bk = getBackup();
+          let lines = it.npc === "keeper" && bk.deaths > 0 ? [keeperAfterDeath, ...base] : base;
+          // 지상에 다녀와 백업이 생겼다면 관리인이 끊긴 단말을 알려 준다
+          if (it.npc === "keeper" && bk.n > 0 && !bk.deleted) lines = [...lines, ...keeperBackupHint];
           setPanel({ kind: "dialog", name: n.name, lines, step: 0 });
           break;
         }
         case "door":
           goTo(it.to!);
+          break;
+        case "backup":
+          setPanel({ kind: "backup", step: getBackup().deleted ? "done" : "view" });
           break;
         case "checkpoint":
           // 백업을 지우고 한 번도 죽지 않은 사람: 검문소가 알아보지 못한다
@@ -297,6 +312,8 @@ export default function ExploreClient() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (performance.now() - unlockAt.current < 250) return; // 잠금 해제와 같은 Esc
+        // 시스템의 동의 요청은 Esc로 피할 수 없다
+        if (panelRef.current?.kind === "consent") return;
         if (panelRef.current) setPanel(null);
         else if (pausedRef.current) resume();
         else if (activeRef.current) setPaused(true);
@@ -356,6 +373,16 @@ export default function ExploreClient() {
   useEffect(() => {
     if (!ending) return;
     const { kind, step } = ending;
+    // 마지막 줄에 닿으면 발견한 결말로 남긴다 (거부 결말은 기록을 지우므로 제외)
+    if (kind !== "reject" && step === BEAT_MS[kind].length) {
+      setFound((f) => {
+        const next = f.includes(kind) ? f : [...f, kind];
+        try {
+          localStorage.setItem(FOUND_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
     if (kind === "accept") {
       if (step === 0) {
         gaze.mood = "calm";
@@ -592,10 +619,10 @@ export default function ExploreClient() {
       <div className="hud-zone">
         {t(zone === "bunker" ? ui.zoneBunker : ui.zoneCity)}
         {tracked && !ending && <span className="tracked">{t(ui.tracked)}</span>}
-        {!intro && !ending && !accepted && <BackupLine zone={zone} />}
       </div>
 
       {toast && <div className="toast">{toast}</div>}
+      {!intro && !ending && !accepted && <SaveToast />}
       {notice && !panel && <div className="notice">{t(notice)}</div>}
 
       {active && near && verb && !touch && (
@@ -706,13 +733,121 @@ export default function ExploreClient() {
             <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 등급 산정 불가" : "▲ RESPONSE REQUIRED · UNGRADED UNTIL ANSWERED"}</span>
             <h2>{t(checkpoint.title)}</h2>
             <p>{t(checkpoint.body)}</p>
+            <p className="choice-san">
+              <span>{lang === "ko" ? "이산" : "San"}</span>“{t(checkpoint.sanWarn)}”
+            </p>
             <div className="choice-actions">
               <button className="choice-accept" onClick={() => choose("accept")}>
                 {t(ui.accept)}
+                <small>{t(checkpoint.acceptSub)}</small>
               </button>
               <button className="choice-reject" onClick={() => choose("reject")}>
                 {t(ui.reject)}
+                <small>{t(checkpoint.rejectSub)}</small>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {panel?.kind === "consent" && (
+        <div className="choice-wrap">
+          <div className="choice consent" role="dialog" aria-modal="true">
+            <span className="choice-sys">{t(ui.consentSys)}</span>
+            <span className="choice-alert">{lang === "ko" ? "▲ 이동 정지 · 응답 필요" : "▲ MOVEMENT HALTED · RESPONSE REQUIRED"}</span>
+            <h2>{t(ui.consentTitle)}</h2>
+            <p>{t(ui.consentBody)}</p>
+            {panel.step === "ask" && (
+              <div className="choice-actions">
+                {(["accept", "reject"] as const).map((k) => (
+                  <button
+                    key={k}
+                    className={k === "accept" ? "choice-accept" : "choice-reject"}
+                    autoFocus={k === "accept"}
+                    onClick={() => {
+                      setPanel({ kind: "consent", step: "busy", pick: k });
+                      setTimeout(() => {
+                        saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]);
+                        setPanel((p) => (p?.kind === "consent" ? { ...p, step: "done" } : p));
+                      }, 1300);
+                    }}
+                  >
+                    {t(k === "accept" ? ui.accept : ui.reject)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {panel.step !== "ask" && (
+              <p className="consent-status">
+                {panel.pick === "reject" && <s>{t(ui.reject)}</s>} {panel.step === "busy" ? t(ui.processing) : `✓ ${t(ui.acceptedAll)}`}
+              </p>
+            )}
+            {panel.step === "done" && (
+              <>
+                <p className="consent-backup">● {t(ui.consentDone)}</p>
+                <div className="panel-actions">
+                  <button className="btn primary" autoFocus onClick={closePanel}>
+                    {t(ui.consentOk)}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {panel?.kind === "backup" && (
+        <div className="panel-wrap">
+          <div className="panel backup-term">
+            <div className="panel-head">
+              <h2>{t(backupTerm.title)}</h2>
+            </div>
+            <p className="bt-sub">{t(backupTerm.sub)}</p>
+            {(() => {
+              const b = getBackup();
+              if (panel.step === "done") return <p className="bt-gone">{t(b.deleted ? backupTerm.done : backupTerm.gone)}</p>;
+              if (!b.list.length) return <p className="bt-none">{t(backupTerm.none)}</p>;
+              return (
+                <ol className="bt-list">
+                  {b.list
+                    .slice(-3)
+                    .reverse()
+                    .map((x) => (
+                      <li key={x.n}>
+                        BACKUP #{x.n} · {clock(x.t)}
+                      </li>
+                    ))}
+                </ol>
+              );
+            })()}
+            {panel.step === "confirm" && <p className="bt-confirm">{t(backupTerm.confirm)}</p>}
+            <div className="panel-actions">
+              {panel.step === "view" && getBackup().list.length > 0 && (
+                <button className="btn danger" onClick={() => setPanel({ kind: "backup", step: "confirm" })}>
+                  {t(backupTerm.del)}
+                </button>
+              )}
+              {panel.step === "confirm" && (
+                <>
+                  <button className="btn" autoFocus onClick={() => setPanel({ kind: "backup", step: "view" })}>
+                    {t(backupTerm.no)}
+                  </button>
+                  <button
+                    className="btn danger"
+                    onClick={() => {
+                      deleteBackup();
+                      setPanel({ kind: "backup", step: "done" });
+                    }}
+                  >
+                    {t(backupTerm.yes)}
+                  </button>
+                </>
+              )}
+              {panel.step !== "confirm" && (
+                <button className="btn primary" autoFocus onClick={closePanel}>
+                  {t(ui.close)}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -752,6 +887,9 @@ export default function ExploreClient() {
             {ending.step >= (checkpoint[ending.kind] as Beat[]).length - 1 && (
               <div className="ending-actions">
                 <small>{t(ending.kind === "accept" ? checkpoint.endingAccept : ending.kind === "reject" ? checkpoint.endingReject : checkpoint.endingGhost)}</small>
+                <small className="ending-found">
+                  {ending.kind === "reject" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}
+                </small>
                 <div>
                   {ending.kind === "accept" ? (
                     <button className="btn" onClick={() => location.reload()}>
@@ -781,41 +919,9 @@ export default function ExploreClient() {
               <h2 className="glitch">{t(ui.title)}</h2>
               <LangToggle />
             </div>
-            {cookie !== "done" ? (
-              // 입장 전 쿠키 창: 무엇을 누르든 '수락됨'으로 끝난다
-              <div className="intro-cookie" role="dialog" aria-label={t(ui.cookieTitle)}>
-                <span className="choice-sys">{t(ui.cookieTitle)}</span>
-                <p>{t(ui.cookieBody)}</p>
-                {cookie === "ask" ? (
-                  <div className="intro-cookie-actions">
-                    {(["accept", "reject"] as const).map((k) => (
-                      <button
-                        key={k}
-                        className={`btn ${k === "accept" ? "primary" : ""}`}
-                        autoFocus={k === "accept"}
-                        onClick={() => {
-                          setCookiePick(k);
-                          setCookie("busy");
-                          setTimeout(() => setCookie("yes"), 1100);
-                          setTimeout(() => setCookie("done"), 2300);
-                        }}
-                      >
-                        {t(k === "accept" ? ui.accept : ui.reject)}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={`intro-cookie-status ${cookie}`}>
-                    {cookiePick === "reject" && <s>{t(ui.reject)}</s>} {cookie === "busy" ? t(ui.processing) : `✓ ${t(ui.acceptedAll)}`}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <>
-                {accepted ? <p>{t(ui.welcomeB)}</p> : ui.introLines.map((l, i) => <p key={i}>{t(l)}</p>)}
-                <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
-              </>
-            )}
+            {accepted ? <p>{t(ui.welcomeB)}</p> : ui.introLines.map((l, i) => <p key={i}>{t(l)}</p>)}
+            {found.length > 0 && <p className="intro-found">{t(ui.foundEndings).replace("{n}", String(found.length))}</p>}
+            <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
             <div className="panel-actions" style={{ justifyContent: "flex-end" }}>
               {/* 들어가지 않고 웹사이트로 돌아가는 보조 선택지 */}
               <Link href="/" className="btn ghost">
@@ -824,7 +930,6 @@ export default function ExploreClient() {
               <button
                 className="btn primary"
                 autoFocus
-                hidden={cookie !== "done"}
                 onClick={() => {
                   enter();
                   // 휴대폰: 시작 버튼을 누르는 순간 전체화면으로 (안드로이드 크롬 등에서 주소창이 사라진다)

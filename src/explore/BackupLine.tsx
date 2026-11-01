@@ -2,24 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useLang } from "@/components/LangProvider";
-import { backupUi } from "./story";
-import { clock, getBackup, lastSlot } from "./backup";
-import type { Zone } from "./zones";
+import { backupUi, ui } from "./story";
 
-// 구역 이름 아래 흐린 한 줄. 저장되는 순간에만 2초 동안 밝아진다. 방공호 안에서는 신호가 없다.
-export default function BackupLine({ zone }: { zone: Zone }) {
+// 백업이 저장되는 순간 화면 아래 가운데에 잠깐 뜨는 알림. 세이브 포인트처럼 보이게 한다.
+// 첫 백업은 동의 창이 직접 알려 주므로 여기서는 두 번째부터. 두 번째에는 뜻을 한 번 더 붙인다.
+export default function SaveToast() {
   const { t } = useLang();
-  const [, bump] = useState(0);
-  const [flash, setFlash] = useState<number | null>(null);
+  const [n, setN] = useState<number | null>(null);
   useEffect(() => {
     let to: ReturnType<typeof setTimeout>;
     const on = (e: Event) => {
-      bump((x) => x + 1);
-      if ((e as CustomEvent).detail === "save") {
-        setFlash(getBackup().n);
-        clearTimeout(to);
-        to = setTimeout(() => setFlash(null), 2000);
-      }
+      const d = (e as CustomEvent).detail as { kind: string; n: number } | string;
+      if (typeof d !== "object" || d.kind !== "save" || d.n < 2) return;
+      setN(d.n);
+      clearTimeout(to);
+      to = setTimeout(() => setN(null), 2600);
     };
     window.addEventListener("sanlee-backup", on);
     return () => {
@@ -27,20 +24,11 @@ export default function BackupLine({ zone }: { zone: Zone }) {
       clearTimeout(to);
     };
   }, []);
-  const b = getBackup();
-  const slot = lastSlot();
-  let text: string;
-  let cls = "backup-line";
-  if (flash !== null) {
-    text = t(backupUi.saved).replace("{n}", String(flash));
-    cls += " flash";
-  } else if (zone === "bunker") {
-    text = t(backupUi.noSignal);
-    cls += " off";
-  } else if (b.deleted) {
-    text = t(backupUi.deleted);
-    cls += " gone";
-  } else if (slot) text = `BACKUP #${slot.n} · ${clock(slot.t)}`;
-  else text = t(backupUi.none);
-  return <div className={cls}>{text}</div>;
+  if (n === null) return null;
+  return (
+    <div className="save-toast" role="status">
+      <b>{t(backupUi.saved).replace("{n}", String(n))}</b>
+      {n <= 3 && <span>{t(ui.savedHint)}</span>}
+    </div>
+  );
 }

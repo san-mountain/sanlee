@@ -25,7 +25,7 @@ export function getBackup(): Backup {
   return cache!;
 }
 
-function write(b: Backup, ev: string) {
+function write(b: Backup, ev: string | { kind: string; n: number }) {
   cache = b;
   try {
     localStorage.setItem(BACKUP_KEY, JSON.stringify(b));
@@ -38,7 +38,7 @@ export function saveBackup(x: number, z: number) {
   const b = getBackup();
   if (b.deleted) return null;
   const slot = { n: b.n + 1, t: Date.now(), x, z };
-  write({ ...b, n: slot.n, list: [...b.list, slot].slice(-5) }, "save");
+  write({ ...b, n: slot.n, list: [...b.list, slot].slice(-5) }, { kind: "save", n: slot.n });
   return slot;
 }
 
