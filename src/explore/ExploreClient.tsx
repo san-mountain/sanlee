@@ -80,7 +80,8 @@ export default function ExploreClient() {
   // 수락 결말을 본 사람: 다시 오면 방공호가 아니라 줄 속에서 시작한다
   const [accepted, setAccepted] = useState(false);
   // 입장 전 쿠키 창: ask → busy(처리 중…) → yes(수락됨) → done
-  const [cookie, setCookie] = useState<"ask" | "busy" | "yes" | "done">("ask");
+  // 입장 전 쿠키 창은 뺐다: 시작 버튼 하나로 바로 들어간다
+  const [cookie, setCookie] = useState<"ask" | "busy" | "yes" | "done">("done");
   const [cookiePick, setCookiePick] = useState<"accept" | "reject" | null>(null);
   const rootRef = useRef<HTMLElement>(null);
   const labelEls = useRef<Record<string, HTMLDivElement | null>>({});
