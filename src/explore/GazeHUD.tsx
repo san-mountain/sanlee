@@ -44,7 +44,7 @@ export default function GazeHUD({ rootRef }: { rootRef: React.RefObject<HTMLElem
       if (gaze.inZone && !shown.current) {
         shown.current = true;
         setTip(true);
-        setTimeout(() => setTip(false), 7000);
+        setTimeout(() => setTip(false), 15000);
       }
       if (gaze.dead && !deadShown) {
         deadShown = true;

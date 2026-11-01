@@ -640,3 +640,6 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .btn.ghost { border-color: transparent; color: var(--dim); text-decoration: none; }
 .btn.ghost:hover { color: var(--fg); border-color: transparent; text-decoration: underline; text-underline-offset: 4px; }
 .intro .panel-actions { align-items: center; }
+/* 게임 규칙 안내: 15초 동안 보이고, 마지막 1초에 천천히 사라진다 */
+.gaze-tip { animation: panelIn .3s ease-out, tipOut 1s ease-in 14s forwards; }
+@keyframes tipOut { to { opacity: 0; } }
