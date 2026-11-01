@@ -69,6 +69,7 @@ img { max-width: 100%; height: auto; display: block; }
 /* 모든 페이지가 같은 틀: 제목은 내비의 로고와 같은 왼쪽 선에서 시작하고, 글은 읽기 좋은 폭(760px)으로만 줄인다 */
 .page { max-width: 1280px; margin: 0 auto; padding: 32px var(--gutter) 96px; line-height: 1.8; }
 .page:not(.wide) > *:not(h1) { max-width: 760px; }
+.meta, .poem > summary .meta { font-variant-numeric: tabular-nums; }
 .page h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 700; letter-spacing: -.01em; margin: 0 0 28px; line-height: 1.2; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -491,8 +492,10 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* 넓은 화면: 제목은 왼쪽 칸에 붙어 따라 내려오고, 내용은 오른쪽 넓은 칸에. 오른쪽이 비지 않는 편집 디자인 그리드 */
 @media (min-width: 1000px) {
-  .page:not(.home) { display: grid; grid-template-columns: minmax(180px, 1fr) 3fr; column-gap: clamp(40px, 5vw, 96px); align-items: start; }
+  .page:not(.home) { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(0, 3fr); column-gap: clamp(40px, 5vw, 96px); align-items: start; }
   .page:not(.home) > h1 { grid-column: 1; grid-row: 1 / span 20; position: sticky; top: 96px; margin: 0; }
-  .page:not(.home) > *:not(h1) { grid-column: 2; }
-  .page:not(.home):not(.wide) > *:not(h1) { max-width: 720px; }
+  .page:not(.home) > *:not(h1) { grid-column: 2; min-width: 0; }
+  /* 선과 목록은 오른쪽 칸 끝까지, 읽는 글만 좁게: 오른쪽이 남은 공간이 아니라 닫힌 면으로 보인다 */
+  .page:not(.home):not(.wide) > *:not(h1) { max-width: none; }
+  .page .section-body > p, .page .poem-body, .page .poems-note { max-width: 680px; }
 }
