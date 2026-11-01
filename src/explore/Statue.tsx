@@ -9,7 +9,7 @@ const GREY = new THREE.Color("#a6a3ad");
 const STONE_EMISSIVE = new THREE.Color("#000000");
 
 type Part = "head" | "torso" | "arms" | "legs";
-const RESTORE_AT: Record<Part, number> = { head: 1, torso: 2, arms: 3, legs: 4 };
+const RESTORE_AT: Record<Part, number> = { head: 1, torso: 2, arms: 3, legs: 3 };
 const COLORS: Record<Part, string> = { head: "#ff2bd6", torso: "#22f0ff", arms: "#a77bff", legs: "#ffe14d" };
 
 // 회색으로 굳은 상태에서 방문한 건물 수만큼 부위별로 색이 돌아오는 재질
@@ -73,7 +73,7 @@ export default function Statue({ restored, onSelect }: Props) {
   const torso = usePartMaterial("torso", restored);
   const arms = usePartMaterial("arms", restored);
   const legs = usePartMaterial("legs", restored);
-  const complete = restored >= 4;
+  const complete = restored >= 3;
 
   // 완전히 복원되기 전에는 가끔 지직거림
   useFrame((s) => {

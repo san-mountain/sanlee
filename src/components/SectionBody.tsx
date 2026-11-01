@@ -13,6 +13,19 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
         {about.paragraphs.map((p, i) => (
           <p key={i}>{t(p)}</p>
         ))}
+        <h2 id="contact" className="contact-title">
+          {t(ui.contactTitle)}
+        </h2>
+        <p>
+          <a href={`mailto:${contact.email}`}>{contact.email}</a>
+        </p>
+        {contact.links.map((l) => (
+          <p key={l.href}>
+            <a href={l.href} target="_blank" rel="noreferrer">
+              {l.label}
+            </a>
+          </p>
+        ))}
       </div>
     );
   }
@@ -78,18 +91,5 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
       </ul>
     );
   }
-  return (
-    <div className="section-body">
-      <p>
-        <a href={`mailto:${contact.email}`}>{contact.email}</a>
-      </p>
-      {contact.links.map((l) => (
-        <p key={l.href}>
-          <a href={l.href} target="_blank" rel="noreferrer">
-            {l.label}
-          </a>
-        </p>
-      ))}
-    </div>
-  );
+  return null;
 }

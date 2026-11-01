@@ -33,7 +33,7 @@ img { max-width: 100%; height: auto; display: block; }
 .nav a { text-decoration: none; }
 .nav-logo { grid-area: logo; font-weight: 700; letter-spacing: .04em; font-size: 15px; }
 .nav-lang { grid-area: lang; }
-.nav-links { grid-area: links; display: flex; gap: 20px; overflow-x: auto; scrollbar-width: none;
+.nav-links { grid-area: links; display: flex; flex-wrap: wrap; gap: 4px 20px; overflow-x: auto; scrollbar-width: none;
   margin: 0 calc(var(--gutter) * -1); padding: 2px var(--gutter); }
 .nav-links::-webkit-scrollbar { display: none; }
 .nav-links a { color: var(--muted); font-size: 14px; white-space: nowrap; padding: 4px 0; border-bottom: 1px solid transparent; }
@@ -45,11 +45,11 @@ img { max-width: 100%; height: auto; display: block; }
 .page.wide { max-width: 1280px; }
 .page h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 700; letter-spacing: -.01em; margin: 0 0 28px; line-height: 1.2; }
 
-.hero { padding: clamp(24px, 8vw, 96px) 0 clamp(32px, 6vw, 72px); }
-.hero h1 { font-size: clamp(48px, 11vw, 120px); letter-spacing: -.03em; margin: 0 0 8px; line-height: 1; }
-.tagline { color: var(--muted); font-size: clamp(16px, 2vw, 20px); margin: 0 0 32px; }
-.explore-cta { display: inline-block; padding: 12px 20px; border: 1px solid var(--ink); text-decoration: none; font-size: 15px; }
-.explore-cta:hover { background: var(--ink); color: var(--paper); opacity: 1; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.home .grid { margin-bottom: 0; }
+.home-more { border-top: 1px solid var(--rule); padding-top: 16px; margin-top: clamp(36px, 5vw, 56px); text-align: right; font-size: 14px; }
+.home-more a { text-decoration: none; color: var(--muted); }
+.home-more a:hover { color: var(--ink); opacity: 1; }
 .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
   border-top: 1px solid var(--ink); padding-top: 14px; margin-bottom: 24px; }
 .section-head h2 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .02em; }
@@ -73,12 +73,13 @@ img { max-width: 100%; height: auto; display: block; }
 .caption { word-break: keep-all; }
 .work-link { font-size: 14px; }
 
-.cat-nav { display: flex; gap: 18px; margin: -12px 0 clamp(28px, 4vw, 44px); font-size: 15px; }
-.cat-nav a { color: var(--muted, #777); text-decoration: none; }
-.cat-nav a:hover { color: var(--ink); }
-.cat-title { font-size: clamp(20px, 2.4vw, 26px); font-weight: 700; margin: clamp(40px, 6vw, 72px) 0 clamp(18px, 2.5vw, 28px); scroll-margin-top: 90px; }
-.cat-title:first-of-type { margin-top: 0; }
-.cat-empty { color: var(--muted, #777); margin: 0; }
+.cat-tabs { display: flex; gap: 22px; border-bottom: 1px solid var(--rule); margin: -8px 0 clamp(24px, 4vw, 40px); }
+.cat-tabs button { all: unset; cursor: pointer; font-size: 15px; color: var(--muted); padding: 6px 0 10px; margin-bottom: -1px;
+  border-bottom: 1px solid transparent; }
+.cat-tabs button:hover { color: var(--ink); }
+.cat-tabs button.on { color: var(--ink); border-bottom-color: var(--ink); }
+.cat-tabs button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.cat-empty { color: var(--muted); margin: 0 0 40px; }
 .feature-card { display: grid; grid-template-columns: 1fr; gap: 20px; text-decoration: none; margin-bottom: clamp(32px, 5vw, 64px);
   padding-bottom: clamp(32px, 5vw, 64px); border-bottom: 1px solid var(--rule); }
 .feature-card:hover { opacity: 1; }
@@ -219,3 +220,12 @@ img { max-width: 100%; height: auto; display: block; }
   .intro .panel { width: min(520px, 90vw); }
   .hud { padding: 18px 24px; font-size: 13px; }
 }
+
+/* 메인: 이름 대신 작업이 먼저 보이도록 */
+.page.home { padding-top: 24px; }
+@media (max-width: 719px) {
+  .home .grid { columns: 2; column-gap: 14px; }
+  .home .grid li { margin-bottom: 22px; }
+  .home .caption { font-size: 12px; line-height: 1.5; }
+}
+.contact-title { font-size: 15px; font-weight: 600; letter-spacing: .02em; margin: 56px 0 8px; padding-top: 14px; border-top: 1px solid var(--ink); scroll-margin-top: 90px; }

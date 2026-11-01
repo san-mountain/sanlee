@@ -89,7 +89,7 @@ export default function ExploreClient() {
     );
   }
 
-  const lines = statueLines[Math.min(visited.length, statueLines.length - 1)];
+  const lines = visited.length >= sections.length ? statueLines[statueLines.length - 1] : statueLines[visited.length];
   const sectionMeta = panel?.kind === "section" ? sections.find((s) => s.id === panel.id)! : null;
 
   return (
