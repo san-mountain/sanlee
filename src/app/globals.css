@@ -801,3 +801,16 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 
 /* 탭 아래 긴 구분선은 없애고, 선택한 탭의 밑줄만 남긴다 */
 .cat-tabs { border-bottom: 0; }
+
+/* ---------- 시·일기: 고운바탕 + 동양적인 여백과 낙관 ---------- */
+.poems .poem-title, .poems .stanza, .poems .poem-first, .diary-sub, .diary-memo {
+  font-family: var(--font-brush), var(--font-serif), "Noto Serif KR", serif; }
+.poems .poem-title { font-weight: 700; letter-spacing: .01em; }
+.poems .stanza { font-size: 17px; line-height: 2.05; letter-spacing: .015em; }
+.poems .poem-first { font-size: 14px; }
+.diary .poem-title { font-weight: 400; letter-spacing: .04em; }
+/* 글을 다 읽으면 끝에 붉은 낙관(山) 하나 */
+.poem-seal { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin: .4em 0 .2em;
+  border: 1.5px solid #b3261e; color: #b3261e; border-radius: 3px; font: 700 15px/1 var(--font-brush), var(--font-serif), serif;
+  transform: rotate(-3deg); opacity: .85; user-select: none; }
+.explore-root .poem-seal { border-color: var(--pink); color: var(--pink); }

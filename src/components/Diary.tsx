@@ -296,6 +296,9 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
             </summary>
             <div className="poem-body">
               <Body body={e.body} />
+              <span className="poem-seal" aria-hidden>
+                山
+              </span>
               <button
                 type="button"
                 className="poem-fold"

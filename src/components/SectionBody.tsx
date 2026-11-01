@@ -186,6 +186,9 @@ function Poems({ inExplore }: { inExplore: boolean }) {
                     {stanza}
                   </p>
                 ))}
+                <span className="poem-seal" aria-hidden>
+                  山
+                </span>
                 <button
                   type="button"
                   className="poem-fold"
