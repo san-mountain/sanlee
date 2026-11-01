@@ -104,8 +104,8 @@ export default function WorksGrid({ limit }: { limit?: number }) {
           {feature.map((w) => (
           <Link key={w.title.en} href={w.link ?? "#"} className="feature-card">
             <div className="feature-art" aria-hidden>
+              <span>DELETE</span>
               <span>SEOUL</span>
-              <span>2087</span>
             </div>
             <div className="feature-text">
               <Caption w={w} />
@@ -115,6 +115,32 @@ export default function WorksGrid({ limit }: { limit?: number }) {
           </Link>
         ))}
         </>
+      )}
+
+      {!limit && (
+        <section className="work-index" aria-labelledby="work-index-title">
+          <h2 id="work-index-title">{t(ui.workIndex)}</h2>
+          <ol>
+            {works.map((w) => {
+                const cat = w.image ? CATS[0] : CATS[2];
+                const go = () => {
+                  if (w.image) {
+                    setTab("painting");
+                    setOpen(images.indexOf(w));
+                  } else selectTab("interactive");
+                };
+                return (
+                  <li key={w.title.en}>
+                    <button type="button" onClick={go}>
+                      <span className="wi-year">{w.date.slice(0, 4)}</span>
+                      <span className="wi-title">{t(w.title)}</span>
+                      <span className="wi-cat">{t(cat.label)}</span>
+                    </button>
+                  </li>
+                );
+              })}
+          </ol>
+        </section>
       )}
 
       {cur && (

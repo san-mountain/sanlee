@@ -1,4 +1,4 @@
-// SEOUL 2087의 모든 문구. 대사를 바꾸고 싶으면 이 파일만 고치면 됩니다.
+// DELETE SEOUL의 모든 문구. 대사를 바꾸고 싶으면 이 파일만 고치면 됩니다.
 import type { L } from "@/data/site";
 
 export const plaque: L[] = [
@@ -15,7 +15,7 @@ export const plaque: L[] = [
 ];
 
 export const ui = {
-  title: { ko: "SEOUL 2087", en: "SEOUL 2087" },
+  title: { ko: "DELETE SEOUL", en: "DELETE SEOUL" },
   introLines: [
     { ko: "2087년, 지상은 기계가 관리합니다. 모든 시민은 매 순간 동의하고, 기록되고, A부터 F까지 등급이 매겨집니다.", en: "2087. The surface is managed by machines. Every citizen consents, is logged and graded from A to F, every second." },
     { ko: "여기는 지하 40m, 방공호 B-7. 시스템이 지우려 한 한 사람의 기록이 숨겨져 있습니다.", en: "This is Shelter B-7, forty metres underground, where the record of one erased person is hidden." },
