@@ -68,25 +68,56 @@ export function Joystick() {
 }
 
 // 화면 어디든 끌면 고개를 돌린다 (마우스·터치 공통). 키보드 입력도 여기서 받는다.
-export function useLookAndKeys(target: React.RefObject<HTMLElement | null>, onInteract: () => void, active: boolean) {
+// PC에서는 화면을 클릭하면 마우스가 잠기고, 마우스를 움직이는 대로 시점이 돈다 (FPS 게임처럼). Esc로 해제.
+export function useLookAndKeys(
+  target: React.RefObject<HTMLElement | null>,
+  onInteract: () => void,
+  active: boolean,
+  onLockChange?: (locked: boolean) => void
+) {
   const cb = useRef(onInteract);
   cb.current = onInteract;
+  const lockCb = useRef(onLockChange);
+  lockCb.current = onLockChange;
   useEffect(() => {
     input.enabled = active;
     if (!active) {
       input.keys.clear();
       input.joy.x = input.joy.y = 0;
+      if (document.pointerLockElement) document.exitPointerLock();
     }
   }, [active]);
   useEffect(() => {
     const el = target.current;
     if (!el) return;
     const pts = new Map<number, { x: number; y: number }>();
+    const locked = () => document.pointerLockElement === el;
     const down = (e: PointerEvent) => {
-      if ((e.target as HTMLElement).closest(".joy-zone, button, a, .panel")) return;
+      if (locked()) {
+        // 잠긴 상태의 클릭 = 상호작용
+        if (e.button === 0 && input.enabled) cb.current();
+        return;
+      }
+      if ((e.target as HTMLElement).closest(".joy-zone, button, a, .panel, .choice, .ending, .intro")) return;
+      if (e.pointerType === "mouse" && input.enabled && el.requestPointerLock) {
+        try {
+          const r = el.requestPointerLock() as unknown as Promise<void> | undefined;
+          r?.catch?.(() => {});
+        } catch {}
+      }
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     };
+    const mouseMove = (e: MouseEvent) => {
+      if (!locked() || !input.enabled) return;
+      input.look.yaw -= e.movementX * 0.0022;
+      input.look.pitch -= e.movementY * 0.0022;
+    };
+    const lockChange = () => {
+      pts.clear();
+      lockCb.current?.(locked());
+    };
     const move = (e: PointerEvent) => {
+      if (locked()) return;
       const p = pts.get(e.pointerId);
       if (!p || !input.enabled) return;
       const k = e.pointerType === "touch" ? 0.0055 : 0.0038;
@@ -110,6 +141,8 @@ export function useLookAndKeys(target: React.RefObject<HTMLElement | null>, onIn
     const ku = (e: KeyboardEvent) => input.keys.delete(e.code);
     const blur = () => input.keys.clear();
     el.addEventListener("pointerdown", down);
+    window.addEventListener("mousemove", mouseMove);
+    document.addEventListener("pointerlockchange", lockChange);
     window.addEventListener("pointermove", move);
     window.addEventListener("pointerup", up);
     window.addEventListener("pointercancel", up);
@@ -118,6 +151,8 @@ export function useLookAndKeys(target: React.RefObject<HTMLElement | null>, onIn
     window.addEventListener("blur", blur);
     return () => {
       el.removeEventListener("pointerdown", down);
+      window.removeEventListener("mousemove", mouseMove);
+      document.removeEventListener("pointerlockchange", lockChange);
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
       window.removeEventListener("pointercancel", up);

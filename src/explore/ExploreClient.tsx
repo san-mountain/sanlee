@@ -48,6 +48,7 @@ export default function ExploreClient() {
   const [fade, setFade] = useState<string | null>(null);
   const [notice, setNotice] = useState<L | null>(null);
   const [ending, setEnding] = useState<Ending>(null);
+  const [locked, setLocked] = useState(false);
   const rootRef = useRef<HTMLElement>(null);
   const labelEls = useRef<Record<string, HTMLDivElement | null>>({});
   const complete = visited.length >= sections.length;
@@ -126,14 +127,15 @@ export default function ExploreClient() {
   // 3D 물체를 직접 탭한 경우: 너무 멀면 무시
   const onTap = useCallback(
     (id: string) => {
-      if (panel || intro || fade || ending) return;
+      // PC에서는 클릭이 마우스 잠금·상호작용(E)으로 쓰이므로 물체 직접 탭은 터치 화면에서만
+      if (!touch || panel || intro || fade || ending) return;
       const it = ZONES[zone].items.find((i) => i.id === id);
       if (!it) return;
       const d = Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z);
       if (d > 10) return;
       interact(it);
     },
-    [panel, intro, fade, ending, zone, interact]
+    [touch, panel, intro, fade, ending, zone, interact]
   );
 
   // 테스트용: 주소 끝에 ?debug 를 붙이면 콘솔에서 이동·복원을 조작할 수 있다
@@ -150,9 +152,14 @@ export default function ExploreClient() {
   const active = !intro && !panel && !fade && !ending;
   const nearRef = useRef(near);
   nearRef.current = near;
-  useLookAndKeys(rootRef, () => {
-    if (nearRef.current) interact(nearRef.current);
-  }, active);
+  useLookAndKeys(
+    rootRef,
+    () => {
+      if (nearRef.current) interact(nearRef.current);
+    },
+    active,
+    setLocked
+  );
 
   // Esc로 패널 닫기
   useEffect(() => {
@@ -271,14 +278,15 @@ export default function ExploreClient() {
 
       {active && near && verb && (
         <button type="button" className="prompt" onClick={() => interact(near)} style={{ borderColor: near.color, color: near.color }}>
-          {!touch && <kbd>E</kbd>}
+          {!touch && <kbd>{locked ? "E / Click" : "E"}</kbd>}
           <span>
             {t(near.id === "statue" && complete ? { ko: "이산", en: "San" } : near.label)} · {t(verb)}
           </span>
         </button>
       )}
 
-      {active && !near && <div className="hint">{t(touch ? ui.hintTouch : ui.hintPc)}</div>}
+      {active && !near && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
+      {active && locked && <div className="crosshair" aria-hidden />}
       {active && touch && <Joystick />}
 
       {panel?.kind === "section" && sectionMeta && (

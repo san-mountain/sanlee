@@ -312,3 +312,7 @@ img { max-width: 100%; height: auto; display: block; }
   .painting-panel img { max-height: 58vh; }
 }
 .ending-inner { word-break: keep-all; background: radial-gradient(ellipse at center, #000000aa, transparent 70%); padding: 30px 10px; }
+.crosshair { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; z-index: 30; pointer-events: none; }
+.crosshair::before, .crosshair::after { content: ""; position: absolute; background: #ffffffb0; box-shadow: 0 0 4px #000; }
+.crosshair::before { left: 6px; top: 0; width: 2px; height: 14px; }
+.crosshair::after { top: 6px; left: 0; height: 2px; width: 14px; }
