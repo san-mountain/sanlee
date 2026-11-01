@@ -815,3 +815,15 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
   border: 1.5px solid #b3261e; color: #b3261e; border-radius: 3px; font: 700 15px/1 var(--font-brush), var(--font-serif), serif;
   transform: rotate(-3deg); opacity: .85; user-select: none; }
 .explore-root .poem-seal { border-color: var(--pink); color: var(--pink); }
+
+/* Works: 보기 전환은 아이콘으로, 분류 탭과 한 줄에. 탭 아래 구분선 없음. 페이지 제목은 화면 크기와 상관없이 숨김(메뉴가 대신함) */
+.works-bar { border-bottom: 0; flex-wrap: nowrap; align-items: center; }
+.works-bar .cat-tabs { min-width: 0; }
+.view-toggle { gap: 10px; padding: 0 0 var(--s1); flex: none; }
+.view-toggle button { display: inline-flex; padding: 2px; color: var(--muted); opacity: .7; }
+.view-toggle button:hover { opacity: 1; }
+.view-toggle button.on { color: var(--ink); opacity: 1; text-decoration: none; }
+.page > h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
+@media (max-width: 520px) { .works-bar .cat-tabs { gap: 18px; } .view-toggle { gap: 6px; } }
+/* 〈제목〉: 전각 괄호의 빈 반쪽을 걷어 내 왼쪽이 다른 줄과 맞도록 */
+.caption .ct, .caption strong, .wi-title { font-feature-settings: "halt"; }
