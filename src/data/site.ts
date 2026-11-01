@@ -1,5 +1,5 @@
 // 사이트의 모든 내용은 이 파일 하나에서 관리합니다.
-// 일반 포트폴리오 페이지와 /explore 3D 도시가 둘 다 이 데이터를 읽어요.
+// 일반 포트폴리오 페이지와 /deleteseoul 3D 도시가 둘 다 이 데이터를 읽어요.
 // 각 문장은 { ko: 한국어, en: 영어 } 쌍으로 적어 주세요.
 
 export type Lang = "ko" | "en";
@@ -58,7 +58,7 @@ export const works: Work[] = [
       ko: "이 포트폴리오를 지하 방공호와 그 위의 감시 도시로 옮겨 지은 3D 작업. 방문자는 직접 걸으며 흩어진 기록을 복원하고, 끝까지 쿠키를 거부하다 굳어버린 작가의 동상을 다시 움직이게 한다. 마지막에는 선택 하나가 남는다.",
       en: "This portfolio rebuilt as an underground shelter and the surveillance city above it. Visitors walk through it to restore a scattered record and bring back the statue of an artist who froze after rejecting every last cookie. In the end, one choice remains.",
     },
-    link: "/explore",
+    link: "/deleteseoul",
   },
   {
     title: { ko: "인간도人間圖", en: "Ingando (A Diagram of Humans)" },
@@ -165,6 +165,9 @@ export const ui = {
   contactTitle: { ko: "연락처", en: "Contact" },
   catPainting: { ko: "그림", en: "Painting" },
   workIndex: { ko: "목록", en: "Index" },
+  viewGrid: { ko: "그리드", en: "Grid" },
+  viewWall: { ko: "벽", en: "Wall" },
+  wallNote: { ko: "실제 크기 비율로 건 벽 · 사람 키 170cm 기준", en: "Hung at true relative scale · figure 170 cm" },
   catSculpture: { ko: "조각", en: "Sculpture" },
   catInteractive: { ko: "인터랙티브", en: "Interactive" },
   sculptureEmpty: {

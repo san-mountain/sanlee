@@ -94,7 +94,7 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
               {t(w.medium)}, {t(w.size)}
             </p>
             {w.description && <p className="work-desc">{t(w.description)}</p>}
-            {w.link && !(inExplore && w.link === "/explore") && (
+            {w.link && !(inExplore && w.link === "/deleteseoul") && (
               <p>
                 <a href={w.link} className="work-link">
                   {t(ui.viewWork)}

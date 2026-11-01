@@ -1,8 +1,8 @@
 {
   "name": "DELETE SEOUL · SAN LEE",
   "short_name": "DELETE SEOUL",
-  "start_url": "/explore",
-  "scope": "/explore",
+  "start_url": "/deleteseoul",
+  "scope": "/deleteseoul",
   "display": "fullscreen",
   "orientation": "any",
   "background_color": "#07030f",
