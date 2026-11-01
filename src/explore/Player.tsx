@@ -15,7 +15,7 @@ const RADIUS = 0.38;
 const JUMP_V = 6.2;
 const GRAVITY = 19;
 
-export const player = { pos: new THREE.Vector3(), yaw: 0 };
+export const player = { pos: new THREE.Vector3(), yaw: 0, air: 0 };
 // 디버그(?debug)에서 순간이동할 때 쓰는 요청
 export const teleport: { req: { x: number; z: number; yaw: number } | null } = { req: null };
 
@@ -54,6 +54,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
 
   const fwd = useRef(new THREE.Vector3());
   const tmp = useRef(new THREE.Vector3());
+  const jumpBuf = useRef(0);
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.05);
@@ -85,9 +86,15 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
     s.x = p.x;
     s.z = p.z;
-    // 점프: 땅에 있을 때만
-    if (input.jump && s.y <= 0 && input.enabled) s.vy = JUMP_V;
+    // 점프: 달리거나 걷는 중에도 언제든. 착지 직전에 누른 것도 0.15초 동안 기억했다가 닿자마자 뛰고,
+    // 누르고 있으면 착지할 때마다 이어서 뛴다
+    if (input.jump) jumpBuf.current = 0.15;
     input.jump = false;
+    jumpBuf.current -= dt;
+    if ((jumpBuf.current > 0 || input.jumpHeld) && s.y <= 0 && s.vy <= 0 && input.enabled) {
+      s.vy = JUMP_V;
+      jumpBuf.current = 0;
+    }
     if (s.y > 0 || s.vy > 0) {
       s.vy -= GRAVITY * dt;
       s.y += s.vy * dt;
@@ -112,6 +119,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     }
     player.pos.set(s.x, EYE, s.z);
     player.yaw = s.yaw;
+    player.air = s.y;
 
     // 가까이 있는 상호작용 대상 찾기 (앞쪽에 있는 것 우선)
     camera.getWorldDirection(fwd.current);

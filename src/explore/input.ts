@@ -8,6 +8,8 @@ export const input = {
   enabled: true,
   // 점프 요청 (스페이스바·점프 버튼)
   jump: false,
+  // 점프 키·버튼을 누르고 있는 중 (누르고 있으면 착지할 때마다 다시 뛴다)
+  jumpHeld: false,
   // 설정창에서 바꾸는 값
   sens: 1,
   bob: true,

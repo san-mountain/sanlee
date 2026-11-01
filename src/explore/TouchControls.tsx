@@ -103,7 +103,11 @@ export function JumpButton({ action }: { action?: { label: string; color?: strin
       onPointerDown={(e) => {
         e.preventDefault();
         input.jump = true;
+        input.jumpHeld = true;
       }}
+      onPointerUp={() => (input.jumpHeld = false)}
+      onPointerCancel={() => (input.jumpHeld = false)}
+      onPointerLeave={() => (input.jumpHeld = false)}
     >
       ⤒
     </button>
@@ -176,6 +180,7 @@ export function useLookAndKeys(
         if (input.enabled) {
           e.preventDefault();
           if (!e.repeat) input.jump = true;
+          input.jumpHeld = true;
         }
         return;
       }
@@ -187,8 +192,14 @@ export function useLookAndKeys(
       if (e.code.startsWith("Arrow")) e.preventDefault();
       input.keys.add(e.code);
     };
-    const ku = (e: KeyboardEvent) => input.keys.delete(e.code);
-    const blur = () => input.keys.clear();
+    const ku = (e: KeyboardEvent) => {
+      if (e.code === "Space") input.jumpHeld = false;
+      input.keys.delete(e.code);
+    };
+    const blur = () => {
+      input.keys.clear();
+      input.jumpHeld = false;
+    };
     el.addEventListener("pointerdown", down);
     window.addEventListener("mousemove", mouseMove);
     document.addEventListener("pointerlockchange", lockChange);

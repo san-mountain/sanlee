@@ -169,7 +169,7 @@ export default function ExploreClient() {
       goTo,
       tp: (x: number, z: number, yaw = 0) => (teleport.req = { x, z, yaw }),
       restore: () => setVisited(sections.map((s) => s.id)),
-      pos: () => [player.pos.x, player.pos.z, player.yaw],
+      pos: () => [player.pos.x, player.pos.z, player.yaw, player.air],
       look: (pitch: number) => (input.look.pitch += pitch),
       gaze,
     };
