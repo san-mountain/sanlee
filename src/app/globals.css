@@ -450,3 +450,9 @@ img { max-width: 100%; height: auto; display: block; }
   .nav-links { gap: 4px 16px; }
   .nav-links .nav-explore { padding: 3px 7px; letter-spacing: .06em; font-size: 13px; }
 }
+/* 간판 앞 한자: 붉은 관, 명조체 */
+.ne-han { display: inline-block; margin-right: .55em; padding-right: .55em; border-right: 1px solid #ff4a5a88; letter-spacing: .08em;
+  font-family: "Noto Serif KR", "Noto Serif CJK KR", "Songti SC", serif; font-weight: 700; color: #ffe2d6;
+  text-shadow: 0 0 2px #fff, 0 0 6px #ff3b3b, 0 0 12px #ff1f2f, 0 0 20px #ff1f2faa; }
+@media (max-width: 480px) { .ne-han { margin-right: .4em; padding-right: .4em; letter-spacing: 0; } }
+@media (max-width: 480px) { .ne-year { display: none; } }
