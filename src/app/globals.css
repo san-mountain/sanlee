@@ -47,7 +47,7 @@ img { max-width: 100%; height: auto; display: block; }
 .nav-links::-webkit-scrollbar { display: none; }
 .nav-links a { color: var(--muted); font-size: var(--fs-meta); white-space: nowrap; padding: 4px 0; border-bottom: 1px solid transparent; }
 .nav-links a:hover { color: var(--ink); opacity: 1; }
-.nav-links a.active { color: var(--ink); border-bottom-color: var(--ink); }
+.nav-links a.active { color: var(--ink); font-weight: 600; }
 /* 네온사인: 어두운 간판 위에 분홍 관 글씨, 하늘색 테두리 관. 높이와 글줄은 옆 탭과 같게 */
 .nav-links { align-items: center; }
 .nav-links .nav-explore { position: relative; display: inline-block; padding: 3px 10px; margin: -1px 0; border: 1px solid #7ff6ff; border-radius: 4px;
