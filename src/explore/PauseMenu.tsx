@@ -7,7 +7,7 @@ import { fourthWall, pause } from "./story";
 import { input, saveSettings } from "./input";
 
 // Esc 설정창. 실제로 쓸 수 있는 설정 몇 개와, 시스템이 방문자에게 직접 말을 거는 문장들.
-export default function PauseMenu({ onResume, onReset, since }: { onResume: () => void; onReset: () => void; since: number }) {
+export default function PauseMenu({ onResume, onReset, onBunker, since }: { onResume: () => void; onReset: () => void; onBunker?: () => void; since: number }) {
   const { t, lang } = useLang();
   const [sens, setSens] = useState(input.sens);
   const [bob, setBob] = useState(input.bob);
@@ -139,6 +139,11 @@ export default function PauseMenu({ onResume, onReset, since }: { onResume: () =
           <Link className="btn" href="/">
             {t(pause.leave)}
           </Link>
+          {onBunker && (
+            <button className="btn" title={t(pause.bunkerNote)} onClick={onBunker}>
+              {t(pause.bunker)}
+            </button>
+          )}
           <button className="btn primary" autoFocus onClick={onResume}>
             {t(pause.resume)}
           </button>

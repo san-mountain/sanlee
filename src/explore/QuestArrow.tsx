@@ -1,20 +1,29 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type * as THREE from "three";
 import { player } from "./Player";
 
 // 화면 위쪽 가운데의 작은 화살표: 지금 목표가 어느 쪽에 있는지 알려 준다
-export default function QuestArrow({ target, label }: { target: THREE.Vector3 | null; label: string }) {
+export type QuestTarget = { pos: { x: number; z: number }; label: string } | null;
+
+export default function QuestArrow({ get }: { get: () => QuestTarget }) {
   const ref = useRef<HTMLDivElement>(null);
   const arrow = useRef<HTMLSpanElement>(null);
   const dist = useRef<HTMLSpanElement>(null);
+  const text = useRef<HTMLSpanElement>(null);
+  const getRef = useRef(get);
+  getRef.current = get;
   useEffect(() => {
     let raf = 0;
     const loop = () => {
       raf = requestAnimationFrame(loop);
       const el = ref.current;
-      if (!el || !target) return;
+      if (!el) return;
+      const q = getRef.current();
+      el.style.display = q ? "" : "none";
+      if (!q) return;
+      const target = q.pos;
+      if (text.current && text.current.textContent !== q.label) text.current.textContent = q.label;
       const dx = target.x - player.pos.x;
       const dz = target.z - player.pos.z;
       const d = Math.hypot(dx, dz);
@@ -28,8 +37,7 @@ export default function QuestArrow({ target, label }: { target: THREE.Vector3 | 
     };
     loop();
     return () => cancelAnimationFrame(raf);
-  }, [target]);
-  if (!target) return null;
+  }, []);
   return (
     <div className="quest" ref={ref} aria-hidden>
       <span className="quest-arrow" ref={arrow}>
@@ -38,7 +46,7 @@ export default function QuestArrow({ target, label }: { target: THREE.Vector3 | 
           <path d="M8 1 L13.5 9 L9.6 9 L9.6 15 L6.4 15 L6.4 9 L2.5 9 Z" fill="currentColor" />
         </svg>
       </span>
-      <span className="quest-label">{label}</span>
+      <span className="quest-label" ref={text} />
       <span className="quest-dist" ref={dist} />
     </div>
   );

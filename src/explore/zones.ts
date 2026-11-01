@@ -281,6 +281,52 @@ export const ALLEY_PEOPLE: { x: number; z: number; rotY: number; tone: number }[
   return out;
 })();
 
+// 통제선: 띠 A(남쪽 골목들) 바깥으로는 큰길로만 북쪽에 갈 수 있다.
+// 골목에서는 남쪽 광장으로만 나갈 수 있어서, 검문소까지는 큰길 전체를 걸어야 한다.
+export type Barrier = Box & { axis: "x" | "z" }; // axis: 장벽이 뻗은 방향
+export const BARRIERS: Barrier[] = (() => {
+  const out: Barrier[] = [];
+  for (const s of [-1, 1]) {
+    // 띠 A 북쪽 끝 (골목·산책로 출구)
+    for (const [a, b] of [
+      [22, 22 + ALLEY],
+      [36, 36 + ALLEY],
+      [52, EDGE.x],
+    ])
+      out.push({ x0: s < 0 ? -b : a, x1: s < 0 ? -a : b, z0: -26.5, z1: -25.5, axis: "x" });
+    // 큰길에서 동서로 빠지는 길: 띠 A의 골목 두 개 + 교차로 두 개
+    for (const [z0, z1] of [
+      [-15, -11.5],
+      [-0.5, 3],
+      [-36, -26],
+      [-70, -60],
+    ])
+      out.push({ x0: s * 11.5 - 0.5, x1: s * 11.5 + 0.5, z0, z1, axis: "z" });
+  }
+  return out;
+})();
+
+// 큰길의 엄폐물: 기계의 질서답게 좌우 대칭. 가운데 하나, 양옆 한 쌍이 번갈아 놓인다.
+export type Cover = { x: number; z: number; w: number; d: number; h: number; kind: "stele" | "container" | "wall" };
+export const COVERS: Cover[] = (() => {
+  const out: Cover[] = [];
+  const kinds: Cover["kind"][] = ["stele", "container", "wall"];
+  const zs = [-4, -12, -20, -30, -38, -46, -54, -62, -70, -78];
+  zs.forEach((z, i) => {
+    const kind = kinds[i % 3];
+    const dims = kind === "stele" ? { w: 2.4, d: 1.1, h: 3.6 } : kind === "container" ? { w: 2.6, d: 1.6, h: 3.3 } : { w: 3, d: 0.8, h: 3.4 };
+    if (i % 2 === 0) out.push({ x: 0, z, ...dims, kind });
+    else for (const s of [-1, 1]) out.push({ x: s * 6.9, z, ...dims, kind });
+  });
+  return out;
+})();
+export const coverBox = (c: Cover): Box => box(c.x, c.z, c.w, c.d);
+
+// 큰길 끝, 다리 건너 섬에 선 거대한 입불 '대자비'. 이마의 렌즈가 감시하는 눈이다.
+export const JABI = { x: 0, y: 0, z: -178, eye: new THREE.Vector3(0, 84, -169.6) };
+// 시선이 닿는 구간 (큰길)
+export const GAZE_ZONE = { x: AVENUE + 2.5, z0: -90, z1: 2 };
+
 // 남쪽 광장의 범종각과 석탑
 export const BELL = { pos: [-10, 0, 27] as Vec3 };
 export const PAGODA = { pos: [10, 0, 26] as Vec3 };
@@ -318,6 +364,8 @@ export const CITY: ZoneDef = {
   bounds: CITY_BOUNDS,
   boxes: [
     ...LOTS,
+    ...BARRIERS,
+    ...COVERS.map(coverBox),
     GATE_STOP,
     JUNK,
     box(-7.2, 5.2, 2.2, 1.4), // 노점 수레

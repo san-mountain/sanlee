@@ -33,25 +33,21 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
     return (
       <div className="poems">
         {lang === "en" && <p className="poems-note">{ui.poemsNote.en}</p>}
-        {!inExplore && (
-          <ol className="poem-toc">
-            {poems.map((p, i) => (
-              <li key={p.title}>
-                <a href={`#poem-${i}`}>{p.title}</a> <span className="meta">{p.date}</span>
-              </li>
-            ))}
-          </ol>
-        )}
+        {/* 제목 목록만 보이고, 제목을 누르면 그 시가 펼쳐진다 */}
         {poems.map((p, i) => (
-          <article key={p.title} id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
-            <h3>{p.title}</h3>
-            <p className="meta">{p.date}</p>
-            {p.body.split("\n\n").map((stanza, i) => (
-              <p key={i} className="stanza">
-                {stanza}
-              </p>
-            ))}
-          </article>
+          <details key={p.title} id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
+            <summary>
+              <span className="poem-title">{p.title}</span>
+              <span className="meta">{p.date}</span>
+            </summary>
+            <div className="poem-body">
+              {p.body.split("\n\n").map((stanza, i) => (
+                <p key={i} className="stanza">
+                  {stanza}
+                </p>
+              ))}
+            </div>
+          </details>
         ))}
       </div>
     );

@@ -1,0 +1,766 @@
+"use client";
+
+// 대자비(大慈悲): 큰길 끝 섬에 선 거대한 입불. 이마의 렌즈로 큰길을 내려다보고,
+// 시선에 오래 노출되면 눈이 붉어지고 입꼬리가 올라가다가, 레이저로 바닥을 긁으며 쏜다.
+import { useLayoutEffect, useMemo, useRef } from "react";
+import * as THREE from "three";
+import { useFrame } from "@react-three/fiber";
+import { Sparkles } from "@react-three/drei";
+import type { Lang } from "@/data/site";
+import { AVENUE, BARRIERS, COVERS, GAZE_ZONE, JABI, QUEUE_Z } from "./zones";
+import { gaze } from "./gaze";
+import { player } from "./Player";
+import { hazardTexture, signTexture } from "./textures";
+import { useSign } from "./parts";
+
+const tmpM = new THREE.Matrix4();
+const tmpQ = new THREE.Quaternion();
+const tmpV = new THREE.Vector3();
+const tmpS = new THREE.Vector3();
+const UP = new THREE.Vector3(0, 1, 0);
+
+/* ---------- 엄폐물 상태 (파괴되면 alive=false) ---------- */
+export const coverState = COVERS.map(() => ({ alive: true, hp: 1.1, burn: 0 }));
+export function restoreCovers() {
+  coverState.forEach((c) => {
+    c.alive = true;
+    c.hp = 1.1;
+    c.burn = 0;
+  });
+}
+
+const HEAD = 1.5; // 시선 판정에 쓰는 머리 높이
+// 점 (px, pz, py)에서 눈까지의 선이 살아 있는 엄폐물에 가리는지. 가리면 그 엄폐물 번호
+function blockedBy(px: number, pz: number, py: number): number {
+  const ex = JABI.eye.x;
+  const ez = JABI.eye.z;
+  const dx = ex - px;
+  const dz = ez - pz;
+  let best = -1;
+  let bestT = 2;
+  COVERS.forEach((c, i) => {
+    if (!coverState[i].alive) return;
+    const x0 = c.x - c.w / 2;
+    const x1 = c.x + c.w / 2;
+    const z0 = c.z - c.d / 2;
+    const z1 = c.z + c.d / 2;
+    let t0 = 0;
+    let t1 = 1;
+    for (const [p, d, a, b] of [
+      [px, dx, x0, x1],
+      [pz, dz, z0, z1],
+    ]) {
+      if (Math.abs(d) < 1e-6) {
+        if (p < a || p > b) return;
+      } else {
+        let ta = (a - p) / d;
+        let tb = (b - p) / d;
+        if (ta > tb) [ta, tb] = [tb, ta];
+        t0 = Math.max(t0, ta);
+        t1 = Math.min(t1, tb);
+        if (t0 > t1) return;
+      }
+    }
+    const h = py + t0 * (JABI.eye.y - py);
+    if (h < c.h && t0 < bestT) {
+      bestT = t0;
+      best = i;
+    }
+  });
+  return best;
+}
+
+/* ---------- 시선 판정과 레이저 (매 프레임) ---------- */
+const beam = {
+  on: false,
+  t: 0,
+  p: new THREE.Vector3(),
+  target: new THREE.Vector3(),
+  end: new THREE.Vector3(),
+  blocked: -1,
+  lastDrop: new THREE.Vector3(),
+};
+const scorch: { x: number; z: number; born: number }[] = [];
+let lockT = 0;
+let coolT = 0;
+const last = { x: 0, z: 0 };
+
+function GazeSystem() {
+  useFrame((s, rawDt) => {
+    const dt = Math.min(rawDt, 0.05);
+    const now = s.clock.elapsedTime;
+    const px = player.pos.x;
+    const pz = player.pos.z;
+    const moved = Math.hypot(px - last.x, pz - last.z);
+    last.x = px;
+    last.z = pz;
+    const inZone = gaze.enabled && !gaze.dead && Math.abs(px) < GAZE_ZONE.x && pz < GAZE_ZONE.z1 && pz > GAZE_ZONE.z0;
+    gaze.inZone = inZone;
+    // 줄 속에 가만히 서 있으면 시민으로 보인다
+    const inLine = Math.abs(Math.abs(px) - 3.6) < 0.55 && pz < QUEUE_Z[0] + 1 && pz > QUEUE_Z[QUEUE_Z.length - 1] - 1 && moved < 0.004;
+    const cover = blockedBy(px, pz, HEAD);
+    gaze.hiddenBy = inLine ? "line" : cover >= 0 ? "cover" : "";
+    gaze.seen = inZone && !inLine && cover < 0;
+
+    if (gaze.state === "fire") {
+      runBeam(dt, now);
+    } else if (gaze.state === "lock") {
+      lockT -= dt;
+      gaze.shake = 0.1 + (0.9 - lockT) * 0.12;
+      if (lockT <= 0) startBeam();
+    } else if (gaze.state === "cool") {
+      coolT -= dt;
+      gaze.shake = Math.max(0, gaze.shake - dt * 0.4);
+      if (coolT <= 0) gaze.state = "watch";
+    } else {
+      if (gaze.seen) {
+        const dist = Math.hypot(px - JABI.eye.x, pz - JABI.eye.z);
+        const near = THREE.MathUtils.clamp(1 - (dist - 90) / 90, 0, 1);
+        const run = moved / Math.max(dt, 1e-4) > 4.5 ? 1.25 : 1;
+        if (!gaze.firstSeenAt) gaze.firstSeenAt = performance.now();
+        gaze.meter += 13 * (1 + 0.9 * near) * run * dt;
+      } else {
+        gaze.meter -= (inZone ? 20 : 30) * dt;
+      }
+      gaze.meter = THREE.MathUtils.clamp(gaze.meter, 0, 100);
+      const m = gaze.meter;
+      gaze.state = m >= 100 ? "lock" : m >= 70 ? "charge" : m >= 35 ? "suspect" : m > 2 ? "watch" : "idle";
+      if (gaze.state === "lock") lockT = 0.9;
+      gaze.shake = m >= 70 ? ((m - 70) / 30) * 0.06 : 0;
+    }
+    // 불타는 엄폐물 잔해
+    coverState.forEach((c) => {
+      if (c.burn > 0) c.burn = Math.max(0, c.burn - dt * 0.15);
+    });
+  });
+  return null;
+}
+
+function startBeam() {
+  gaze.state = "fire";
+  beam.on = true;
+  beam.t = 0;
+  // 레이저는 플레이어 앞쪽(눈 쪽으로 16m) 바닥에 먼저 떨어져서 플레이어를 향해 긁어 온다
+  const dx = JABI.eye.x - player.pos.x;
+  const dz = JABI.eye.z - player.pos.z;
+  const d = Math.hypot(dx, dz) || 1;
+  beam.p.set(player.pos.x + (dx / d) * 16, 0, player.pos.z + (dz / d) * 16);
+  beam.p.x = THREE.MathUtils.clamp(beam.p.x, -AVENUE - 2, AVENUE + 2);
+  beam.target.set(player.pos.x, 0, player.pos.z);
+  beam.lastDrop.copy(beam.p);
+  gaze.shake = 0.28;
+}
+
+function runBeam(dt: number, now: number) {
+  beam.t += dt;
+  if (gaze.seen) beam.target.set(player.pos.x, 0, player.pos.z);
+  const dx = beam.target.x - beam.p.x;
+  const dz = beam.target.z - beam.p.z;
+  const d = Math.hypot(dx, dz);
+  const step = Math.min(d, 12 * dt);
+  if (d > 1e-4) {
+    beam.p.x += (dx / d) * step;
+    beam.p.z += (dz / d) * step;
+  }
+  // 레이저가 엄폐물에 막히면 그 엄폐물을 태운다
+  const b = blockedBy(beam.p.x, beam.p.z, 0.2);
+  beam.blocked = b;
+  if (b >= 0) {
+    const c = coverState[b];
+    c.hp -= dt;
+    c.burn = 1;
+    beam.end.set(COVERS[b].x, COVERS[b].h * 0.6, COVERS[b].z);
+    if (c.hp <= 0) c.alive = false;
+  } else {
+    beam.end.copy(beam.p);
+    // 지나간 바닥에 녹아내린 자국
+    if (beam.end.distanceTo(beam.lastDrop) > 0.45) {
+      scorch.push({ x: beam.end.x, z: beam.end.z, born: now });
+      if (scorch.length > 220) scorch.shift();
+      beam.lastDrop.copy(beam.end);
+    }
+    if (Math.hypot(beam.p.x - player.pos.x, beam.p.z - player.pos.z) < 1.1 && gaze.inZone) {
+      gaze.dead = performance.now();
+      gaze.frozen = true;
+      gaze.deaths++;
+      endBeam(1.2);
+      return;
+    }
+  }
+  gaze.shake = 0.22 + Math.sin(now * 40) * 0.04;
+  if (beam.t > 3.4 || (d < 0.3 && beam.t > 2.2)) endBeam(1.6);
+}
+
+function endBeam(cool: number) {
+  beam.on = false;
+  gaze.state = "cool";
+  gaze.meter = 28;
+  coolT = cool;
+}
+
+/* ---------- 레이저와 바닥 자국 ---------- */
+function Beam() {
+  const g = useRef<THREE.Group>(null);
+  const core = useRef<THREE.Mesh>(null);
+  const glow = useRef<THREE.Mesh>(null);
+  const hit = useRef<THREE.Group>(null);
+  const light = useRef<THREE.PointLight>(null);
+  const aim = useRef<THREE.Mesh>(null);
+  const dark = useRef<THREE.InstancedMesh>(null);
+  const molten = useRef<THREE.InstancedMesh>(null);
+  const col = useMemo(() => new THREE.Color(), []);
+  const N = 220;
+  useLayoutEffect(() => {
+    for (let i = 0; i < N; i++) {
+      tmpM.makeScale(0, 0, 0);
+      dark.current!.setMatrixAt(i, tmpM);
+      molten.current!.setMatrixAt(i, tmpM);
+      molten.current!.setColorAt(i, col.set("#000"));
+    }
+  }, [col]);
+  const place = (m: THREE.Mesh, from: THREE.Vector3, to: THREE.Vector3, r: number) => {
+    const len = from.distanceTo(to);
+    m.position.copy(from).lerp(to, 0.5);
+    tmpV.copy(to).sub(from).normalize();
+    m.quaternion.setFromUnitVectors(UP, tmpV);
+    m.scale.set(r, len, r);
+  };
+  useFrame((s) => {
+    const now = s.clock.elapsedTime;
+    const on = beam.on;
+    if (g.current) g.current.visible = on;
+    if (hit.current) hit.current.visible = on;
+    if (light.current) {
+      light.current.intensity = on ? 260 + Math.sin(now * 60) * 80 : 0;
+      light.current.position.copy(beam.end).setY(beam.end.y + 1.5);
+    }
+    if (on && core.current && glow.current) {
+      place(core.current, JABI.eye, beam.end, 0.35);
+      place(glow.current, JABI.eye, beam.end, 1.6 + Math.sin(now * 50) * 0.3);
+      hit.current!.position.copy(beam.end);
+    }
+    // 발사 직전: 가는 조준선이 깜빡인다
+    if (aim.current) {
+      const show = gaze.state === "lock";
+      aim.current.visible = show;
+      if (show) {
+        const dx = JABI.eye.x - player.pos.x;
+        const dz = JABI.eye.z - player.pos.z;
+        const d = Math.hypot(dx, dz) || 1;
+        tmpS.set(player.pos.x + (dx / d) * 16, 0, player.pos.z + (dz / d) * 16);
+        place(aim.current, JABI.eye, tmpS, 0.08);
+        (aim.current.material as THREE.MeshBasicMaterial).opacity = Math.sin(now * 30) > 0 ? 0.9 : 0.2;
+      }
+    }
+    // 바닥 자국: 처음엔 녹은 주황, 몇 초 뒤 검게 식는다
+    scorch.forEach((sc, i) => {
+      const age = now - sc.born;
+      const k = Math.max(0, 1 - age / 5);
+      tmpM.compose(tmpV.set(sc.x, 0.025 + (i % 7) * 0.0006, sc.z), tmpQ.setFromAxisAngle(tmpS.set(1, 0, 0), -Math.PI / 2), tmpS.set(1.3, 1.3, 1));
+      dark.current!.setMatrixAt(i, tmpM);
+      tmpM.compose(tmpV.set(sc.x, 0.03 + (i % 7) * 0.0006, sc.z), tmpQ, new THREE.Vector3(1.1 * (0.4 + k * 0.6), 1.1 * (0.4 + k * 0.6), 1));
+      molten.current!.setMatrixAt(i, tmpM);
+      molten.current!.setColorAt(i, col.setRGB(1 * k, 0.35 * k * k, 0.05 * k * k * k));
+    });
+    if (dark.current) {
+      dark.current.count = scorch.length;
+      dark.current.instanceMatrix.needsUpdate = true;
+    }
+    if (molten.current) {
+      molten.current.count = scorch.length;
+      molten.current.instanceMatrix.needsUpdate = true;
+      if (molten.current.instanceColor) molten.current.instanceColor.needsUpdate = true;
+    }
+  });
+  return (
+    <group>
+      <group ref={g} visible={false}>
+        <mesh ref={core}>
+          <cylinderGeometry args={[1, 1, 1, 10, 1, true]} />
+          <meshBasicMaterial color="#fff2f2" toneMapped={false} fog={false} />
+        </mesh>
+        <mesh ref={glow}>
+          <cylinderGeometry args={[1, 1, 1, 16, 1, true]} />
+          <meshBasicMaterial color="#ff1030" transparent opacity={0.35} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} fog={false} />
+        </mesh>
+      </group>
+      <mesh ref={aim} visible={false}>
+        <cylinderGeometry args={[1, 1, 1, 6, 1, true]} />
+        <meshBasicMaterial color="#ff2a3d" transparent opacity={0.6} depthWrite={false} toneMapped={false} fog={false} />
+      </mesh>
+      <pointLight ref={light} distance={26} color="#ff5030" intensity={0} />
+      <group ref={hit} visible={false}>
+        <mesh>
+          <sphereGeometry args={[0.9, 16, 10]} />
+          <meshBasicMaterial color="#fff0c0" toneMapped={false} />
+        </mesh>
+        <mesh>
+          <sphereGeometry args={[2.4, 16, 10]} />
+          <meshBasicMaterial color="#ff4020" transparent opacity={0.35} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
+        </mesh>
+        <Sparkles count={40} scale={[3, 4, 3]} position={[0, 1.5, 0]} size={18} speed={3} color="#ffb070" />
+      </group>
+      <instancedMesh ref={dark} args={[undefined, undefined, N]} frustumCulled={false}>
+        <circleGeometry args={[1, 12]} />
+        <meshStandardMaterial color="#050505" roughness={1} transparent opacity={0.9} depthWrite={false} />
+      </instancedMesh>
+      <instancedMesh ref={molten} args={[undefined, undefined, N]} frustumCulled={false}>
+        <circleGeometry args={[1, 12]} />
+        <meshBasicMaterial transparent depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
+      </instancedMesh>
+    </group>
+  );
+}
+
+/* ---------- 큰길의 엄폐물: 비석, 컨테이너, 방벽 (대칭) ---------- */
+function useStoneTex() {
+  return useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 128;
+    c.height = 256;
+    const g = c.getContext("2d")!;
+    g.fillStyle = "#77736a";
+    g.fillRect(0, 0, 128, 256);
+    // 새겨진 글자 줄 (읽을 수 없는 비문)
+    g.fillStyle = "#4a4740";
+    for (let x = 18; x < 112; x += 14) for (let y = 30; y < 230; y += 13) if (Math.random() > 0.15) g.fillRect(x, y, 9, 8);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+}
+
+function Covers() {
+  const stone = useStoneTex();
+  const refs = useRef<{ whole: THREE.Group | null; rubble: THREE.Group | null; fire: THREE.Group | null }[]>([]);
+  useFrame(() => {
+    coverState.forEach((c, i) => {
+      const r = refs.current[i];
+      if (!r) return;
+      if (r.whole) r.whole.visible = c.alive;
+      if (r.rubble) r.rubble.visible = !c.alive;
+      if (r.fire) r.fire.visible = c.burn > 0.05;
+    });
+  });
+  return (
+    <group>
+      {COVERS.map((c, i) => (
+        <group key={i} position={[c.x, 0, c.z]}>
+          <group ref={(g) => { refs.current[i] = { ...refs.current[i], whole: g }; }}>
+            {c.kind === "stele" && (
+              <>
+                {/* 거북 받침 위의 비석 */}
+                <mesh position={[0, 0.45, 0]} scale={[1.3, 0.45, 0.9]}>
+                  <sphereGeometry args={[1, 14, 10]} />
+                  <meshStandardMaterial color="#5e5a52" roughness={0.95} />
+                </mesh>
+                <mesh position={[0, 0.55, 0.85]}>
+                  <sphereGeometry args={[0.32, 10, 8]} />
+                  <meshStandardMaterial color="#5e5a52" roughness={0.95} />
+                </mesh>
+                <mesh position={[0, 2.1, 0]}>
+                  <boxGeometry args={[c.w * 0.85, 2.8, 0.45]} />
+                  <meshStandardMaterial map={stone} roughness={0.95} />
+                </mesh>
+                <mesh position={[0, 3.55, 0]}>
+                  <boxGeometry args={[c.w, 0.3, 0.7]} />
+                  <meshStandardMaterial color="#5e5a52" roughness={0.95} />
+                </mesh>
+              </>
+            )}
+            {c.kind === "container" && (
+              <>
+                <mesh position={[0, c.h / 2, 0]}>
+                  <boxGeometry args={[c.w, c.h, c.d]} />
+                  <meshStandardMaterial color="#8a2a22" roughness={0.6} metalness={0.5} />
+                </mesh>
+                {[-0.9, -0.3, 0.3, 0.9].map((x) => (
+                  <mesh key={x} position={[x, c.h / 2, c.d / 2 + 0.01]}>
+                    <boxGeometry args={[0.08, c.h * 0.92, 0.04]} />
+                    <meshStandardMaterial color="#5a1a14" roughness={0.6} metalness={0.5} />
+                  </mesh>
+                ))}
+                <mesh position={[0, c.h + 0.06, 0]}>
+                  <boxGeometry args={[c.w * 0.4, 0.12, 0.3]} />
+                  <meshBasicMaterial color="#ffb02e" toneMapped={false} />
+                </mesh>
+              </>
+            )}
+            {c.kind === "wall" && (
+              <>
+                <mesh position={[0, c.h / 2, 0]}>
+                  <boxGeometry args={[c.w, c.h, c.d]} />
+                  <meshStandardMaterial color="#6a6a68" roughness={0.9} />
+                </mesh>
+                <mesh position={[0, 0.5, c.d / 2 + 0.01]}>
+                  <planeGeometry args={[c.w, 0.4]} />
+                  <meshBasicMaterial color="#ffd23f" />
+                </mesh>
+              </>
+            )}
+          </group>
+          {/* 파괴된 뒤의 잔해 */}
+          <group ref={(g) => { refs.current[i] = { ...refs.current[i], rubble: g }; }} visible={false}>
+            {[
+              [-0.6, 0.25, 0.1, 0.7],
+              [0.5, 0.2, -0.2, 0.6],
+              [0.1, 0.5, 0.2, 0.5],
+              [-0.2, 0.15, -0.4, 0.4],
+            ].map(([x, y, z, sz], k) => (
+              <mesh key={k} position={[x, y, z]} rotation={[k, k * 0.7, 0.3]}>
+                <boxGeometry args={[sz, sz * 0.7, sz]} />
+                <meshStandardMaterial color="#1a1614" roughness={1} emissive="#2a0a00" />
+              </mesh>
+            ))}
+          </group>
+          <group ref={(g) => { refs.current[i] = { ...refs.current[i], fire: g }; }} visible={false}>
+            <Sparkles count={24} scale={[c.w, 3, c.d + 0.6]} position={[0, 1.5, 0]} size={14} speed={1.5} color="#ff7a2a" />
+          </group>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/* ---------- 통제선: 붉은 레이저 울타리와 표지 ---------- */
+function Barriers({ lang }: { lang: Lang }) {
+  const hazard = useMemo(() => {
+    const t = hazardTexture();
+    t.repeat.set(4, 1);
+    return t;
+  }, []);
+  const sign = useSign(
+    [
+      [lang === "ko" ? "통제 구역" : "RESTRICTED", 1],
+      [lang === "ko" ? "큰길로 이동하십시오" : "PROCEED VIA THE AVENUE", 0.55],
+    ],
+    { color: "#ff2a3d", glow: true, mono: true, w: 512, h: 160, bg: "#0a0204" }
+  );
+  const lasers = useRef<THREE.MeshBasicMaterial>(null);
+  useFrame((s) => {
+    if (lasers.current) lasers.current.opacity = 0.55 + Math.sin(s.clock.elapsedTime * 9) * 0.3;
+  });
+  void signTexture;
+  return (
+    <group>
+      {BARRIERS.map((b, i) => {
+        const along = b.axis === "x" ? b.x1 - b.x0 : b.z1 - b.z0;
+        const cx = (b.x0 + b.x1) / 2;
+        const cz = (b.z0 + b.z1) / 2;
+        return (
+          <group key={i} position={[cx, 0, cz]} rotation={[0, b.axis === "x" ? 0 : Math.PI / 2, 0]}>
+            <mesh position={[0, 0.3, 0]}>
+              <boxGeometry args={[along, 0.6, 0.5]} />
+              <meshStandardMaterial map={hazard} roughness={0.7} />
+            </mesh>
+            {[-1, 1].map((k) => (
+              <mesh key={k} position={[(k * along) / 2, 1.8, 0]}>
+                <boxGeometry args={[0.25, 3.6, 0.25]} />
+                <meshStandardMaterial color="#2a2c31" metalness={0.8} roughness={0.35} />
+              </mesh>
+            ))}
+            {[1.1, 1.8, 2.5, 3.2].map((y) => (
+              <mesh key={y} position={[0, y, 0]}>
+                <boxGeometry args={[along, 0.04, 0.04]} />
+                <meshBasicMaterial ref={y === 1.1 ? lasers : undefined} color="#ff1030" transparent toneMapped={false} />
+              </mesh>
+            ))}
+            <mesh position={[0, 3.75, 0]}>
+              <planeGeometry args={[Math.min(3, along * 0.9), 0.95]} />
+              <meshBasicMaterial map={sign} toneMapped={false} side={THREE.DoubleSide} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/* ---------- 거대한 입불: 오른손은 들어 손바닥을 보이고, 왼손은 내려 손바닥을 펼쳤다 ---------- */
+function useCurls() {
+  return useMemo(() => {
+    const out: THREE.Vector3[] = [];
+    // 머리 윗부분과 육계를 덮는 소라 모양 머리칼
+    const shell = (cy: number, r: number, phiMax: number, n: number) => {
+      for (let i = 0; i < n; i++) {
+        const y = 1 - (i / (n - 1)) * (1 - Math.cos(phiMax));
+        const rr = Math.sqrt(1 - y * y);
+        const a = i * 2.399963;
+        out.push(new THREE.Vector3(Math.cos(a) * rr * r, cy + y * r, Math.sin(a) * rr * r));
+      }
+    };
+    shell(80, 7.6, 1.25, 260);
+    shell(87.5, 4.1, 1.6, 90);
+    return out.filter((p) => !(p.z > 4.2 && p.y < 82.5)); // 이마는 비운다
+  }, []);
+}
+
+function StandingBuddha() {
+  const curls = useCurls();
+  const curlRef = useRef<THREE.InstancedMesh>(null);
+  useLayoutEffect(() => {
+    curls.forEach((p, i) => {
+      tmpM.compose(p, tmpQ.identity(), tmpS.set(1, 1, 1));
+      curlRef.current!.setMatrixAt(i, tmpM);
+    });
+    curlRef.current!.instanceMatrix.needsUpdate = true;
+  }, [curls]);
+  const bronze = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8a6c40", metalness: 0.85, roughness: 0.38, emissive: "#24160a", fog: false }), []);
+  const dark = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3a2c1c", metalness: 0.8, roughness: 0.5, emissive: "#140a04", fog: false }), []);
+  const seam = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffb02e", toneMapped: false, fog: false }), []);
+  // 몸통(가사를 걸친 몸): 회전체에 세로 주름을 새긴다
+  const robe = useMemo(() => {
+    const pts: [number, number][] = [
+      [12.5, 14],
+      [11.5, 18],
+      [10.4, 30],
+      [10.8, 44],
+      [10.2, 52],
+      [11.6, 60],
+      [12.6, 64],
+      [9, 67],
+      [3.6, 68],
+    ];
+    const g = new THREE.LatheGeometry(
+      pts.map(([r, y]) => new THREE.Vector2(r, y)),
+      72
+    );
+    const p = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i);
+      const y = p.getY(i);
+      const z = p.getZ(i);
+      const a = Math.atan2(z, x);
+      const fold = Math.sin(a * 11 + y * 0.08) * 0.45 * THREE.MathUtils.clamp((60 - y) / 40, 0, 1);
+      const r = Math.hypot(x, z) + fold;
+      p.setXYZ(i, Math.cos(a) * r, y, Math.sin(a) * r * 0.62);
+    }
+    g.computeVertexNormals();
+    return g;
+  }, []);
+  const petals = useMemo(() => Array.from({ length: 20 }, (_, i) => (i / 20) * Math.PI * 2), []);
+
+  // 얼굴: 시선 게이지에 따라 눈이 붉어지고, 입꼬리가 올라가고, 렌즈가 달아오른다
+  const eyeMat = useRef<THREE.MeshBasicMaterial>(null);
+  const lens = useRef<THREE.MeshBasicMaterial>(null);
+  const lensRing = useRef<THREE.Mesh>(null);
+  const lids = useRef<THREE.Group>(null);
+  const smile = useRef<THREE.Mesh>(null);
+  const mouth = useRef<THREE.Mesh>(null);
+  const mouthMat = useRef<THREE.MeshBasicMaterial>(null);
+  const halo = useRef<THREE.Group>(null);
+  const k = useRef(0);
+  useFrame((s, dt) => {
+    const t = s.clock.elapsedTime;
+    const target = gaze.state === "fire" || gaze.state === "lock" ? 1 : gaze.meter / 100;
+    k.current += (target - k.current) * Math.min(1, dt * 4);
+    const v = k.current;
+    const flash = gaze.state === "lock" ? (Math.sin(t * 30) > 0 ? 1 : 0.4) : 1;
+    if (eyeMat.current) eyeMat.current.color.setRGB(0.25 + v * 1.4, 0.05 + (1 - v) * 0.15, 0.05).multiplyScalar(flash);
+    if (lens.current) {
+      if (gaze.state === "lock" || gaze.state === "fire") lens.current.color.setRGB(2, 1.6, 1.6);
+      else lens.current.color.setRGB(0.5 + v * 1.5, 0.04, 0.08);
+    }
+    if (lensRing.current) lensRing.current.scale.setScalar(1 + v * 0.6 + (gaze.state === "charge" ? Math.sin(t * 12) * 0.1 : 0));
+    // 반쯤 감은 눈꺼풀이 위로 걷힌다
+    if (lids.current) lids.current.position.y = v * 0.55;
+    // 입: 평온한 일자 → 입꼬리가 치켜 올라간 미소 → 붉게 벌어진 웃음
+    if (smile.current) smile.current.scale.set(1 + v * 0.5, 0.15 + v * 1.1, 1);
+    if (mouth.current) {
+      const open = THREE.MathUtils.clamp((v - 0.6) / 0.4, 0, 1);
+      mouth.current.scale.set(1 + v * 0.5, 0.05 + open * 0.9, 1);
+      mouth.current.visible = open > 0.02;
+    }
+    if (mouthMat.current) mouthMat.current.color.setRGB(1.2 + v, 0.1, 0.1);
+    if (halo.current) halo.current.rotation.z = t * 0.03;
+  });
+
+  return (
+    <group position={[JABI.x, JABI.y, JABI.z]}>
+      {/* 팔각 기단과 연꽃 대좌 */}
+      <mesh position={[0, 3, 0]} rotation={[0, Math.PI / 8, 0]} material={dark}>
+        <cylinderGeometry args={[24, 26, 6, 8]} />
+      </mesh>
+      {petals.map((a, i) => (
+        <mesh key={i} position={[Math.sin(a) * 15, 9.5, Math.cos(a) * 15]} rotation={[0, a, 0]} scale={[5.2, 5, 3.4]} material={bronze}>
+          <sphereGeometry args={[1, 12, 8, 0, Math.PI * 2, 0, Math.PI / 1.8]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 12.5, 0]} material={bronze}>
+        <cylinderGeometry args={[15, 17, 3, 32]} />
+      </mesh>
+      {/* 몸 */}
+      <mesh geometry={robe} material={bronze} />
+      {[24, 40, 56].map((y) => (
+        <mesh key={y} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]} scale={[1, 0.62, 1]} material={seam}>
+          <torusGeometry args={[11.3, 0.12, 4, 64]} />
+        </mesh>
+      ))}
+      {/* 가슴의 가사 깃: 비스듬한 띠 */}
+      <mesh position={[1.5, 58, 6.6]} rotation={[0.1, 0, -0.55]} material={dark}>
+        <boxGeometry args={[2.2, 20, 0.6]} />
+      </mesh>
+      {/* 어깨 */}
+      <mesh position={[0, 64.5, 0]} scale={[14, 4.5, 8]} material={bronze}>
+        <sphereGeometry args={[1, 24, 14]} />
+      </mesh>
+      {/* 목의 삼도 */}
+      <mesh position={[0, 70, 0.5]} material={bronze}>
+        <cylinderGeometry args={[3.6, 4.2, 6, 20]} />
+      </mesh>
+      {[68.5, 70, 71.5].map((y) => (
+        <mesh key={y} position={[0, y, 0.5]} rotation={[Math.PI / 2, 0, 0]} material={dark}>
+          <torusGeometry args={[3.9, 0.12, 4, 24]} />
+        </mesh>
+      ))}
+      {/* 오른팔(보는 쪽 왼편): 들어 올린 손, 손바닥이 앞을 향한다 (시무외인) */}
+      <group position={[-13, 63, 1]}>
+        <mesh position={[-1.5, -7, 0]} rotation={[0, 0, -0.18]} material={bronze}>
+          <cylinderGeometry args={[3, 3.4, 15, 14]} />
+        </mesh>
+        <mesh position={[-3, -14, 3]} rotation={[-0.9, 0, 0.05]} material={bronze}>
+          <cylinderGeometry args={[2.4, 2.8, 12, 14]} />
+        </mesh>
+        {/* 늘어진 소매 */}
+        <mesh position={[-3.4, -22, 0.5]} scale={[3.6, 16, 4.4]} material={bronze}>
+          <sphereGeometry args={[1, 14, 12]} />
+        </mesh>
+        <group position={[-3, -6, 7.5]}>
+          <mesh material={bronze}>
+            <boxGeometry args={[6, 6.5, 1.5]} />
+          </mesh>
+          {[-2.1, -0.7, 0.7, 2.1].map((x, i) => (
+            <mesh key={x} position={[x, 5.2 + (i === 1 || i === 2 ? 0.6 : 0), 0]} material={bronze}>
+              <capsuleGeometry args={[0.62, 4 + (i === 1 || i === 2 ? 1 : 0), 4, 8]} />
+            </mesh>
+          ))}
+          <mesh position={[3.6, 0.5, 0.3]} rotation={[0, 0, -0.7]} material={bronze}>
+            <capsuleGeometry args={[0.7, 3, 4, 8]} />
+          </mesh>
+          {/* 손바닥의 바퀴 문양 */}
+          <mesh position={[0, -0.5, 0.78]} material={seam}>
+            <ringGeometry args={[1.1, 1.35, 20]} />
+          </mesh>
+        </group>
+      </group>
+      {/* 왼팔(보는 쪽 오른편): 내려서 손바닥을 펼친다 (여원인) */}
+      <group position={[13, 63, 1]}>
+        <mesh position={[1.5, -7, 0]} rotation={[0, 0, 0.18]} material={bronze}>
+          <cylinderGeometry args={[3, 3.4, 15, 14]} />
+        </mesh>
+        <mesh position={[3, -17, 3]} rotation={[0.6, 0, -0.1]} material={bronze}>
+          <cylinderGeometry args={[2.4, 2.8, 10, 14]} />
+        </mesh>
+        <mesh position={[3.6, -26, -0.5]} scale={[3.8, 17, 4.4]} material={bronze}>
+          <sphereGeometry args={[1, 14, 12]} />
+        </mesh>
+        <group position={[3.6, -24, 7]} rotation={[0.35, 0, 0]}>
+          <mesh material={bronze}>
+            <boxGeometry args={[6, 6, 1.5]} />
+          </mesh>
+          {[-2.1, -0.7, 0.7, 2.1].map((x, i) => (
+            <mesh key={x} position={[x, -5 - (i === 1 || i === 2 ? 0.5 : 0), 0]} material={bronze}>
+              <capsuleGeometry args={[0.62, 4 + (i === 1 || i === 2 ? 1 : 0), 4, 8]} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.3, 0.78]} material={seam}>
+            <ringGeometry args={[1.1, 1.35, 20]} />
+          </mesh>
+        </group>
+      </group>
+      {/* 머리 */}
+      <group>
+        <mesh position={[0, 79.5, 0.6]} scale={[7.2, 8.6, 7.6]} material={bronze}>
+          <sphereGeometry args={[1, 32, 24]} />
+        </mesh>
+        <mesh position={[0, 87.5, 0]} scale={[4.1, 4.1, 4.1]} material={bronze}>
+          <sphereGeometry args={[1, 20, 14]} />
+        </mesh>
+        <instancedMesh ref={curlRef} args={[undefined, bronze, curls.length]} frustumCulled={false}>
+          <icosahedronGeometry args={[0.72, 0]} />
+        </instancedMesh>
+        {/* 길게 늘어진 귀 */}
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * 7.2, 77, 0]} scale={[1.2, 5, 2.1]} material={bronze}>
+            <sphereGeometry args={[1, 12, 10]} />
+          </mesh>
+        ))}
+        {/* 코 */}
+        <mesh position={[0, 78.2, 8.1]} scale={[1.1, 2.4, 1.1]} material={bronze}>
+          <sphereGeometry args={[1, 10, 8]} />
+        </mesh>
+        {/* 눈: 붉게 빛나는 눈동자와 그 위를 덮은 눈꺼풀 */}
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * 2.7, 81.2, 7.35]} rotation={[0, s * 0.22, 0]} scale={[1.9, 0.75, 0.3]}>
+            <sphereGeometry args={[1, 16, 10]} />
+            <meshBasicMaterial ref={s < 0 ? eyeMat : undefined} color="#400808" toneMapped={false} fog={false} />
+          </mesh>
+        ))}
+        <group ref={lids}>
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 2.7, 81.45, 7.55]} rotation={[0, s * 0.22, 0]} scale={[2.1, 0.55, 0.45]} material={bronze}>
+              <sphereGeometry args={[1, 16, 10]} />
+            </mesh>
+          ))}
+        </group>
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * 2.8, 83.1, 7.3]} rotation={[0, 0, s * -0.12]} material={dark}>
+            <boxGeometry args={[3.6, 0.22, 0.4]} />
+          </mesh>
+        ))}
+        {/* 이마의 렌즈 (백호 자리) */}
+        <mesh position={[0, 84, 8.25]}>
+          <circleGeometry args={[0.85, 24]} />
+          <meshBasicMaterial ref={lens} color="#400810" toneMapped={false} fog={false} />
+        </mesh>
+        <mesh ref={lensRing} position={[0, 84, 8.3]}>
+          <ringGeometry args={[1.0, 1.25, 32]} />
+          <meshBasicMaterial color="#ff2a3d" toneMapped={false} fog={false} transparent opacity={0.8} />
+        </mesh>
+        {/* 입: 미소 선 + 벌어지는 붉은 안쪽 */}
+        <mesh ref={mouth} position={[0, 75.4, 7.45]} visible={false}>
+          <circleGeometry args={[1.7, 24, Math.PI, Math.PI]} />
+          <meshBasicMaterial ref={mouthMat} color="#ff2020" toneMapped={false} fog={false} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh ref={smile} position={[0, 75.4, 7.55]} rotation={[0, 0, Math.PI]}>
+          <torusGeometry args={[1.8, 0.18, 6, 24, Math.PI]} />
+          <meshBasicMaterial color="#1a0a04" fog={false} />
+        </mesh>
+      </group>
+      {/* 머리 뒤 광배: 성당의 장미창 모양 */}
+      <group ref={halo} position={[0, 81, -7]}>
+        <mesh>
+          <ringGeometry args={[15, 15.8, 64]} />
+          <meshBasicMaterial color="#ffb02e" toneMapped={false} fog={false} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh>
+          <ringGeometry args={[19.5, 19.9, 64]} />
+          <meshBasicMaterial color="#ff2a3d" toneMapped={false} fog={false} side={THREE.DoubleSide} transparent opacity={0.8} />
+        </mesh>
+        {Array.from({ length: 16 }, (_, i) => (
+          <mesh key={i} rotation={[0, 0, (i / 16) * Math.PI * 2]} position={[0, 0, 0]}>
+            <planeGeometry args={[0.3, 31]} />
+            <meshBasicMaterial color="#ffb02e" toneMapped={false} fog={false} side={THREE.DoubleSide} transparent opacity={0.55} />
+          </mesh>
+        ))}
+      </group>
+      <mesh position={[0, 50, -9]}>
+        <ringGeometry args={[42, 42.6, 96]} />
+        <meshBasicMaterial color="#22f0ff" toneMapped={false} fog={false} side={THREE.DoubleSide} transparent opacity={0.4} />
+      </mesh>
+      <pointLight position={[0, 40, 40]} intensity={5000} distance={140} color="#ffb070" />
+    </group>
+  );
+}
+
+export default function Jabi({ lang }: { lang: Lang }) {
+  return (
+    <group>
+      <StandingBuddha />
+      <GazeSystem />
+      <Beam />
+      <Covers />
+      <Barriers lang={lang} />
+    </group>
+  );
+}

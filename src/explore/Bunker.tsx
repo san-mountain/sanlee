@@ -720,7 +720,7 @@ function WallText({ lang }: { lang: Lang }) {
   const warn = useSign(
     [
       [lang === "ko" ? "비인가 신호 차단 구역" : "SIGNAL-FREE ZONE", 1],
-      [lang === "ko" ? "쿠키 · 추적 · 점수 없음" : "NO COOKIES · NO TRACKING · NO SCORES", 0.6],
+      [lang === "ko" ? "쿠키 · 추적 · 등급 없음" : "NO COOKIES · NO TRACKING · NO GRADES", 0.6],
     ],
     { color: "#d8d2c0", w: 1024, h: 256 }
   );

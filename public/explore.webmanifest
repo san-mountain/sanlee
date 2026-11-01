@@ -1,0 +1,10 @@
+{
+  "name": "NEO-SEOUL 2087 · SAN LEE",
+  "short_name": "NEO-SEOUL",
+  "start_url": "/explore",
+  "scope": "/explore",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#07030f",
+  "theme_color": "#07030f"
+}

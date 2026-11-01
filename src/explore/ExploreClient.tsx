@@ -12,7 +12,11 @@ import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
 import { input, loadSettings } from "./input";
 import PauseMenu from "./PauseMenu";
-import QuestArrow from "./QuestArrow";
+import Minimap from "./Minimap";
+import QuestArrow, { type QuestTarget } from "./QuestArrow";
+import GazeHUD from "./GazeHUD";
+import { gaze, resetGaze } from "./gaze";
+import { restoreCovers } from "./Jabi";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -167,6 +171,7 @@ export default function ExploreClient() {
       restore: () => setVisited(sections.map((s) => s.id)),
       pos: () => [player.pos.x, player.pos.z, player.yaw],
       look: (pitch: number) => (input.look.pitch += pitch),
+      gaze,
     };
   }, [goTo]);
 
@@ -208,6 +213,12 @@ export default function ExploreClient() {
     setPaused(false);
     lock();
   }, [lock]);
+  // 설정창에서 곧장 방공호로: 방폭문 앞에서 방 안을 바라보며 들어온다
+  const backToBunker = useCallback(() => {
+    setPaused(false);
+    goTo("bunker");
+    lock();
+  }, [goTo, lock]);
 
   // Esc: 패널 닫기 / 설정창 열고 닫기. E: 대화 넘기기
   const panelRef = useRef(panel);
@@ -285,34 +296,59 @@ export default function ExploreClient() {
   };
   const restart = () => {
     resetProgress();
+    resetGaze();
+    restoreCovers();
     setEnding(null);
     goTo("bunker", false);
     lock();
   };
 
-  // 퀘스트 화살표의 목표
-  const items = ZONES[zone].items;
-  const find = (id: string) => items.find((i) => i.id === id) ?? null;
-  let questTarget: Interactable | null = null;
-  let questLabel = "";
-  if (!ending) {
+  // 퀘스트 화살표의 목표: 매 프레임 플레이어 위치에 따라 고른다
+  const questRef = useRef<() => QuestTarget>(() => null);
+  questRef.current = () => {
+    if (ending) return null;
+    const items = ZONES[zone].items;
+    const find = (id: string) => items.find((i) => i.id === id);
+    const px = player.pos.x;
+    const pz = player.pos.z;
     if (zone === "bunker") {
       if (!complete && !met && visited.length === 0) {
-        questTarget = find("statue");
-        questLabel = t(quest.statue);
-      } else if (!complete) {
-        const left = items.filter((i) => i.kind === "section" && !visited.includes(i.section!));
-        questTarget = left.sort((a, b) => Math.hypot(a.pos.x - player.pos.x, a.pos.z - player.pos.z) - Math.hypot(b.pos.x - player.pos.x, b.pos.z - player.pos.z))[0] ?? null;
-        questLabel = `${t(quest.terminal)} ${visited.length}/${sections.length}`;
-      } else {
-        questTarget = find("exit");
-        questLabel = t(quest.exit);
+        const it = find("statue");
+        return it ? { pos: it.pos, label: t(quest.statue) } : null;
       }
-    } else {
-      questTarget = complete ? find("checkpoint") : find("hatch");
-      questLabel = t(complete ? quest.checkpoint : quest.back);
+      if (!complete) {
+        const left = items.filter((i) => i.kind === "section" && !visited.includes(i.section!));
+        let best = left[0];
+        for (const it of left) if (Math.hypot(it.pos.x - px, it.pos.z - pz) < Math.hypot(best.pos.x - px, best.pos.z - pz)) best = it;
+        return best ? { pos: best.pos, label: `${t(quest.terminal)} ${visited.length}/${sections.length}` } : null;
+      }
+      const ex = find("exit");
+      return ex ? { pos: ex.pos, label: t(quest.exit) } : null;
     }
-  }
+    if (!complete) {
+      const h = find("hatch");
+      return h ? { pos: h.pos, label: t(quest.back) } : null;
+    }
+    // 골목(띠 A)에 있으면 먼저 남쪽 광장으로 나가는 길을 가리킨다
+    if (Math.abs(px) > 11.5 && pz < 14) {
+      const exits = [-58, -37.75, 37.75, 58, 23.75].map((x) => ({ x, z: 16 }));
+      let best = exits[0];
+      for (const e of exits) if (Math.hypot(e.x - px, e.z - pz) < Math.hypot(best.x - px, best.z - pz)) best = e;
+      return { pos: best, label: t(quest.plaza) };
+    }
+    const cp = find("checkpoint");
+    return cp ? { pos: cp.pos, label: t(quest.checkpoint) } : null;
+  };
+  const getQuest = useCallback(() => questRef.current(), []);
+
+  // 대자비의 시선은 지상에서 자유롭게 움직일 때만 작동한다
+  useEffect(() => {
+    gaze.enabled = zone === "city" && active;
+    if (zone !== "city") {
+      resetGaze();
+      restoreCovers();
+    }
+  }, [zone, active]);
 
   if (webgl === false) {
     return (
@@ -379,7 +415,7 @@ export default function ExploreClient() {
       {toast && <div className="toast">{toast}</div>}
       {notice && !panel && <div className="notice">{t(notice)}</div>}
 
-      {active && near && verb && (
+      {active && near && verb && !touch && (
         <button type="button" className="prompt" onClick={() => interact(near)} style={{ borderColor: near.color, color: near.color }}>
           {!touch && <kbd>{locked ? "E / Click" : "E"}</kbd>}
           <span>
@@ -390,10 +426,31 @@ export default function ExploreClient() {
 
       {active && !near && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
       {active && locked && <div className="crosshair" aria-hidden />}
-      {active && questTarget && <QuestArrow target={questTarget.pos} label={questLabel} />}
+      {active && <QuestArrow get={getQuest} />}
+      {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
+      {zone === "city" && !ending && <GazeHUD rootRef={rootRef} />}
       {active && touch && <Joystick />}
-      {active && touch && <JumpButton />}
-      {paused && <PauseMenu onResume={resume} onReset={resetProgress} since={since} />}
+      {active && touch && (
+        <JumpButton
+          action={
+            near && verb
+              ? {
+                  label: `${t(near.id === "statue" && complete ? { ko: "이산", en: "San" } : near.label)} · ${t(verb)}`,
+                  color: near.color,
+                  run: () => interact(near),
+                }
+              : null
+          }
+        />
+      )}
+      {paused && (
+        <PauseMenu
+          onResume={resume}
+          onReset={resetProgress}
+          onBunker={zone === "city" && !ending ? backToBunker : undefined}
+          since={since}
+        />
+      )}
 
       {panel?.kind === "section" && sectionMeta && (
         <div className="panel-wrap">
@@ -429,9 +486,6 @@ export default function ExploreClient() {
               <button className="btn" onClick={closePanel}>
                 {t(ui.close)}
               </button>
-              <Link className="btn" href="/works">
-                {t(ui.normalPage)}
-              </Link>
             </div>
           </div>
         </div>
@@ -525,6 +579,10 @@ export default function ExploreClient() {
                 autoFocus
                 onClick={() => {
                   setIntro(false);
+                  // 휴대폰: 시작 버튼을 누르는 순간 전체화면으로 (안드로이드 크롬 등에서 주소창이 사라진다)
+                  if (touch && !document.fullscreenElement) {
+                    document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
+                  }
                   lock();
                 }}
               >
