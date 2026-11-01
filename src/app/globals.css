@@ -532,7 +532,6 @@ img { max-width: 100%; height: auto; display: block; }
 /* 로고 옆 한자 이름: 명조, 같은 크기, 조금 옅게 */
 .nav-logo-han { margin-left: .5em; font-family: "Noto Serif KR", "Noto Serif CJK KR", "Songti SC", "Hiragino Mincho ProN", serif; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
 /* 맨 위 시 위의 선은 없앤다 */
-.poems .poem:first-of-type { border-top: 0; }
 
 /* 메일 주소: 누르면 복사되었다는 작은 표시 */
 .email-link { position: relative; }
@@ -827,3 +826,11 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 @media (max-width: 520px) { .works-bar .cat-tabs { gap: 18px; } .view-toggle { gap: 6px; } }
 /* 〈제목〉: 전각 괄호의 빈 반쪽을 걷어 내 왼쪽이 다른 줄과 맞도록 */
 .caption .ct, .caption strong, .wi-title { font-feature-settings: "halt"; }
+
+/* 본문 전체가 private인 일기: 날짜는 보이고, 펼칠 수 없으며, 첫 줄 자리의 막대만 누를 수 있다 */
+.diary-withheld { display: block; padding: 0; cursor: default; }
+.diary-withheld-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); padding: var(--s2) 0; }
+.diary-withheld-row::before { content: "·"; font-family: ui-monospace, Menlo, monospace; color: var(--muted); width: 1em; flex: none; }
+.diary-withheld .poem-title { color: var(--muted); }
+.diary-withheld .poem-first { overflow: visible; }
+.diary-withheld .diary-withheld-bar { display: inline-block; vertical-align: middle; height: .95em; width: min(11em, 70%); }

@@ -243,8 +243,8 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
       <div className="diary-head">
         <p className="poems-note diary-note">
           {lang === "ko"
-            ? `2023년부터 쓴 일기 ${diary.length}편. 검게 지운 곳은 private로 남겨 두었고, ${hiddenCount}편은 날짜까지 지웠다.`
-            : `${diary.length} diary entries since 2023, in their original Korean. Blacked-out passages stay private; ${hiddenCount} entries are withheld entirely.`}
+            ? `2023년부터 쓴 일기 ${diary.length}편. 검게 지운 곳은 private로 남겨 두었고, ${hiddenCount}편은 본문 전체를 닫아 두었다.`
+            : `${diary.length} diary entries since 2023, in their original Korean. Blacked-out passages stay private; ${hiddenCount} entries are closed in full.`}
         </p>
         <button
           type="button"
@@ -264,9 +264,16 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
       {list.map((d, i) => {
         if (d.hidden) {
           return (
-            <div key={`h${i}`} className="poem diary-withheld">
-              <span className="diary-withheld-bar" {...bar} />
-              <span className="meta">private</span>
+            <div key={`h${d.date}`} className="poem diary-withheld" lang="ko">
+              <div className="diary-withheld-row">
+                <span className="poem-head">
+                  <span className="poem-title">{d.date}</span>
+                  <span className="poem-first">
+                    <span className="diary-withheld-bar" {...bar} />
+                  </span>
+                </span>
+                <span className="meta">private</span>
+              </div>
             </div>
           );
         }
