@@ -264,8 +264,8 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
       {list.map((d, i) => {
         if (d.hidden) {
           return (
-            <div key={`h${i}`} className="poem diary-withheld" role="img" aria-label="private">
-              <span className="diary-withheld-bar" aria-hidden />
+            <div key={`h${i}`} className="poem diary-withheld">
+              <span className="diary-withheld-bar" {...bar} />
               <span className="meta">private</span>
             </div>
           );

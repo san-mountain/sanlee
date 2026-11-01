@@ -738,16 +738,17 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .redact-block:hover > span, .redact-block:focus-visible > span { animation: redactJitter .35s steps(2) 1; }
 @keyframes redactJitter { 0% { transform: translateX(0); } 50% { transform: translateX(1px); opacity: .85; } 100% { transform: translateX(0); } }
 .diary-withheld { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 0 18px 1.6em; cursor: default; }
-.diary-withheld-bar { display: block; height: 1.05em; width: min(9.5em, 50%); background: var(--ink); border-radius: 1px; }
+.diary-withheld-bar { display: block; height: 1.05em; width: min(9.5em, 50%); background: var(--ink); border-radius: 1px; cursor: pointer; }
+.diary-withheld-bar:focus-visible { outline: 1px dashed var(--muted); outline-offset: 3px; }
 .diary-withheld .meta { font: 11px/1 var(--mono); letter-spacing: .08em; color: var(--muted); }
 .explore-root .redact, .explore-root .redact-block > span, .explore-root .diary-withheld-bar { background: #000; box-shadow: inset 0 0 0 1px #2d2445; }
 .explore-root .redact::after, .explore-root .redact-block::after { color: var(--bg); background: var(--fg); }
 .explore-root .diary-title, .explore-root .redact-block .redact-label, .explore-root .diary-withheld .meta { color: var(--dim); }
 .explore-root .diary-rule { border-top-color: #2d2445; }
-@media (prefers-reduced-motion: reduce) { .redact, .redact-block > span { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .redact, .redact-block > span, .diary-withheld-bar { animation: none !important; } }
 
 /* 가린 곳 클릭: 막대가 깨졌다가 다시 봉인 + 복원 실패 로그 */
-.redact.cracking, .redact-block.cracking > span { animation: redactCrack .6s steps(1) 1; }
+.redact.cracking, .redact-block.cracking > span, .diary-withheld-bar.cracking { animation: redactCrack .6s steps(1) 1; }
 @keyframes redactCrack {
   0% { background: repeating-linear-gradient(90deg, var(--ink) 0 7px, transparent 7px 9px); transform: translateX(-1px); }
   25% { background: repeating-linear-gradient(90deg, var(--ink) 0 3px, transparent 3px 5px); transform: translateX(2px); }
