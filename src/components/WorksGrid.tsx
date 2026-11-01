@@ -12,7 +12,17 @@ function Caption({ w }: { w: Work }) {
   const { t, lang } = useLang();
   return (
     <p className="caption">
-      <span className="ct">{lang === "ko" ? `〈${w.title.ko}〉` : <em>{w.title.en}</em>}</span>, {w.date.slice(0, 4)}
+      <span className="ct">
+        {lang === "ko" ? (
+          <>
+            <span className="br">〈</span>
+            {w.title.ko}
+            <span className="br">〉</span>
+          </>
+        ) : (
+          <em>{w.title.en}</em>
+        )}
+      </span>, {w.date.slice(0, 4)}
       <br />
       <span className="cm">
         {t(w.medium)}, {t(w.size)}
