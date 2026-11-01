@@ -114,3 +114,11 @@ a:hover { opacity: .6; }
 .intro { z-index: 50; }
 .labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
 .label-anchor { position: absolute; left: 0; top: 0; visibility: hidden; transform-origin: 50% 50%; will-change: transform; }
+.works li { padding: 28px 0 36px; }
+.work-img { width: 100%; height: auto; max-height: 80vh; object-fit: contain; object-position: left; background: transparent; }
+.caption { font-size: 14px; line-height: 1.6; color: var(--ink); margin-top: 10px !important; }
+.caption strong { font-weight: 600; }
+.work-desc { color: var(--muted); font-size: 15px; }
+.explore-root .caption { color: var(--fg); }
+.explore-root .work-desc { color: var(--dim); }
+.explore-root .work-img { max-height: 46vh; }

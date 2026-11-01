@@ -5,7 +5,7 @@ import { useLang } from "./LangProvider";
 
 // 일반 페이지와 3D 도시의 홀로그램 패널이 같이 쓰는 본문
 export default function SectionBody({ id, inExplore = false }: { id: SectionId; inExplore?: boolean }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   if (id === "about") {
     return (
       <div className="section-body">
@@ -22,13 +22,22 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
           <li key={w.title.en}>
             {w.image && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img className="work-img" src={w.image} alt={t(w.title)} loading="lazy" />
+              <img
+                className="work-img"
+                src={w.image}
+                alt={t(w.title)}
+                width={w.width}
+                height={w.height}
+                loading="lazy"
+                decoding="async"
+              />
             )}
-            <h3>{t(w.title)}</h3>
-            <p className="meta">
-              {w.year} · {t(w.medium)}
+            <p className="caption">
+              <strong>{lang === "ko" ? `〈${w.title.ko}〉` : <em>{w.title.en}</em>}</strong>, {w.date.slice(0, 4)}
+              <br />
+              {t(w.medium)}, {t(w.size)}
             </p>
-            <p>{t(w.description)}</p>
+            {w.description && <p className="work-desc">{t(w.description)}</p>}
             {w.link && !(inExplore && w.link === "/explore") && (
               <p>
                 <a href={w.link} className="work-link">
