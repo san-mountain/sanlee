@@ -488,3 +488,11 @@ img { max-width: 100%; height: auto; display: block; }
   .gaze { top: 100px; }
   .minimap { width: 96px; height: 96px; }
 }
+
+/* 넓은 화면: 제목은 왼쪽 칸에 붙어 따라 내려오고, 내용은 오른쪽 넓은 칸에. 오른쪽이 비지 않는 편집 디자인 그리드 */
+@media (min-width: 1000px) {
+  .page:not(.home) { display: grid; grid-template-columns: minmax(180px, 1fr) 3fr; column-gap: clamp(40px, 5vw, 96px); align-items: start; }
+  .page:not(.home) > h1 { grid-column: 1; grid-row: 1 / span 20; position: sticky; top: 96px; margin: 0; }
+  .page:not(.home) > *:not(h1) { grid-column: 2; }
+  .page:not(.home):not(.wide) > *:not(h1) { max-width: 720px; }
+}
