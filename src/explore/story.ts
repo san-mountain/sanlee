@@ -3,7 +3,7 @@
 import type { L } from "@/data/site";
 
 export const plaque: L[] = [
-  { ko: "SAN LEE (보관 처리됨)", en: "SAN LEE (ARCHIVED)" },
+  { ko: "이산 (보관 처리됨)", en: "SAN LEE (ARCHIVED)" },
   { ko: "끝까지 '모두 거부'를 누른 자", en: "The One Who Pressed 'Reject All' to the End" },
   {
     ko: "2087년 네오서울에서 모든 쿠키를 거부한 유일한 시민.",
@@ -19,7 +19,7 @@ export const ui = {
   title: { ko: "NEO-SEOUL 2087", en: "NEO-SEOUL 2087" },
   introLines: [
     {
-      ko: "이 도시는 웹사이트입니다. 건물 하나하나가 San의 포트폴리오 페이지예요.",
+      ko: "이 도시는 웹사이트입니다. 건물 하나하나가 이산의 포트폴리오 페이지예요.",
       en: "This city is a website. Every building is a page of San's portfolio.",
     },
     {

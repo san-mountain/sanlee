@@ -4,7 +4,7 @@ import { LangProvider } from "@/components/LangProvider";
 
 export const metadata: Metadata = {
   title: "SAN LEE",
-  description: "San Lee 포트폴리오",
+  description: "이산(San Lee) 포트폴리오",
 };
 
 export const viewport: Viewport = {

@@ -8,6 +8,7 @@ export type SectionId = "about" | "works" | "writing" | "contact";
 
 export const profile = {
   name: "SAN LEE",
+  displayName: { ko: "이산", en: "SAN LEE" },
   tagline: {
     ko: "그림과 코드 사이에서 [나]들을 만드는 사람",
     en: "Making my [selves] somewhere between drawing and code",

@@ -8,7 +8,9 @@ export default function Home() {
     <>
       <SiteNav />
       <main className="page home">
-        <h1>{profile.name}</h1>
+        <h1>
+          <T s={profile.displayName} />
+        </h1>
         <p className="tagline">
           <T s={profile.tagline} />
         </p>
