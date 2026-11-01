@@ -112,11 +112,11 @@ export const works: Work[] = [
     height: 1400,
   },
   {
-    title: { ko: "인고의 고치", en: "Cocoon of Endurance" },
+    title: { ko: "인고의 번데기", en: "Chrysalis of Endurance" },
     date: "2026. 10.",
     medium: { ko: "종이에 수채, 먹", en: "Watercolor and ink on paper" },
     size: PAPER_PORTRAIT,
-    image: "/works/sanlee_2026_cocoon-of-endurance.webp",
+    image: "/works/sanlee_2026_chrysalis-of-endurance.webp",
     width: 961,
     height: 1400,
   },
