@@ -245,7 +245,7 @@ function Gate({ lang }: { lang: Lang }) {
   const gateSign = useSign(
     [
       [lang === "ko" ? "통제 구역" : "RESTRICTED", 1.3],
-      [lang === "ko" ? "B등급 미만 시민 출입 불가" : "GRADE C AND BELOW MAY NOT PASS", 0.6],
+      [lang === "ko" ? "미등록 시민 출입 불가" : "UNREGISTERED CITIZENS MAY NOT PASS", 0.6],
     ],
     { color: "#ff2a3d", glow: true, mono: true, w: 1024, h: 256, bg: "#0a0204" }
   );

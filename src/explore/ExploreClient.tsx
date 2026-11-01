@@ -730,7 +730,7 @@ export default function ExploreClient() {
         <div className="choice-wrap">
           <div className="choice" role="dialog" aria-modal="true">
             <span className="choice-sys">SYS://SEOUL/CHECKPOINT · GATE-01</span>
-            <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 등급 산정 불가" : "▲ RESPONSE REQUIRED · UNGRADED UNTIL ANSWERED"}</span>
+            <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 통과 불가" : "▲ RESPONSE REQUIRED · NO PASSAGE UNTIL ANSWERED"}</span>
             <h2>{t(checkpoint.title)}</h2>
             <p>{t(checkpoint.body)}</p>
             <p className="choice-san">

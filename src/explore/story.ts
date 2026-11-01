@@ -68,12 +68,12 @@ export const ui = {
     ko: "이 도시는 시민의 안전을 위해 쿠키를 사용합니다. 동의하면 당신을 기록하고, 쓰러져도 되살려 드립니다.",
     en: "This city uses cookies to keep its citizens safe. Consent, and we will record you, and bring you back if you fall.",
   },
-  consentDone: { ko: "백업 #1이 만들어졌습니다. 이제 쓰러지면 마지막 백업에서 다시 시작합니다.", en: "Backup #1 created. If you fall, you will restart from your last backup." },
+  consentDone: { ko: "임시 시민으로 등록되었습니다. 백업 #1이 만들어졌습니다. 이제 쓰러지면 마지막 백업에서 다시 시작합니다.", en: "Registered as a temporary citizen. Backup #1 created. If you fall, you will restart from your last backup." },
   consentOk: { ko: "확인", en: "OK" },
   savedHint: { ko: "쓰러지면 여기서 다시 시작합니다", en: "If you fall, you restart here" },
   foundEndings: { ko: "발견한 결말 {n}/3", en: "Endings found {n}/3" },
   notRecorded: { ko: "발견한 결말 · 이 결말은 기록되지 않음", en: "Endings found · this one is not recorded" },
-  welcomeB: { ko: "어서 오세요, B등급 시민.", en: "Welcome, Grade B citizen." },
+  welcomeB: { ko: "어서 오세요, 등록 시민.", en: "Welcome, registered citizen." },
 };
 
 // 백업 로그 (구역 이름 아래 한 줄)
@@ -145,7 +145,7 @@ export const jabiUi = {
   deadSub: { ko: "자비는 언제나 공정합니다. 처음 위치에서 다시 시작합니다.", en: "Mercy is always fair. Restarting from the last position." },
   restoreFrom: { ko: "백업 #{n}에서 복원합니다.", en: "Restoring from backup #{n}." },
   restoreFresh: { ko: "초기 기록에서 복원합니다.", en: "Restoring from the initial record." },
-  cost: { ko: "복원 비용은 당신의 등급에서 차감됩니다.", en: "The cost of restoration is deducted from your grade." },
+  cost: { ko: "복원될 때마다 시스템은 당신을 조금 더 잘 알게 됩니다.", en: "Every restoration, the system knows you a little better." },
   noBackup: { ko: "복원할 백업이 없습니다.", en: "There is no backup to restore." },
   noBackupSub: { ko: "처음부터 다시 시작합니다.", en: "Starting again from the beginning." },
 };
@@ -229,21 +229,24 @@ export type Beat = L & { say?: boolean; slots?: boolean; plaque?: boolean };
 
 export const checkpoint = {
   locked: [
-    { ko: "[검문소] 시민 등급 확인 불가. 통과할 수 없습니다.", en: "[CHECKPOINT] Citizen grade unavailable. You may not pass." },
+    { ko: "[검문소] 시민 등록 확인 불가. 통과할 수 없습니다.", en: "[CHECKPOINT] Citizen registration unavailable. You may not pass." },
     { ko: "…어딘가에 당신을 기억하는 기록이 있다면, 다시 오십시오.", en: "…If there is a record somewhere that remembers you, come back." },
   ] as L[],
   title: { ko: "마지막 동의 요청", en: "FINAL CONSENT REQUEST" },
-  sanWarn: { ko: "수락하면 넌 영원히 백업돼. 거부하면 백업이 지워지고. 나처럼.", en: "Accept, and you'll be backed up forever. Refuse, and your backups are deleted. Like mine." },
-  acceptSub: { ko: "B등급 · 영원히 복원됨", en: "Grade B · restored forever" },
-  rejectSub: { ko: "백업 삭제 · 복원 불가", en: "Backups deleted · no restoring" },
+  sanWarn: {
+    ko: "동의하면 계속 기록돼. 그래서 몇 번이고 돌아올 수 있는 거야. 거부하면 기록이 지워져. 그럼 다음은 없어. 나처럼.",
+    en: "Consent, and they keep recording you. That's why you can keep coming back. Refuse, and the record is deleted. Then there's no next time. Like me.",
+  },
+  acceptSub: { ko: "계속 기록됨 · 쓰러져도 복원", en: "Kept on record · restored if you fall" },
+  rejectSub: { ko: "기록 삭제 · 복원 불가", en: "Record deleted · no restoring" },
   body: {
-    ko: "서울은 시민의 더 나은 삶을 위해 쿠키를 사용합니다. 동의하면 다시는 묻지 않겠습니다.",
-    en: "Seoul uses cookies for a better life for its citizens. Consent, and you will never be asked again.",
+    ko: "임시 등록은 검문소까지만 유효합니다. 정식 시민으로 계속 기록되려면 동의하십시오. 동의하면 다시는 묻지 않겠습니다.",
+    en: "Temporary registration is valid only up to this checkpoint. To remain on record as a full citizen, consent. Consent, and you will never be asked again.",
   },
   // 결말 대본: say = 이산의 말, slots = 백업 번호가 지워지는 화면, plaque = 표석. {a} 보관 횟수, {r} 복원 횟수
   accept: [
     { ko: "동의해 주셔서 감사합니다.", en: "Thank you for your consent." },
-    { ko: "당신의 등급은 B입니다. 줄에 서 주십시오.", en: "Your grade is B. Please join the line." },
+    { ko: "정식 시민으로 등록되었습니다. 줄에 서 주십시오.", en: "You are now a registered citizen. Please join the line." },
     { ko: "괜찮아. 돌아올 수 있는 건 너니까.", en: "It's all right. You're the one who can come back.", say: true },
     { ko: "당신은 {a}번 보관되고 {r}번 복원되었습니다.", en: "You were archived {a} times and restored {r} times." },
     { ko: "이제 다시는 죽지 않습니다. 대신 다시는 아무것도 묻지 않습니다.", en: "You will never die again. Instead, you will never ask anything again." },
