@@ -16,6 +16,13 @@ function Caption({ w }: { w: Work }) {
   );
 }
 
+type Cat = "painting" | "sculpture" | "interactive";
+const CATS: { id: Cat; label: { ko: string; en: string } }[] = [
+  { id: "painting", label: ui.catPainting },
+  { id: "sculpture", label: ui.catSculpture },
+  { id: "interactive", label: ui.catInteractive },
+];
+
 // 일반 Works 페이지: 화면 폭에 따라 1~3열 메이슨리, 사진을 누르면 크게 보기
 export default function WorksGrid({ limit }: { limit?: number }) {
   const { t } = useLang();
@@ -23,6 +30,17 @@ export default function WorksGrid({ limit }: { limit?: number }) {
   const images = works.filter((w) => w.image);
   const shown = limit ? images.slice(0, limit) : images;
   const [open, setOpen] = useState<number | null>(null);
+  const [tab, setTab] = useState<Cat>("painting");
+
+  // 주소 끝의 #sculpture 같은 해시로 탭을 바로 열 수 있게
+  useEffect(() => {
+    const h = location.hash.slice(1) as Cat;
+    if (!limit && CATS.some((c) => c.id === h)) setTab(h);
+  }, [limit]);
+  const selectTab = (c: Cat) => {
+    setTab(c);
+    history.replaceState(null, "", `#${c}`);
+  };
 
   const step = useCallback(
     (d: number) => setOpen((i) => (i === null ? i : (i + d + shown.length) % shown.length)),
@@ -49,32 +67,40 @@ export default function WorksGrid({ limit }: { limit?: number }) {
   return (
     <>
       {!limit && (
-        <nav className="cat-nav" aria-label="Categories">
-          <a href="#painting">{t(ui.catPainting)}</a>
-          <a href="#sculpture">{t(ui.catSculpture)}</a>
-          <a href="#interactive">{t(ui.catInteractive)}</a>
-        </nav>
+        <div className="cat-tabs" role="tablist" aria-label="Categories">
+          {CATS.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === c.id}
+              className={tab === c.id ? "on" : ""}
+              onClick={() => selectTab(c.id)}
+            >
+              {t(c.label)}
+            </button>
+          ))}
+        </div>
       )}
 
-      {!limit && <h2 id="painting" className="cat-title">{t(ui.catPainting)}</h2>}
+      {tab === "painting" && (
       <ul className="grid">
-        {shown.map((w, i) => (
-          <li key={w.title.en}>
-            <button type="button" className="grid-item" onClick={() => setOpen(i)} aria-label={t(w.title)}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={w.image} alt={t(w.title)} width={w.width} height={w.height} loading="lazy" decoding="async" />
-            </button>
-            <Caption w={w} />
-          </li>
-        ))}
-      </ul>
+          {shown.map((w, i) => (
+            <li key={w.title.en}>
+              <button type="button" className="grid-item" onClick={() => setOpen(i)} aria-label={t(w.title)}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={w.image} alt={t(w.title)} width={w.width} height={w.height} loading="lazy" decoding="async" />
+              </button>
+              <Caption w={w} />
+            </li>
+          ))}
+        </ul>
+      )}
 
-      {!limit && (
+      {tab === "sculpture" && <p className="cat-empty">{t(ui.sculptureEmpty)}</p>}
+
+      {tab === "interactive" && (
         <>
-          <h2 id="sculpture" className="cat-title">{t(ui.catSculpture)}</h2>
-          <p className="cat-empty">{t(ui.sculptureEmpty)}</p>
-
-          <h2 id="interactive" className="cat-title">{t(ui.catInteractive)}</h2>
           {feature.map((w) => (
           <Link key={w.title.en} href={w.link ?? "#"} className="feature-card">
             <div className="feature-art" aria-hidden>
