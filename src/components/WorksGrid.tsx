@@ -22,7 +22,8 @@ function Caption({ w }: { w: Work }) {
         ) : (
           <em>{w.title.en}</em>
         )}
-      </span>, {w.date.slice(0, 4)}
+        , {w.date.slice(0, 4)}
+      </span>
       <br />
       <span className="cm">
         {t(w.medium)}, {t(w.size)}
