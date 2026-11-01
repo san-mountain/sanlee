@@ -179,9 +179,6 @@ function RedactedBlock({ n }: { n: number }) {
           style={{ width: i === lines - 1 && lines > 1 ? `${35 + ((n * 7 + i * 13) % 50)}%` : undefined }}
         />
       ))}
-      <em className="redact-label" aria-hidden>
-        private
-      </em>
     </div>
   );
 }

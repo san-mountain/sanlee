@@ -478,7 +478,7 @@ img { max-width: 100%; height: auto; display: block; }
 .redact-block { position: relative; display: flex; flex-direction: column; gap: .62em; margin: .5em 0 1.6em; cursor: pointer; outline: none; user-select: none; }
 .redact-block > span { display: block; height: 1.15em; background: var(--ink); border-radius: 1px; }
 .redact-block .redact-label { position: absolute; right: 0; bottom: -1.5em; font: 10px/1 var(--mono); letter-spacing: .08em; color: var(--muted); font-style: normal; }
-.redact-block::after { display: none; }
+.redact-block::after { top: -1.9em; }
 .redact-block:hover > span, .redact-block:focus-visible > span { animation: redactJitter .35s steps(2) 1; }
 @keyframes redactJitter { 0% { transform: translateX(0); } 50% { transform: translateX(1px); opacity: .85; } 100% { transform: translateX(0); } }
 .diary-withheld { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 0 18px 1.6em; cursor: default; }
