@@ -72,7 +72,7 @@ img { max-width: 100%; height: auto; display: block; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .home .grid { margin-bottom: 0; }
-.home-more { border-top: 1px solid var(--rule); padding-top: 16px; margin-top: clamp(36px, 5vw, 56px); text-align: right; font-size: 14px; }
+.home-more { margin-top: clamp(36px, 5vw, 56px); text-align: right; font-size: 14px; }
 .home-more a { text-decoration: none; color: var(--muted); }
 .home-more a:hover { color: var(--ink); opacity: 1; }
 .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
@@ -467,3 +467,23 @@ img { max-width: 100%; height: auto; display: block; }
 .site-footer a { color: inherit; text-decoration: none; }
 .site-footer a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .site-footer-links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+
+/* 모바일 안전 영역: 전체화면·홈 화면 앱으로 볼 때 노치, 둥근 모서리, 홈 막대를 피한다.
+   평소(주소창이 있는 브라우저)에는 env() 값이 0이라 아무것도 바뀌지 않는다. */
+.explore-root { --sat: env(safe-area-inset-top, 0px); --sar: env(safe-area-inset-right, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); }
+.explore-root .hud { margin: var(--sat) var(--sar) 0 var(--sal); }
+.explore-root .hud-zone { margin: var(--sat) 0 0 var(--sal); }
+.explore-root .minimap { margin: var(--sat) var(--sar) 0 0; }
+.explore-root .quest, .explore-root .gaze, .explore-root .gaze-tip, .explore-root .toast { margin-top: var(--sat); }
+.explore-root .hint, .explore-root .prompt, .explore-root .notice { margin-bottom: var(--sab); }
+.explore-root .jump-btn { margin: 0 var(--sar) var(--sab) 0; }
+.explore-root .joy-zone { margin: 0 0 var(--sab) var(--sal); }
+.explore-root .panel-wrap, .explore-root .intro, .explore-root .pause-wrap, .explore-root .choice-wrap {
+  top: var(--sat); right: var(--sar); bottom: var(--sab); left: var(--sal); }
+/* 세로 휴대폰: 퀘스트 표시가 구역 이름·미니맵과 겹치지 않게 한 줄 아래로 */
+@media (max-width: 480px) and (orientation: portrait) {
+  .quest { top: 66px; max-width: calc(100vw - 130px); left: 14px; transform: none; overflow: hidden; }
+  .quest-label { overflow: hidden; text-overflow: ellipsis; }
+  .gaze { top: 100px; }
+  .minimap { width: 96px; height: 96px; }
+}
