@@ -870,3 +870,11 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .view-menu-list button.on { color: var(--ink); background: #0000000f; }
 @media (max-width: 379px) { .works-bar .cat-tabs { gap: 14px; } }
 @media (max-width: 340px) { .works-bar .cat-tabs button { font-size: 15px; } .works-bar .cat-tabs { gap: 12px; } }
+/* 모바일 작품 확대 화면: 좌우 넘김 버튼을 그림 위가 아니라 화면 아래 양쪽으로 */
+@media (max-width: 719px) {
+  .lightbox { padding-bottom: 84px; }
+  .lightbox img { max-height: calc(100vh - 250px); max-height: calc(100dvh - 250px); }
+  .lb-nav { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); transform: none; font-size: 36px; }
+  .lb-prev { left: 12px; }
+  .lb-next { right: 12px; }
+}
