@@ -141,8 +141,8 @@ export const works: Work[] = [
 ];
 
 export const contact = {
-  email: "hello@sanlee.kr",
-  links: [{ label: "Instagram", href: "https://instagram.com/" }],
+  email: "bysanlee@gmail.com",
+  links: [{ label: "Instagram @bysanlee", href: "https://www.instagram.com/bysanlee/" }],
 };
 
 export const sections: { id: SectionId; label: string; labelKo: string; href: string }[] = [
