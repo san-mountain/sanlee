@@ -90,7 +90,7 @@ export const BUNKER: ZoneDef = {
       kind: "section",
       section: t.id,
       pos: v(t.pos[0] + Math.sin(t.rotY), 1.4, t.pos[2] + Math.cos(t.rotY)),
-      radius: 2.8,
+      radius: 3.3,
       color: t.color,
       label: { ko: `${t.id.toUpperCase()} 터미널`, en: `${t.id.toUpperCase()} terminal` },
     })),

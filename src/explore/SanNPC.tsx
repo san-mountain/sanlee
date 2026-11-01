@@ -33,7 +33,7 @@ export default function SanNPC({ mode, item, onTap, start, beside }: { mode: "wa
       const cos = Math.cos(player.yaw);
       tx = player.pos.x - sin * 1.7 + cos * 0.6;
       tz = player.pos.z - cos * 1.7 - sin * 0.6;
-      speed = 1.2;
+      speed = 2.4;
     } else if (mode === "follow") {
       // 방문자의 오른쪽 뒤, 1.6m 거리
       const sin = Math.sin(player.yaw);
