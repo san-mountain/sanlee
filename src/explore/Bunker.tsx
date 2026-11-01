@@ -803,7 +803,7 @@ function WallText({ lang }: { lang: Lang }) {
   );
 }
 
-export default function Bunker({ lang, visited, onTap }: { lang: Lang; visited: SectionId[]; onTap: TapFn }) {
+export default function Bunker({ lang, visited, onTap, secondStatue }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -826,7 +826,13 @@ export default function Bunker({ lang, visited, onTap }: { lang: Lang; visited: 
       <Kid onTap={onTap} />
       <Sleeper onTap={onTap} />
       <BunkerLotus />
-      {visited.length >= TERMINALS.length ? (
+      {secondStatue ? (
+        <>
+          {/* 거부 결말: 비어 있던 대좌에 두 번째 동상이 섰다. 이산이 그 곁에 서 있다 */}
+          <Statue restored={0} lang={lang} />
+          <SanNPC mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[1.9, 1.2]} at={[1.9, 1.3, -0.9]} />
+        </>
+      ) : visited.length >= TERMINALS.length ? (
         <>
           <Pedestal lang={lang} empty />
           <SanNPC mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[0, 3]} />

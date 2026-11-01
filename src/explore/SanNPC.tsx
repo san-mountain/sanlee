@@ -16,7 +16,7 @@ const PATH: [number, number][] = [
   [-4.2, -6.5],
 ];
 
-export default function SanNPC({ mode, item, onTap, start, beside }: { mode: "wander" | "follow"; item: Interactable; onTap: TapFn; start: [number, number]; beside?: boolean }) {
+export default function SanNPC({ mode, item, onTap, start, beside, stay, at }: { mode: "wander" | "follow"; item: Interactable; onTap: TapFn; start: [number, number]; beside?: boolean; stay?: boolean; at?: [number, number, number] }) {
   const ref = useRef<THREE.Group>(null);
   const st = useRef({ x: start[0], z: start[1], wp: 0, yaw: 0, bob: 0 });
   // 이산이 사라지면(다시 시작 등) 상호작용 위치를 원래 자리로 되돌린다. 안 그러면 동상에게 말을 걸 수 없다.
@@ -35,13 +35,25 @@ export default function SanNPC({ mode, item, onTap, start, beside }: { mode: "wa
     let tx = S.x;
     let tz = S.z;
     let speed = 1.3;
-    if (mode === "follow" && beside) {
+    if (at) {
+      // 결말: 정해진 자리에 서서 정해진 쪽을 본다
+      S.x = at[0];
+      S.z = at[1];
+      S.yaw = at[2];
+      g.position.set(S.x, 0, S.z);
+      g.rotation.y = S.yaw;
+      item.pos.set(S.x, 1.5, S.z);
+      return;
+    }
+    if (stay) {
+      // 수락 결말: 이산은 줄 밖에 남아 배웅한다
+    } else if (mode === "follow" && beside) {
       // 결말: 방문자 앞쪽 옆에 와서 마주 선다
       const sin = Math.sin(player.yaw);
       const cos = Math.cos(player.yaw);
       tx = player.pos.x - sin * 1.7 + cos * 0.6;
       tz = player.pos.z - cos * 1.7 - sin * 0.6;
-      speed = 2.4;
+      speed = Math.max(2.4, dp * 1.4);
     } else if (mode === "follow") {
       // 목줄처럼 따라온다: 3m 넘게 멀어질 때만 다가오고, 가까우면 멈춰서 방문자를 바라본다.
       // 그래서 돌아서면 언제든 마주할 수 있다.
@@ -70,13 +82,13 @@ export default function SanNPC({ mode, item, onTap, start, beside }: { mode: "wa
     if (d > 0.15) {
       const step = Math.min(d, speed * dt);
       const p = { x: S.x + (dx / d) * step, z: S.z + (dz / d) * step };
-      if (mode === "follow") resolve(p, 0.35, CITY.bounds, CITY.boxes, CITY.circles);
+      if (mode === "follow" && !beside) resolve(p, 0.35, CITY.bounds, CITY.boxes, CITY.circles);
       S.x = p.x;
       S.z = p.z;
       S.yaw = Math.atan2(dx, dz);
       moving = true;
       S.bob += step * 5;
-    } else if (dp < 6 || beside) {
+    } else if (dp < 6 || beside || stay) {
       S.yaw = Math.atan2(player.pos.x - S.x, player.pos.z - S.z);
     }
     g.position.set(S.x, moving ? Math.abs(Math.sin(S.bob)) * 0.05 : 0, S.z);

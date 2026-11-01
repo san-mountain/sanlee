@@ -3,17 +3,43 @@
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
 import { gaze, resetGaze } from "./gaze";
-import { teleport } from "./Player";
+import { player, teleport } from "./Player";
+import { getBackup, lastSlot, mmss, recordDeath, recordRestore, saveBackup } from "./backup";
 import { restoreCovers } from "./Jabi";
 import { jabiUi } from "./story";
 
 // 대자비의 시선 게이지, 붉은 화면 가장자리, 보관 처리(죽음) 연출과 되살리기
-export default function GazeHUD({ rootRef }: { rootRef: React.RefObject<HTMLElement | null> }) {
+// 한 글자씩 타자되듯 찍히는 줄
+function TypeLine({ text, delay = 0, className }: { text: string; delay?: number; className?: string }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    let iv: ReturnType<typeof setInterval>;
+    const start = setTimeout(() => {
+      iv = setInterval(() => setN((k) => (k >= text.length ? k : k + 1)), 38);
+    }, delay);
+    return () => {
+      clearTimeout(start);
+      clearInterval(iv);
+    };
+  }, [text, delay]);
+  return (
+    <p className={className}>
+      {text.slice(0, n)}
+      {n < text.length && <span className="type-caret">▍</span>}
+    </p>
+  );
+}
+
+type Dead = { kind: "restore"; line: string; cost: boolean } | { kind: "gone" };
+
+export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<HTMLElement | null>; onGone: () => void }) {
   const { t } = useLang();
+  const goneRef = useRef(onGone);
+  goneRef.current = onGone;
   const wrap = useRef<HTMLDivElement>(null);
   const fill = useRef<HTMLDivElement>(null);
   const label = useRef<HTMLSpanElement>(null);
-  const [dead, setDead] = useState(false);
+  const [dead, setDead] = useState<Dead | null>(null);
   const [tip, setTip] = useState(false);
   const shown = useRef(false);
   const tRef = useRef(t);
@@ -22,6 +48,7 @@ export default function GazeHUD({ rootRef }: { rootRef: React.RefObject<HTMLElem
   useEffect(() => {
     let raf = 0;
     let deadShown = false;
+    let armed = false; // 게이지가 의심 이상까지 찼다가 숨어서 바닥을 치면 백업
     const loop = () => {
       raf = requestAnimationFrame(loop);
       const root = rootRef.current;
@@ -46,16 +73,39 @@ export default function GazeHUD({ rootRef }: { rootRef: React.RefObject<HTMLElem
         setTip(true);
         setTimeout(() => setTip(false), 15000);
       }
+      if (gaze.meter >= 35) armed = true;
+      if (armed && gaze.meter <= 0.5 && gaze.inZone && gaze.hiddenBy && !gaze.dead) {
+        armed = false;
+        saveBackup(player.pos.x, player.pos.z);
+      }
       if (gaze.dead && !deadShown) {
         deadShown = true;
-        setDead(true);
+        armed = false;
+        recordDeath();
+        const b = getBackup();
+        if (b.deleted) {
+          // 숨은 결말의 대가: 백업을 지운 사람은 되살아나지 않는다
+          setDead({ kind: "gone" });
+          setTimeout(() => {
+            deadShown = false;
+            setDead(null);
+            goneRef.current();
+          }, 4200);
+          return;
+        }
+        const slot = lastSlot();
+        const lost = mmss(Date.now() - (slot?.t ?? Date.now() - 1000 * (20 + Math.random() * 40)));
+        const tt = tRef.current;
+        const line = (slot ? tt(jabiUi.restoreFrom).replace("{n}", String(slot.n)) : tt(jabiUi.restoreFresh)).replace("{t}", lost);
+        setDead({ kind: "restore", line, cost: b.deaths >= 3 });
         setTimeout(() => {
-          teleport.req = { x: 0, z: 7, yaw: 0 };
+          teleport.req = slot ? { x: slot.x, z: slot.z, yaw: 0 } : { x: 0, z: 7, yaw: 0 };
           restoreCovers();
           resetGaze();
+          recordRestore();
           deadShown = false;
-          setDead(false);
-        }, 2600);
+          setDead(null);
+        }, 3400);
       }
     };
     loop();
@@ -74,10 +124,20 @@ export default function GazeHUD({ rootRef }: { rootRef: React.RefObject<HTMLElem
       <div className="gaze-vignette" aria-hidden />
       {tip && <div className="gaze-tip">{t(jabiUi.tip)}</div>}
       {dead && (
-        <div className="archived">
+        <div className={`archived ${dead.kind === "gone" ? "gone" : ""}`}>
           <div>
             <p className="big">{t(jabiUi.deadTitle)}</p>
-            <p>{t(jabiUi.deadSub)}</p>
+            {dead.kind === "restore" ? (
+              <>
+                <TypeLine className="restore-line" text={dead.line} delay={700} />
+                {dead.cost && <p className="restore-cost">{t(jabiUi.cost)}</p>}
+              </>
+            ) : (
+              <>
+                <TypeLine className="restore-line" text={t(jabiUi.noBackup)} delay={900} />
+                <p className="restore-cost">{t(jabiUi.noBackupSub)}</p>
+              </>
+            )}
           </div>
         </div>
       )}

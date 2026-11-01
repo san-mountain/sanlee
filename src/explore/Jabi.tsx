@@ -136,6 +136,11 @@ function GazeSystem() {
   return null;
 }
 
+// 거부 결말: 대자비의 마지막 레이저
+export function finalBeam() {
+  startBeam();
+}
+
 function startBeam() {
   gaze.state = "fire";
   beam.on = true;
@@ -694,6 +699,41 @@ function StandingBuddha() {
     bronze.emissive.copy(calmEmissive).lerp(wrathEmissive, rage * (0.85 + Math.random() * 0.15 * rage));
     if (faceLight.current) faceLight.current.intensity = rage * 9000 * (hot ? 1.6 : 1) * (0.85 + Math.random() * 0.3);
     if (halo.current) halo.current.rotation.z = t * (0.03 + rage * 0.4);
+
+    // 결말: 수락하면 눈이 평온하게 감기고 붉은 빛이 금빛으로 돌아온다
+    if (gaze.mood === "calm") {
+      eyeMat.color.setRGB(1.8, 1.25, 0.35);
+      eyeGlowMat.color.set("#ffc040");
+      eyeGlowMat.opacity = 0.45;
+      faceGlowMat.opacity = 0;
+      arcMat.opacity = 0;
+      leakMat.opacity = 0;
+      if (lens.current) lens.current.color.setRGB(2.2, 1.6, 0.5);
+      if (lids.current) lids.current.position.y = -0.32;
+      if (smile.current) {
+        smile.current.visible = true;
+        smile.current.scale.set(1, 0.15, 1);
+      }
+      if (grin.current) grin.current.visible = false;
+      if (teeth.current) teeth.current.visible = false;
+      bronze.emissive.set("#4a3008");
+      if (faceLight.current) faceLight.current.intensity = 0;
+    } else if (gaze.mood === "blind") {
+      // 기록 없는 사람: 대자비는 눈을 뜬 채 멈춰 있다. 아무것도 찾지 못한다
+      eyeMat.color.setRGB(0.12, 0.1, 0.1);
+      eyeGlowMat.opacity = 0;
+      faceGlowMat.opacity = 0;
+      arcMat.opacity = 0;
+      leakMat.opacity = 0;
+      if (lens.current) lens.current.color.setRGB(0.18, 0.18, 0.2);
+      if (lids.current) lids.current.position.y = 0.8;
+      if (grin.current) grin.current.visible = false;
+      if (teeth.current) teeth.current.visible = false;
+      if (smile.current) smile.current.visible = true;
+      bronze.emissive.copy(calmEmissive);
+      if (faceLight.current) faceLight.current.intensity = 0;
+      if (halo.current) halo.current.rotation.z = 0;
+    } else eyeGlowMat.color.set("#ff2020");
   });
 
   return (

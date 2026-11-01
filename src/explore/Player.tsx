@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
-import { gaze } from "./gaze";
+import { autoWalk, gaze } from "./gaze";
 import type { Interactable, ZoneDef } from "./zones";
 
 const EYE = 1.65;
@@ -82,7 +82,22 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     const dx = (mv.x * cos - mv.y * sin) * speed * dt;
     const dz = (-mv.x * sin - mv.y * cos) * speed * dt;
     const p = { x: s.x + dx, z: s.z + dz };
-    resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
+    const aw = autoWalk.to;
+    if (aw) {
+      // 결말: 시점이 스스로 걸어간다. 길을 향해 고개를 돌리고, 다 오면 앞(북쪽)을 본다
+      const ax = aw.x - s.x;
+      const az = aw.z - s.z;
+      const ad = Math.hypot(ax, az);
+      const k = Math.min(1, dt * 2.2);
+      const want = ad > 0.6 ? Math.atan2(-ax, -az) : 0;
+      let dy = want - s.yaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      s.yaw += dy * k;
+      if (aw.pitch !== undefined) s.pitch += (aw.pitch - s.pitch) * Math.min(1, dt * 1.2);
+      const st = Math.min(ad, aw.speed * dt);
+      p.x = ad > 1e-4 ? s.x + (ax / ad) * st : s.x;
+      p.z = ad > 1e-4 ? s.z + (az / ad) * st : s.z;
+    } else resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
     s.x = p.x;
     s.z = p.z;
