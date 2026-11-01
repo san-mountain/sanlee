@@ -45,31 +45,52 @@ const VIEWS: { id: View; label: { ko: string; en: string } }[] = [
   { id: "wall", label: ui.viewWall },
 ];
 
-// 보기 전환은 글자 대신 작은 아이콘: 위의 그림/조각/인터랙티브 탭과 같은 줄로 읽히지 않게
-function ViewIcon({ v }: { v: View }) {
-  const p = { width: 18, height: 18, viewBox: "0 0 18 18", fill: "none", stroke: "currentColor", strokeWidth: 1.4, "aria-hidden": true };
-  if (v === "grid")
-    return (
-      <svg {...p}>
-        <rect x="2.5" y="2.5" width="5" height="5" />
-        <rect x="10.5" y="2.5" width="5" height="5" />
-        <rect x="2.5" y="10.5" width="5" height="5" />
-        <rect x="10.5" y="10.5" width="5" height="5" />
-      </svg>
-    );
-  if (v === "index")
-    return (
-      <svg {...p}>
-        <path d="M2.5 4.5h13M2.5 9h13M2.5 13.5h13" />
-      </svg>
-    );
-  // 벽: 바닥선 위에 크기가 다른 그림 두 점
+// 보기 전환: 탭 줄 오른쪽의 짧은 글자 버튼 하나("Grid ▾")를 누르면 세 가지 보기가 펼쳐진다.
+// 아이콘 세 개보다 폭이 좁아, 영문 탭(Painting·Sculpture·Interactive)과 겹치지 않는다.
+function ViewMenu({ view, onPick }: { view: View; onPick: (v: View) => void }) {
+  const { t } = useLang();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+  const cur = VIEWS.find((o) => o.id === view)!;
   return (
-    <svg {...p}>
-      <rect x="2.5" y="3.5" width="6" height="8" />
-      <rect x="11" y="6" width="4.5" height="4" />
-      <path d="M1 15.5h16" />
-    </svg>
+    <div className="view-menu" ref={box}>
+      <button type="button" className="view-menu-btn" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        {t(cur.label)} <span aria-hidden>▾</span>
+      </button>
+      {open && (
+        <ul className="view-menu-list" role="menu">
+          {VIEWS.map((o) => (
+            <li key={o.id} role="none">
+              <button
+                type="button"
+                role="menuitemradio"
+                aria-checked={view === o.id}
+                className={view === o.id ? "on" : ""}
+                onClick={() => {
+                  onPick(o.id);
+                  setOpen(false);
+                }}
+              >
+                {t(o.label)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -183,21 +204,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
             ))}
           </div>
           {tab === "painting" && (
-            <div className="view-toggle" role="group" aria-label="View">
-              {VIEWS.map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  aria-pressed={view === o.id}
-                  aria-label={t(o.label)}
-                  title={t(o.label)}
-                  className={view === o.id ? "on" : ""}
-                  onClick={() => selectView(o.id)}
-                >
-                  <ViewIcon v={o.id} />
-                </button>
-              ))}
-            </div>
+            <ViewMenu view={view} onPick={selectView} />
           )}
         </div>
       )}
