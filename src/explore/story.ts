@@ -5,8 +5,8 @@ export const plaque: L[] = [
   { ko: "이산 (보관 처리됨)", en: "SAN LEE (ARCHIVED)" },
   { ko: "끝까지 '모두 거부'를 누른 사람", en: "The One Who Pressed 'Reject All' to the End" },
   {
-    ko: "2087년 서울에서 모든 쿠키를 거부한 단 한 명의 시민.",
-    en: "The only citizen of Seoul, 2087, who rejected every cookie.",
+    ko: "2087년 서울에서 모든 쿠키를 거부한 시민.",
+    en: "A citizen of Seoul, 2087, who rejected every cookie.",
   },
   {
     ko: "백업이 없어 복원되지 못한 채 그대로 굳었다. 남은 사람들이 몰래 이곳 지하로 옮겨 왔다.",
@@ -23,7 +23,7 @@ export const ui = {
   ] as L[],
   start: { ko: "방공호로 들어가기", en: "Enter the shelter" },
   goBack: { ko: "돌아가기", en: "Go back" },
-  hintPc: { ko: "화면을 클릭하면 다시 마우스로 둘러볼 수 있어요", en: "Click the screen to look with the mouse again" },
+  hintPc: { ko: "화면을 클릭하거나 아무 키나 누르면 다시 마우스로 둘러볼 수 있어요", en: "Click or press any key to look with the mouse again" },
   hintLocked: { ko: "WASD 이동 · Shift 톡: 달리기 · Space 점프 · 클릭/E 상호작용 · Esc 설정", en: "WASD move · tap Shift: run · Space jump · click/E interact · Esc settings" },
   hintIntroPc: { ko: "마우스로 둘러보기 · WASD 이동 · Shift 톡: 달리기 · Space 점프 · 클릭/E 상호작용 · Esc 설정", en: "Mouse to look · WASD move · tap Shift: run · Space jump · click/E interact · Esc settings" },
   hintTouch: { ko: "왼쪽 조이스틱으로 이동 · 화면을 끌어 둘러보기 · ⤒ 점프", en: "Left stick to move · drag the screen to look · ⤒ jump" },

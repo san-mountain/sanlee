@@ -259,6 +259,17 @@ export default function ExploreClient() {
     setPanel(null);
     lock();
   }, [lock]);
+  // Esc로 설정창을 닫고 돌아오면 브라우저가 Esc 입력으로는 마우스 잠금을 허락하지 않는다.
+  // 그래서 돌아온 뒤 처음 누르는 키(이동 키 등)에서 바로 다시 화면 가운데에 마우스를 잠근다.
+  useEffect(() => {
+    if (!active || locked || touch) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === "Escape" || e.repeat) return;
+      lock();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active, locked, touch, lock]);
   const resume = useCallback(() => {
     setPaused(false);
     lock();
