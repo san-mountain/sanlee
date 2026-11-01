@@ -503,15 +503,15 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* 넓은 화면: 이름과 메뉴가 왼쪽 단에 고정되고, 오른쪽 넓은 단은 작품과 글만. 지금 페이지는 메뉴에서 진하게 */
 @media (min-width: 1000px) {
-  :root { --side: 220px; --frame-l: max(var(--gutter), calc((100% - 1280px) / 2 + var(--gutter))); }
+  :root { --top: clamp(64px, 14vh, 140px); --side: 220px; --frame-l: max(var(--gutter), calc((100% - 1280px) / 2 + var(--gutter))); }
   .nav { position: fixed; top: 0; bottom: 0; left: var(--frame-l); width: var(--side); z-index: 20;
     display: flex; flex-direction: column; align-items: flex-start; gap: var(--s3);
-    padding: var(--s4) 0 var(--s3); background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    padding: var(--top) 0 var(--s3); background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .nav-links { flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: var(--s1); margin: 0; padding: 0; overflow: visible; }
   .nav-links a { font-size: var(--fs-body); padding: 0; border-bottom: 0; }
   .nav-links a.active { color: var(--ink); font-weight: 600; }
   .nav-links .nav-explore { margin-top: var(--s2); font-size: var(--fs-meta); }
-  .page, .page.home { max-width: 1280px; padding: var(--s4) var(--gutter) var(--s4) calc(var(--gutter) + var(--side) + var(--s4)); }
+  .page, .page.home { max-width: 1280px; padding: var(--top) var(--gutter) var(--s4) calc(var(--gutter) + var(--side) + var(--s4)); }
   /* 제목은 메뉴의 진한 글자가 대신한다. 화면 읽기 프로그램에는 그대로 남긴다 */
   .page > h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
   .page:not(.wide) > *:not(h1) { max-width: none; }
@@ -595,3 +595,8 @@ body.deleting .nav-explore { box-shadow: 0 0 10px #22f0ff, 0 0 30px #22f0ffaa, i
 .wall-label { position: absolute; left: 0; top: calc(100% + 8px); font-size: 11px; line-height: 1.3; color: var(--muted); white-space: nowrap; opacity: 0; transition: opacity .2s; font-family: var(--font-serif), serif; }
 .wall-art:hover .wall-label, .wall-art:focus-visible .wall-label { opacity: 1; }
 .wall-note { margin-top: var(--s1); font-size: var(--fs-meta); color: var(--muted); }
+
+/* 짧은 페이지에서도 꼬리말은 화면 맨 아래에 (일반 페이지만, 게임 화면은 제외) */
+body:not(:has(.explore-root)) { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+body:not(:has(.explore-root)) > .page { flex: 1 0 auto; width: 100%; }
+body:not(:has(.explore-root)) > .site-footer { flex: none; }
