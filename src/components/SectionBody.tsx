@@ -5,6 +5,8 @@ import { about, contact, ui, works, type SectionId, type Work } from "@/data/sit
 import { poems } from "@/data/poems";
 import { useLang } from "./LangProvider";
 import EmailLink from "./EmailLink";
+import Diary from "./Diary";
+import { unfold } from "./unfold";
 
 // 일반 페이지와 3D 도시의 홀로그램 패널이 같이 쓰는 본문
 export default function SectionBody({ id, inExplore = false }: { id: SectionId; inExplore?: boolean }) {
@@ -31,53 +33,7 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
       </div>
     );
   }
-  if (id === "writing") {
-    return (
-      <div className="poems">
-        {lang === "en" && <p className="poems-note">{ui.poemsNote.en}</p>}
-        {/* 제목과 첫 줄만 보이고, 제목을 누르면 그 시 하나만 펼쳐진다 (다른 시는 접힌다) */}
-        {poems.map((p, i) => {
-          const first = p.body.split("\n").find((l) => l.trim()) ?? "";
-          return (
-            <details key={p.title} data-group="poems" id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
-              <summary
-                onClick={(e) => {
-                  e.preventDefault();
-                  const d = e.currentTarget.parentElement as HTMLDetailsElement;
-                  unfold(d, !d.open || d.dataset.closing === "1");
-                }}
-              >
-                <span className="poem-head">
-                  <span className="poem-title">{p.title}</span>
-                  <span className="poem-first">{first.trim()}</span>
-                </span>
-                <span className="meta">{p.date}</span>
-              </summary>
-              <div className="poem-body">
-                {p.body.split("\n\n").map((stanza, j) => (
-                  <p key={j} className="stanza">
-                    {stanza}
-                  </p>
-                ))}
-                <button
-                  type="button"
-                  className="poem-fold"
-                  onClick={(e) => {
-                    const d = e.currentTarget.closest("details");
-                    if (!d) return;
-                    unfold(d, false);
-                    d.querySelector("summary")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-                  }}
-                >
-                  {lang === "ko" ? "↑ 접기" : "↑ Fold"}
-                </button>
-              </div>
-            </details>
-          );
-        })}
-      </div>
-    );
-  }
+  if (id === "writing") return <WritingTabs inExplore={inExplore} />;
   if (id === "works" && inExplore) return <WorksViewer list={works} />;
   if (id === "works") {
     return (
@@ -201,60 +157,92 @@ function WorksViewer({ list }: { list: Work[] }) {
   );
 }
 
-// 시 펼치기·접기: 종이가 아래로 풀려 내려가듯 높이가 늘어나며 위에서부터 드러나고, 연이 차례로 맺힌다.
-// 한 번에 시 하나만 펼쳐 둔다. 움직임 줄이기 설정이면 바로 열고 닫는다.
-function unfold(d: HTMLDetailsElement, open: boolean) {
-  const body = d.querySelector<HTMLElement>(".poem-body");
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (open) {
-    d.parentElement?.querySelectorAll<HTMLDetailsElement>('details[data-group="poems"][open]').forEach((o) => {
-      if (o !== d) unfold(o, false);
-    });
-  }
-  if (!body || reduce || !body.animate) {
-    d.open = open;
-    return;
-  }
-  body.getAnimations().forEach((a) => a.cancel());
-  if (open) {
-    delete d.dataset.closing;
-    d.open = true;
-    const h = body.scrollHeight;
-    const dur = Math.min(1100, Math.max(450, h * 0.7));
-    body.style.overflow = "hidden";
-    const a = body.animate(
-      [
-        { height: "0px", clipPath: "inset(0 0 100% 0)" },
-        { height: `${h}px`, clipPath: "inset(0 0 0% 0)" },
-      ],
-      { duration: dur, easing: "cubic-bezier(.22,.8,.24,1)" }
+function Poems({ inExplore }: { inExplore: boolean }) {
+  const { lang } = useLang();
+    return (
+      <div className="poems">
+        {lang === "en" && <p className="poems-note">{ui.poemsNote.en}</p>}
+        {/* 제목과 첫 줄만 보이고, 제목을 누르면 그 시 하나만 펼쳐진다 (다른 시는 접힌다) */}
+        {poems.map((p, i) => {
+          const first = p.body.split("\n").find((l) => l.trim()) ?? "";
+          return (
+            <details key={p.title} data-group="poems" id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
+              <summary
+                onClick={(e) => {
+                  e.preventDefault();
+                  const d = e.currentTarget.parentElement as HTMLDetailsElement;
+                  unfold(d, !d.open || d.dataset.closing === "1");
+                }}
+              >
+                <span className="poem-head">
+                  <span className="poem-title">{p.title}</span>
+                  <span className="poem-first">{first.trim()}</span>
+                </span>
+                <span className="meta">{p.date}</span>
+              </summary>
+              <div className="poem-body">
+                {p.body.split("\n\n").map((stanza, j) => (
+                  <p key={j} className="stanza">
+                    {stanza}
+                  </p>
+                ))}
+                <span className="poem-seal" aria-hidden>
+                  山
+                </span>
+                <button
+                  type="button"
+                  className="poem-fold"
+                  onClick={(e) => {
+                    const d = e.currentTarget.closest("details");
+                    if (!d) return;
+                    unfold(d, false);
+                    d.querySelector("summary")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                  }}
+                >
+                  {lang === "ko" ? "↑ 접기" : "↑ Fold"}
+                </button>
+              </div>
+            </details>
+          );
+        })}
+      </div>
     );
-    a.onfinish = () => (body.style.overflow = "");
-    body.querySelectorAll<HTMLElement>(".stanza").forEach((s, i) => {
-      s.animate(
-        [
-          { opacity: 0, transform: "translateY(-6px)" },
-          { opacity: 1, transform: "none" },
-        ],
-        { duration: 520, delay: Math.min(i * 90, dur * 0.8), easing: "ease-out", fill: "backwards" }
-      );
-    });
-  } else {
-    if (!d.open) return;
-    d.dataset.closing = "1";
-    const h = body.offsetHeight;
-    body.style.overflow = "hidden";
-    const a = body.animate(
-      [
-        { height: `${h}px`, clipPath: "inset(0 0 0% 0)", opacity: 1 },
-        { height: "0px", clipPath: "inset(0 0 100% 0)", opacity: 0.4 },
-      ],
-      { duration: Math.min(700, Math.max(320, h * 0.4)), easing: "cubic-bezier(.4,0,.6,1)" }
-    );
-    a.onfinish = () => {
-      body.style.overflow = "";
-      if (d.dataset.closing === "1") d.open = false;
-      delete d.dataset.closing;
-    };
-  }
+}
+
+const WRITING_TABS = [
+  { id: "poems", label: { ko: "시", en: "Poems" } },
+  { id: "diary", label: { ko: "일기", en: "Diary" } },
+] as const;
+type WritingTab = (typeof WRITING_TABS)[number]["id"];
+
+// Writing 안의 탭: 시 / 일기. 주소 끝 #diary 로 바로 일기 탭을 열 수 있다.
+function WritingTabs({ inExplore }: { inExplore: boolean }) {
+  const { t } = useLang();
+  const [tab, setTab] = useState<WritingTab>("poems");
+  useEffect(() => {
+    if (!inExplore && window.location.hash.startsWith("#diary")) setTab("diary");
+  }, [inExplore]);
+  const select = (id: WritingTab) => {
+    setTab(id);
+    if (!inExplore) history.replaceState(null, "", id === "diary" ? "#diary" : window.location.pathname);
+  };
+  return (
+    <>
+      <div className="cat-tabs" role="tablist" aria-label="Writing">
+        {WRITING_TABS.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === c.id}
+            className={tab === c.id ? "on" : ""}
+            onClick={() => select(c.id)}
+          >
+            {t(c.label)}
+          </button>
+        ))}
+      </div>
+      {tab === "poems" ? <Poems inExplore={inExplore} /> : <Diary inExplore={inExplore} />}
+    </>
+  );
 }
