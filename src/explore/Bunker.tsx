@@ -43,17 +43,6 @@ function Room() {
         <planeGeometry args={[W * 2, LEN]} />
         <meshStandardMaterial map={floor} roughness={0.55} metalness={0.15} color="#9a9a9a" />
       </mesh>
-      {/* 바닥의 물웅덩이: 반사가 강한 얇은 판 */}
-      {[
-        [-3, 7, 2.2, 1.3],
-        [4.5, -6, 1.6, 2.4],
-        [-7.5, -15, 2.4, 1.2],
-      ].map(([x, z, w, d], i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, i]} position={[x, 0.006, z]} scale={[w, d, 1]}>
-          <circleGeometry args={[1, 24]} />
-          <meshStandardMaterial color="#0d0f12" roughness={0.05} metalness={0.9} transparent opacity={0.8} />
-        </mesh>
-      ))}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, BUNKER_H, MIDZ]}>
         <planeGeometry args={[W * 2, LEN]} />
         <meshStandardMaterial map={ceil} roughness={1} color="#777" />
