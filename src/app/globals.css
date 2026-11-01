@@ -269,7 +269,7 @@ img { max-width: 100%; height: auto; display: block; }
   .home .caption { font-size: 12px; line-height: 1.5; }
 }
 .contact-title { font-size: 15px; font-weight: 600; letter-spacing: .02em; margin: 56px 0 8px; padding-top: 14px; border-top: 1px solid var(--ink); scroll-margin-top: 90px; }
-/* ---------- 네오서울 v2: 1인칭 이동 ---------- */
+/* ---------- SEOUL 2087 v2: 1인칭 이동 ---------- */
 .explore-root { height: 100dvh; overscroll-behavior: none; }
 .canvas-wrap { position: absolute; inset: 0; transition: filter 2.4s ease; }
 .hud-right { display: flex; gap: 10px; align-items: center; }
@@ -366,7 +366,7 @@ img { max-width: 100%; height: auto; display: block; }
   box-shadow: 0 0 30px #22f0ff33, inset 0 0 50px #22f0ff0d; animation: panelIn .25s ease-out; }
 .pause::before { content: ""; position: absolute; inset: 0; pointer-events: none;
   background: repeating-linear-gradient(0deg, #ffffff06 0 1px, transparent 1px 3px); }
-.pause::after { content: "SYS://NEO-SEOUL/CONSENT-CTL"; position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: 9px; color: #22f0ff66; letter-spacing: .1em; }
+.pause::after { content: "SYS://SEOUL-2087/CONSENT-CTL"; position: absolute; top: 6px; right: 10px; font-family: var(--mono); font-size: 9px; color: #22f0ff66; letter-spacing: .1em; }
 .pause-head h2 { margin: 6px 0 0; font-family: var(--mono); font-size: 18px; letter-spacing: .16em; color: var(--cyan); text-shadow: 0 0 10px var(--cyan); }
 .pause-head p { margin: 4px 0 14px; color: var(--dim); font-family: var(--mono); font-size: 11px; }
 .pause-rows { border-top: 1px solid #22f0ff33; }
@@ -455,7 +455,7 @@ img { max-width: 100%; height: auto; display: block; }
   font-family: "Noto Serif KR", "Noto Serif CJK KR", "Songti SC", serif; font-weight: 700; color: #ffe2d6;
   text-shadow: 0 0 2px #fff, 0 0 6px #ff3b3b, 0 0 12px #ff1f2f, 0 0 20px #ff1f2faa; }
 @media (max-width: 480px) { .ne-han { margin-right: .4em; padding-right: .4em; letter-spacing: 0; } }
-@media (max-width: 480px) { .ne-year { display: none; } }
+/* 이름이 짧아져서 휴대폰에서도 연도까지 보인다 */
 .ne-arrow { display: inline-block; margin-left: .4em; letter-spacing: 0; color: #e6feff; text-shadow: 0 0 2px #fff, 0 0 6px #22f0ff, 0 0 12px #22f0ff; transition: transform .2s; }
 .nav-explore:hover .ne-arrow { transform: translate(2px, -2px); }
 @media (max-width: 480px) { .nav-links { gap: 4px 14px; } .nav-links .nav-explore { padding: 3px 6px; letter-spacing: .04em; } .ne-arrow { margin-left: .25em; } }

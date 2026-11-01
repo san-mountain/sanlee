@@ -50,7 +50,7 @@ const PAPER_PORTRAIT: L = { ko: "8절, 39.4\u00a0×\u00a027.2\u00a0cm", en: "39.
 
 export const works: Work[] = [
   {
-    title: { ko: "NEO-SEOUL 2087", en: "NEO-SEOUL 2087" },
+    title: { ko: "SEOUL 2087", en: "SEOUL 2087" },
     date: "2026. 11.",
     medium: { ko: "인터랙티브 웹, 3D", en: "Interactive web, 3D" },
     size: { ko: "가변 크기", en: "Dimensions variable" },
@@ -153,7 +153,7 @@ export const sections: { id: SectionId; label: string; labelKo: string; href: st
 
 // 화면에 고정으로 나오는 짧은 문구들
 export const ui = {
-  explore: { ko: "NEO-SEOUL 2087 · 3D 도시로 들어가기", en: "NEO-SEOUL 2087 · enter the 3D city" },
+  explore: { ko: "SEOUL 2087 · 3D 도시로 들어가기", en: "SEOUL 2087 · enter the 3D city" },
   exploreCta: { ko: "이 사이트를 도시로 탐험하기 ↗", en: "Explore this site as a city ↗" },
   viewWork: { ko: "작품 보기 ↗", en: "View work ↗" },
   selected: { ko: "최근 작업", en: "Recent works" },

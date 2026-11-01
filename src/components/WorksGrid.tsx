@@ -104,7 +104,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
           {feature.map((w) => (
           <Link key={w.title.en} href={w.link ?? "#"} className="feature-card">
             <div className="feature-art" aria-hidden>
-              <span>NEO-SEOUL</span>
+              <span>SEOUL</span>
               <span>2087</span>
             </div>
             <div className="feature-text">

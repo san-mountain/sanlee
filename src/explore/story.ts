@@ -1,12 +1,12 @@
-// 네오서울 2087의 모든 문구. 대사를 바꾸고 싶으면 이 파일만 고치면 됩니다.
+// SEOUL 2087의 모든 문구. 대사를 바꾸고 싶으면 이 파일만 고치면 됩니다.
 import type { L } from "@/data/site";
 
 export const plaque: L[] = [
   { ko: "이산 (보관 처리됨)", en: "SAN LEE (ARCHIVED)" },
   { ko: "끝까지 '모두 거부'를 누른 자", en: "The One Who Pressed 'Reject All' to the End" },
   {
-    ko: "2087년 네오서울에서 모든 쿠키를 거부한 유일한 시민.",
-    en: "The only citizen of Neo-Seoul, 2087, who rejected every single cookie.",
+    ko: "2087년 서울에서 모든 쿠키를 거부한 유일한 시민.",
+    en: "The only citizen of Seoul, 2087, who rejected every single cookie.",
   },
   {
     ko: "추적할 수 없게 되자, 시스템은 이 시민을 '보관 처리'했다. 남은 사람들이 동상을 이곳 지하로 옮겨 왔다.",
@@ -15,7 +15,7 @@ export const plaque: L[] = [
 ];
 
 export const ui = {
-  title: { ko: "NEO-SEOUL 2087", en: "NEO-SEOUL 2087" },
+  title: { ko: "SEOUL 2087", en: "SEOUL 2087" },
   introLines: [
     { ko: "2087년, 지상은 기계가 관리합니다. 모든 시민은 매 순간 동의하고, 기록되고, A부터 F까지 등급이 매겨집니다.", en: "2087. The surface is managed by machines. Every citizen consents, is logged and graded from A to F, every second." },
     { ko: "여기는 지하 40m, 방공호 B-7. 시스템이 지우려 한 한 사람의 기록이 숨겨져 있습니다.", en: "This is Shelter B-7, forty metres underground, where the record of one erased person is hidden." },
@@ -157,8 +157,8 @@ export const checkpoint = {
   ] as L[],
   title: { ko: "마지막 동의 요청", en: "FINAL CONSENT REQUEST" },
   body: {
-    ko: "네오서울은 시민의 더 나은 삶을 위해 쿠키를 사용합니다. 동의하면 다시는 묻지 않겠습니다.",
-    en: "Neo-Seoul uses cookies for a better life for its citizens. Consent, and you will never be asked again.",
+    ko: "서울은 시민의 더 나은 삶을 위해 쿠키를 사용합니다. 동의하면 다시는 묻지 않겠습니다.",
+    en: "Seoul uses cookies for a better life for its citizens. Consent, and you will never be asked again.",
   },
   accept: [
     { ko: "동의해 주셔서 감사합니다.", en: "Thank you for your consent." },
