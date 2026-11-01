@@ -77,7 +77,24 @@ export function requestLock(el: HTMLElement | null) {
 }
 
 // 모바일 점프 버튼
-export function JumpButton() {
+// 모바일 오른쪽 아래 버튼: 평소엔 점프, 상호작용할 수 있는 것 가까이에 가면 그 행동 버튼으로 바뀐다
+export function JumpButton({ action }: { action?: { label: string; color?: string; run: () => void } | null }) {
+  if (action)
+    return (
+      <button
+        type="button"
+        className="jump-btn act"
+        aria-label={action.label}
+        style={{ borderColor: action.color, color: action.color, boxShadow: `0 0 16px ${action.color ?? "#22f0ff"}66` }}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          action.run();
+        }}
+      >
+        <span className="act-icon">✦</span>
+        <span className="act-label">{action.label}</span>
+      </button>
+    );
   return (
     <button
       type="button"

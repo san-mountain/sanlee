@@ -404,7 +404,7 @@ export function Hatch({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
 /* ---------- 골목 포장마차와 할머니 ---------- */
 export function Grandma({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
   const { pos, rotY } = CITY_NPCS.grandma;
-  const sign = useSign([[lang === "ko" ? "어묵 · 떡볶이" : "FISHCAKE · TTEOKBOKKI", 1], [lang === "ko" ? "점수 안 받음" : "NO SCORES ACCEPTED", 0.55]], { color: "#ffe9c0", bg: "#a8321e", w: 512, h: 180 });
+  const sign = useSign([[lang === "ko" ? "어묵 · 떡볶이" : "FISHCAKE · TTEOKBOKKI", 1], [lang === "ko" ? "등급 안 따짐" : "ALL GRADES WELCOME", 0.55]], { color: "#ffe9c0", bg: "#a8321e", w: 512, h: 180 });
   return (
     <Tap id="grandma" onTap={onTap}>
       <group scale={0.88}>

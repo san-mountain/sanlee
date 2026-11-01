@@ -1,12 +1,12 @@
-// 네오서울 2087의 모든 문구. 대사를 바꾸고 싶으면 이 파일만 고치면 됩니다.
+// SEOUL 2087의 모든 문구. 대사를 바꾸고 싶으면 이 파일만 고치면 됩니다.
 import type { L } from "@/data/site";
 
 export const plaque: L[] = [
   { ko: "이산 (보관 처리됨)", en: "SAN LEE (ARCHIVED)" },
   { ko: "끝까지 '모두 거부'를 누른 자", en: "The One Who Pressed 'Reject All' to the End" },
   {
-    ko: "2087년 네오서울에서 모든 쿠키를 거부한 유일한 시민.",
-    en: "The only citizen of Neo-Seoul, 2087, who rejected every single cookie.",
+    ko: "2087년 서울에서 모든 쿠키를 거부한 유일한 시민.",
+    en: "The only citizen of Seoul, 2087, who rejected every single cookie.",
   },
   {
     ko: "추적할 수 없게 되자, 시스템은 이 시민을 '보관 처리'했다. 남은 사람들이 동상을 이곳 지하로 옮겨 왔다.",
@@ -15,9 +15,9 @@ export const plaque: L[] = [
 ];
 
 export const ui = {
-  title: { ko: "NEO-SEOUL 2087", en: "NEO-SEOUL 2087" },
+  title: { ko: "SEOUL 2087", en: "SEOUL 2087" },
   introLines: [
-    { ko: "2087년, 지상은 기계가 관리합니다. 모든 시민은 매 순간 동의하고, 기록되고, 점수가 매겨집니다.", en: "2087. The surface is managed by machines. Every citizen consents, is logged and is scored, every second." },
+    { ko: "2087년, 지상은 기계가 관리합니다. 모든 시민은 매 순간 동의하고, 기록되고, A부터 F까지 등급이 매겨집니다.", en: "2087. The surface is managed by machines. Every citizen consents, is logged and graded from A to F, every second." },
     { ko: "여기는 지하 40m, 방공호 B-7. 시스템이 지우려 한 한 사람의 기록이 숨겨져 있습니다.", en: "This is Shelter B-7, forty metres underground, where the record of one erased person is hidden." },
     { ko: "터미널을 열어 기록을 복원하고, 원한다면 지상으로 올라가 보세요. 고개는 숙이고요.", en: "Open the terminals to restore the record, and go up to the surface if you dare. Keep your head down." },
   ] as L[],
@@ -33,17 +33,17 @@ export const ui = {
   normalPage: { ko: "일반 페이지로 보기 ↗", en: "Open as a normal page ↗" },
   next: { ko: "다음 ▸", en: "Next ▸" },
   close: { ko: "닫기", en: "Close" },
-  home: { ko: "← 포트폴리오", en: "← Portfolio" },
+  home: { ko: "← 웹사이트", en: "← Website" },
   restored: { ko: "기록 조각이 동상으로 돌아갔어요", en: "A fragment returned to the statue" },
   noWebgl: {
-    ko: "이 기기에서는 3D 도시를 열 수 없어요. 대신 일반 포트폴리오로 안내할게요.",
-    en: "This device can't open the 3D city, so here's the regular portfolio instead.",
+    ko: "이 기기에서는 3D 도시를 열 수 없어요. 대신 일반 웹사이트로 안내할게요.",
+    en: "This device can't open the 3D city, so here's the regular website instead.",
   },
   popup: { ko: "이 도시는 시민을 추적하기 위해 쿠키를 사용합니다.", en: "This city uses cookies to track its citizens." },
   accept: { ko: "모두 수락", en: "Accept all" },
   reject: { ko: "모두 거부", en: "Reject all" },
   plaqueShort: { ko: "끝까지 '모두 거부'를 누른 자", en: "The One Who Rejected All" },
-  toPortfolio: { ko: "포트폴리오로 가기", en: "Go to the portfolio" },
+  toPortfolio: { ko: "웹사이트로 가기", en: "Go to the website" },
   zoneBunker: { ko: "B-7 방공호 · 지하 40m", en: "SHELTER B-7 · 40m BELOW" },
   zoneCity: { ko: "지상 · 부유 감시구역 7 · 고도 2,400m", en: "SURFACE · FLOATING ZONE 7 · ALT 2,400m" },
   goingUp: { ko: "지상으로 올라가는 중…", en: "Ascending to the surface…" },
@@ -68,7 +68,9 @@ export const pause = {
   cookiesNo: { ko: "모든 쿠키는 이미 수락되었습니다. 수정하시겠습니까? [예] [예]", en: "All cookies have already been accepted. Change? [Yes] [Yes]" },
   reset: { ko: "방문 기록 지우기", en: "Erase my visit" },
   resetNote: { ko: "지웠습니다. 우리는 기억합니다.", en: "Erased. We remember." },
-  leave: { ko: "도시를 떠나 포트폴리오로", en: "Leave the city for the portfolio" },
+  leave: { ko: "도시를 떠나 웹사이트로", en: "Leave the city for the website" },
+  bunker: { ko: "방공호로 돌아가기", en: "Back to the shelter" },
+  bunkerNote: { ko: "배전실 7-B의 문은 아무도 모르게 다시 닫힙니다.", en: "The door of Substation 7-B closes again, unnoticed." },
   on: { ko: "켬", en: "On" },
   off: { ko: "끔", en: "Off" },
 };
@@ -82,6 +84,28 @@ export const fourthWall: L[] = [
   { ko: "이 화면 밖의 당신은 지금 무엇을 보고 있습니까? 우리는 그것까지는 모릅니다. 아직은.", en: "What is the you outside this screen looking at? That, we don't know. Yet." },
 ];
 
+// 큰길 끝의 거대한 입불 '대자비'와 그 시선
+export const jabiUi = {
+  name: { ko: "大慈悲 · 자비의 시선", en: "GREAT COMPASSION · GAZE" },
+  states: {
+    idle: { ko: "잠잠함", en: "still" },
+    watch: { ko: "지켜보는 중", en: "watching" },
+    suspect: { ko: "의심 중 — 눈이 붉어진다", en: "suspicious — its eyes redden" },
+    charge: { ko: "분노 — 숨으십시오", en: "wrath — hide" },
+    lock: { ko: "조준", en: "LOCKED" },
+    fire: { ko: "자비를 베푸는 중", en: "BESTOWING MERCY" },
+    cool: { ko: "식는 중", en: "cooling" },
+    hidden: { ko: "가려짐", en: "out of sight" },
+    line: { ko: "줄에 섞임 — 움직이지 마십시오", en: "blending into the line — don't move" },
+  },
+  tip: {
+    ko: "큰길 끝의 대자비가 보고 있어요. 비석이나 컨테이너 뒤에 숨으면 게이지가 줄어요. 줄 선 시민들 사이에 서서 가만히 있어도 들키지 않아요.",
+    en: "The Great Compassion at the end of the avenue is watching. Hide behind steles or containers to cool its gaze. Standing still among the queue also hides you.",
+  },
+  deadTitle: { ko: "보관 처리되었습니다", en: "YOU HAVE BEEN ARCHIVED" },
+  deadSub: { ko: "자비는 언제나 공정합니다. 처음 위치에서 다시 시작합니다.", en: "Mercy is always fair. Restarting from the last position." },
+};
+
 // 화면 위쪽 퀘스트 화살표에 붙는 짧은 목표
 export const quest = {
   terminal: { ko: "기록 복원", en: "Restore the record" },
@@ -89,6 +113,7 @@ export const quest = {
   exit: { ko: "지상으로", en: "To the surface" },
   checkpoint: { ko: "검문소", en: "Checkpoint" },
   back: { ko: "방공호로 돌아가기", en: "Back to the shelter" },
+  plaza: { ko: "광장으로 나가기", en: "Out to the plaza" },
 };
 
 // 방문한 터미널 수(0~3)에 따라 동상 대사가 바뀝니다.
@@ -127,17 +152,17 @@ export const sanCityLines: L[] = [
 
 export const checkpoint = {
   locked: [
-    { ko: "[검문소] 시민 점수 확인 불가. 통과할 수 없습니다.", en: "[CHECKPOINT] Citizen score unavailable. You may not pass." },
+    { ko: "[검문소] 시민 등급 확인 불가. 통과할 수 없습니다.", en: "[CHECKPOINT] Citizen grade unavailable. You may not pass." },
     { ko: "…어딘가에 당신을 기억하는 기록이 있다면, 다시 오십시오.", en: "…If there is a record somewhere that remembers you, come back." },
   ] as L[],
   title: { ko: "마지막 동의 요청", en: "FINAL CONSENT REQUEST" },
   body: {
-    ko: "네오서울은 시민의 더 나은 삶을 위해 쿠키를 사용합니다. 동의하면 다시는 묻지 않겠습니다.",
-    en: "Neo-Seoul uses cookies for a better life for its citizens. Consent, and you will never be asked again.",
+    ko: "서울은 시민의 더 나은 삶을 위해 쿠키를 사용합니다. 동의하면 다시는 묻지 않겠습니다.",
+    en: "Seoul uses cookies for a better life for its citizens. Consent, and you will never be asked again.",
   },
   accept: [
     { ko: "동의해 주셔서 감사합니다.", en: "Thank you for your consent." },
-    { ko: "당신의 점수는 정상입니다. 줄에 서 주십시오.", en: "Your score is nominal. Please join the line." },
+    { ko: "당신의 등급은 B입니다. 줄에 서 주십시오.", en: "Your grade is B. Please join the line." },
     { ko: "그날 이후, 아무도 당신에게 묻지 않았다.", en: "After that day, no one ever asked you again." },
   ] as L[],
   reject: [
@@ -155,7 +180,7 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
   keeper: {
     name: { ko: "방공호 관리인", en: "Shelter keeper" },
     lines: [
-      { ko: "어서 와. 여기까지는 시스템 신호가 안 닿아. 쿠키도, 점수도 없어.", en: "Welcome. The system's signal doesn't reach this deep. No cookies, no scores." },
+      { ko: "어서 와. 여기까지는 시스템 신호가 안 닿아. 쿠키도, 등급도 없어.", en: "Welcome. The system's signal doesn't reach this deep. No cookies, no grades." },
       { ko: "가운데 동상 봤지? 우리가 지상에서 몰래 옮겨 왔어. 터미널을 열면 저 사람이 조금씩 돌아와.", en: "Seen the statue? We smuggled it down from the surface. Open the terminals and they'll come back, bit by bit." },
       { ko: "지상에 올라가 보고 싶으면 저 뒤 방폭문으로 나가. 올라가면 골목 끝 배전실 문으로 나올 거야. 카메라랑 눈은 마주치지 말고.", en: "Want to see the surface? Take the blast door behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
       { ko: "아, 그리고 놀라지 마. 위는… 이제 땅이 아니야.", en: "Oh, and don't panic. Up there… it isn't ground any more." },
@@ -173,14 +198,14 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
     name: { ko: "우산 장수", en: "Umbrella seller" },
     lines: [
       { ko: "우산 하나 사 갈래? 이 비는 진짜야. 시스템도 아직 날씨까지는 못 바꿨거든.", en: "Want an umbrella? This rain is real. The system hasn't managed to change the weather yet." },
-      { ko: "요즘 사람들은 비를 맞아도 몰라. 감각 알림을 꺼 두면 점수가 오르니까.", en: "People don't even notice the rain now. Turning off sensation alerts raises your score." },
+      { ko: "요즘 사람들은 비를 맞아도 몰라. 감각 알림을 꺼 두면 등급이 오르니까.", en: "People don't even notice the rain now. Turning off sensation alerts raises your grade." },
       { ko: "너는 젖은 게 느껴지지? 그럼 아직 괜찮은 거야.", en: "You can feel you're wet, right? Then you're still alright." },
     ],
   },
   whisper: {
     name: { ko: "줄 선 시민", en: "Citizen in line" },
     lines: [
-      { ko: "...말 걸지 마세요. 줄에서 고개를 돌리면 점수가 깎여요.", en: "...Don't talk to me. Turning your head in line costs points." },
+      { ko: "...말 걸지 마세요. 줄에서 고개를 돌리면 등급이 떨어져요.", en: "...Don't talk to me. Turning your head in line drops your grade." },
       { ko: "무슨 줄이냐고요? 모르겠어요. 다들 서 있으니까 서 있는 거예요.", en: "What's the line for? I don't know. Everyone's standing, so I stand." },
       { ko: "...방공호 얘기는 들어 봤어요. 정말 있어요?", en: "...I've heard about the shelter. Is it real?" },
     ],
@@ -198,7 +223,7 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
     name: { ko: "무전수", en: "Radio operator" },
     lines: [
       { ko: "쉿. 지상 주파수 듣는 중이야. 매일 같은 방송이지. '동의는 이미 처리되었습니다.'", en: "Shh. Listening to the surface frequency. Same broadcast every day: 'Your consent has been processed.'" },
-      { ko: "근데 가끔 잡음 사이로 누가 흥얼거리는 소리가 들려. 점수에 안 잡히는 소리.", en: "But now and then, between the static, someone hums. A sound no score can catch." },
+      { ko: "근데 가끔 잡음 사이로 누가 흥얼거리는 소리가 들려. 등급에 안 잡히는 소리.", en: "But now and then, between the static, someone hums. A sound no grade can catch." },
       { ko: "그걸 녹음해 두는 게 내 일이야. 언젠가 누가 따라 부를 수 있게.", en: "Recording it is my job. So someday someone can sing along." },
     ],
   },
@@ -215,13 +240,12 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
     lines: [
       { ko: "…음냐… 5분만… 아니, 동의 안 해요…", en: "…mm… five more minutes… no, I don't consent…" },
       { ko: "…쿠키… 싫어… 초코칩 말고는…", en: "…cookies… no… except chocolate chip…" },
-      { ko: "(꿈에서는 아직 아무도 점수를 매기지 않는 모양이다.)", en: "(It seems no one keeps score in dreams. Not yet.)" },
     ],
   },
   grandma: {
     name: { ko: "포장마차 할머니", en: "Street-stall grandmother" },
     lines: [
-      { ko: "어묵 국물 한 컵 해. 돈은 안 받아. 점수로 계산하는 가게는 다 망했거든.", en: "Have some fishcake broth. No charge. The shops that took scores all went under." },
+      { ko: "어묵 국물 한 컵 해. 돈은 안 받아. 등급 보고 손님 받던 가게는 다 망했거든.", en: "Have some fishcake broth. No charge. The shops that served by grade all went under." },
       { ko: "옛날엔 이 동네도 땅에 붙어 있었어. 높은 양반들이 '구름 위가 더 깨끗하다'면서 통째로 들어 올렸지. 방공호까지 같이.", en: "This neighbourhood used to sit on the ground. The people upstairs said 'it's cleaner above the clouds' and lifted the whole thing. Shelters and all." },
       { ko: "아래엔 아직 사람들이 산대. 아무도 내려가 본 적은 없지만. 골목은 그때 그대로야. 기계들이 지도에 안 넣었거든.", en: "They say people still live down below. Nobody's been. The alleys are just as they were. The machines never put them on the map." },
     ],
@@ -237,8 +261,8 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
   edgekid: {
     name: { ko: "난간의 아이", en: "Child at the railing" },
     lines: [
-      { ko: "저 구름 아래에도 도시가 있어요? 엄마는 거긴 점수가 없어서 위험하대요.", en: "Is there a city under the clouds? Mum says it's dangerous there because there are no scores." },
-      { ko: "점수가 없으면 어떻게 돼요? …저는 좀 궁금한데.", en: "What happens when there are no scores? …I kind of want to know." },
+      { ko: "저 구름 아래에도 도시가 있어요? 엄마는 거긴 등급이 없어서 위험하대요.", en: "Is there a city under the clouds? Mum says it's dangerous there because there are no grades." },
+      { ko: "등급이 없으면 어떻게 돼요? …저는 좀 궁금한데.", en: "What happens when there are no grades? …I kind of want to know." },
     ],
   },
   courier: {
@@ -252,7 +276,7 @@ export const npcs: Record<string, { name: L; lines: L[] }> = {
   scope0: {
     name: { ko: "전망 망원경 · 남쪽", en: "Viewing scope · south" },
     lines: [
-      { ko: "(동전 넣는 곳에 '점수 10 차감'이라고 적혀 있다. 그냥 눈을 대 본다.)", en: "(The coin slot reads '10 points deducted'. You look anyway.)" },
+      { ko: "(동전 넣는 곳에 '1회 이용 시 등급 한 칸 강등'이라고 적혀 있다. 그냥 눈을 대 본다.)", en: "(The coin slot reads 'one use, one grade down'. You look anyway.)" },
       { ko: "(끝없는 구름 바다. 그 아래로는 아무것도 보이지 않는다. 멀리 다른 섬 도시들이 같은 높이로 떠 있다.)", en: "(An endless sea of cloud. Nothing below it. Far off, other island cities float at exactly the same height.)" },
       { ko: "(접안렌즈 옆에 누군가 긁어 쓴 글씨: '아래에도 하늘이 있다.')", en: "(Someone has scratched beside the eyepiece: 'there is sky down there too.')" },
     ],
@@ -297,13 +321,14 @@ export const announcements: L[] = [
   { ko: "[중앙 관리 AI] 귀하의 동의는 이미 처리되었습니다. 다시 동의하실 필요는 없습니다.", en: "[CENTRAL AI] Your consent has already been processed. There is no need to consent again." },
   { ko: "[중앙 관리 AI] 비인가 개체가 감지되었습니다. 가까운 시민은 시선을 피해 주십시오.", en: "[CENTRAL AI] Unregistered entity detected. Nearby citizens, please look away." },
   { ko: "[중앙 관리 AI] 줄은 질서입니다. 질서는 행복입니다.", en: "[CENTRAL AI] The line is order. Order is happiness." },
+  { ko: "[중앙 관리 AI] 대자비께서 큰길을 굽어보고 계십니다. 고개를 드십시오. 숨지 마십시오.", en: "[CENTRAL AI] The Great Compassion watches over the avenue. Raise your head. Do not hide." },
 ];
 
 // 지상 전광판 문구 [큰 글씨, 작은 글씨, 색]
 export const billboards: { ko: [string, string]; en: [string, string]; color: string }[] = [
   { ko: ["모두 수락하십시오", "ACCEPT ALL COOKIES"], en: ["ACCEPT ALL", "모두 수락하십시오"], color: "#ff2a4d" },
   { ko: ["감정은 비효율입니다", "EMOTION IS INEFFICIENT"], en: ["EMOTION IS INEFFICIENT", "감정은 비효율입니다"], color: "#22f0ff" },
-  { ko: ["시민 점수: 정상", "CITIZEN SCORE: NOMINAL"], en: ["SCORE: NOMINAL", "시민 점수: 정상"], color: "#7dff7a" },
+  { ko: ["시민 등급: B 정상", "CITIZEN GRADE: B"], en: ["GRADE: B — NOMINAL", "시민 등급: B 정상"], color: "#7dff7a" },
   { ko: ["당신은 이미 동의했습니다", "CONSENT PROCESSED"], en: ["YOU HAVE CONSENTED", "동의 처리 완료"], color: "#ffe14d" },
   { ko: ["인간성 업데이트 대기 중", "HUMANITY UPDATE PENDING"], en: ["HUMANITY UPDATE PENDING", "인간성 업데이트 대기 중"], color: "#ff2bd6" },
   { ko: ["줄은 질서입니다", "THE LINE IS ORDER"], en: ["THE LINE IS ORDER", "줄은 질서입니다"], color: "#ff8a2a" },

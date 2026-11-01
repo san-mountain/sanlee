@@ -33,26 +33,40 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
     return (
       <div className="poems">
         {lang === "en" && <p className="poems-note">{ui.poemsNote.en}</p>}
-        {!inExplore && (
-          <ol className="poem-toc">
-            {poems.map((p, i) => (
-              <li key={p.title}>
-                <a href={`#poem-${i}`}>{p.title}</a> <span className="meta">{p.date}</span>
-              </li>
-            ))}
-          </ol>
-        )}
-        {poems.map((p, i) => (
-          <article key={p.title} id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
-            <h3>{p.title}</h3>
-            <p className="meta">{p.date}</p>
-            {p.body.split("\n\n").map((stanza, i) => (
-              <p key={i} className="stanza">
-                {stanza}
-              </p>
-            ))}
-          </article>
-        ))}
+        {/* 제목과 첫 줄만 보이고, 제목을 누르면 그 시 하나만 펼쳐진다 (다른 시는 접힌다) */}
+        {poems.map((p, i) => {
+          const first = p.body.split("\n").find((l) => l.trim()) ?? "";
+          return (
+            <details key={p.title} name="poems" id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
+              <summary>
+                <span className="poem-head">
+                  <span className="poem-title">{p.title}</span>
+                  <span className="poem-first">{first.trim()}</span>
+                </span>
+                <span className="meta">{p.date}</span>
+              </summary>
+              <div className="poem-body">
+                {p.body.split("\n\n").map((stanza, j) => (
+                  <p key={j} className="stanza">
+                    {stanza}
+                  </p>
+                ))}
+                <button
+                  type="button"
+                  className="poem-fold"
+                  onClick={(e) => {
+                    const d = e.currentTarget.closest("details");
+                    if (!d) return;
+                    d.open = false;
+                    d.querySelector("summary")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                  }}
+                >
+                  {lang === "ko" ? "↑ 접기" : "↑ Fold"}
+                </button>
+              </div>
+            </details>
+          );
+        })}
       </div>
     );
   }

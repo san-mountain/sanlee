@@ -1,0 +1,10 @@
+{
+  "name": "SEOUL 2087 · SAN LEE",
+  "short_name": "SEOUL 2087",
+  "start_url": "/explore",
+  "scope": "/explore",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#07030f",
+  "theme_color": "#07030f"
+}

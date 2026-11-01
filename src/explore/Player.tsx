@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
+import { gaze } from "./gaze";
 import type { Interactable, ZoneDef } from "./zones";
 
 const EYE = 1.65;
@@ -72,7 +73,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     input.look.pitch = 0;
 
     // 이동
-    const mv = input.enabled ? moveVector() : { x: 0, y: 0, run: false };
+    const mv = input.enabled && !gaze.frozen ? moveVector() : { x: 0, y: 0, run: false };
     const speed = mv.run ? RUN : WALK;
     const sin = Math.sin(s.yaw);
     const cos = Math.cos(s.yaw);
@@ -101,6 +102,14 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     const bobY = input.bob && grounded ? Math.sin(s.bob * 2) * 0.035 * Math.min(1, moved / (dt * 2 + 1e-4)) : 0;
     camera.position.set(s.x, EYE + s.y + bobY, s.z);
     camera.rotation.set(s.pitch, s.yaw, 0, "YXZ");
+    // 대자비가 분노하면 화면이 흔들린다
+    const sh = gaze.shake;
+    if (sh > 0.001) {
+      camera.position.x += (Math.random() - 0.5) * sh;
+      camera.position.y += (Math.random() - 0.5) * sh;
+      camera.rotation.z += (Math.random() - 0.5) * sh * 0.25;
+      camera.rotation.x += (Math.random() - 0.5) * sh * 0.15;
+    }
     player.pos.set(s.x, EYE, s.z);
     player.yaw = s.yaw;
 

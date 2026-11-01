@@ -289,7 +289,7 @@ export function Bridge() {
 function Buddha({ flip }: { flip: boolean }) {
   const urna = useRef<THREE.MeshBasicMaterial>(null);
   const halo = useRef<THREE.Group>(null);
-  const bronze = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3b3328", metalness: 0.85, roughness: 0.38, emissive: "#140c06" }), []);
+  const bronze = useMemo(() => new THREE.MeshStandardMaterial({ color: "#3b3328", metalness: 0.85, roughness: 0.38, emissive: "#2a1a0c" }), []);
   const seam = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffb02e", toneMapped: false }), []);
   const petals = useMemo(() => Array.from({ length: 16 }, (_, i) => (i / 16) * Math.PI * 2), []);
   useFrame((s) => {
@@ -384,7 +384,6 @@ function Buddha({ flip }: { flip: boolean }) {
         <torusGeometry args={[36, 0.3, 4, 80]} />
         <meshBasicMaterial color="#22f0ff" toneMapped={false} transparent opacity={0.35} />
       </mesh>
-      <pointLight position={[0, 50, 30]} intensity={1800} distance={120} color="#ffb070" />
     </group>
   );
 }
@@ -582,41 +581,70 @@ function Ark({ len }: { len: number }) {
           </mesh>
         </group>
       </group>
-      <pointLight position={[0, -R * 2, 0]} intensity={900} distance={R * 8} color="#ffb070" />
     </group>
   );
 }
 
-// 세 척이 도시 위에서 교차한다. 두 척은 서로의 거울상으로 X자를 그린다.
+// 하늘을 여덟 방향으로 나누고, 한 번에 한 척씩 그중 한 방향에서 나타나 도시 위를 가로지른다.
+// 앞의 배가 거의 지나갈 즈음 다른 방향에서 다음 배가 나온다.
+type Flight = { a: THREE.Vector3; b: THREE.Vector3; t0: number; dur: number; sector: number };
+const SLOTS = 3;
+const LENS = [190, 230, 260];
 export function Arks() {
-  const paths = useMemo(
-    () => [
-      { a: new THREE.Vector3(-380, 72, 120), b: new THREE.Vector3(380, 72, -220), len: 190, period: 95, phase: 0.1 },
-      { a: new THREE.Vector3(380, 72, 120), b: new THREE.Vector3(-380, 72, -220), len: 190, period: 95, phase: 0.1 },
-      { a: new THREE.Vector3(0, 115, 360), b: new THREE.Vector3(0, 115, -460), len: 260, period: 140, phase: 0.55 },
-    ],
-    []
-  );
   const refs = useRef<(THREE.Group | null)[]>([]);
+  const st = useRef<{ flights: (Flight | null)[]; next: number; lastSector: number; seed: number }>({ flights: [null, null, null], next: 0, lastSector: -1, seed: 7 });
+  const rand = () => {
+    const S = st.current;
+    S.seed = (S.seed * 16807) % 2147483647;
+    return (S.seed - 1) / 2147483646;
+  };
+  const launch = (now: number) => {
+    const S = st.current;
+    const slot = S.flights.findIndex((f) => !f);
+    if (slot < 0) return;
+    let sector = Math.floor(rand() * 8);
+    if (sector === S.lastSector) sector = (sector + 3) % 8;
+    S.lastSector = sector;
+    const ang = (sector / 8) * Math.PI * 2 + (rand() - 0.5) * 0.5;
+    const out = ang + Math.PI + (rand() - 0.5) * 1.2; // 반대편 쪽으로, 조금씩 비껴서
+    const R = 430;
+    const cx = 0;
+    const cz = -50;
+    const y = 70 + rand() * 70;
+    const a = new THREE.Vector3(cx + Math.sin(ang) * R, y, cz + Math.cos(ang) * R);
+    const b = new THREE.Vector3(cx + Math.sin(out) * R, y + (rand() - 0.5) * 20, cz + Math.cos(out) * R);
+    S.flights[slot] = { a, b, t0: now, dur: 34 + rand() * 12, sector };
+    S.next = now + 24 + rand() * 8; // 앞 배가 70% 쯤 지났을 때 다음 배
+  };
   useFrame((s) => {
     const t = s.clock.elapsedTime;
-    paths.forEach((p, i) => {
+    const S = st.current;
+    if (t >= S.next) launch(t);
+    S.flights.forEach((f, i) => {
       const g = refs.current[i];
       if (!g) return;
-      const u = (t / p.period + p.phase) % 1;
-      g.position.copy(p.a).lerp(p.b, u);
-      // 두 척이 교차할 때 부딪히지 않도록 한 척은 살짝 위로
-      g.position.y += i === 1 ? 26 : 0;
+      if (!f) {
+        g.visible = false;
+        return;
+      }
+      const u = (t - f.t0) / f.dur;
+      if (u >= 1) {
+        S.flights[i] = null;
+        g.visible = false;
+        return;
+      }
+      g.visible = true;
+      g.position.copy(f.a).lerp(f.b, u);
       g.position.y += Math.sin(t * 0.3 + i) * 1.5;
-      g.rotation.y = Math.atan2(p.b.x - p.a.x, p.b.z - p.a.z);
+      g.rotation.y = Math.atan2(f.b.x - f.a.x, f.b.z - f.a.z);
       g.rotation.z = Math.sin(t * 0.2 + i) * 0.02;
     });
   });
   return (
     <group>
-      {paths.map((p, i) => (
-        <group key={i} ref={(g) => { refs.current[i] = g; }}>
-          <Ark len={p.len} />
+      {LENS.slice(0, SLOTS).map((len, i) => (
+        <group key={i} visible={false} ref={(g) => { refs.current[i] = g; }}>
+          <Ark len={len} />
         </group>
       ))}
     </group>

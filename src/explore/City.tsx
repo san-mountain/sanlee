@@ -14,6 +14,7 @@ import { towerMaterial } from "./towerMaterial";
 import { concreteTexture, hazardTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
+import Jabi from "./Jabi";
 
 function rng(seed: number) {
   return () => {
@@ -169,7 +170,7 @@ function Towers() {
 const MIRROR_LITTER: [number, number, number, number][] = (() => {
   const r = rng(77);
   const out: [number, number, number, number][] = [];
-  for (let z = 12; z > -86; z -= 5 + r() * 6) out.push([2 + r() * 6.5, z, 0.5 + r() * 1.3, r() * 3]);
+  for (let z = 12; z > EDGE.z0 + 6; z -= 5 + r() * 6) out.push([2 + r() * 6.5, z, 0.5 + r() * 1.3, r() * 3]);
   return out;
 })();
 
@@ -181,7 +182,7 @@ function Ground() {
   }, []);
   const dashes = useMemo(() => {
     const out: [number, number][] = [];
-    for (let z = 26; z > -90; z -= 6) out.push([0, z]);
+    for (let z = 26; z > EDGE.z0 + 2; z -= 6) out.push([0, z]);
     return out;
   }, []);
   const W = EDGE.x * 2 + 2;
@@ -243,7 +244,7 @@ function Gate({ lang }: { lang: Lang }) {
   const gateSign = useSign(
     [
       [lang === "ko" ? "통제 구역" : "RESTRICTED", 1.3],
-      [lang === "ko" ? "점수 900 미만 시민 출입 불가" : "CITIZENS BELOW SCORE 900 MAY NOT PASS", 0.6],
+      [lang === "ko" ? "B등급 미만 시민 출입 불가" : "GRADE C AND BELOW MAY NOT PASS", 0.6],
     ],
     { color: "#ff2a3d", glow: true, mono: true, w: 1024, h: 256, bg: "#0a0204" }
   );
@@ -312,122 +313,8 @@ function Gate({ lang }: { lang: Lang }) {
   );
 }
 
-/* ---------- 관리 탑: 여러 겹 지붕을 얹은 탑 꼭대기의 거대한 눈 ---------- */
-function Overseer() {
-  const eye = useRef<THREE.Group>(null);
-  const iris = useRef<THREE.MeshBasicMaterial>(null);
-  const ringMat = useRef<THREE.MeshBasicMaterial>(null);
-  const roof = roofGeometry();
-  const tiers = useMemo(() => {
-    const out: { y: number; w: number; h: number }[] = [];
-    let y = 0;
-    let w = 46;
-    for (let i = 0; i < 6; i++) {
-      const h = i === 0 ? 26 : 16 - i;
-      out.push({ y, w, h });
-      y += h;
-      w *= 0.8;
-    }
-    return out;
-  }, []);
-  const top = tiers[tiers.length - 1].y + tiers[tiers.length - 1].h;
-  useFrame((s) => {
-    const t = s.clock.elapsedTime;
-    eye.current?.lookAt(player.pos);
-    if (iris.current) iris.current.color.setRGB(1, 0.08 + Math.sin(t * 1.3) * 0.05, 0.12);
-    if (ringMat.current) ringMat.current.opacity = 0.35 + Math.sin(t * 0.8) * 0.15;
-  });
-  return (
-    <group position={[OVERSEER_ISLAND.x, OVERSEER_ISLAND.y, OVERSEER_ISLAND.z]}>
-      {/* 네 귀퉁이의 고딕 첨탑: 사원과 성당이 섞인 탑 */}
-      {[-1, 1].flatMap((a) =>
-        [-1, 1].map((b) => (
-          <group key={`${a}${b}`} position={[a * 21, 0, b * 21]}>
-            <mesh position={[0, 22, 0]}>
-              <boxGeometry args={[4, 44, 4]} />
-              <meshStandardMaterial color="#120f12" metalness={0.7} roughness={0.4} emissive="#200407" emissiveIntensity={0.6} />
-            </mesh>
-            <mesh position={[0, 58, 0]} rotation={[0, Math.PI / 4, 0]}>
-              <coneGeometry args={[3, 28, 4]} />
-              <meshStandardMaterial color="#120f12" metalness={0.7} roughness={0.4} emissive="#200407" emissiveIntensity={0.6} />
-            </mesh>
-            <mesh position={[0, 30, b * 2.02]}>
-              <planeGeometry args={[1.2, 10]} />
-              <meshBasicMaterial color="#ff1030" toneMapped={false} side={THREE.DoubleSide} />
-            </mesh>
-          </group>
-        ))
-      )}
-      {/* 정면의 장미창: 눈동자처럼 생긴 둥근 스테인드글라스 */}
-      <group position={[0, 16, 18.1]}>
-        <mesh>
-          <circleGeometry args={[7, 48]} />
-          <meshBasicMaterial color="#3a0610" toneMapped={false} />
-        </mesh>
-        {Array.from({ length: 12 }, (_, i) => (
-          <mesh key={i} rotation={[0, 0, (i / 12) * Math.PI * 2]} position={[0, 0, 0.05]}>
-            <planeGeometry args={[0.3, 13.6]} />
-            <meshBasicMaterial color="#ffb02e" toneMapped={false} />
-          </mesh>
-        ))}
-        <mesh position={[0, 0, 0.08]}>
-          <ringGeometry args={[6.6, 7.2, 48]} />
-          <meshBasicMaterial color="#ffb02e" toneMapped={false} />
-        </mesh>
-        <mesh position={[0, 0, 0.1]}>
-          <circleGeometry args={[2, 32]} />
-          <meshBasicMaterial color="#ff1030" toneMapped={false} />
-        </mesh>
-      </group>
-      {tiers.map((t, i) => (
-        <group key={i} position={[0, t.y, 0]}>
-          <mesh position={[0, t.h / 2, 0]}>
-            <boxGeometry args={[t.w * 0.78, t.h, t.w * 0.78]} />
-            <meshStandardMaterial color="#120f12" metalness={0.7} roughness={0.4} emissive="#200407" emissiveIntensity={0.7} fog={false} />
-          </mesh>
-          {/* 층마다 붉은 창 띠 */}
-          <mesh position={[0, t.h * 0.55, 0]}>
-            <boxGeometry args={[t.w * 0.79, t.h * 0.12, t.w * 0.79]} />
-            <meshBasicMaterial color="#ff1030" toneMapped={false} fog={false} />
-          </mesh>
-          <mesh geometry={roof} position={[0, t.h - 0.5, 0]} scale={[t.w * 1.05, t.w * 0.22, t.w * 1.05]}>
-            <meshStandardMaterial color="#0d0d10" metalness={0.6} roughness={0.35} emissive="#16080a" fog={false} />
-          </mesh>
-        </group>
-      ))}
-      <mesh position={[0, top + 12, 0]}>
-        <cylinderGeometry args={[0.6, 1.4, 24, 8]} />
-        <meshStandardMaterial color="#111" metalness={0.8} roughness={0.3} fog={false} />
-      </mesh>
-      <group ref={eye} position={[0, top + 22, 0]}>
-        <mesh>
-          <sphereGeometry args={[10, 32, 24]} />
-          <meshStandardMaterial color="#d8d4cf" roughness={0.2} metalness={0.1} emissive="#3a2a2a" emissiveIntensity={0.6} fog={false} />
-        </mesh>
-        <mesh position={[0, 0, 9.3]}>
-          <circleGeometry args={[4.8, 48]} />
-          <meshBasicMaterial ref={iris} color="#ff1030" toneMapped={false} fog={false} />
-        </mesh>
-        <mesh position={[0, 0, 9.7]}>
-          <circleGeometry args={[2.2, 32]} />
-          <meshBasicMaterial color="#000" fog={false} />
-        </mesh>
-        <mesh position={[1.5, 1.5, 9.9]}>
-          <circleGeometry args={[0.6, 16]} />
-          <meshBasicMaterial color="#fff" fog={false} />
-        </mesh>
-      </group>
-      <mesh position={[0, top + 22, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[16, 0.5, 8, 64]} />
-        <meshBasicMaterial ref={ringMat} color="#ff1030" transparent toneMapped={false} fog={false} />
-      </mesh>
-      <pointLight position={[0, top, 30]} intensity={3000} distance={260} color="#ff2030" />
-    </group>
-  );
-}
-
 /* ---------- 세로 한글 간판: 건물 벽에서 길 쪽으로 튀어나옴 ---------- */
-const SIGN_WORDS = ["기억수리", "감정대여", "동의센터", "해장국", "점수상담", "꿈판매", "전당포", "로봇수리", "인력사무소", "만두", "여관", "신경칩", "노래방", "약국", "환불불가", "족발", "PC방", "부적"];
+const SIGN_WORDS = ["기억수리", "감정대여", "동의센터", "해장국", "등급상담", "꿈판매", "전당포", "로봇수리", "인력사무소", "만두", "여관", "신경칩", "노래방", "약국", "환불불가", "족발", "PC방", "부적"];
 const SIGN_COLORS = ["#ff2a4d", "#22f0ff", "#ffe14d", "#7dff7a", "#ff2bd6", "#ff8a2a", "#a77bff", "#ffffff"];
 
 function VerticalSigns() {
@@ -493,7 +380,7 @@ function VerticalSigns() {
 /* ---------- 큰길을 가로지르는 연등 줄과 전깃줄 (좌우 대칭) ---------- */
 function Lanterns() {
   const strings = useMemo(() => {
-    const rows = [18, 10, 2, -8, -18, -44, -52, -78, -84];
+    const rows = [18, 10, 2, -8, -18, -44, -52, -78, -86, -112, -118];
     return rows.map((z, i) => {
       const y = 7 + (i % 3) * 1.4;
       return { a: new THREE.Vector3(-AVENUE - 2, y, z), b: new THREE.Vector3(AVENUE + 2, y, z), sag: 1.6, n: 11, seed: i };
@@ -501,7 +388,7 @@ function Lanterns() {
   }, []);
   const wires = useMemo(() => {
     const out: THREE.TubeGeometry[] = [];
-    [14, 6, -2, -14, -48, -74].forEach((z, i) => {
+    [14, 6, -2, -14, -48, -74, -108].forEach((z, i) => {
       for (let w = 0; w < 2; w++) {
         const y = 9 + w * 0.8 + (i % 2) * 0.6;
         const A = new THREE.Vector3(-AVENUE - 2, y, z);
@@ -913,11 +800,11 @@ function Patrol({ onTap, id, m }: { onTap: TapFn; id: string; m: number }) {
     if (!g) return;
     const t = s.clock.elapsedTime;
     // 둘 중 하나에게라도 가까이 가면 둘 다 멈춘다 (한 번만 계산)
-    if (m > 0) st.current.stop = Math.hypot(Math.abs(player.pos.x) - 6.2, player.pos.z - st.current.z) < 4;
+    if (m > 0) st.current.stop = Math.hypot(Math.abs(player.pos.x) - 10.4, player.pos.z - st.current.z) < 4;
     const near = st.current.stop;
     if (!near) {
       if (m > 0) st.current.z += st.current.dir * dt * 1.6;
-      if (st.current.z < -84) st.current.dir = 1;
+      if (st.current.z < EDGE.z0 + 12) st.current.dir = 1;
       if (st.current.z > 12) st.current.dir = -1;
       g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, st.current.dir < 0 ? 0 : Math.PI * m, 0.05);
       const sw = Math.sin(t * 5) * 0.4;
@@ -926,12 +813,12 @@ function Patrol({ onTap, id, m }: { onTap: TapFn; id: string; m: number }) {
     } else {
       // 멈춰서 플레이어를 바라봄 (모델 정면은 -z)
       // 거울상은 당신이 아니라, 당신의 거울 위치를 바라본다
-      const a = Math.atan2(6.2 - player.pos.x, g.position.z - player.pos.z);
+      const a = Math.atan2(10.4 - player.pos.x, g.position.z - player.pos.z);
       const yaw = m > 0 ? a : -a;
       g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, yaw, 0.1);
     }
-    g.position.set(6.2 * m, 0, st.current.z);
-    item.pos.set(6.2 * m, 2, st.current.z);
+    g.position.set(10.4 * m, 0, st.current.z);
+    item.pos.set(10.4 * m, 2, st.current.z);
   });
   return (
     <Tap id={id} onTap={onTap}>
@@ -970,7 +857,6 @@ function Patrol({ onTap, id, m }: { onTap: TapFn; id: string; m: number }) {
           <boxGeometry args={[0.5, 0.08, 0.02]} />
           <meshBasicMaterial color="#ff1030" toneMapped={false} />
         </mesh>
-        <pointLight position={[0, 2.8, -0.8]} intensity={4} distance={5} color="#ff1030" />
       </group>
     </Tap>
   );
@@ -1120,7 +1006,7 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
       <Towers />
       <Ground />
       <Gate lang={lang} />
-      <Overseer />
+      <Jabi lang={lang} />
       <Billboards lang={lang} />
       <VerticalSigns />
       <Lanterns />
