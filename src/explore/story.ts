@@ -58,6 +58,7 @@ export const ui = {
   },
   processing: { ko: "처리 중…", en: "Processing…" },
   acceptedAll: { ko: "수락됨", en: "Accepted" },
+  startLine: { ko: "줄로 돌아가기", en: "Return to the line" },
   welcomeB: { ko: "어서 오세요, B등급 시민.", en: "Welcome, Grade B citizen." },
 };
 

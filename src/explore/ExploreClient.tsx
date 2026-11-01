@@ -52,7 +52,8 @@ const BEAT_MS: Record<EndKind, number[]> = {
   ghost: [2600, 3600, 5600, 4400],
 };
 // 수락한 시민이 다시 들어오면 서게 되는 줄 속 자리
-const LINE_SPOT = { x: 3.6, z: QUEUE_Z[QUEUE_Z.length - 1] - 1.75 };
+// 줄 한가운데, 두 사람 사이. 여기서는 문 너머로 금빛이 된 대자비의 얼굴이 보인다
+const LINE_SPOT = { x: 3.6, z: (QUEUE_Z[44] + QUEUE_Z[45]) / 2 };
 
 export default function ExploreClient() {
   const { t, lang } = useLang();
@@ -215,6 +216,7 @@ export default function ExploreClient() {
       input,
       look: (pitch: number) => (input.look.pitch += pitch),
       gaze,
+      end: (k: EndKind) => startEndingRef.current(k),
     };
   }, [goTo]);
 
@@ -333,13 +335,16 @@ export default function ExploreClient() {
   // 결말 연출: 줄마다 장면이 바뀐다
   const [secondStatue, setSecondStatue] = useState(false);
   const [flash, setFlash] = useState(false);
+  const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     if (!ending) return;
     const { kind, step } = ending;
     if (kind === "accept") {
       if (step === 0) {
         gaze.mood = "calm";
-        autoWalk.to = { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 2.4, pitch: 0.12 };
+        // 줄 옆을 따라 걸어가 빈자리에 들어선다
+        autoWalk.to = { x: 2.3, z: LINE_SPOT.z, speed: 3.6, pitch: 0.2 };
+        sceneTimer.current = setTimeout(() => (autoWalk.to = { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.6, pitch: 0.42 }), 6800);
       }
       if (step === 4)
         try {
@@ -348,8 +353,7 @@ export default function ExploreClient() {
     } else if (kind === "reject") {
       if (step === 0) {
         finalBeam();
-        const id = setTimeout(() => setFlash(true), 1500);
-        return () => clearTimeout(id);
+        sceneTimer.current = setTimeout(() => setFlash(true), 1500);
       }
       if (step === 2) {
         // 장면이 방공호로: 사람들이 두 번째 동상을 옮겨 놓았다
@@ -366,7 +370,7 @@ export default function ExploreClient() {
       }
     } else if (kind === "ghost") {
       if (step === 0) gaze.mood = "blind";
-      if (step === 2) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 1.0 };
+      if (step === 2) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
@@ -392,6 +396,7 @@ export default function ExploreClient() {
     setTalked(false);
   };
   const clearScene = () => {
+    clearTimeout(sceneTimer.current);
     autoWalk.to = null;
     gaze.mood = "";
     setSecondStatue(false);
@@ -700,6 +705,10 @@ export default function ExploreClient() {
         <div className={`ending ending-${ending.kind}`}>
           <div className="ending-inner">
             {(checkpoint[ending.kind] as Beat[]).slice(0, ending.step + 1).map((l, i, arr) => {
+              // 거부 결말이 방공호로 넘어가면 앞 장면의 글은 거둔다
+              if (ending.kind === "reject" && ending.step >= 2 && i < 2) return null;
+              // 숨은 결말은 대자비의 얼굴을 가리지 않도록 마지막 두 줄만 아래에
+              if (ending.kind === "ghost" && i < ending.step - 1) return null;
               const last = i === (checkpoint[ending.kind] as Beat[]).length - 1;
               const cls = [last ? "final" : "", l.say ? "say" : "", l.plaque ? "plaque-line" : "", i < arr.length - 1 && !last ? "past" : ""].join(" ");
               if (l.slots)
@@ -808,7 +817,7 @@ export default function ExploreClient() {
                   lock();
                 }}
               >
-                {t(ui.start)}
+                {t(accepted ? ui.startLine : ui.start)}
               </button>
             </div>
           </div>

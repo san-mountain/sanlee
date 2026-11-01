@@ -701,6 +701,8 @@ function StandingBuddha() {
     if (halo.current) halo.current.rotation.z = t * (0.03 + rage * 0.4);
 
     // 결말: 수락하면 눈이 평온하게 감기고 붉은 빛이 금빛으로 돌아온다
+    const ringMat = lensRing.current?.material as THREE.MeshBasicMaterial | undefined;
+    ringMat?.color.set(gaze.mood === "calm" ? "#ffc040" : gaze.mood === "blind" ? "#3a3a40" : "#ff2a3d");
     if (gaze.mood === "calm") {
       eyeMat.color.setRGB(1.8, 1.25, 0.35);
       eyeGlowMat.color.set("#ffc040");

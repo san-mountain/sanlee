@@ -709,3 +709,9 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .backup-list .none { opacity: .6; }
 .pause-row.backups .switch { white-space: nowrap; }
 .intro-cookie .choice-sys { position: static; display: block; }
+/* 거부 결말의 방공호 장면: 동상이 보이도록 글은 아래로 */
+.explore-root.thaw .ending { align-items: flex-end; padding-bottom: 7vh; }
+.explore-root.thaw .ending-inner, .ending.ending-ghost .ending-inner { background: none; }
+.explore-root.thaw .ending p.final { font-size: clamp(16px, 2vw, 20px); }
+.ending.ending-ghost { align-items: flex-end; padding-bottom: 7vh; }
+.explore-root.thaw .ending, .ending.ending-ghost { background: linear-gradient(0deg, #000000d0 0%, #00000080 30%, transparent 55%); }
