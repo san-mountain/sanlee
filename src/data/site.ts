@@ -146,9 +146,9 @@ export const contact = {
 };
 
 export const sections: { id: SectionId; label: string; labelKo: string; href: string }[] = [
-  { id: "about", label: "About", labelKo: "소개", href: "/about" },
   { id: "works", label: "Works", labelKo: "작업", href: "/works" },
   { id: "writing", label: "Writing", labelKo: "글", href: "/writing" },
+  { id: "about", label: "About", labelKo: "소개", href: "/about" },
 ];
 
 // 화면에 고정으로 나오는 짧은 문구들

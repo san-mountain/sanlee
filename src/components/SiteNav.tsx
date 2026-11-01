@@ -15,13 +15,14 @@ export default function SiteNav() {
   useEffect(() => document.body.classList.remove("deleting"), []);
   return (
     <header className="nav">
+      {/* 이름과 메뉴는 늘 영문이라 lang="en"으로 고정: 시스템 글꼴이 페이지 언어(ko/en)에 따라 다른 글꼴을 고르지 않게 */}
       <Link href="/" className="nav-logo">
-        {profile.name}
+        <span lang="en">{profile.name}</span>
         <span className="nav-logo-han" lang="ko-Hani">李山</span>
       </Link>
       <nav className="nav-links" aria-label="Main">
         {sections.map((s) => (
-          <Link key={s.id} href={s.href} className={path === s.href ? "active" : ""} aria-current={path === s.href ? "page" : undefined}>
+          <Link key={s.id} href={s.href} lang="en" className={path === s.href ? "active" : ""} aria-current={path === s.href ? "page" : undefined}>
             {s.label}
           </Link>
         ))}
