@@ -464,9 +464,6 @@ export default function ExploreClient() {
               <button className="btn" onClick={closePanel}>
                 {t(ui.back)}
               </button>
-              <Link className="btn" href={sectionMeta.href}>
-                {t(ui.normalPage)}
-              </Link>
             </div>
           </div>
         </div>

@@ -170,7 +170,7 @@ function Towers() {
 const MIRROR_LITTER: [number, number, number, number][] = (() => {
   const r = rng(77);
   const out: [number, number, number, number][] = [];
-  for (let z = 12; z > -86; z -= 5 + r() * 6) out.push([2 + r() * 6.5, z, 0.5 + r() * 1.3, r() * 3]);
+  for (let z = 12; z > EDGE.z0 + 6; z -= 5 + r() * 6) out.push([2 + r() * 6.5, z, 0.5 + r() * 1.3, r() * 3]);
   return out;
 })();
 
@@ -182,7 +182,7 @@ function Ground() {
   }, []);
   const dashes = useMemo(() => {
     const out: [number, number][] = [];
-    for (let z = 26; z > -90; z -= 6) out.push([0, z]);
+    for (let z = 26; z > EDGE.z0 + 2; z -= 6) out.push([0, z]);
     return out;
   }, []);
   const W = EDGE.x * 2 + 2;
@@ -380,7 +380,7 @@ function VerticalSigns() {
 /* ---------- 큰길을 가로지르는 연등 줄과 전깃줄 (좌우 대칭) ---------- */
 function Lanterns() {
   const strings = useMemo(() => {
-    const rows = [18, 10, 2, -8, -18, -44, -52, -78, -84];
+    const rows = [18, 10, 2, -8, -18, -44, -52, -78, -86, -112, -118];
     return rows.map((z, i) => {
       const y = 7 + (i % 3) * 1.4;
       return { a: new THREE.Vector3(-AVENUE - 2, y, z), b: new THREE.Vector3(AVENUE + 2, y, z), sag: 1.6, n: 11, seed: i };
@@ -388,7 +388,7 @@ function Lanterns() {
   }, []);
   const wires = useMemo(() => {
     const out: THREE.TubeGeometry[] = [];
-    [14, 6, -2, -14, -48, -74].forEach((z, i) => {
+    [14, 6, -2, -14, -48, -74, -108].forEach((z, i) => {
       for (let w = 0; w < 2; w++) {
         const y = 9 + w * 0.8 + (i % 2) * 0.6;
         const A = new THREE.Vector3(-AVENUE - 2, y, z);
@@ -804,7 +804,7 @@ function Patrol({ onTap, id, m }: { onTap: TapFn; id: string; m: number }) {
     const near = st.current.stop;
     if (!near) {
       if (m > 0) st.current.z += st.current.dir * dt * 1.6;
-      if (st.current.z < -84) st.current.dir = 1;
+      if (st.current.z < EDGE.z0 + 12) st.current.dir = 1;
       if (st.current.z > 12) st.current.dir = -1;
       g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, st.current.dir < 0 ? 0 : Math.PI * m, 0.05);
       const sw = Math.sin(t * 5) * 0.4;

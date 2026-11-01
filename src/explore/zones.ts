@@ -156,21 +156,23 @@ export const BUNKER: ZoneDef = {
 /* ---------------- 지상: 하늘에 뜬 감시구역 7 ---------------- */
 // 도시 전체가 구름 위에 떠 있는 판 위에 있다. 가장자리는 난간이고, 그 너머는 허공.
 // 큰길(|x|<9)이 남북으로 뻗고, 양쪽 건물 사이사이는 골목. 북쪽 끝 검문소 너머로 관리 탑의 섬이 보인다.
-export const EDGE = { x: 64, z0: -92, z1: 38 }; // 난간 위치
+export const EDGE = { x: 64, z0: -132, z1: 38 }; // 난간 위치
 export const CITY_BOUNDS: Box = { x0: -EDGE.x + 0.6, x1: EDGE.x - 0.6, z0: EDGE.z0 + 0.6, z1: EDGE.z1 - 0.6 };
 export const AVENUE = 9;
 export const ALLEY = 3.5;
 // 검문소 레이저 앞에서 멈추도록 큰길 끝에 보이지 않는 벽
-const GATE_STOP = box(0, -89.5, 2 * AVENUE + 4, 7);
+const GATE_STOP = box(0, EDGE.z0 + 2.5, 2 * AVENUE + 4, 7);
 export const CROSS: [number, number][] = [
   [-36, -26],
   [-70, -60],
+  [-104, -94],
 ];
 // 건물이 들어선 띠 (남북 방향)
 const BANDS: [number, number, number][] = [
   [-26, 14, 3],
   [-60, -36, 2],
-  [-88, -70, 2],
+  [-94, -70, 2],
+  [-128, -104, 2],
 ];
 // 큰길에서 바깥쪽으로 건물 세 줄 (|x|)
 const COLS: [number, number][] = [
@@ -232,8 +234,8 @@ export const HATCH = { pos: [-COLS[1][0], 0, 10.6] as Vec3, alleyX: -(COLS[0][1]
 export const JUNK = box(HATCH.alleyX, 13.3, ALLEY, 1.4);
 
 export const QUEUE_X = [-3.6, 3.6];
-export const QUEUE_Z: number[] = Array.from({ length: 36 }, (_, i) => -22 - i * 1.75);
-export const CAMERA_POLES: Vec3[] = [-1, 1].flatMap((s) => [8, -14, -40, -64, -84].map((z) => [s * (AVENUE - 0.6), 0, z] as Vec3));
+export const QUEUE_Z: number[] = Array.from({ length: 58 }, (_, i) => -22 - i * 1.75);
+export const CAMERA_POLES: Vec3[] = [-1, 1].flatMap((s) => [8, -14, -40, -64, -84, -104, -124].map((z) => [s * (AVENUE - 0.6), 0, z] as Vec3));
 
 // 도시를 둘러싼 떠 있는 섬들. 기계의 질서답게 큰길(x=0)을 축으로 정확히 대칭이다.
 export type Island = { x: number; y: number; z: number; r: number; towers: boolean };
@@ -249,7 +251,7 @@ export const ISLANDS: Island[] = (() => {
   return half.flatMap((i) => [i, { ...i, x: -i.x }]);
 })();
 export const BUDDHAS = ISLANDS.filter((i) => !i.towers);
-export const OVERSEER_ISLAND = { x: 0, y: 0, z: -178, r: 38 };
+export const OVERSEER_ISLAND = { x: 0, y: 0, z: -218, r: 38 };
 
 // 골목 사람들: 큰길과 달리 아무렇게나 서 있고, 바이저도 벗었다 (골목은 비대칭으로 남겨 둔다)
 export const ALLEY_PEOPLE: { x: number; z: number; rotY: number; tone: number }[] = (() => {
@@ -300,6 +302,7 @@ export const BARRIERS: Barrier[] = (() => {
       [-0.5, 3],
       [-36, -26],
       [-70, -60],
+      [-104, -94],
     ])
       out.push({ x0: s * 11.5 - 0.5, x1: s * 11.5 + 0.5, z0, z1, axis: "z" });
   }
@@ -311,7 +314,7 @@ export type Cover = { x: number; z: number; w: number; d: number; h: number; kin
 export const COVERS: Cover[] = (() => {
   const out: Cover[] = [];
   const kinds: Cover["kind"][] = ["stele", "container", "wall"];
-  const zs = [-4, -12, -20, -30, -38, -46, -54, -62, -70, -78];
+  const zs = [-4, -12, -20, -30, -38, -46, -54, -62, -70, -78, -86, -94, -102, -110, -118];
   zs.forEach((z, i) => {
     const kind = kinds[i % 3];
     const dims = kind === "stele" ? { w: 2.4, d: 1.1, h: 3.6 } : kind === "container" ? { w: 2.6, d: 1.6, h: 3.3 } : { w: 3, d: 0.8, h: 3.4 };
@@ -323,9 +326,9 @@ export const COVERS: Cover[] = (() => {
 export const coverBox = (c: Cover): Box => box(c.x, c.z, c.w, c.d);
 
 // 큰길 끝, 다리 건너 섬에 선 거대한 입불 '대자비'. 이마의 렌즈가 감시하는 눈이다.
-export const JABI = { x: 0, y: 0, z: -178, eye: new THREE.Vector3(0, 84, -169.6) };
+export const JABI = { x: 0, y: 0, z: -218, eye: new THREE.Vector3(0, 84, -209.6) };
 // 시선이 닿는 구간 (큰길)
-export const GAZE_ZONE = { x: AVENUE + 2.5, z0: -90, z1: 2 };
+export const GAZE_ZONE = { x: AVENUE + 2.5, z0: EDGE.z0 + 2, z1: 2 };
 
 // 남쪽 광장의 범종각과 석탑
 export const BELL = { pos: [-10, 0, 27] as Vec3 };
@@ -398,7 +401,7 @@ export const CITY: ZoneDef = {
       radius: 2.4,
       label: { ko: "전망 망원경", en: "Viewing scope" },
     })),
-    { id: "checkpoint", kind: "checkpoint", pos: v(0, 1.6, -84.5), radius: 4.5, label: { ko: "검문소", en: "Checkpoint" } },
+    { id: "checkpoint", kind: "checkpoint", pos: v(0, 1.6, EDGE.z0 + 7.5), radius: 4.5, label: { ko: "검문소", en: "Checkpoint" } },
     { id: "san", kind: "statue", pos: v(9999, 0, 9999), radius: 2.6, label: { ko: "이산", en: "San" } },
     { id: "patrol", kind: "npc", npc: "patrol", pos: v(6, 2, -10), radius: 3.4, label: { ko: "순찰 기계 P-3", en: "Patrol unit P-3" } },
     { id: "patrol2", kind: "npc", npc: "patrol2", pos: v(-6, 2, -10), radius: 3.4, label: { ko: "순찰 기계 P-3′", en: "Patrol unit P-3′" } },
