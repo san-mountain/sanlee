@@ -5,15 +5,29 @@ import { useEffect, useRef, useState } from "react";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import { fourthWall, pause } from "./story";
 import { input, saveSettings } from "./input";
+import { clock, deleteBackup, getBackup } from "./backup";
 
 // Esc 설정창. 실제로 쓸 수 있는 설정 몇 개와, 시스템이 방문자에게 직접 말을 거는 문장들.
-export default function PauseMenu({ onResume, onReset, onBunker, since }: { onResume: () => void; onReset: () => void; onBunker?: () => void; since: number }) {
+export default function PauseMenu({
+  onResume,
+  onReset,
+  onBunker,
+  since,
+  inBunker,
+}: {
+  onResume: () => void;
+  onReset: () => void;
+  onBunker?: () => void;
+  since: number;
+  inBunker: boolean;
+}) {
   const { t, lang } = useLang();
   const [sens, setSens] = useState(input.sens);
   const [bob, setBob] = useState(input.bob);
   const [note, setNote] = useState<string | null>(null);
   const [free, setFree] = useState(true);
   const [line, setLine] = useState(0);
+  const [bk, setBk] = useState(() => getBackup());
   const [, tick] = useState(0);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -37,7 +51,8 @@ export default function PauseMenu({ onResume, onReset, onBunker, since }: { onRe
       .replace("{time}", new Date().toLocaleTimeString(lang === "ko" ? "ko-KR" : "en-GB", { hour: "2-digit", minute: "2-digit" }))
       .replace("{min}", String(Math.max(1, Math.round((Date.now() - since) / 60000))))
       .replace("{w}", String(window.innerWidth))
-      .replace("{h}", String(window.innerHeight));
+      .replace("{h}", String(window.innerHeight))
+      .replace("{copy}", String(getBackup().restores + 1));
 
   return (
     <div className="pause-wrap">
@@ -113,6 +128,37 @@ export default function PauseMenu({ onResume, onReset, onBunker, since }: { onRe
             <span>{t(pause.cookies)}</span>
             <button type="button" className="switch" onClick={() => say(t(pause.cookiesNo))}>
               ⚙
+            </button>
+          </div>
+
+          {/* 백업 기록: 지상에서는 지울 권한이 없다. 신호가 닿지 않는 방공호에서만 실제로 지워진다 */}
+          <div className="pause-row backups">
+            <span>{t(pause.backups)}</span>
+            <ol className="backup-list">
+              {bk.list.length ? (
+                bk.list
+                  .slice(-3)
+                  .reverse()
+                  .map((b) => (
+                    <li key={b.n}>
+                      #{b.n} · {clock(b.t)}
+                    </li>
+                  ))
+              ) : (
+                <li className="none">{t(pause.backupEmpty)}</li>
+              )}
+            </ol>
+            <button
+              type="button"
+              className="switch danger"
+              onClick={() => {
+                if (!inBunker) return say(t(pause.backupDenied));
+                deleteBackup();
+                setBk(getBackup());
+                say(t(pause.backupDeleted));
+              }}
+            >
+              {t(pause.backupDelete)}
             </button>
           </div>
 

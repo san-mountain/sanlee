@@ -1,5 +1,6 @@
 "use client";
 
+import { gaze } from "./gaze";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
@@ -255,6 +256,8 @@ function Gate({ lang }: { lang: Lang }) {
     return t;
   }, []);
   useFrame((s) => {
+    // 숨은 결말: 기록 없는 사람 앞에서 문의 레이저가 꺼진다
+    if (lasers.current) lasers.current.visible = gaze.mood !== "blind";
     lasers.current?.children.forEach((c, i) => {
       ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(s.clock.elapsedTime * 8 + i) * 0.3;
     });

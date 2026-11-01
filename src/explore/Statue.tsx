@@ -87,11 +87,13 @@ const S = 2.1; // 사람 크기 모델을 동상 크기로
 const TOP = 1.2; // 받침대 높이
 
 // 받침대: 복원이 끝나면 비어 있고 명판만 남는다
-export function Pedestal({ lang, empty }: { lang: Lang; empty?: boolean }) {
+export function Pedestal({ lang, empty, second }: { lang: Lang; empty?: boolean; second?: boolean }) {
   const plate = useSign(
     [
-      [lang === "ko" ? "이산 (보관 처리됨)" : "SAN LEE (ARCHIVED)", 1],
-      [empty ? (lang === "ko" ? "— 걸어 나감 —" : "— WALKED AWAY —") : lang === "ko" ? "끝까지 '모두 거부'를 누른 자" : "THE ONE WHO REJECTED ALL", 0.7],
+      second ? [lang === "ko" ? "방문자 (보관 처리됨)" : "VISITOR (ARCHIVED)", 1] : [lang === "ko" ? "이산 (보관 처리됨)" : "SAN LEE (ARCHIVED)", 1],
+      second
+        ? [lang === "ko" ? "끝까지 '모두 거부'를 누른 두 번째 사람" : "THE SECOND ONE WHO REJECTED ALL", 0.62]
+        : [empty ? (lang === "ko" ? "— 걸어 나감 —" : "— WALKED AWAY —") : lang === "ko" ? "끝까지 '모두 거부'를 누른 사람" : "THE ONE WHO REJECTED ALL", 0.7],
     ],
     { color: "#2a1d08", w: 512, h: 144 }
   );
@@ -124,7 +126,7 @@ export function Pedestal({ lang, empty }: { lang: Lang; empty?: boolean }) {
 const LEAN = 0.5; // 앞으로 웅크린 각도
 
 // 받침대 위에 주저앉아 머리를 감싸 쥔 동상
-export default function Statue({ restored, lang }: { restored: number; lang: Lang }) {
+export default function Statue({ restored, lang, second }: { restored: number; lang: Lang; second?: boolean }) {
   const body = useRef<THREE.Group>(null);
   const head = usePartMaterial("head", restored);
   const torso = usePartMaterial("torso", restored);
@@ -160,7 +162,7 @@ export default function Statue({ restored, lang }: { restored: number; lang: Lan
 
   return (
     <group>
-      <Pedestal lang={lang} />
+      <Pedestal lang={lang} second={second} />
       <group ref={body} position={[0, TOP, -0.35]} scale={S}>
         {/* 무릎을 세우고 앉은 다리 */}
         {[-1, 1].map((k) => (

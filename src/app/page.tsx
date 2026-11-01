@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SiteNav from "@/components/SiteNav";
+import SiteFooter from "@/components/SiteFooter";
 import WorksGrid from "@/components/WorksGrid";
 import { profile, ui } from "@/data/site";
 import { T } from "@/components/LangProvider";
@@ -19,6 +20,7 @@ export default function Home() {
           </Link>
         </div>
       </main>
+      <SiteFooter />
     </>
   );
 }

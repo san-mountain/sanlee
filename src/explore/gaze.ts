@@ -13,7 +13,12 @@ export const gaze = {
   enabled: true, // 결말·대화 중에는 멈춤
   frozen: false, // 죽음 연출 중에는 움직이지 못함
   firstSeenAt: 0,
+  // 결말 연출: calm = 수락 뒤 눈을 감고 금빛으로, blind = 기록 없는 사람을 보지 못해 멈춤
+  mood: "" as "" | "calm" | "blind",
 };
+
+// 결말 연출에서 시점을 스스로 걷게 한다 (충돌 무시). Player가 읽는다
+export const autoWalk: { to: { x: number; z: number; speed: number; pitch?: number } | null } = { to: null };
 
 export function resetGaze() {
   gaze.meter = 0;

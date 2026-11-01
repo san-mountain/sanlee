@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { diary, type DiaryEntry } from "@/data/diary";
 import { useLang } from "./LangProvider";
+import { unfold } from "./unfold";
 
 const MARK = /⟦(\d+)⟧/g;
 const ONLY_MARK = /^⟦(\d+)⟧$/;
@@ -273,12 +274,18 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
         return (
           <details
             key={`${e.date}-${e.title ?? ""}`}
-            name="diary"
+            data-group="diary"
             id={inExplore ? undefined : `diary-${e.date}${e.title ? `-${i}` : ""}`}
             className="poem diary-entry"
             lang="ko"
           >
-            <summary>
+            <summary
+              onClick={(ev) => {
+                ev.preventDefault();
+                const det = ev.currentTarget.parentElement as HTMLDetailsElement;
+                unfold(det, !det.open || det.dataset.closing === "1");
+              }}
+            >
               <span className="poem-head">
                 <span className="poem-title">
                   {e.date}
@@ -295,7 +302,7 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
                 onClick={(ev) => {
                   const det = ev.currentTarget.closest("details");
                   if (!det) return;
-                  det.open = false;
+                  unfold(det, false);
                   det.querySelector("summary")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
                 }}
               >
