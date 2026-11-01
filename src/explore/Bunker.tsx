@@ -828,9 +828,13 @@ export default function Bunker({ lang, visited, onTap, secondStatue }: { lang: L
       <BunkerLotus />
       {secondStatue ? (
         <>
-          {/* 거부 결말: 비어 있던 대좌에 두 번째 동상이 섰다. 이산이 그 곁에 서 있다 */}
-          <Statue restored={0} lang={lang} />
-          <SanNPC mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[1.9, 1.2]} at={[1.9, 1.3, -0.9]} />
+          {/* 거부 결말: 이산도 다시 보관 처리되어 굳었다. 그 곁에 두 번째 동상이 나란히 앉아 있다 */}
+          <group position={[-2.3, 0, 0]} rotation={[0, 0.12, 0]}>
+            <Statue restored={0} lang={lang} />
+          </group>
+          <group position={[2.3, 0, 0]} rotation={[0, -0.12, 0]}>
+            <Statue restored={0} lang={lang} second />
+          </group>
         </>
       ) : visited.length >= TERMINALS.length ? (
         <>
