@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { diary, type DiaryEntry } from "@/data/diary";
 import { useLang } from "./LangProvider";
 
@@ -16,9 +16,153 @@ function filler(n: number) {
   return Array.from({ length: words }, () => "xxxx").join(" ");
 }
 
+// 가린 곳을 누르면: 막대가 잠깐 깨졌다가 다시 봉인되고, '열어 볼까요?' 창이 뜬다. [열기]는 자꾸 도망간다.
+// (SEOUL 2087의 삭제·백업 세계관. 실제로 복원할 원문은 어디에도 없다.)
+const RESTORE_EVENT = "diary-restore";
+function restore(e: React.SyntheticEvent<HTMLElement>) {
+  const el = e.currentTarget;
+  el.classList.remove("cracking");
+  void el.offsetWidth; // 애니메이션 다시 시작
+  el.classList.add("cracking");
+  window.dispatchEvent(new Event(RESTORE_EVENT));
+}
+const bar = {
+  role: "button" as const,
+  "aria-label": "private",
+  title: "private",
+  tabIndex: 0,
+  onClick: restore,
+  onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      restore(e);
+    }
+  },
+  onAnimationEnd: (e: React.AnimationEvent<HTMLElement>) => e.currentTarget.classList.remove("cracking"),
+};
+
+const LOGS: { ko: string[]; en: string[] }[] = [
+  {
+    ko: ["복원 요청 중…", "실패: 소유자가 private로 지정한 기록입니다."],
+    en: ["Requesting restore…", "Failed: the owner marked this record private."],
+  },
+  {
+    ko: ["백업 사본 검색 중…", "0건. 이 문장은 서버에 올라온 적이 없습니다."],
+    en: ["Searching backups…", "0 found. This sentence was never uploaded."],
+  },
+  { ko: ["접근 권한 확인 중…", "열람 가능: 작가 본인 1명"], en: ["Checking access…", "Readable by: the author (1)"] },
+  {
+    ko: ["해독 시도 중…", "해독 결과: (작가가 아직 읽히고 싶지 않음)"],
+    en: ["Attempting to decode…", "Result: (the author would rather not be read yet)"],
+  },
+  {
+    ko: ["복원 요청 중…", "실패: 아직 쓰는 중인 문장입니다."],
+    en: ["Requesting restore…", "Failed: this sentence is still being written."],
+  },
+];
+const KEEP = { ko: ["봉인 유지.", "고마워요."], en: ["Seal kept.", "Thank you."] };
+const DODGES = 5; // [열기]는 다섯 번 도망간 뒤에야 눌린다. 눌러도 열리진 않는다.
+
+// 가린 곳을 누르면 뜨는 작은 창: "열어 볼까요? [열기] [그대로 두기]"
+function RestoreDialog() {
+  const { lang } = useLang();
+  const [phase, setPhase] = useState<null | { id: number; kind: "ask" } | { id: number; kind: "log"; lines: string[] }>(
+    null,
+  );
+  const [dodge, setDodge] = useState({ x: 0, y: 0, n: 0 });
+  const last = useRef(-1);
+  const justFled = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    const on = () => {
+      clearTimeout(timer.current);
+      setDodge({ x: 0, y: 0, n: 0 });
+      setPhase({ id: Date.now(), kind: "ask" });
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setPhase(null);
+    window.addEventListener(RESTORE_EVENT, on);
+    window.addEventListener("keydown", esc);
+    return () => {
+      window.removeEventListener(RESTORE_EVENT, on);
+      window.removeEventListener("keydown", esc);
+      clearTimeout(timer.current);
+    };
+  }, []);
+
+  const showLog = (lines: string[]) => {
+    setPhase({ id: Date.now(), kind: "log", lines });
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setPhase(null), 3200);
+  };
+  const fail = () => {
+    let i = Math.floor(Math.random() * LOGS.length);
+    if (i === last.current) i = (i + 1) % LOGS.length;
+    last.current = i;
+    showLog(LOGS[i][lang]);
+  };
+  // 마우스가 다가오거나 손가락이 닿으면 [열기]가 다른 자리로 달아난다
+  const flee = (e: React.PointerEvent) => {
+    if (dodge.n >= DODGES) return;
+    if (e.pointerType !== "mouse") e.preventDefault();
+    // 창 안쪽(왼쪽 위)으로만 달아나서 화면 밖으로 나가지 않는다
+    setDodge((d) => {
+      let x = -(30 + Math.random() * 170);
+      if (Math.abs(x - d.x) < 50) x = x < -115 ? x + 80 : x - 80;
+      return { x, y: -(Math.random() * 40), n: d.n + 1 };
+    });
+  };
+
+  if (!phase) return null;
+  if (phase.kind === "log")
+    return (
+      <div key={phase.id} className="restore-log" role="status" aria-live="polite">
+        <span className="restore-line">
+          <span className="restore-prompt">$</span> {phase.lines[0]}
+        </span>
+        <span className="restore-line restore-result">{phase.lines[1]}</span>
+      </div>
+    );
+  const tired = dodge.n >= DODGES;
+  return (
+    <div key={phase.id} className="restore-log restore-ask" role="dialog" aria-label="private">
+      <span className="restore-line">
+        <span className="restore-prompt">$</span>{" "}
+        {lang === "ko" ? "private 기록입니다. 열어 볼까요?" : "This record is private. Open it?"}
+      </span>
+      <span className="restore-buttons">
+        <button
+          type="button"
+          className={`restore-open ${tired ? "tired" : ""}`}
+          style={{ transform: `translate(${dodge.x}px, ${dodge.y}px)` }}
+          onPointerEnter={(e) => e.pointerType === "mouse" && flee(e)}
+          onPointerDown={(e) => {
+            // 방금 도망간 그 터치가 곧바로 '클릭'으로 처리되지 않게
+            if (dodge.n < DODGES) justFled.current = true;
+            flee(e);
+          }}
+          onClick={(e) => {
+            // 키보드로 누른 경우(detail 0)나 다섯 번 도망간 뒤에만 눌린다
+            if (justFled.current) {
+              justFled.current = false;
+              return;
+            }
+            if (tired || e.detail === 0) fail();
+          }}
+        >
+          {lang === "ko" ? (tired ? "…열기" : "열기") : tired ? "…open" : "Open"}
+        </button>
+        <button type="button" className="restore-keep" onClick={() => showLog(KEEP[lang])} autoFocus>
+          {lang === "ko" ? "그대로 두기" : "Leave it"}
+        </button>
+      </span>
+    </div>
+  );
+}
+
 function Redacted({ n }: { n: number }) {
   return (
-    <span className="redact" role="img" aria-label="private" title="private" tabIndex={0}>
+    <span className="redact" {...bar}>
       <span aria-hidden>{filler(n)}</span>
     </span>
   );
@@ -28,7 +172,7 @@ function Redacted({ n }: { n: number }) {
 function RedactedBlock({ n }: { n: number }) {
   const lines = Math.min(6, Math.max(1, Math.round(Math.sqrt(n) / 6)));
   return (
-    <div className="redact-block" role="img" aria-label="private" title="private" tabIndex={0}>
+    <div className="redact-block" {...bar}>
       {Array.from({ length: lines }, (_, i) => (
         <span
           key={i}
@@ -56,6 +200,16 @@ function Body({ body }: { body: string }) {
         const only = para.trim().match(ONLY_MARK);
         if (only) return <RedactedBlock key={j} n={Number(only[1])} />;
         if (para.trim() === "---") return <hr key={j} className="diary-rule" />;
+        // "> " 로 시작하는 줄은 노션의 콜아웃: 작가가 붙여 둔 메모지처럼
+        if (para.startsWith("> "))
+          return (
+            <aside key={j} className="diary-memo">
+              {para
+                .split("\n")
+                .map((l) => l.replace(/^> ?/, ""))
+                .join("\n")}
+            </aside>
+          );
         if (para.startsWith("## "))
           return (
             <h3 key={j} className="diary-sub">
@@ -136,6 +290,7 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
           </details>
         );
       })}
+      <RestoreDialog />
     </div>
   );
 }
