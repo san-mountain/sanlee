@@ -794,7 +794,7 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .diary-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 0 0 6px; }
 .diary-head .diary-note { margin: 0; }
 .diary-sort { flex: none; background: none; border: 0; padding: 4px 0; font: 12px/1 var(--mono); letter-spacing: .04em; color: var(--muted); cursor: pointer; white-space: nowrap; }
-.diary-sort:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+.diary-sort:hover { color: var(--ink); }
 .diary-sort:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .explore-root .diary-sort { color: var(--dim); }
 .explore-root .diary-sort:hover { color: var(--fg); }
