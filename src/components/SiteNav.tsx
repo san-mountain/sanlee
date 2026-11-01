@@ -27,6 +27,9 @@ export default function SiteNav() {
           <span className="ne-text" data-text="NEO-SEOUL 2087" aria-hidden>
             NEO-SE<span className="ne-dead">O</span>UL<span className="ne-year"> 2087</span>
           </span>
+          <span className="ne-arrow" aria-hidden>
+            ↗
+          </span>
         </Link>
       </nav>
       <LangToggle className="nav-lang" />

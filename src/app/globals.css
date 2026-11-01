@@ -456,3 +456,6 @@ img { max-width: 100%; height: auto; display: block; }
   text-shadow: 0 0 2px #fff, 0 0 6px #ff3b3b, 0 0 12px #ff1f2f, 0 0 20px #ff1f2faa; }
 @media (max-width: 480px) { .ne-han { margin-right: .4em; padding-right: .4em; letter-spacing: 0; } }
 @media (max-width: 480px) { .ne-year { display: none; } }
+.ne-arrow { display: inline-block; margin-left: .4em; letter-spacing: 0; color: #e6feff; text-shadow: 0 0 2px #fff, 0 0 6px #22f0ff, 0 0 12px #22f0ff; transition: transform .2s; }
+.nav-explore:hover .ne-arrow { transform: translate(2px, -2px); }
+@media (max-width: 480px) { .nav-links { gap: 4px 14px; } .nav-links .nav-explore { padding: 3px 6px; letter-spacing: .04em; } .ne-arrow { margin-left: .25em; } }
