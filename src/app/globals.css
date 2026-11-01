@@ -459,3 +459,33 @@ img { max-width: 100%; height: auto; display: block; }
 .ne-arrow { display: inline-block; margin-left: .4em; letter-spacing: 0; color: #e6feff; text-shadow: 0 0 2px #fff, 0 0 6px #22f0ff, 0 0 12px #22f0ff; transition: transform .2s; }
 .nav-explore:hover .ne-arrow { transform: translate(2px, -2px); }
 @media (max-width: 480px) { .nav-links { gap: 4px 14px; } .nav-links .nav-explore { padding: 3px 6px; letter-spacing: .04em; } .ne-arrow { margin-left: .25em; } }
+
+/* ---------- 일기: 작가가 지운 부분은 원문 없이 검은 막대로 (hover/탭하면 private) ---------- */
+.diary-note { font-style: normal; margin: 0 0 18px; word-break: keep-all; }
+.diary .poem-title { font-variant-numeric: tabular-nums; }
+.diary-title { font-weight: 400; color: var(--muted); }
+.diary-entry .stanza { white-space: pre-line; text-indent: 0; line-height: 1.9; word-break: keep-all; overflow-wrap: anywhere; }
+.diary-sub { font-size: 15px; font-weight: 600; margin: 1.6em 0 .6em; }
+.diary-rule { border: 0; border-top: 1px dashed var(--rule); margin: 1.6em 0; width: 3em; }
+.redact { position: relative; background: var(--ink); color: transparent; border-radius: 1px; cursor: help; outline: none;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; padding: 0 1px; user-select: none; transition: background .2s; }
+.redact > span { color: transparent; }
+.redact::after, .redact-block::after { content: "private"; position: absolute; left: 0; top: -1.7em; z-index: 3; white-space: nowrap; text-indent: 0;
+  font: 11px/1 var(--mono); letter-spacing: .08em; color: var(--paper); background: var(--ink); padding: 4px 6px; border-radius: 2px;
+  opacity: 0; transform: translateY(3px); pointer-events: none; transition: opacity .15s, transform .15s; }
+.redact:hover::after, .redact:focus-visible::after, .redact-block:hover::after, .redact-block:focus-visible::after { opacity: 1; transform: none; }
+.redact:hover, .redact:focus-visible { animation: redactJitter .35s steps(2) 1; }
+.redact-block { position: relative; display: flex; flex-direction: column; gap: .62em; margin: .5em 0 1.6em; cursor: help; outline: none; user-select: none; }
+.redact-block > span { display: block; height: 1.15em; background: var(--ink); border-radius: 1px; }
+.redact-block .redact-label { position: absolute; right: 0; bottom: -1.5em; font: 10px/1 var(--mono); letter-spacing: .08em; color: var(--muted); font-style: normal; }
+.redact-block::after { display: none; }
+.redact-block:hover > span, .redact-block:focus-visible > span { animation: redactJitter .35s steps(2) 1; }
+@keyframes redactJitter { 0% { transform: translateX(0); } 50% { transform: translateX(1px); opacity: .85; } 100% { transform: translateX(0); } }
+.diary-withheld { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 0 18px 1.6em; cursor: default; }
+.diary-withheld-bar { display: block; height: 1.05em; width: min(9.5em, 50%); background: var(--ink); border-radius: 1px; }
+.diary-withheld .meta { font: 11px/1 var(--mono); letter-spacing: .08em; color: var(--muted); }
+.explore-root .redact, .explore-root .redact-block > span, .explore-root .diary-withheld-bar { background: #000; box-shadow: inset 0 0 0 1px #2d2445; }
+.explore-root .redact::after, .explore-root .redact-block::after { color: var(--bg); background: var(--fg); }
+.explore-root .diary-title, .explore-root .redact-block .redact-label, .explore-root .diary-withheld .meta { color: var(--dim); }
+.explore-root .diary-rule { border-top-color: #2d2445; }
+@media (prefers-reduced-motion: reduce) { .redact, .redact-block > span { animation: none !important; } }
