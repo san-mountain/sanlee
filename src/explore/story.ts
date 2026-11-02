@@ -263,7 +263,7 @@ export const checkpoint = {
   ghost: [
     { ko: "[검문소] 방문 기록 0건. 이 방문자의 활동을 확인할 수 없습니다.", en: "[CHECKPOINT] 0 visits on record. This visitor's activity cannot be confirmed." },
     { ko: "확인되지 않는 시민은 그 자리에 멈춘 것으로 처리됩니다.", en: "A citizen who cannot be confirmed is processed as stopped where they stand." },
-    { ko: "멈추지 마. 대자비는 기록 없는 사람을 못 봐. 멈췄다고 적어 둘 뿐이야. 가자.", en: "Don't stop. The Great Compassion can't see someone with no record. It just writes you down as stopped. Come on.", say: true },
+    { ko: "괜찮아, 움직여 봐. 대자비는 기록 없는 사람을 못 봐. 못 보면 쏠 수도 없어.", en: "It's okay, try moving. The Great Compassion can't see anyone with no record. What it can't see, it can't shoot.", say: true },
     { ko: "검문소는 '통과자 없음'을 기록했다. 대자비는 빈 길을 바라보고 있다.", en: "The checkpoint logs 'no one passed'. The Great Compassion keeps watching an empty road." },
     { ko: "도시의 기록에는 아무도 남지 않았다. 두 사람은 그 빈칸 속으로 걸어 나갔다.", en: "No one is left in the city's records. The two of them walk out into the blank." },
   ] as Beat[],
