@@ -252,9 +252,10 @@ export const checkpoint = {
   ] as Beat[],
   reject: [
     { ko: "거부 의사를 기억하기 위해 쿠키 1개를 저장했습니다. 그 밖의 활동은 확인되지 않습니다.", en: "One cookie has been stored to remember your refusal. No other activity found." },
+    { ko: "[대자비] 거부자 1명 확인. 동행인 1명 포함. 함께 보관 처리합니다.", en: "[GREAT COMPASSION] 1 refuser confirmed. 1 companion included. Archiving both." },
     { ko: "", en: "", slots: true },
     { ko: "끝까지 '모두 거부'를 누른 두 번째 사람.", en: "The second person who pressed 'Reject all' to the end.", plaque: true },
-    { ko: "이번에는 혼자가 아니었다.", en: "This time, they were not alone." },
+    { ko: "동상 아래, 거부 의사를 기억하는 쿠키 1개가 아직 남아 있다.", en: "Beneath the statue, one cookie that remembers the refusal is still there." },
     { ko: "도시는 이 결말을 기억하지 않습니다. 당신이 거부했으니까.", en: "The city will not remember this ending. Because you refused." },
   ] as Beat[],
   // 숨은 결말: 기록을 지우면 도시의 규칙대로 멈춰야 한다. 그런데 이산이 기억하고 있어서 멈추지 않는다.
@@ -262,7 +263,7 @@ export const checkpoint = {
   ghost: [
     { ko: "[검문소] 방문 기록 0건. 이 방문자의 활동을 확인할 수 없습니다.", en: "[CHECKPOINT] 0 visits on record. This visitor's activity cannot be confirmed." },
     { ko: "확인되지 않는 시민은 그 자리에 멈춘 것으로 처리됩니다.", en: "A citizen who cannot be confirmed is processed as stopped where they stand." },
-    { ko: "멈추지 마. 도시는 너를 몰라도 나는 알아. 날 깨운 게 너잖아.", en: "Don't stop. The city doesn't know you, but I do. You're the one who woke me.", say: true },
+    { ko: "멈추지 마. 대자비는 기록 없는 사람을 못 봐. 멈췄다고 적어 둘 뿐이야. 가자.", en: "Don't stop. The Great Compassion can't see someone with no record. It just writes you down as stopped. Come on.", say: true },
     { ko: "검문소는 '통과자 없음'을 기록했다. 대자비는 빈 길을 바라보고 있다.", en: "The checkpoint logs 'no one passed'. The Great Compassion keeps watching an empty road." },
     { ko: "도시의 기록에는 아무도 남지 않았다. 두 사람은 그 빈칸 속으로 걸어 나갔다.", en: "No one is left in the city's records. The two of them walk out into the blank." },
   ] as Beat[],

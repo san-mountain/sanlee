@@ -51,7 +51,7 @@ type Ending = { kind: EndKind; step: number; a: number; r: number; slots: number
 // 결말 대본의 각 줄이 머무는 시간(ms). 마지막 줄 다음에 버튼이 나온다
 const BEAT_MS: Record<EndKind, number[]> = {
   accept: [2600, 3200, 3800, 3200],
-  reject: [2800, 3800, 4800, 3400],
+  reject: [2800, 3400, 3800, 4800, 3400],
   ghost: [3000, 3600, 4600, 4600],
 };
 // 수락한 시민이 다시 들어오면 서게 되는 줄 속 자리
@@ -408,13 +408,13 @@ export default function ExploreClient() {
         finalBeam();
         sceneTimer.current = setTimeout(() => setFlash(true), 1500);
       }
-      if (step === 2) {
+      if (step === 3) {
         // 장면이 방공호로: 사람들이 두 번째 동상을 옮겨 놓았다
         setFlash(false);
         setSecondStatue(true);
         goTo("bunker", false);
       }
-      if (step === 4) {
+      if (step === 5) {
         // 이 결말은 저장되지 않는다: 진행 기록을 실제로 지운다
         try {
           [KEY, END_KEY, MET_KEY, TALK_KEY].forEach((k) => localStorage.removeItem(k));
@@ -630,7 +630,7 @@ export default function ExploreClient() {
   const rootClass = [
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
-    ending?.kind === "reject" && ending.step >= 2 ? "thaw" : "",
+    ending?.kind === "reject" && ending.step >= 3 ? "thaw" : "",
     ending?.kind === "ghost" && ending.step === 1 ? "ghost-freeze" : "",
     flash ? "final-flash" : "",
     tracked && !ending ? "is-tracked" : "",
@@ -874,7 +874,7 @@ export default function ExploreClient() {
           <div className="ending-inner">
             {(checkpoint[ending.kind] as Beat[]).slice(0, ending.step + 1).map((l, i, arr) => {
               // 거부 결말이 방공호로 넘어가면 앞 장면의 글은 거둔다
-              if (ending.kind === "reject" && ending.step >= 2 && i < 2) return null;
+              if (ending.kind === "reject" && ending.step >= 3 && i < 3) return null;
               // 숨은 결말은 대자비의 얼굴을 가리지 않도록 마지막 두 줄만 아래에
               if (ending.kind === "ghost" && i < ending.step - 1) return null;
               const last = i === (checkpoint[ending.kind] as Beat[]).length - 1;
