@@ -73,8 +73,6 @@ export default function NeonSeal() {
         }}
       />
     )}
-    {/* 가끔 원에서 네온 파동이 한 번 퍼진다 (원 자체는 overflow: hidden이라 바깥에 따로 둔다) */}
-    {!open && <span className="seal-pulse" aria-hidden />}
     {!open && (
       <span className={`seal-tip${tip ? " on" : ""}`} aria-hidden>
         {t(ui.sealTip)}

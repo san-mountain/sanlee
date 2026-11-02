@@ -963,7 +963,7 @@ span.cookie-clear { cursor: default; text-decoration: none; }
 /* 휴대폰의 DELETE SEOUL 입구: 메뉴 줄의 간판 대신 오른쪽 아래에 떠 있는 空 네온 원.
    둘레 글자가 천천히 돌고, 한 번 누르면 위로 세로 간판처럼 펼쳐져 전체 제목이 드러나며, 다시 누르면 들어간다.
    태블릿·PC는 메뉴 줄의 원래 간판을 그대로 쓴다 */
-.seal, .seal-pulse, .seal-tip { display: none; }
+.seal, .seal-tip { display: none; }
 @media (max-width: 719px) {
   .nav-links .nav-explore-pill { display: none; }
   .seal { --seal: 54px; position: fixed; z-index: 30; right: max(16px, env(safe-area-inset-right)); bottom: max(18px, calc(env(safe-area-inset-bottom) + 10px));
@@ -975,11 +975,6 @@ span.cookie-clear { cursor: default; text-decoration: none; }
     transition: height .5s cubic-bezier(.2, .8, .2, 1), box-shadow .3s; animation: neHum 6s infinite; }
   .seal:hover { opacity: 1; }
   .seal.open { height: calc(var(--full-h) + 30px); box-shadow: 0 0 6px #22f0ff, 0 0 20px #22f0ffaa, inset 0 0 8px #22f0ff88, 0 4px 16px #07030f33; }
-  /* 7초마다 한 번, 원에서 네온 고리가 퍼진다 */
-  .seal-pulse { display: block; --seal: 54px; position: fixed; z-index: 29; pointer-events: none; right: max(16px, env(safe-area-inset-right)); bottom: max(18px, calc(env(safe-area-inset-bottom) + 10px));
-    width: var(--seal); height: var(--seal); border-radius: 50%; border: 2px solid #22f0ff; box-shadow: 0 0 10px #22f0ff, inset 0 0 6px #22f0ff88;
-    opacity: 0; animation: sealPulse 7s ease-out 2s infinite; }
-  @keyframes sealPulse { 0% { opacity: .9; transform: scale(1); } 16% { opacity: 0; transform: scale(1.9); } 100% { opacity: 0; transform: scale(1.9); } }
   /* 처음 온 사람에게만 잠깐: 원 왼쪽의 말풍선 */
   .seal-tip { display: block; position: fixed; z-index: 30; pointer-events: none; right: calc(max(16px, env(safe-area-inset-right)) + 54px + 12px); bottom: calc(max(18px, calc(env(safe-area-inset-bottom) + 10px)) + 15px);
     padding: 5px 10px; background: #0d0716; color: #ffe6fb; font-size: 12.5px; font-weight: 600; white-space: nowrap; border: 1px solid #22f0ff88; border-radius: 3px;
@@ -987,7 +982,7 @@ span.cookie-clear { cursor: default; text-decoration: none; }
   .seal-tip::after { content: ""; position: absolute; right: -5px; top: 50%; width: 8px; height: 8px; margin-top: -4px; background: #0d0716;
     border-top: 1px solid #22f0ff88; border-right: 1px solid #22f0ff88; transform: rotate(45deg); }
   .seal-tip.on { opacity: 1; transform: none; }
-  body.deleting .seal-pulse, body.deleting .seal-tip { display: none; }
+  body.deleting .seal-tip { display: none; }
   .seal-ring { position: absolute; left: 0; bottom: 0; width: var(--seal); height: var(--seal); overflow: visible;
     animation: sealTurn 14s linear infinite; transition: opacity .25s, transform .45s; }
   .seal-edge { fill: none; stroke: #7ff6ff; stroke-width: 2; }
@@ -1006,7 +1001,7 @@ span.cookie-clear { cursor: default; text-decoration: none; }
   .seal.open .seal-han { opacity: 0; }
   .seal.open .seal-full { opacity: 1; transition: opacity .3s .2s; }
   .seal:focus-visible { outline: 2px solid #7ff6ff; outline-offset: 3px; }
-  @media (prefers-reduced-motion: reduce) { .seal, .seal-ring, .seal-pulse { animation: none; transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .seal, .seal-ring { animation: none; transition: none; } }
   body.deleting .seal { box-shadow: 0 0 10px #22f0ff, 0 0 30px #22f0ffaa, inset 0 0 8px #22f0ff88; }
 }
 @keyframes sealTurn { to { transform: rotate(360deg); } }
