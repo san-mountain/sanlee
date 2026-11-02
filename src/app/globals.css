@@ -1028,3 +1028,15 @@ span.cookie-clear { cursor: default; text-decoration: none; }
 @media (max-width: 719px) {
   .poems .poem-body { padding-left: 0; }
 }
+
+/* 대자비 소개: 감시 카메라 화면. 주사선과 모서리 표식, 녹화 표시 */
+.cctv { position: absolute; inset: 0; z-index: 25; pointer-events: none; font-family: var(--mono); color: #e8fff4;
+  background: repeating-linear-gradient(0deg, #00000022 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 55%, #000000aa 100%); }
+.cctv::before, .cctv::after { content: ""; position: absolute; width: 34px; height: 34px; border: 2px solid #e8fff4aa; }
+.cctv::before { left: calc(18px + var(--sal, 0px)); top: calc(70px + var(--sat, 0px)); border-right: 0; border-bottom: 0; }
+.cctv::after { right: calc(18px + var(--sar, 0px)); bottom: calc(18px + var(--sab, 0px)); border-left: 0; border-top: 0; }
+.cctv-rec { position: absolute; left: calc(24px + var(--sal, 0px)); bottom: calc(22px + var(--sab, 0px)); color: #ff3b4e; font-size: 12px; letter-spacing: .12em; animation: blink 1s steps(1) infinite; }
+.cctv-cam { position: absolute; left: calc(24px + var(--sal, 0px)); bottom: calc(40px + var(--sab, 0px)); font-size: 11px; letter-spacing: .12em; opacity: .8; }
+.cctv-cut { position: absolute; inset: 0; z-index: 26; background: #000; pointer-events: none; animation: cctvCut .26s steps(2) forwards; }
+@keyframes cctvCut { 0% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cctv-rec { animation: none; } }

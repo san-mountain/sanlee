@@ -73,6 +73,15 @@ export default function ExploreClient() {
   const [near, setNear] = useState<Interactable | null>(null);
   const [tracked, setTracked] = useState(false);
   const [fade, setFade] = useState<string | null>(null);
+  // 대자비 소개: 도시 감시 카메라 화면으로 전환 (cut = 전환 순간의 짧은 암전)
+  const [cctv, setCctv] = useState(false);
+  const [cut, setCut] = useState(false);
+  const cutTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const flashCut = () => {
+    setCut(true);
+    clearTimeout(cutTimer.current);
+    cutTimer.current = setTimeout(() => setCut(false), 260);
+  };
   const [notice, setNotice] = useState<L | null>(null);
   const [ending, setEnding] = useState<Ending>(null);
   const [locked, setLocked] = useState(false);
@@ -536,6 +545,8 @@ export default function ExploreClient() {
     if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
   }, [panel]);
   const startJabiIntro = useCallback(() => {
+    flashCut();
+    setCctv(true);
     gaze.intro = true;
     gaze.frozen = true;
     gaze.lookAt = { x: JABI.eye.x, y: JABI.eye.y, z: JABI.eye.z };
@@ -554,6 +565,8 @@ export default function ExploreClient() {
     try {
       localStorage.setItem("sanlee-jabi-intro", "1");
     } catch {}
+    if (gaze.intro) flashCut();
+    setCctv(false);
     gaze.intro = false;
     gaze.frozen = false;
     gaze.lookAt = null;
@@ -991,6 +1004,13 @@ export default function ExploreClient() {
         </div>
       )}
 
+      {cctv && (
+        <div className="cctv" aria-hidden>
+          <span className="cctv-rec">● REC</span>
+          <span className="cctv-cam">{lang === "ko" ? "감시 카메라 07 · 대자비 시선 확인" : "CAM 07 · GREAT COMPASSION IN VIEW"}</span>
+        </div>
+      )}
+      {cut && <div className="cctv-cut" aria-hidden />}
       {fade && <div className="fade">{t(fade === "up" ? ui.goingUp : ui.goingDown)}</div>}
 
       {intro && (
