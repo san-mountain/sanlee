@@ -146,7 +146,6 @@ export const BUNKER: ZoneDef = {
     bnpc("radio", { ko: "무전수", en: "Radio operator" }),
     bnpc("kid", { ko: "그림 그리는 아이", en: "Child drawing" }, 0.9, 2.4),
     bnpc("sleeper", { ko: "잠든 사람", en: "Sleeper" }, 0.6, 2.4),
-    { id: "backup", kind: "backup", pos: v(BACKUP_RACK.pos[0] - 0.9, 1.3, BACKUP_RACK.pos[2]), radius: 2.4, label: { ko: "끊긴 백업 단말", en: "Severed backup terminal" } },
     { id: "exit", kind: "door", to: "city", pos: v(0, 1.6, -19), radius: 3.6, label: { ko: "지상으로 올라가기", en: "Go up to the surface" } },
   ],
 };

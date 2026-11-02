@@ -15,10 +15,11 @@ export default function SaveToast() {
     let to: ReturnType<typeof setTimeout>;
     const on = (e: Event) => {
       const d = (e as CustomEvent).detail as { kind: string; n: number } | string;
-      if (typeof d !== "object" || d.kind !== "save") return;
+      // 위치는 조용히 기억하고, 알림은 처음 한 번(쿠키 안내)만 띄운다
+      if (typeof d !== "object" || d.kind !== "save" || d.n !== 1) return;
       setN(d.n);
       clearTimeout(to);
-      to = setTimeout(() => setN(null), d.n === 1 ? 6500 : 2600);
+      to = setTimeout(() => setN(null), 6500);
     };
     window.addEventListener("sanlee-backup", on);
     return () => {

@@ -878,3 +878,16 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .btn.danger:hover { background: #ff2a3d22; }
 .intro-found, .ending-found { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; color: #ffe14d; }
 .ending-actions small.ending-found { color: #ffe14d; margin-top: -6px; }
+/* 게임 안 패널(어두운 배경)에서 시 / 일기 탭이 묻히지 않도록 */
+.panel .cat-tabs button { color: #b9aed6; }
+.panel .cat-tabs button:hover, .panel .cat-tabs button.on { color: #fff; border-bottom-color: var(--pink); }
+/* 검문소의 세 번째 선택지: 현실의 쿠키 창처럼 작고 흐린 '설정' 링크 */
+.choice-settings { all: unset; cursor: pointer; display: block; margin: 14px auto 0; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: #8f86a8; text-decoration: underline; text-underline-offset: 3px; }
+.choice-settings:hover, .choice-settings:focus-visible { color: #fff; }
+.cookie-prefs ul { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 6px; }
+.cookie-prefs li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid #ffffff1f; font-size: 13px; }
+.cookie-prefs li b { font-family: var(--mono); font-weight: 400; font-size: 11px; color: #7dff7a; white-space: nowrap; }
+.cookie-prefs-note { font-size: 12px !important; color: #b9aed6 !important; }
+.cookie-prefs-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
+.cookie-clear { all: unset; cursor: pointer; font-family: var(--mono); font-size: 10.5px; color: #6f6888; text-decoration: underline; text-underline-offset: 3px; }
+.cookie-clear:hover, .cookie-clear:focus-visible { color: #ff8a96; }

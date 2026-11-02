@@ -192,36 +192,27 @@ export const sanCityLines: L[] = [
 // 한 번이라도 연결이 끊겼다면 지상의 이산이 덧붙이는 말
 export const sanAfterDeath: L = { ko: "너는 쓰러져도 금방 다시 오더라. 도시가 널 기억하니까. 부럽지는 않아. 그만큼 지켜본다는 뜻이니까.", en: "You fall and you're right back. The city remembers you. I'm not jealous. It means it's watching that closely." };
 
-// 지상에 다녀와 방문 기록이 생긴 뒤 관리인이 덧붙이는 말 (숨은 결말의 단서)
-export const keeperBackupHint: L[] = [
-  { ko: "위에 다녀왔구나. 그럼 도시에 네 방문 기록이 남았겠네.", en: "You've been up there. So the city has your visit history now." },
-  {
-    ko: "저쪽 벽에 끊긴 단말 보여? 위에서 남긴 방문 기록이 거기까지 흘러와. 여긴 신호가 안 닿으니까 거기서라면 지울 수 있어. 기록이 없으면 도시한테 너는 없는 사람이야. 자비는 기록으로 사람을 보거든. 아마 너를 못 볼걸.",
-    en: "See that severed terminal on the far wall? The visit history you leave up there drifts down to it. The signal can't reach us here, so you could erase it there. No history, and to the city you don't exist. Mercy sees people through their records. It probably won't see you at all.",
-  },
-];
 export const keeperAfterDeath: L = { ko: "또 왔네. 지난번이랑 똑같은 얼굴로. 흉터 하나 없이.", en: "Back again. Same face as last time. Not a single scar." };
-
-// 방공호의 끊긴 단말: 방문 기록 삭제
-export const backupTerm = {
-  title: { ko: "끊긴 단말 · 방문 기록", en: "SEVERED TERMINAL · VISIT HISTORY" },
-  sub: { ko: "지상에서 남긴 방문 기록이 이곳까지 흘러든다. 여기는 신호가 닿지 않는다.", en: "The visit history left on the surface drifts down to here. The signal cannot reach this place." },
-  none: { ko: "아직 방문 기록이 없습니다. 지상에 나가면 남기 시작합니다.", en: "No visit history yet. It starts when you go up to the surface." },
-  gone: { ko: "기록 없음. 도시는 당신을 모릅니다.", en: "No record. The city does not know you." },
-  del: { ko: "방문 기록 삭제", en: "Clear visit history" },
-  confirm: { ko: "되돌릴 수 없습니다. 도시는 당신이 어디에 머물렀는지도, 무엇을 거부했는지도 잊습니다.", en: "This cannot be undone. The city will forget where you have been and what you refused." },
-  yes: { ko: "삭제", en: "Clear" },
-  no: { ko: "그만두기", en: "Cancel" },
-  done: { ko: "삭제되었습니다. 이제 도시는 당신을 기억하지 못합니다.", en: "Cleared. The city no longer remembers you." },
-};
 
 export type Beat = L & { say?: boolean; slots?: boolean; plaque?: boolean };
 
 export const checkpoint = {
   locked: [
-    { ko: "[검문소] 방문 기록 확인 중… 통과할 수 없습니다.", en: "[CHECKPOINT] Checking visit history… You may not pass." },
-    { ko: "…어딘가에 당신을 기억하는 기록이 있다면, 다시 오십시오.", en: "…If there is a record somewhere that remembers you, come back." },
+    { ko: "[검문소] 동행인 확인 중… 이산의 본인 인증이 끝나지 않았습니다. ({n}/3)", en: "[CHECKPOINT] Checking companion… San's identity check is not finished. ({n}/3)" },
+    { ko: "방공호로 돌아가 남은 터미널을 열어 이산을 깨우자. 위쪽 화살표가 길을 알려 준다.", en: "Go back to the shelter and open the remaining terminals to wake San. The arrow at the top shows the way." },
   ] as L[],
+  // 세 번째 선택지: 현실의 쿠키 창처럼 작게 숨겨 둔 '설정'. 여기서 기록을 전부 지우면 숨은 결말
+  settings: { ko: "쿠키 설정", en: "Cookie settings" },
+  prefs: [
+    { ko: "필수 쿠키 (도시 운영)", en: "Essential (running the city)" },
+    { ko: "시선 분석 쿠키", en: "Gaze analytics" },
+    { ko: "감정 맞춤 쿠키", en: "Mood personalisation" },
+    { ko: "꿈 광고 쿠키", en: "Dream advertising" },
+  ] as L[],
+  prefOn: { ko: "켜짐 · 변경 불가", en: "ON · locked" },
+  prefsNote: { ko: "모든 쿠키는 시민의 편의를 위해 켜져 있습니다.", en: "All cookies are on, for your convenience." },
+  prefsBack: { ko: "뒤로", en: "Back" },
+  clearAll: { ko: "방문 기록 전부 삭제", en: "Clear all visit history" },
   title: { ko: "이 기기를 기억할까요?", en: "REMEMBER THIS DEVICE?" },
   sanWarn: {
     ko: "수락하면 평생 자동 로그인이야. 거부하면? 활동 확인 불가. 그다음은… 나 봤지?",

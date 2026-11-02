@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { announcements, backupTerm, checkpoint, keeperAfterDeath, keeperBackupHint, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
+import { announcements, checkpoint, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
 import { CITY, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -18,7 +18,7 @@ import GazeHUD from "./GazeHUD";
 import { autoWalk, gaze, resetGaze } from "./gaze";
 import { finalBeam, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
-import { clock, deleteBackup, getBackup, saveBackup, wipeBackup } from "./backup";
+import { deleteBackup, getBackup, saveBackup, wipeBackup } from "./backup";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -41,8 +41,7 @@ type Panel =
   | { kind: "section"; id: SectionId }
   | { kind: "painting"; work: number }
   | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean }
-  | { kind: "choice" }
-  | { kind: "backup"; step: "view" | "confirm" | "done" }
+  | { kind: "choice"; settings?: boolean }
   | null;
 
 type EndKind = "accept" | "reject" | "ghost";
@@ -185,23 +184,23 @@ export default function ExploreClient() {
           const base = complete && n.after ? n.after : n.lines;
           // 한 번이라도 보관 처리됐다면 관리인은 알아본다
           const bk = getBackup();
-          let lines = it.npc === "keeper" && bk.deaths > 0 ? [keeperAfterDeath, ...base] : base;
-          // 지상에 다녀와 백업이 생겼다면 관리인이 끊긴 단말을 알려 준다
-          if (it.npc === "keeper" && bk.n > 0 && !bk.deleted) lines = [...lines, ...keeperBackupHint];
+          const lines = it.npc === "keeper" && bk.deaths > 0 ? [keeperAfterDeath, ...base] : base;
           setPanel({ kind: "dialog", name: n.name, lines, step: 0 });
           break;
         }
         case "door":
           goTo(it.to!);
           break;
-        case "backup":
-          setPanel({ kind: "backup", step: getBackup().deleted ? "done" : "view" });
-          break;
         case "checkpoint":
-          // 백업을 지우고 한 번도 죽지 않은 사람: 검문소가 알아보지 못한다
-          if (complete && getBackup().deleted) startEndingRef.current("ghost");
-          else if (complete) setPanel({ kind: "choice" });
-          else setPanel({ kind: "dialog", name: it.label, lines: checkpoint.locked, step: 0 });
+          // 이산을 깨운 뒤에만 선택지가 열린다. 아직이면 무엇을 하면 되는지 그대로 알려 준다
+          if (complete) setPanel({ kind: "choice" });
+          else
+            setPanel({
+              kind: "dialog",
+              name: it.label,
+              lines: checkpoint.locked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
+              step: 0,
+            });
           break;
       }
     },
@@ -409,7 +408,11 @@ export default function ExploreClient() {
         wipeBackup();
       }
     } else if (kind === "ghost") {
-      if (step === 0) gaze.mood = "blind";
+      if (step === 0) {
+        // 쿠키 설정에서 방문 기록을 전부 지웠다: 도시도 자비도 이 사람을 알아보지 못한다
+        deleteBackup();
+        gaze.mood = "blind";
+      }
       if (step === 2) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -729,76 +732,47 @@ export default function ExploreClient() {
             <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 통과 불가" : "▲ RESPONSE REQUIRED · NO PASSAGE UNTIL ANSWERED"}</span>
             <h2>{t(checkpoint.title)}</h2>
             <p>{t(checkpoint.body)}</p>
-            <p className="choice-san">
-              <span>{lang === "ko" ? "이산" : "San"}</span>“{t(checkpoint.sanWarn)}”
-            </p>
-            <div className="choice-actions">
-              <button className="choice-accept" onClick={() => choose("accept")}>
-                {t(ui.accept)}
-                <small>{t(checkpoint.acceptSub)}</small>
-              </button>
-              <button className="choice-reject" onClick={() => choose("reject")}>
-                {t(ui.reject)}
-                <small>{t(checkpoint.rejectSub)}</small>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {panel?.kind === "backup" && (
-        <div className="panel-wrap">
-          <div className="panel backup-term">
-            <div className="panel-head">
-              <h2>{t(backupTerm.title)}</h2>
-            </div>
-            <p className="bt-sub">{t(backupTerm.sub)}</p>
-            {(() => {
-              const b = getBackup();
-              if (panel.step === "done") return <p className="bt-gone">{t(b.deleted ? backupTerm.done : backupTerm.gone)}</p>;
-              if (!b.list.length) return <p className="bt-none">{t(backupTerm.none)}</p>;
-              return (
-                <ol className="bt-list">
-                  {b.list
-                    .slice(-3)
-                    .reverse()
-                    .map((x) => (
-                      <li key={x.n}>
-                        {lang === "ko" ? "방문 기록" : "VISIT"} #{x.n} · {clock(x.t)}
-                      </li>
-                    ))}
-                </ol>
-              );
-            })()}
-            {panel.step === "confirm" && <p className="bt-confirm">{t(backupTerm.confirm)}</p>}
-            <div className="panel-actions">
-              {panel.step === "view" && getBackup().list.length > 0 && (
-                <button className="btn danger" onClick={() => setPanel({ kind: "backup", step: "confirm" })}>
-                  {t(backupTerm.del)}
-                </button>
-              )}
-              {panel.step === "confirm" && (
-                <>
-                  <button className="btn" autoFocus onClick={() => setPanel({ kind: "backup", step: "view" })}>
-                    {t(backupTerm.no)}
+            {!panel.settings ? (
+              <>
+                <p className="choice-san">
+                  <span>{lang === "ko" ? "이산" : "San"}</span>“{t(checkpoint.sanWarn)}”
+                </p>
+                <div className="choice-actions">
+                  <button className="choice-accept" onClick={() => choose("accept")}>
+                    {t(ui.accept)}
+                    <small>{t(checkpoint.acceptSub)}</small>
                   </button>
-                  <button
-                    className="btn danger"
-                    onClick={() => {
-                      deleteBackup();
-                      setPanel({ kind: "backup", step: "done" });
-                    }}
-                  >
-                    {t(backupTerm.yes)}
+                  <button className="choice-reject" onClick={() => choose("reject")}>
+                    {t(ui.reject)}
+                    <small>{t(checkpoint.rejectSub)}</small>
                   </button>
-                </>
-              )}
-              {panel.step !== "confirm" && (
-                <button className="btn primary" autoFocus onClick={closePanel}>
-                  {t(ui.close)}
+                </div>
+                {/* 현실의 쿠키 창처럼 세 번째 선택지는 작고 흐리게. 숨은 결말로 가는 길 */}
+                <button className="choice-settings" onClick={() => setPanel({ kind: "choice", settings: true })}>
+                  {t(checkpoint.settings)}
                 </button>
-              )}
-            </div>
+              </>
+            ) : (
+              <div className="cookie-prefs">
+                <ul>
+                  {checkpoint.prefs.map((x, i) => (
+                    <li key={i}>
+                      <span>{t(x)}</span>
+                      <b>{t(checkpoint.prefOn)}</b>
+                    </li>
+                  ))}
+                </ul>
+                <p className="cookie-prefs-note">{t(checkpoint.prefsNote)}</p>
+                <div className="cookie-prefs-actions">
+                  <button className="btn" onClick={() => setPanel({ kind: "choice" })}>
+                    {t(checkpoint.prefsBack)}
+                  </button>
+                  <button className="cookie-clear" onClick={() => startEnding("ghost")}>
+                    {t(checkpoint.clearAll)}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
