@@ -16,6 +16,12 @@ export const plaque: L[] = [
 
 export const ui = {
   title: { ko: "DELETE SEOUL", en: "DELETE SEOUL" },
+  // 이산의 약속을 처음 들었을 때: 숨은 결말이 열렸다는 알림
+  unlockTitle: { ko: "숨은 결말이 열렸습니다", en: "A hidden ending has opened" },
+  unlockBody: {
+    ko: "이산의 말을 기억해 두세요. 도시의 기록은 도시 밖, 이 웹사이트 맨 아래에서 지울 수 있습니다.",
+    en: "Remember San's words. The city's records can be erased outside the city, at the very bottom of this website.",
+  },
   introLines: [
     { ko: "2087년 서울. 쿠키를 거부한 시민은 그 자리에 멈춥니다. 신호가 닿지 않는 지하 방공호에, 그렇게 굳어 버린 한 사람이 있습니다.", en: "Seoul, 2087. Citizens who reject cookies stop where they stand. In a shelter the signal cannot reach, one of them sits frozen." },
   ] as L[],
@@ -256,6 +262,22 @@ export const checkpoint = {
   prefsNote: { ko: "모든 쿠키는 시민의 편의를 위해 켜져 있습니다.", en: "All cookies are on, for your convenience." },
   prefsBack: { ko: "뒤로", en: "Back" },
   clearOutside: { ko: "방문 기록 삭제는 이 도시 밖에서만 할 수 있습니다.", en: "Visit history can only be deleted outside this city." },
+  // 거부는 막지 않는다. 다만 작게, 여러 번 묻는다 (현실의 다크 패턴을 과장한 것)
+  rejectNotice: { ko: "거부 시 시민 활동이 정지될 수 있습니다.", en: "Rejecting may suspend your citizen activity." },
+  confirm: [
+    {
+      title: { ko: "정말 거부하시겠어요?", en: "ARE YOU SURE?" },
+      body: { ko: "거부하면 맞춤형 행복, 자동 로그인, 대자비의 보살핌을 모두 잃게 됩니다.", en: "Rejecting means losing personalised happiness, automatic login and the care of the Great Compassion." },
+      stay: { ko: "수락하고 계속하기", en: "Accept and continue" },
+      go: { ko: "거부 계속하기", en: "Continue rejecting" },
+    },
+    {
+      title: { ko: "마지막으로 확인합니다", en: "FINAL CONFIRMATION" },
+      body: { ko: "거부하면 동행인 이산도 함께 보관 처리됩니다. 시민 여러분의 98.7%는 수락을 선택했습니다.", en: "Rejecting will archive your companion, San, as well. 98.7% of citizens chose to accept." },
+      stay: { ko: "수락하기", en: "Accept" },
+      go: { ko: "그래도 거부", en: "Reject anyway" },
+    },
+  ] as { title: L; body: L; stay: L; go: L }[],
   title: { ko: "이 기기를 기억할까요?", en: "REMEMBER THIS DEVICE?" },
   sanWarn: {
     ko: "수락하면 평생 자동 로그인이야. 거부하면? 활동 확인 불가. 그다음은… 나 봤지?",
@@ -483,4 +505,36 @@ export const billboards: { ko: [string, string]; en: [string, string]; color: st
 export const ticker: L = {
   ko: "  ··· 시민 여러분, 동의는 이미 완료되었습니다 ··· 오늘의 추천 감정: 무관심 ··· 비인가 방공호에 대한 소문은 사실이 아닙니다 ··· 줄을 벗어나지 마십시오 ···",
   en: "  ··· Citizens, your consent is complete ··· Today's recommended emotion: indifference ··· Rumours of an unregistered shelter are false ··· Do not leave the line ···",
+};
+
+// 거부 과정의 미니 게임 (쿠키 끄기)
+export const cookieGame = {
+  title: { ko: "개별 쿠키 설정", en: "INDIVIDUAL COOKIE SETTINGS" } as L,
+  body: {
+    ko: "거부하려면 쿠키를 하나씩 직접 꺼 주세요. 시민의 편의를 위해 일부 쿠키는 자동으로 다시 켜질 수 있습니다.",
+    en: "To reject, please switch off each cookie yourself. For your convenience, some cookies may switch themselves back on.",
+  } as L,
+  left: { ko: "남은 쿠키", en: "Cookies left" } as L,
+  essential: { ko: "필수 쿠키 (도시 운영)", en: "Essential (running the city)" } as L,
+  lockedOn: { ko: "켜짐 · 변경 불가", en: "ON · locked" } as L,
+  win: { ko: "모든 선택 쿠키가 꺼졌습니다. 거부 절차를 계속합니다.", en: "All optional cookies are off. Continuing the refusal." } as L,
+  lose: { ko: "응답 시간이 지나 기본 설정(모두 수락)을 적용했습니다. 처음 화면으로 돌아갑니다.", en: "Time ran out, so the default (accept all) was applied. Returning to the start." } as L,
+  items: [
+    { ko: "시선 분석", en: "Gaze analytics" },
+    { ko: "감정 맞춤", en: "Mood personalisation" },
+    { ko: "꿈 광고", en: "Dream advertising" },
+    { ko: "걸음 수집", en: "Step collection" },
+    { ko: "침묵 측정", en: "Silence metering" },
+    { ko: "눈물 분석", en: "Tear analysis" },
+    { ko: "기억 보관", en: "Memory archiving" },
+    { ko: "친구 추천", en: "Friend suggestions" },
+    { ko: "호흡 맞춤", en: "Breath matching" },
+    { ko: "표정 학습", en: "Expression learning" },
+    { ko: "위치 공유", en: "Location sharing" },
+    { ko: "망설임 기록", en: "Hesitation logging" },
+    { ko: "잠꼬대 분석", en: "Sleep-talk analysis" },
+    { ko: "그리움 예측", en: "Longing prediction" },
+    { ko: "체온 광고", en: "Body-heat ads" },
+    { ko: "거부 의사 분석", en: "Refusal analysis" },
+  ] as L[],
 };

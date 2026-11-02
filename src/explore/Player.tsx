@@ -32,8 +32,10 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const aspect = useThree((s) => s.size.width / s.size.height);
   const lookDone = useRef(false);
-  // 소개 장면: 시선이 큰길 끝 건물에 가리지 않도록 카메라가 잠시 높이 떠오른다
+  // 소개 장면은 도시의 감시 카메라 화면으로 끊어 보여 준다 (플레이어가 떠오르는 게 아니라 높은 곳의 카메라로 컷).
+  // 그래서 높이와 시선은 서서히가 아니라 한 번에 바뀌고, 그 순간은 화면 전환 깜빡임이 가린다
   const lift = useRef(0);
+  const wasIntro = useRef(false);
   const st = useRef({ yaw: 0, pitch: 0, x: 0, z: 0, bob: 0, near: null as string | null, y: 0, vy: 0 });
 
   useEffect(() => {
@@ -74,9 +76,12 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     // 시점. 소개 장면 중에는 입력을 버리고 대상 쪽으로 천천히 고개를 돌린다
     const la = gaze.lookAt;
     if (!la) lookDone.current = false;
-    lift.current += ((gaze.intro ? INTRO_LIFT : 0) - lift.current) * Math.min(1, dt * 1.4);
+    lift.current = gaze.intro ? INTRO_LIFT : 0;
+    // 감시 화면이 끝나면 플레이어의 눈높이로 돌아와 큰길 끝을 바라본다
+    if (wasIntro.current && !gaze.intro) s.pitch = 0.12;
+    wasIntro.current = gaze.intro;
     if (la) {
-      const k = Math.min(1, dt * 1.6);
+      const k = gaze.intro ? 1 : Math.min(1, dt * 1.6);
       const want = Math.atan2(-(la.x - s.x), -(la.z - s.z));
       let dy = want - s.yaw;
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));

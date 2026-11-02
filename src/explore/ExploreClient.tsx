@@ -15,6 +15,7 @@ import { input, loadSettings } from "./input";
 import PauseMenu from "./PauseMenu";
 import Minimap from "./Minimap";
 import QuestArrow, { type QuestTarget } from "./QuestArrow";
+import CookieGame from "./CookieGame";
 import GazeHUD from "./GazeHUD";
 import { autoWalk, gaze, resetGaze } from "./gaze";
 import { finalBeam, restoreCovers } from "./Jabi";
@@ -45,7 +46,7 @@ type Panel =
   | { kind: "section"; id: SectionId }
   | { kind: "painting"; work: number }
   | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean; whisper?: boolean }
-  | { kind: "choice"; settings?: boolean }
+  | { kind: "choice"; settings?: boolean; confirm?: number; game?: boolean }
   | { kind: "jabi" }
   | null;
 
@@ -73,6 +74,15 @@ export default function ExploreClient() {
   const [near, setNear] = useState<Interactable | null>(null);
   const [tracked, setTracked] = useState(false);
   const [fade, setFade] = useState<string | null>(null);
+  // 대자비 소개: 도시 감시 카메라 화면으로 전환 (cut = 전환 순간의 짧은 암전)
+  const [cctv, setCctv] = useState(false);
+  const [cut, setCut] = useState(false);
+  const cutTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const flashCut = () => {
+    setCut(true);
+    clearTimeout(cutTimer.current);
+    cutTimer.current = setTimeout(() => setCut(false), 260);
+  };
   const [notice, setNotice] = useState<L | null>(null);
   const [ending, setEnding] = useState<Ending>(null);
   const [locked, setLocked] = useState(false);
@@ -402,12 +412,24 @@ export default function ExploreClient() {
   const [whisperMiss, setWhisperMiss] = useState(false);
   // 이산이 '그 문장'을 남긴 순간: 웹사이트 꼬리말의 delete seoul 간판이 이때부터 켜진다
   const promiseLine = sanCityLines[sanCityLines.length - 1];
+  // 처음 들었을 때는 대화가 끝난 뒤 '숨은 결말이 열렸다'는 알림을 띄운다
+  const [unlock, setUnlock] = useState<"pending" | "show" | null>(null);
   useEffect(() => {
     if (panel?.kind === "dialog" && panel.lines[panel.step] === promiseLine)
       try {
+        if (localStorage.getItem(PROMISE_KEY) === null) setUnlock("pending");
         localStorage.setItem(PROMISE_KEY, "1");
       } catch {}
-  }, [panel, promiseLine]);
+    if (!panel && unlock === "pending") {
+      sfx.chime();
+      setUnlock("show");
+    }
+  }, [panel, promiseLine, unlock]);
+  useEffect(() => {
+    if (unlock !== "show") return;
+    const h = setTimeout(() => setUnlock(null), 9000);
+    return () => clearTimeout(h);
+  }, [unlock]);
   const [flash, setFlash] = useState(false);
   const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
@@ -468,6 +490,8 @@ export default function ExploreClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
 
+  const onGameWin = useCallback(() => setPanel({ kind: "choice", confirm: 1 }), []);
+  const onGameLose = useCallback(() => setPanel({ kind: "choice" }), []);
   const startEnding = (kind: EndKind) => {
     setPanel(null);
     const b = getBackup();
@@ -536,6 +560,8 @@ export default function ExploreClient() {
     if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
   }, [panel]);
   const startJabiIntro = useCallback(() => {
+    flashCut();
+    setCctv(true);
     gaze.intro = true;
     gaze.frozen = true;
     gaze.lookAt = { x: JABI.eye.x, y: JABI.eye.y, z: JABI.eye.z };
@@ -554,6 +580,8 @@ export default function ExploreClient() {
     try {
       localStorage.setItem("sanlee-jabi-intro", "1");
     } catch {}
+    if (gaze.intro) flashCut();
+    setCctv(false);
     gaze.intro = false;
     gaze.frozen = false;
     gaze.lookAt = null;
@@ -725,6 +753,12 @@ export default function ExploreClient() {
       {toast && <div className="toast">{toast}</div>}
       {!intro && !ending && !accepted && <SaveToast />}
       {notice && !panel && <div className="notice">{t(notice)}</div>}
+      {unlock === "show" && !panel && (
+        <div className="unlock-toast" role="status" onClick={() => setUnlock(null)}>
+          <b>{t(ui.unlockTitle)}</b>
+          <span>{t(ui.unlockBody)}</span>
+        </div>
+      )}
 
       {active && near && verb && !touch && (
         <button type="button" className="prompt" onClick={() => interact(near)} style={{ borderColor: near.color, color: near.color }}>
@@ -889,6 +923,31 @@ export default function ExploreClient() {
           <div className="choice" role="dialog" aria-modal="true">
             <span className="choice-sys">SYS://SEOUL/CHECKPOINT · GATE-01</span>
             <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 통과 불가" : "▲ RESPONSE REQUIRED · NO PASSAGE UNTIL ANSWERED"}</span>
+            {panel.game ? (
+              <CookieGame t={t} onWin={onGameWin} onLose={onGameLose} />
+            ) : panel.confirm !== undefined ? (
+              <>
+                <h2>{t(checkpoint.confirm[panel.confirm].title)}</h2>
+                <p>{t(checkpoint.confirm[panel.confirm].body)}</p>
+                <div className="choice-actions">
+                  <button className="choice-accept" onClick={() => choose("accept")}>
+                    {t(checkpoint.confirm[panel.confirm].stay)}
+                  </button>
+                  <button
+                    className="choice-reject"
+                    onClick={() => {
+                      sfx.denied();
+                      // 첫 확인 다음에는 쿠키를 하나씩 끄는 미니 게임, 그다음 마지막 확인
+                      if (panel.confirm === 0) setPanel({ kind: "choice", game: true });
+                      else choose("reject");
+                    }}
+                  >
+                    {t(checkpoint.confirm[panel.confirm].go)}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
             <h2>{t(checkpoint.title)}</h2>
             <p>{t(checkpoint.body)}</p>
             {!panel.settings ? (
@@ -901,11 +960,18 @@ export default function ExploreClient() {
                     {t(ui.accept)}
                     <small>{t(checkpoint.acceptSub)}</small>
                   </button>
-                  <button className="choice-reject" onClick={() => choose("reject")}>
+                  <button
+                    className="choice-reject"
+                    onClick={() => {
+                      sfx.denied();
+                      setPanel({ kind: "choice", confirm: 0 });
+                    }}
+                  >
                     {t(ui.reject)}
                     <small>{t(checkpoint.rejectSub)}</small>
                   </button>
                 </div>
+                <p className="choice-notice">{t(checkpoint.rejectNotice)}</p>
                 {/* 현실의 쿠키 창처럼 세 번째 선택지는 작고 흐리게. 숨은 결말로 가는 길 */}
                 <button className="choice-settings" onClick={() => setPanel({ kind: "choice", settings: true })}>
                   {t(checkpoint.settings)}
@@ -929,6 +995,8 @@ export default function ExploreClient() {
                   <span className="cookie-clear">{t(checkpoint.clearOutside)}</span>
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
         </div>
@@ -991,6 +1059,13 @@ export default function ExploreClient() {
         </div>
       )}
 
+      {cctv && (
+        <div className="cctv" aria-hidden>
+          <span className="cctv-rec">● REC</span>
+          <span className="cctv-cam">{lang === "ko" ? "감시 카메라 07 · 대자비 시선 확인" : "CAM 07 · GREAT COMPASSION IN VIEW"}</span>
+        </div>
+      )}
+      {cut && <div className="cctv-cut" aria-hidden />}
       {fade && <div className="fade">{t(fade === "up" ? ui.goingUp : ui.goingDown)}</div>}
 
       {intro && (

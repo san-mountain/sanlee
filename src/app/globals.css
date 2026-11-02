@@ -696,6 +696,8 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .choice-reject { order: 1; font-size: 11px !important; padding: 6px 8px !important; background: transparent !important; color: #6b6385 !important; border: 1px solid transparent !important;
   text-decoration: underline; text-underline-offset: 3px; }
 .choice-reject:hover { color: var(--cyan) !important; text-shadow: 0 0 8px #22f0ff; }
+/* 거부 버튼 아래의 작은 고지 */
+.choice-notice { margin: 10px 0 0 !important; font-family: var(--mono); font-size: 10px !important; line-height: 1.5 !important; color: #6b6385 !important; text-align: right; letter-spacing: .04em; }
 @keyframes acceptPulse { 0%, 100% { box-shadow: 0 0 14px #ff2a3d99, inset 0 0 10px #ffffff33; } 50% { box-shadow: 0 0 26px #ff2a3d, inset 0 0 12px #ffffff44; } }
 @media (prefers-reduced-motion: reduce) { .choice-accept, .choice-alert { animation: none; } }
 
@@ -1036,3 +1038,48 @@ span.cookie-clear { cursor: default; text-decoration: none; }
 @media (max-width: 719px) {
   .poems .poem-body { padding-left: 0; }
 }
+
+/* 대자비 소개: 감시 카메라 화면. 주사선과 모서리 표식, 녹화 표시 */
+.cctv { position: absolute; inset: 0; z-index: 25; pointer-events: none; font-family: var(--mono); color: #e8fff4;
+  background: repeating-linear-gradient(0deg, #00000022 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 55%, #000000aa 100%); }
+.cctv::before, .cctv::after { content: ""; position: absolute; width: 34px; height: 34px; border: 2px solid #e8fff4aa; }
+.cctv::before { left: calc(18px + var(--sal, 0px)); top: calc(70px + var(--sat, 0px)); border-right: 0; border-bottom: 0; }
+.cctv::after { right: calc(18px + var(--sar, 0px)); bottom: calc(18px + var(--sab, 0px)); border-left: 0; border-top: 0; }
+.cctv-rec { position: absolute; left: calc(24px + var(--sal, 0px)); bottom: calc(22px + var(--sab, 0px)); color: #ff3b4e; font-size: 12px; letter-spacing: .12em; animation: blink 1s steps(1) infinite; }
+.cctv-cam { position: absolute; left: calc(24px + var(--sal, 0px)); bottom: calc(40px + var(--sab, 0px)); font-size: 11px; letter-spacing: .12em; opacity: .8; }
+.cctv-cut { position: absolute; inset: 0; z-index: 26; background: #000; pointer-events: none; animation: cctvCut .26s steps(2) forwards; }
+@keyframes cctvCut { 0% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cctv-rec { animation: none; } }
+
+/* 숨은 결말 해금 알림: 화면 위쪽 가운데, 금빛 테두리 */
+.unlock-toast { position: absolute; z-index: 35; left: 50%; top: calc(86px + var(--sat, 0px)); transform: translateX(-50%); width: min(420px, calc(100% - 32px));
+  display: flex; flex-direction: column; gap: 6px; padding: 14px 18px; background: #0b0612ee; border: 1px solid #ffc040; box-shadow: 0 0 22px #ffc04055;
+  font-size: 13px; line-height: 1.6; color: #e8e2f4; word-break: keep-all; cursor: pointer; animation: unlockIn .5s ease-out; }
+.unlock-toast b { font-family: var(--mono); font-size: 13px; letter-spacing: .14em; color: #ffd36b; text-shadow: 0 0 10px #ffb02e; }
+@keyframes unlockIn { from { opacity: 0; transform: translate(-50%, -8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .unlock-toast { animation: none; } }
+
+/* 거부 미니 게임: 쿠키 끄기 */
+.cookie-game h2 { margin-bottom: 8px !important; }
+.cookie-game > p { margin: 0 0 12px !important; font-size: 13px !important; }
+.cg-status { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: #cfc6e2; }
+.cg-status b { color: #ff4a5a; font-size: 14px; }
+.cg-timer { flex: 1; height: 4px; background: #ffffff14; }
+.cg-timer i { display: block; height: 100%; background: #ff2a3d; box-shadow: 0 0 8px #ff2a3d; transition: width .1s linear; }
+.cg-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 46vh; overflow: auto; }
+.cg-item { font-family: var(--mono); font-size: 11.5px; }
+.cg-item.locked { grid-column: 1 / -1; display: flex; justify-content: space-between; padding: 7px 9px; color: #6b6385; border: 1px dashed #3a2f52; }
+.cg-item.locked b { color: #ff8a96; font-weight: 400; }
+.cg-item button { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 9px;
+  border: 1px solid #2d2445; color: #6b6385; cursor: default; }
+.cg-item.on button { border-color: #ff2a3d88; color: #ffd9dc; cursor: pointer; }
+.cg-item.on button:hover, .cg-item.on button:focus-visible { background: #ff2a3d1a; }
+.cg-switch { flex: none; position: relative; width: 26px; height: 14px; border-radius: 7px; background: #2d2445; transition: background .15s; }
+.cg-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #6b6385; transition: transform .15s, background .15s; }
+.cg-item.on .cg-switch { background: #ff2a3d; }
+.cg-item.on .cg-switch::after { transform: translateX(12px); background: #fff; }
+.cg-item.back button { animation: cgBack .5s ease-out; }
+@keyframes cgBack { 0% { background: #ff2a3d66; } 100% { background: transparent; } }
+.cg-result { margin: 12px 0 0 !important; font-family: var(--mono); font-size: 12px !important; color: #ffd36b !important; }
+.cookie-game.lose .cg-result { color: #ff4a5a !important; }
+@media (prefers-reduced-motion: reduce) { .cg-item.back button { animation: none; } }
