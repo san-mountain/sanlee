@@ -710,7 +710,7 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .backup-list .none { opacity: .6; }
 .pause-row.backups .switch { white-space: nowrap; }
 .intro-cookie .choice-sys { position: static; display: block; }
-/* 거부 결말의 방공호 장면: 정지 시민이 보이도록 글은 아래로 */
+/* 거부 결말의 방공호 장면: 동상이 보이도록 글은 아래로 */
 .explore-root.thaw .ending { align-items: flex-end; padding-bottom: calc(7vh + var(--sab)); }
 .explore-root.thaw .ending-inner, .ending.ending-ghost .ending-inner { background: none; }
 .explore-root.thaw .ending p.final { font-size: clamp(16px, 2vw, 20px); }
@@ -890,7 +890,7 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .cookie-clear { all: unset; cursor: pointer; font-family: var(--mono); font-size: 10.5px; color: #6f6888; text-decoration: underline; text-underline-offset: 3px; }
 .cookie-clear:hover, .cookie-clear:focus-visible { color: #ff8a96; }
 span.cookie-clear { cursor: default; text-decoration: none; }
-/* 정지 시민에게 말 건네기: 기록이 없는 방문자에게만 보인다 */
+/* 동상에게 말 건네기: 기록이 없는 방문자에게만 보인다 */
 .whisper { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 4px; }
 .whisper input { flex: 1 1 180px; min-width: 0; font: inherit; font-size: 14px; color: var(--fg); background: #0000004d; border: 0; border-bottom: 1px solid #ff2bd666; padding: 8px 2px; outline: none; }
 .whisper input:focus { border-bottom-color: var(--pink); }
