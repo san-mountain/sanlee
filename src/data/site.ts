@@ -146,9 +146,9 @@ export const contact = {
 };
 
 export const sections: { id: SectionId; label: string; labelKo: string; href: string }[] = [
-  { id: "about", label: "About", labelKo: "소개", href: "/about" },
   { id: "works", label: "Works", labelKo: "작업", href: "/works" },
   { id: "writing", label: "Writing", labelKo: "글", href: "/writing" },
+  { id: "about", label: "About", labelKo: "소개", href: "/about" },
 ];
 
 // 화면에 고정으로 나오는 짧은 문구들
@@ -165,6 +165,7 @@ export const ui = {
   contactTitle: { ko: "연락처", en: "Contact" },
   catPainting: { ko: "그림", en: "Painting" },
   workIndex: { ko: "목록", en: "Index" },
+  view: { ko: "보기", en: "View" },
   viewGrid: { ko: "그리드", en: "Grid" },
   viewWall: { ko: "벽", en: "Wall" },
   wallNote: { ko: "실제 크기 비율로 건 벽 · 사람 키 170cm 기준", en: "Hung at true relative scale · figure 170 cm" },

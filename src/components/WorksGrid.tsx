@@ -45,31 +45,96 @@ const VIEWS: { id: View; label: { ko: string; en: string } }[] = [
   { id: "wall", label: ui.viewWall },
 ];
 
-// 보기 전환은 글자 대신 작은 아이콘: 위의 그림/조각/인터랙티브 탭과 같은 줄로 읽히지 않게
+// 보기 아이콘: 모두 18×18 칸, 선 굵기 1.5, 모서리 각진 선으로 통일
+const ICON = { width: 18, height: 18, viewBox: "0 0 18 18", fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "square" as const, "aria-hidden": true };
 function ViewIcon({ v }: { v: View }) {
-  const p = { width: 18, height: 18, viewBox: "0 0 18 18", fill: "none", stroke: "currentColor", strokeWidth: 1.4, "aria-hidden": true };
   if (v === "grid")
     return (
-      <svg {...p}>
-        <rect x="2.5" y="2.5" width="5" height="5" />
-        <rect x="10.5" y="2.5" width="5" height="5" />
-        <rect x="2.5" y="10.5" width="5" height="5" />
-        <rect x="10.5" y="10.5" width="5" height="5" />
+      <svg {...ICON}>
+        <rect x="2.75" y="2.75" width="5" height="5" />
+        <rect x="10.25" y="2.75" width="5" height="5" />
+        <rect x="2.75" y="10.25" width="5" height="5" />
+        <rect x="10.25" y="10.25" width="5" height="5" />
       </svg>
     );
   if (v === "index")
     return (
-      <svg {...p}>
-        <path d="M2.5 4.5h13M2.5 9h13M2.5 13.5h13" />
+      <svg {...ICON}>
+        <path d="M2.75 4.25h12.5M2.75 9h12.5M2.75 13.75h12.5" />
       </svg>
     );
   // 벽: 바닥선 위에 크기가 다른 그림 두 점
   return (
-    <svg {...p}>
-      <rect x="2.5" y="3.5" width="6" height="8" />
-      <rect x="11" y="6" width="4.5" height="4" />
-      <path d="M1 15.5h16" />
+    <svg {...ICON}>
+      <rect x="2.75" y="3.25" width="6" height="8.5" />
+      <rect x="11.25" y="6.25" width="4" height="5.5" />
+      <path d="M1.5 15.25h15" />
     </svg>
+  );
+}
+function Chevron() {
+  return (
+    <svg {...ICON} width={10} height={10} viewBox="0 0 10 10">
+      <path d="M2 3.75l3 3 3-3" strokeLinecap="butt" />
+    </svg>
+  );
+}
+
+// 보기 전환: 탭 줄 오른쪽에 지금 보기의 아이콘 하나. 누르면 세 아이콘이 가로로 펼쳐진다.
+function ViewMenu({ view, onPick }: { view: View; onPick: (v: View) => void }) {
+  const { t } = useLang();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+  const cur = VIEWS.find((o) => o.id === view)!;
+  return (
+    <div className="view-menu" ref={box}>
+      <button
+        type="button"
+        className="view-menu-btn"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label={`${t(ui.view)}: ${t(cur.label)}`}
+        title={t(cur.label)}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <ViewIcon v={view} />
+        <Chevron />
+      </button>
+      {open && (
+        <div className="view-menu-list" role="menu">
+          {VIEWS.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={view === o.id}
+              aria-label={t(o.label)}
+              title={t(o.label)}
+              className={view === o.id ? "on" : ""}
+              onClick={() => {
+                onPick(o.id);
+                setOpen(false);
+              }}
+            >
+              <ViewIcon v={o.id} />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -183,21 +248,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
             ))}
           </div>
           {tab === "painting" && (
-            <div className="view-toggle" role="group" aria-label="View">
-              {VIEWS.map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  aria-pressed={view === o.id}
-                  aria-label={t(o.label)}
-                  title={t(o.label)}
-                  className={view === o.id ? "on" : ""}
-                  onClick={() => selectView(o.id)}
-                >
-                  <ViewIcon v={o.id} />
-                </button>
-              ))}
-            </div>
+            <ViewMenu view={view} onPick={selectView} />
           )}
         </div>
       )}

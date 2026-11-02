@@ -1,4 +1,4 @@
-import Link from "next/link";
+import TopLink from "@/components/TopLink";
 import SiteNav from "@/components/SiteNav";
 import SiteFooter from "@/components/SiteFooter";
 import WorksGrid from "@/components/WorksGrid";
@@ -15,9 +15,9 @@ export default function Home() {
         </h1>
         <WorksGrid limit={6} />
         <div className="home-more">
-          <Link href="/works">
+          <TopLink href="/works">
             <T s={ui.allWorks} />
-          </Link>
+          </TopLink>
         </div>
       </main>
       <SiteFooter />
