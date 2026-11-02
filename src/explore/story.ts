@@ -2,22 +2,22 @@
 import type { L } from "@/data/site";
 
 export const plaque: L[] = [
-  { ko: "이산 (휴면 계정)", en: "SAN LEE (DORMANT ACCOUNT)" },
+  { ko: "이산 (마지막 접속: 2087년)", en: "SAN LEE (LAST SEEN: 2087)" },
   { ko: "끝까지 '모두 거부'를 누른 사람", en: "The One Who Pressed 'Reject All' to the End" },
   {
     ko: "2087년 서울에서 모든 쿠키를 거부한 시민.",
     en: "A citizen of Seoul, 2087, who rejected every cookie.",
   },
   {
-    ko: "쿠키가 없으니 도시는 이 시민이 무엇을 하는지 확인할 수 없었다. 활동이 확인되지 않는 시민은 휴면 처리된다. 남은 사람들이 몰래 이곳 지하로 옮겨 왔다.",
-    en: "With no cookies, the city could not see what this citizen was doing. Citizens with no recorded activity are made dormant. Those who remained carried them down here in secret.",
+    ko: "쿠키가 없으니 도시는 이 시민이 무엇을 하는지 확인할 수 없었다. 보이지 않는 시민은 그 자리에 멈춘 것으로 처리된다. 남은 사람들이 몰래 이곳 지하로 옮겨 왔다.",
+    en: "With no cookies, the city could not see what this citizen was doing. A citizen the city cannot see is filed as standing still. Those who remained carried them down here in secret.",
   },
 ];
 
 export const ui = {
   title: { ko: "DELETE SEOUL", en: "DELETE SEOUL" },
   introLines: [
-    { ko: "2087년 서울. 쿠키를 거부한 시민은 휴면 계정이 됩니다. 신호가 닿지 않는 지하 방공호에, 그렇게 굳어 버린 한 사람이 있습니다.", en: "Seoul, 2087. Citizens who reject cookies become dormant accounts. In a shelter the signal cannot reach, one of them sits frozen." },
+    { ko: "2087년 서울. 쿠키를 거부한 시민은 그 자리에 멈춥니다. 신호가 닿지 않는 지하 방공호에, 그렇게 굳어 버린 한 사람이 있습니다.", en: "Seoul, 2087. Citizens who reject cookies stop where they stand. In a shelter the signal cannot reach, one of them sits frozen." },
   ] as L[],
   start: { ko: "방공호로 들어가기", en: "Enter the shelter" },
   goBack: { ko: "돌아가기", en: "Go back" },
@@ -43,7 +43,7 @@ export const ui = {
   reject: { ko: "모두 거부", en: "Reject all" },
   plaqueShort: { ko: "끝까지 '모두 거부'를 누른 사람", en: "The One Who Rejected All" },
   terminalLocked: [
-    { ko: "[기록 잠김] 휴면 계정의 기록입니다.", en: "[RECORD LOCKED] This record belongs to a dormant account." },
+    { ko: "[기록 잠김] 본인 인증이 필요합니다.", en: "[RECORD LOCKED] Identity check required." },
     { ko: "누구의 계정인지부터 알아야 할 것 같다. 가운데 동상에게 먼저 말을 걸어 보자.", en: "First, find out whose account this is. Speak to the statue in the middle." },
   ] as L[],
   toPortfolio: { ko: "웹사이트로 가기", en: "Go to the website" },
@@ -162,8 +162,8 @@ export const statueLines: L[][] = [
       en: "Up there, I rejected every cookie. Turns out the city couldn't see a thing I did. 'Your account has been made dormant due to inactivity.' That's me now.",
     },
     {
-      ko: "휴면을 풀려면 본인 인증이 필요하대. 이 방 터미널 세 대에 내가 누군지 보여 주는 기록이 있어. 하나씩 열어 줄래?",
-      en: "To wake a dormant account, you need to verify identity. The three terminals in this room hold records of who I am. Would you open them, one by one?",
+      ko: "다시 움직이려면 본인 인증이 필요하대. 이 방 터미널 세 대에 내가 누군지 보여 주는 기록이 있어. 하나씩 열어 줄래?",
+      en: "To move again, I need to verify my identity. The three terminals in this room hold records of who I am. Would you open them, one by one?",
     },
   ],
   [
@@ -175,7 +175,7 @@ export const statueLines: L[][] = [
     { ko: "마지막 한 대만 더. 천천히 봐. 나는 어차피 여기 앉아 있으니까.", en: "Just one more. Take your time. I'm not going anywhere." },
   ],
   [
-    { ko: "인증 완료, 휴면 해제! 고마워. 혼자서는 끝내 못 움직였을 거야.", en: "Verified. Account reactivated! Thank you. I'd never have moved on my own." },
+    { ko: "인증 완료! 고마워. 혼자서는 끝내 못 움직였을 거야.", en: "Verified! Thank you. I'd never have moved on my own." },
     { ko: "거부하는 건 쉬웠어. 거부한 채로 혼자 서 있는 게 어려웠지.", en: "Refusing was easy. Standing there alone after refusing was the hard part." },
     {
       ko: "같이 지상으로 올라가 줄래? 큰길 끝 검문소에서, 너도 하나만 고르면 돼.",
@@ -196,8 +196,8 @@ export const sanAfterDeath: L = { ko: "너는 쓰러져도 금방 다시 오더�
 export const keeperBackupHint: L[] = [
   { ko: "위에 다녀왔구나. 그럼 도시에 네 방문 기록이 남았겠네.", en: "You've been up there. So the city has your visit history now." },
   {
-    ko: "저쪽 벽에 끊긴 단말 보여? 위에서 남긴 방문 기록이 거기까지 흘러와. 여긴 신호가 안 닿으니까 거기서라면 지울 수 있어. 기록이 없으면 회원도 아니고 휴면도 아니야. 자비는 기록으로 사람을 보거든. 아마 너를 못 볼걸.",
-    en: "See that severed terminal on the far wall? The visit history you leave up there drifts down to it. The signal can't reach us here, so you could erase it there. No history, and you're not a member, not dormant, nothing. Mercy sees people through their records. It probably won't see you at all.",
+    ko: "저쪽 벽에 끊긴 단말 보여? 위에서 남긴 방문 기록이 거기까지 흘러와. 여긴 신호가 안 닿으니까 거기서라면 지울 수 있어. 기록이 없으면 도시한테 너는 없는 사람이야. 자비는 기록으로 사람을 보거든. 아마 너를 못 볼걸.",
+    en: "See that severed terminal on the far wall? The visit history you leave up there drifts down to it. The signal can't reach us here, so you could erase it there. No history, and to the city you don't exist. Mercy sees people through their records. It probably won't see you at all.",
   },
 ];
 export const keeperAfterDeath: L = { ko: "또 왔네. 지난번이랑 똑같은 얼굴로. 흉터 하나 없이.", en: "Back again. Same face as last time. Not a single scar." };
@@ -224,11 +224,11 @@ export const checkpoint = {
   ] as L[],
   title: { ko: "이 기기를 기억할까요?", en: "REMEMBER THIS DEVICE?" },
   sanWarn: {
-    ko: "수락하면 평생 자동 로그인이야. 거부하면? 활동 확인 불가, 휴면 처리. 나 봤지?",
-    en: "Accept, and you're logged in for life. Refuse? No activity found, account made dormant. You've seen me.",
+    ko: "수락하면 평생 자동 로그인이야. 거부하면? 활동 확인 불가. 그다음은… 나 봤지?",
+    en: "Accept, and you're logged in for life. Refuse? No activity found. And then… well, you've seen me.",
   },
   acceptSub: { ko: "평생 자동 로그인", en: "Logged in for life" },
-  rejectSub: { ko: "활동 확인 불가 · 휴면 처리", en: "No activity · made dormant" },
+  rejectSub: { ko: "활동 확인 불가 · 그 자리에 멈춤", en: "No activity · stopped where you stand" },
   body: {
     ko: "지금까지는 임시로 기억했습니다. 이 기기를 기억하면 다음부터는 묻지 않고 자동으로 로그인됩니다.",
     en: "Until now, you were remembered temporarily. Remember this device, and from now on you will be logged in automatically, without being asked.",
@@ -242,7 +242,7 @@ export const checkpoint = {
     { ko: "편의를 위해 로그아웃 버튼은 더 이상 제공되지 않습니다.", en: "For your convenience, the log out button is no longer provided." },
   ] as Beat[],
   reject: [
-    { ko: "거부 의사를 기억하기 위해 쿠키 1개를 저장했습니다. 그 밖의 활동은 확인되지 않아 휴면 처리합니다.", en: "One cookie has been stored to remember your refusal. No other activity found. Your account is now dormant." },
+    { ko: "거부 의사를 기억하기 위해 쿠키 1개를 저장했습니다. 그 밖의 활동은 확인되지 않습니다.", en: "One cookie has been stored to remember your refusal. No other activity found." },
     { ko: "", en: "", slots: true },
     { ko: "끝까지 '모두 거부'를 누른 두 번째 사람.", en: "The second person who pressed 'Reject all' to the end.", plaque: true },
     { ko: "이번에는 혼자가 아니었다.", en: "This time, they were not alone." },
@@ -253,7 +253,7 @@ export const checkpoint = {
     { ko: "기록이 없는 방문자에게는 동의를 구할 수 없습니다.", en: "Consent cannot be requested from a visitor with no record." },
     { ko: "문이 열린다.", en: "The gate opens." },
     { ko: "대자비는 눈을 뜬 채 멈춰 있다. 기록에 없는 사람은 볼 수 없다.", en: "The Great Compassion stands still, eyes open. It cannot see anyone with no record." },
-    { ko: "회원도, 휴면도 아니면… 그냥 사람이구나.", en: "Not a member, not dormant… just a person.", say: true },
+    { ko: "아무 기록도 없으니까… 그냥 사람이네.", en: "No record at all… just a person.", say: true },
   ] as Beat[],
   slotErased: { ko: "삭제됨", en: "DELETED" },
   noSlots: { ko: "기억 없음", en: "NO MEMORY" },
@@ -271,7 +271,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[] }> = {
     name: { ko: "방공호 관리인", en: "Shelter keeper" },
     lines: [
       { ko: "어서 와. 여기까지는 시스템 신호가 안 닿아. 쿠키도, 등급도 없어.", en: "Welcome. The system's signal doesn't reach this deep. No cookies, no grades." },
-      { ko: "가운데 동상 봤지? 휴면 계정이 된 사람이야. 우리가 지상에서 몰래 옮겨 왔어. 터미널을 열면 조금씩 깨어날 거야.", en: "Seen the statue? A dormant account. We smuggled them down from the surface. Open the terminals and they'll wake, bit by bit." },
+      { ko: "가운데 동상 봤지? 쿠키를 거부했다가 굳어 버린 사람이야. 우리가 지상에서 몰래 옮겨 왔어. 터미널을 열면 조금씩 깨어날 거야.", en: "Seen the statue? Someone who rejected cookies and froze. We smuggled them down from the surface. Open the terminals and they'll wake, bit by bit." },
       { ko: "지상에 올라가 보고 싶으면 저 뒤 방폭문으로 나가. 올라가면 골목 끝 배전실 문으로 나올 거야. 카메라랑 눈은 마주치지 말고.", en: "Want to see the surface? Take the blast door behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
       { ko: "아, 그리고 놀라지 마. 위는… 이제 땅이 아니야.", en: "Oh, and don't panic. Up there… it isn't ground any more." },
     ],
