@@ -266,7 +266,7 @@ export default function ExploreClient() {
       goTo,
       tp: (x: number, z: number, yaw = 0) => (teleport.req = { x, z, yaw }),
       restore: () => setVisited(sections.map((s) => s.id)),
-      pos: () => [player.pos.x, player.pos.z, player.yaw, player.air],
+      pos: () => [player.pos.x, player.pos.z, player.yaw, player.air, player.pitch],
       input,
       look: (pitch: number) => (input.look.pitch += pitch),
       gaze,
@@ -558,10 +558,10 @@ export default function ExploreClient() {
     gaze.frozen = false;
     gaze.lookAt = null;
   }, []);
-  // 팝업이 뜨면 카메라를 놓아 두고, 어떤 식으로 닫히든(Esc 포함) 소개 상태를 풀어 준다
+  // 팝업이 어떤 식으로 닫히든(Esc 포함) 소개 상태를 풀어 준다
   useEffect(() => {
-    if (panel?.kind === "jabi") gaze.lookAt = null;
-    else if (!panel && gaze.intro && !gaze.lookAt && hadJabi.current) endJabiIntro();
+    // 팝업이 떠 있는 동안에도 카메라는 대자비를 계속 바라본다 (늦게 돌던 카메라가 팝업과 함께 멈추거나, 마우스에 밀려나지 않게)
+    if (!panel && gaze.intro && hadJabi.current) endJabiIntro();
     hadJabi.current = panel?.kind === "jabi";
   }, [panel, endJabiIntro]);
   // 백업이 없는 사람이 레이저에 맞으면: 처음부터 다시
@@ -865,6 +865,15 @@ export default function ExploreClient() {
             <span className="choice-sys">{t(jabiUi.name)}</span>
             <h2>{t(jabiUi.introTitle)}</h2>
             <p>{t(jabiUi.introBody)}</p>
+            <div className="jabi-shots">
+              {jabiUi.introShots.map((sh) => (
+                <figure key={sh.src}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={sh.src} alt={t(sh.cap)} width={480} height={360} />
+                  <figcaption>{t(sh.cap)}</figcaption>
+                </figure>
+              ))}
+            </div>
             <ul className="jabi-rules">
               {jabiUi.introRules.map((r, i) => (
                 <li key={i}>{t(r)}</li>

@@ -995,6 +995,17 @@ span.cookie-clear { cursor: default; text-decoration: none; }
 .jabi-rules li::marker { color: #ffc040; }
 /* 대자비가 보이도록 배경을 흐리지 않고 팝업은 화면 아래쪽에 */
 .choice-wrap.jabi-wrap { background: linear-gradient(to bottom, transparent 35%, #07030fcc); -webkit-backdrop-filter: none; backdrop-filter: none; align-items: flex-end; padding-bottom: 5vh; }
+.choice-wrap.jabi-wrap .jabi-intro { max-height: 100%; overflow: auto; }
+@media (max-width: 520px) { .choice-wrap.jabi-wrap { padding-bottom: 2vh; } .jabi-intro h2 { font-size: 17px; } }
+.jabi-shots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 4px; }
+.jabi-shots figure { margin: 0; }
+.jabi-shots img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid #ffc04055; }
+.jabi-shots figcaption { margin-top: 5px; font-family: var(--mono); font-size: 11px; line-height: 1.4; color: #ffb36b; }
+/* 넓은 화면: 팝업을 오른쪽으로 비켜 세워 가운데의 대자비 얼굴이 보이게 */
+@media (min-width: 900px) and (min-aspect-ratio: 6/5) {
+  .choice-wrap.jabi-wrap { align-items: center; justify-content: flex-end; padding: 0 4vw 0 0; background: linear-gradient(to right, transparent 45%, #07030fcc); }
+  .choice-wrap.jabi-wrap .jabi-intro { width: min(440px, 38vw); max-height: 92vh; overflow: auto; }
+}
 
 /* 시·일기 본문: 모바일에서 본문 폭을 조금 넓힌다.
    글자 크기는 PC와 같은 17px을 유지하고, 모바일에서는 왼쪽 들여쓰기만 없앤다.
