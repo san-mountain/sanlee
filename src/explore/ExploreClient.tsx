@@ -8,7 +8,7 @@ import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
 import { announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
-import { alleyWaypoint, CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
+import { CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
 import { input, loadSettings } from "./input";
@@ -604,7 +604,8 @@ export default function ExploreClient() {
       return h ? { pos: h.pos, label: t(quest.back) } : null;
     }
     // 골목(띠 A)에 있으면 먼저 남쪽 광장으로 나가는 길을 가리킨다
-    if (Math.abs(px) > 11.5 && pz < 14) return { pos: alleyWaypoint(px, pz), label: t(quest.plaza) };
+    // 골목(띠 A)에서는 화살표를 감춘다: 바닥의 분필 화살표가 광장까지 길을 안내한다
+    if (Math.abs(px) > 11.5 && pz < 14) return null;
     const cp = find("checkpoint");
     return cp ? { pos: cp.pos, label: t(quest.checkpoint) } : null;
   };
