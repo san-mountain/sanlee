@@ -851,7 +851,7 @@ export default function ExploreClient() {
                     </button>
                   )}
                   <Link className="btn primary" href="/">
-                    {t(checkpoint.toPortfolio)}
+                    {t(ending.kind === "accept" ? ui.toPortfolio : checkpoint.toPortfolio)}
                   </Link>
                 </div>
               </div>
