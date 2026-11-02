@@ -914,3 +914,6 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
   body.deleting .seal { box-shadow: 0 0 10px #22f0ff, 0 0 30px #22f0ffaa, inset 0 0 8px #22f0ff88; }
 }
 @keyframes sealTurn { to { transform: rotate(360deg); } }
+/* 空 원이 펼쳐진 동안 화면을 덮는 투명한 막 (바깥 터치는 접기만) */
+.seal-veil { display: none; }
+@media (max-width: 719px) { .seal-veil { display: block; position: fixed; inset: 0; z-index: 29; background: transparent; -webkit-tap-highlight-color: transparent; } }

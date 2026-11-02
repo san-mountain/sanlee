@@ -28,27 +28,33 @@ export default function NeonSeal() {
     return () => ro.disconnect();
   }, []);
 
-  // 바깥을 누르거나 Esc면 다시 접힌다
+  // Esc면 다시 접힌다. 바깥 터치는 아래의 투명한 막이 받아서 접기만 한다
   useEffect(() => {
     if (!open) return;
-    const away = (e: PointerEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
     const esc = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setOpen(false);
         ref.current?.blur();
       }
     };
-    document.addEventListener("pointerdown", away);
     document.addEventListener("keydown", esc);
-    return () => {
-      document.removeEventListener("pointerdown", away);
-      document.removeEventListener("keydown", esc);
-    };
+    return () => document.removeEventListener("keydown", esc);
   }, [open]);
 
   return (
+    <>
+    {/* 펼쳐진 동안 화면 전체를 덮는 투명한 막: 바깥을 누르면 접히기만 하고, 그 아래 그림·링크는 눌리지 않는다 */}
+    {open && (
+      <span
+        className="seal-veil"
+        aria-hidden
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(false);
+        }}
+      />
+    )}
     <a
       ref={ref}
       href="/deleteseoul"
@@ -58,7 +64,8 @@ export default function NeonSeal() {
       title={t(ui.explore)}
       // 키보드로 왔을 때만 바로 펼친다 (터치는 첫 탭이 펼치기여야 하므로)
       onFocus={(e) => e.currentTarget.matches(":focus-visible") && setOpen(true)}
-      onBlur={() => setOpen(false)}
+      // 키보드로 다른 곳에 포커스가 옮겨 갈 때만 접는다 (터치로 막을 누를 때 막이 먼저 사라지지 않게)
+      onBlur={(e) => e.relatedTarget && setOpen(false)}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
         e.preventDefault();
@@ -88,5 +95,6 @@ export default function NeonSeal() {
         <span className="ne-arrow">↗</span>
       </span>
     </a>
-);
+    </>
+  );
 }
