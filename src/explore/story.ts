@@ -92,6 +92,7 @@ export const pause = {
   sens: { ko: "마우스 감도", en: "Mouse sensitivity" },
   sensNote: { ko: "당신의 손이 얼마나 예민한지 기록 중입니다.", en: "We are logging how sensitive your hand is." },
   bob: { ko: "걸을 때 화면 흔들림", en: "Head bob when walking" },
+  sound: { ko: "효과음", en: "Sound effects" },
   lang: { ko: "언어", en: "Language" },
   humanity: { ko: "인간성", en: "Humanity" },
   humanityNote: { ko: "관리자에 의해 잠김", en: "Locked by administrator" },

@@ -1,5 +1,6 @@
 "use client";
 
+import { sfx } from "./sfx";
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
 import { gaze, resetGaze } from "./gaze";
@@ -51,8 +52,24 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
     let raf = 0;
     let deadShown = false;
     let armed = false; // 게이지가 의심 이상까지 찼다가 숨어서 바닥을 치면 백업
+    let prevState = gaze.state;
+    let prevHidden = "";
     const loop = () => {
       raf = requestAnimationFrame(loop);
+      // 시선 단계가 올라갈 때, 그리고 숨는 데 성공했을 때 효과음
+      if (gaze.state !== prevState) {
+        const up = ["idle", "watch", "suspect", "charge", "lock"];
+        if (up.indexOf(gaze.state) > up.indexOf(prevState)) {
+          if (gaze.state === "watch") sfx.watch();
+          else if (gaze.state === "suspect") sfx.suspect();
+          else if (gaze.state === "charge") sfx.charge();
+          else if (gaze.state === "lock") sfx.lock();
+        }
+        prevState = gaze.state;
+      }
+      const hid = gaze.inZone ? gaze.hiddenBy : "";
+      if (hid && !prevHidden && gaze.meter > 20) sfx.hidden();
+      prevHidden = hid;
       const root = rootRef.current;
       const m = gaze.meter / 100;
       const hot = gaze.state === "lock" || gaze.state === "fire" ? 1 : m;
@@ -92,6 +109,7 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
       if (gaze.dead && !deadShown) {
         deadShown = true;
         armed = false;
+        sfx.glitch();
         recordDeath();
         const b = getBackup();
         if (b.deleted) {
@@ -114,6 +132,7 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
           restoreCovers();
           resetGaze();
           recordRestore();
+          sfx.restore();
           deadShown = false;
           setDead(null);
         }, 3400);

@@ -1,5 +1,6 @@
 "use client";
 
+import { sfx } from "./sfx";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -40,7 +41,7 @@ function hasWebGL() {
 type Panel =
   | { kind: "section"; id: SectionId }
   | { kind: "painting"; work: number }
-  | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean }
+  | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean }
   | { kind: "choice"; settings?: boolean }
   | { kind: "jabi" }
   | null;
@@ -133,6 +134,7 @@ export default function ExploreClient() {
   const goTo = useCallback((to: Zone, viaDoor = true) => {
     setPanel(null);
     setFade(to === "city" ? "up" : "down");
+    if (viaDoor) sfx.door();
     setTimeout(() => {
       setZone(to);
       setArrived(viaDoor);
@@ -152,7 +154,7 @@ export default function ExploreClient() {
         case "section":
           // 동상과 먼저 이야기해야 기록 터미널이 열린다
           if (!met && !complete && visited.length === 0) {
-            setPanel({ kind: "dialog", name: it.label, lines: ui.terminalLocked, step: 0 });
+            setPanel({ kind: "dialog", name: it.label, lines: ui.terminalLocked, step: 0, locked: true });
             break;
           }
           setPanel({ kind: "section", id: it.section! });
@@ -194,6 +196,7 @@ export default function ExploreClient() {
             setPanel({
               kind: "dialog",
               name: it.label,
+              locked: true,
               lines: ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
               step: 0,
             });
@@ -208,6 +211,7 @@ export default function ExploreClient() {
             setPanel({
               kind: "dialog",
               name: it.label,
+              locked: true,
               lines: checkpoint.locked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
               step: 0,
             });
@@ -436,7 +440,11 @@ export default function ExploreClient() {
     setEnding({ kind, step: 0, a: b.deaths, r: b.restores, slots });
   };
   startEndingRef.current = startEnding;
-  const choose = (kind: "accept" | "reject") => startEnding(kind);
+  const choose = (kind: "accept" | "reject") => {
+    if (kind === "accept") sfx.accept();
+    else sfx.reject();
+    startEnding(kind);
+  };
 
   const resetProgress = () => {
     try {
@@ -480,6 +488,17 @@ export default function ExploreClient() {
   // 대자비 소개: 멈춤 → 카메라가 대자비 쪽으로 → 설명 팝업. 닫으면 게임이 이어진다
   const introTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const hadJabi = useRef(false);
+  // 패널 효과음: 열릴 때, 대화가 한 줄 넘어갈 때, 잠긴 곳에 부딪혔을 때, 대자비 소개
+  const prevPanel = useRef<Panel>(null);
+  useEffect(() => {
+    const a = prevPanel.current;
+    prevPanel.current = panel;
+    if (!panel) return;
+    if (panel.kind === "jabi") return sfx.gong();
+    if (panel.kind === "dialog" && panel.locked && a?.kind !== "dialog") return sfx.denied();
+    if (!a || a.kind !== panel.kind) return sfx.open();
+    if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
+  }, [panel]);
   const startJabiIntro = useCallback(() => {
     gaze.intro = true;
     gaze.frozen = true;
@@ -832,7 +851,13 @@ export default function ExploreClient() {
                   <button className="btn" onClick={() => setPanel({ kind: "choice" })}>
                     {t(checkpoint.prefsBack)}
                   </button>
-                  <button className="cookie-clear" onClick={() => startEnding("ghost")}>
+                  <button
+                    className="cookie-clear"
+                    onClick={() => {
+                      sfx.ghost();
+                      startEnding("ghost");
+                    }}
+                  >
                     {t(checkpoint.clearAll)}
                   </button>
                 </div>
