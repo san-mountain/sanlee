@@ -55,8 +55,8 @@ export const works: Work[] = [
     medium: { ko: "인터랙티브 웹, 3D", en: "Interactive web, 3D" },
     size: { ko: "가변 크기", en: "Dimensions variable" },
     description: {
-      ko: "이 포트폴리오를 지하 방공호와 그 위의 감시 도시로 옮겨 지은 3D 작업. 방문자는 직접 걸으며 흩어진 기록을 복원하고, 끝까지 쿠키를 거부하다 굳어버린 작가의 동상을 다시 움직이게 한다. 마지막에는 선택 하나가 남는다.",
-      en: "This portfolio rebuilt as an underground shelter and the surveillance city above it. Visitors walk through it to restore a scattered record and bring back the statue of an artist who froze after rejecting every last cookie. In the end, one choice remains.",
+      ko: "이 포트폴리오를 지하 방공호와 그 위의 감시 도시로 옮겨 지은 3D 작업. 방문자는 직접 걸으며 흩어진 기록을 복원하고, 끝까지 쿠키를 거부하다 정지 시민이 된 작가를 다시 움직이게 한다. 마지막에는 선택 하나가 남는다.",
+      en: "This portfolio rebuilt as an underground shelter and the surveillance city above it. Visitors walk through it to restore a scattered record and bring back the artist, suspended as a citizen after rejecting every last cookie. In the end, one choice remains.",
     },
     link: "/deleteseoul",
   },

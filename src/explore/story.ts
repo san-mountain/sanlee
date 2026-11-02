@@ -44,12 +44,12 @@ export const ui = {
   plaqueShort: { ko: "끝까지 '모두 거부'를 누른 사람", en: "The One Who Rejected All" },
   terminalLocked: [
     { ko: "[기록 잠김] 본인 인증이 필요합니다.", en: "[RECORD LOCKED] Identity check required." },
-    { ko: "누구의 계정인지부터 알아야 할 것 같다. 가운데 동상에게 먼저 말을 걸어 보자.", en: "First, find out whose account this is. Speak to the statue in the middle." },
+    { ko: "누구의 계정인지부터 알아야 할 것 같다. 가운데 정지 시민에게 먼저 말을 걸어 보자.", en: "First, find out whose account this is. Speak to the suspended citizen in the middle." },
   ] as L[],
   toPortfolio: { ko: "웹사이트로 가기", en: "Go to the website" },
   exitLocked: [
     { ko: "[방폭문] 잠김. 동행인 없이 지상으로 나갈 수 없습니다.", en: "[BLAST DOOR] Locked. You may not go up without a companion." },
-    { ko: "먼저 가운데 동상, 이산을 깨우자. 터미널 세 대를 열면 된다. ({n}/3)", en: "First wake San, the statue in the middle. Open the three terminals. ({n}/3)" },
+    { ko: "먼저 가운데 정지 시민, 이산을 깨우자. 터미널 세 대를 열면 된다. ({n}/3)", en: "First wake San, the suspended citizen in the middle. Open the three terminals. ({n}/3)" },
   ] as L[],
   zoneBunker: { ko: "B-7 방공호 · 지하 40m", en: "SHELTER B-7 · 40m BELOW" },
   zoneCity: { ko: "지상 · 부유 감시구역 7 · 고도 2,400m", en: "SURFACE · FLOATING ZONE 7 · ALT 2,400m" },
@@ -167,7 +167,7 @@ export const jabiUi = {
 // 화면 위쪽 퀘스트 화살표에 붙는 짧은 목표
 export const quest = {
   terminal: { ko: "본인 인증", en: "Verify identity" },
-  statue: { ko: "동상에게 말 걸기", en: "Talk to the statue" },
+  statue: { ko: "정지 시민에게 말 걸기", en: "Talk to the suspended citizen" },
   san: { ko: "이산에게 말 걸기", en: "Talk to San" },
   exit: { ko: "지상으로", en: "To the surface" },
   checkpoint: { ko: "검문소", en: "Checkpoint" },
@@ -212,7 +212,7 @@ export const sanCityLines: L[] = [
   { ko: "다들 같은 쪽을 보고 서 있지. 나도 저기 서 있었어.", en: "They all face the same way. I used to stand there too." },
   { ko: "검문소는 큰길 끝이야. 서두를 필요는 없어.", en: "The checkpoint is at the end of the avenue. No need to hurry." },
   { ko: "혹시 네가 기록을 전부 지우고 다시 오면, 나는 널 못 알아볼 거야. 도시가 날 깨운 게 아니라 기록이 날 깨운 거니까.", en: "If you ever erase every record and come back, I won't recognise you. It wasn't the city that woke me. It was the records." },
-  { ko: "그땐 동상한테 이렇게 말해 줘. '그대는 부를 수 없기에 아름답다.'", en: "Then say this to the statue: 'Beautiful, because you cannot be called.'" },
+  { ko: "그땐 정지 시민이 된 나한테 이렇게 말해 줘. '그대는 부를 수 없기에 아름답다.'", en: "Then say this to me, the suspended citizen: 'Beautiful, because you cannot be called.'" },
 ];
 
 // 숨은 결말 열쇠: 기기가 아니라 사람이 기억하는 말. 기록이 하나도 없는 방문자만 동상에게 건넬 수 있다
@@ -220,9 +220,9 @@ export const whisper = {
   // 이산의 시 〈이름 없는 사랑〉의 마지막 줄
   // 띄어쓰기·문장부호·대소문자는 무시하고 비교한다
   accept: ["그대는부를수없기에아름답다", "부를수없기에아름답다", "그대는부를수없어서아름답다", "beautifulbecauseyoucannotbecalled", "beautifulbecauseyoucantbecalled"],
-  prompt: { ko: "동상에게 말을 건넨다…", en: "Say something to the statue…" } as L,
+  prompt: { ko: "정지 시민에게 말을 건넨다…", en: "Say something to the suspended citizen…" } as L,
   say: { ko: "말하기", en: "Say" } as L,
-  silent: { ko: "동상은 대답하지 않는다.", en: "The statue does not answer." } as L,
+  silent: { ko: "정지 시민은 대답하지 않는다.", en: "The suspended citizen does not answer." } as L,
   // 말을 알아들은 이산: 기록이 아니라 기억으로 깨어난다
   wake: [
     { ko: "…", en: "…" },
@@ -280,7 +280,7 @@ export const checkpoint = {
     { ko: "[대자비] 거부자 1명 확인. 동행인 1명 포함. 함께 보관 처리합니다.", en: "[GREAT COMPASSION] 1 refuser confirmed. 1 companion included. Archiving both." },
     { ko: "", en: "", slots: true },
     { ko: "끝까지 '모두 거부'를 누른 두 번째 사람.", en: "The second person who pressed 'Reject all' to the end.", plaque: true },
-    { ko: "동상 아래, 거부 의사를 기억하는 쿠키 1개가 아직 남아 있다.", en: "Beneath the statue, one cookie that remembers the refusal is still there." },
+    { ko: "두 정지 시민 곁에, 거부 의사를 기억하는 쿠키 1개가 아직 남아 있다.", en: "Beside the two suspended citizens, one cookie that remembers the refusal is still there." },
     { ko: "도시는 이 결말을 기억하지 않습니다. 당신이 거부했으니까.", en: "The city will not remember this ending. Because you refused." },
   ] as Beat[],
   // 숨은 결말: 기록을 지우면 도시의 규칙대로 멈춰야 한다. 그런데 이산이 기억하고 있어서 멈추지 않는다.
@@ -308,12 +308,12 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[] }> = {
     name: { ko: "방공호 관리인", en: "Shelter keeper" },
     lines: [
       { ko: "어서 와. 여기까지는 시스템 신호가 안 닿아. 쿠키도, 등급도 없어.", en: "Welcome. The system's signal doesn't reach this deep. No cookies, no grades." },
-      { ko: "가운데 동상 봤지? 쿠키를 거부했다가 굳어 버린 사람이야. 우리가 지상에서 몰래 옮겨 왔어. 터미널을 열면 조금씩 깨어날 거야.", en: "Seen the statue? Someone who rejected cookies and froze. We smuggled them down from the surface. Open the terminals and they'll wake, bit by bit." },
+      { ko: "가운데 정지 시민 봤지? 쿠키를 거부했다가 멈춰 버린 사람이야. 우리가 지상에서 몰래 옮겨 왔어. 터미널을 열면 조금씩 깨어날 거야.", en: "Seen the suspended citizen in the middle? Someone who rejected cookies and froze. We smuggled them down from the surface. Open the terminals and they'll wake, bit by bit." },
       { ko: "지상에 올라가 보고 싶으면 저 뒤 방폭문으로 나가. 올라가면 골목 끝 배전실 문으로 나올 거야. 카메라랑 눈은 마주치지 말고.", en: "Want to see the surface? Take the blast door behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
       { ko: "아, 그리고 놀라지 마. 위는… 이제 땅이 아니야.", en: "Oh, and don't panic. Up there… it isn't ground any more." },
     ],
     after: [
-      { ko: "봤어? 동상이 일어났어. 몇 년을 저렇게 앉아 있었는데.", en: "Did you see? The statue stood up. Years, it sat like that." },
+      { ko: "봤어? 정지 시민이 일어났어. 몇 년을 저렇게 앉아 있었는데.", en: "Did you see? The suspended citizen stood up. Years, it sat like that." },
       { ko: "이산이 지상에 올라가겠대. 혼자 보내긴 싫고… 네가 같이 가 주면 좋겠어.", en: "San says they're going up to the surface. I don't want them going alone… I'd like you to go with them." },
       { ko: "방폭문은 저 뒤야. 올라가면 골목 끝 배전실 문으로 나와. 카메라랑 눈은 마주치지 말고.", en: "The blast door's behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
       { ko: "…하나만 더. 도시의 기록은 도시 안에서는 못 지워. 정말 지우고 싶으면 도시 밖으로 나가 봐. 이 도시를 만든 사람의 집으로.", en: "…One more thing. The city's records can't be erased from inside the city. If you really want them gone, step outside it. Go to the house of the one who made this city." },
@@ -349,7 +349,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[] }> = {
       { ko: "…앉게. 여기서는 아무도 자네 호흡을 세지 않네.", en: "…Sit. Down here, no one counts your breaths." },
       { ko: "시스템은 '공(空)'을 '비어 있음'으로 번역했지. 그래서 사람들 마음을 비우기 시작했어. 효율적으로.", en: "The system translated 'emptiness' as 'empty'. So it started emptying people's minds. Efficiently." },
       { ko: "공은 비어 있는 게 아니라네. 무엇도 혼자서는 있을 수 없다는 뜻이지. 그래서 우리가 여기 모여 있는 거고.", en: "Emptiness isn't nothing. It means nothing can exist on its own. That's why we gather down here." },
-      { ko: "가운데 동상에게 가 보게. 혼자 굳어 있는 건 그 사람 잘못이 아니야.", en: "Go to the statue in the middle. Being frozen alone was never their fault." },
+      { ko: "가운데 정지 시민에게 가 보게. 혼자 굳어 있는 건 그 사람 잘못이 아니야.", en: "Go to the suspended citizen in the middle. Being frozen alone was never their fault." },
     ],
     after: [
       { ko: "…앉게. 여기서는 아무도 자네 호흡을 세지 않네.", en: "…Sit. Down here, no one counts your breaths." },
