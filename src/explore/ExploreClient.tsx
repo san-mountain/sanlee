@@ -27,6 +27,9 @@ const KEY = "sanlee-visited";
 const END_KEY = "sanlee-ending";
 const MET_KEY = "sanlee-met";
 const TALK_KEY = "sanlee-san-talked";
+const LOGIN_KEY = "sanlee-last-login";
+const PROMISE_KEY = "sanlee-promise";
+const FORGOT_KEY = "sanlee-forgotten";
 const FOUND_KEY = "sanlee-endings-found";
 
 function hasWebGL() {
@@ -170,7 +173,9 @@ export default function ExploreClient() {
           setPanel({ kind: "painting", work: it.work! });
           break;
         case "statue":
-          if (it.id === "san")
+          // 기억으로 깨어난 이산은 약속을 되풀이하지 않는다 (이미 지키고 돌아온 사람이니까)
+          if (it.id === "san" && ghost) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: [whisper.awakeLine], step: 0 });
+          else if (it.id === "san")
             setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: getBackup().deaths > 0 ? [...sanCityLines, sanAfterDeath] : sanCityLines, step: 0 });
           else if (ghost) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: [whisper.awakeLine], step: 0 });
           else if (complete) {
@@ -182,7 +187,12 @@ export default function ExploreClient() {
           }
           else {
             // 기록이 하나도 없는 방문자에게만 동상에게 말을 건넬 수 있는 칸이 열린다
-            const blank = visited.length === 0 && found.length === 0 && getBackup().n === 0;
+            // 웹사이트 꼬리말에서 기록을 지우고 온 사람만 (처음 온 사람, 거부나 재시작으로 비워진 사람은 아님)
+            let forgot = false;
+            try {
+              forgot = localStorage.getItem(FORGOT_KEY) !== null;
+            } catch {}
+            const blank = forgot && visited.length === 0 && found.length === 0 && getBackup().n === 0;
             setPanel({ kind: "dialog", name: plaque[0], lines: statueLines[Math.min(visited.length, statueLines.length - 2)], step: 0, plaque: true, whisper: blank });
             setMet(true);
             try {
@@ -390,6 +400,14 @@ export default function ExploreClient() {
   // 결말 연출: 줄마다 장면이 바뀐다
   const [secondStatue, setSecondStatue] = useState(false);
   const [whisperMiss, setWhisperMiss] = useState(false);
+  // 이산이 '그 문장'을 남긴 순간: 웹사이트 꼬리말의 delete seoul 간판이 이때부터 켜진다
+  const promiseLine = sanCityLines[sanCityLines.length - 1];
+  useEffect(() => {
+    if (panel?.kind === "dialog" && panel.lines[panel.step] === promiseLine)
+      try {
+        localStorage.setItem(PROMISE_KEY, "1");
+      } catch {}
+  }, [panel, promiseLine]);
   const [flash, setFlash] = useState(false);
   const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
@@ -440,6 +458,9 @@ export default function ExploreClient() {
         // 기록을 지운다. 다음 방문까지 남기지 않도록 '삭제됨' 표시도 남기지 않고 깨끗이 비운다
         wipeBackup();
         gaze.mood = "blind";
+        try {
+          localStorage.removeItem(FORGOT_KEY);
+        } catch {}
       }
       // 3번째 줄(이산의 말)에서 굳어 가던 화면이 풀리고, 다음 줄에서 둘이 문을 지나 걸어 나간다
       if (step === 3) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
@@ -561,6 +582,10 @@ export default function ExploreClient() {
   // 입장: 수락한 시민은 곧장 줄 속에서 깨어난다
   const enter = () => {
     setIntro(false);
+    // 접속 기록: 들어오기만 해도 남는다. 웹사이트 꼬리말의 'delete seoul'은 이 기록이 있는 기기에만 나타난다
+    try {
+      localStorage.setItem(LOGIN_KEY, String(Date.now()));
+    } catch {}
     if (accepted) {
       gaze.mood = "calm";
       teleport.req = { x: LINE_SPOT.x, z: QUEUE_Z[30], yaw: 0 };
