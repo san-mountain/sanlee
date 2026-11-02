@@ -256,6 +256,22 @@ export const checkpoint = {
   prefsNote: { ko: "모든 쿠키는 시민의 편의를 위해 켜져 있습니다.", en: "All cookies are on, for your convenience." },
   prefsBack: { ko: "뒤로", en: "Back" },
   clearOutside: { ko: "방문 기록 삭제는 이 도시 밖에서만 할 수 있습니다.", en: "Visit history can only be deleted outside this city." },
+  // 거부는 막지 않는다. 다만 작게, 여러 번 묻는다 (현실의 다크 패턴을 과장한 것)
+  rejectNotice: { ko: "거부 시 시민 활동이 정지될 수 있습니다.", en: "Rejecting may suspend your citizen activity." },
+  confirm: [
+    {
+      title: { ko: "정말 거부하시겠어요?", en: "ARE YOU SURE?" },
+      body: { ko: "거부하면 맞춤형 행복, 자동 로그인, 대자비의 보살핌을 모두 잃게 됩니다.", en: "Rejecting means losing personalised happiness, automatic login and the care of the Great Compassion." },
+      stay: { ko: "수락하고 계속하기", en: "Accept and continue" },
+      go: { ko: "거부 계속하기", en: "Continue rejecting" },
+    },
+    {
+      title: { ko: "마지막으로 확인합니다", en: "FINAL CONFIRMATION" },
+      body: { ko: "거부하면 동행인 이산도 함께 보관 처리됩니다. 시민 여러분의 98.7%는 수락을 선택했습니다.", en: "Rejecting will archive your companion, San, as well. 98.7% of citizens chose to accept." },
+      stay: { ko: "수락하기", en: "Accept" },
+      go: { ko: "그래도 거부", en: "Reject anyway" },
+    },
+  ] as { title: L; body: L; stay: L; go: L }[],
   title: { ko: "이 기기를 기억할까요?", en: "REMEMBER THIS DEVICE?" },
   sanWarn: {
     ko: "수락하면 평생 자동 로그인이야. 거부하면? 활동 확인 불가. 그다음은… 나 봤지?",

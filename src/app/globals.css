@@ -696,6 +696,8 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .choice-reject { order: 1; font-size: 11px !important; padding: 6px 8px !important; background: transparent !important; color: #6b6385 !important; border: 1px solid transparent !important;
   text-decoration: underline; text-underline-offset: 3px; }
 .choice-reject:hover { color: var(--cyan) !important; text-shadow: 0 0 8px #22f0ff; }
+/* 거부 버튼 아래의 작은 고지 */
+.choice-notice { margin: 10px 0 0 !important; font-family: var(--mono); font-size: 10px !important; line-height: 1.5 !important; color: #6b6385 !important; text-align: right; letter-spacing: .04em; }
 @keyframes acceptPulse { 0%, 100% { box-shadow: 0 0 14px #ff2a3d99, inset 0 0 10px #ffffff33; } 50% { box-shadow: 0 0 26px #ff2a3d, inset 0 0 12px #ffffff44; } }
 @media (prefers-reduced-motion: reduce) { .choice-accept, .choice-alert { animation: none; } }
 

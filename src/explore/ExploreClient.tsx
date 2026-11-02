@@ -45,7 +45,7 @@ type Panel =
   | { kind: "section"; id: SectionId }
   | { kind: "painting"; work: number }
   | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean; whisper?: boolean }
-  | { kind: "choice"; settings?: boolean }
+  | { kind: "choice"; settings?: boolean; confirm?: number }
   | { kind: "jabi" }
   | null;
 
@@ -902,6 +902,28 @@ export default function ExploreClient() {
           <div className="choice" role="dialog" aria-modal="true">
             <span className="choice-sys">SYS://SEOUL/CHECKPOINT · GATE-01</span>
             <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 통과 불가" : "▲ RESPONSE REQUIRED · NO PASSAGE UNTIL ANSWERED"}</span>
+            {panel.confirm !== undefined ? (
+              <>
+                <h2>{t(checkpoint.confirm[panel.confirm].title)}</h2>
+                <p>{t(checkpoint.confirm[panel.confirm].body)}</p>
+                <div className="choice-actions">
+                  <button className="choice-accept" onClick={() => choose("accept")}>
+                    {t(checkpoint.confirm[panel.confirm].stay)}
+                  </button>
+                  <button
+                    className="choice-reject"
+                    onClick={() => {
+                      sfx.denied();
+                      if (panel.confirm! + 1 < checkpoint.confirm.length) setPanel({ kind: "choice", confirm: panel.confirm! + 1 });
+                      else choose("reject");
+                    }}
+                  >
+                    {t(checkpoint.confirm[panel.confirm].go)}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
             <h2>{t(checkpoint.title)}</h2>
             <p>{t(checkpoint.body)}</p>
             {!panel.settings ? (
@@ -914,11 +936,18 @@ export default function ExploreClient() {
                     {t(ui.accept)}
                     <small>{t(checkpoint.acceptSub)}</small>
                   </button>
-                  <button className="choice-reject" onClick={() => choose("reject")}>
+                  <button
+                    className="choice-reject"
+                    onClick={() => {
+                      sfx.denied();
+                      setPanel({ kind: "choice", confirm: 0 });
+                    }}
+                  >
                     {t(ui.reject)}
                     <small>{t(checkpoint.rejectSub)}</small>
                   </button>
                 </div>
+                <p className="choice-notice">{t(checkpoint.rejectNotice)}</p>
                 {/* 현실의 쿠키 창처럼 세 번째 선택지는 작고 흐리게. 숨은 결말로 가는 길 */}
                 <button className="choice-settings" onClick={() => setPanel({ kind: "choice", settings: true })}>
                   {t(checkpoint.settings)}
@@ -942,6 +971,8 @@ export default function ExploreClient() {
                   <span className="cookie-clear">{t(checkpoint.clearOutside)}</span>
                 </div>
               </div>
+            )}
+              </>
             )}
           </div>
         </div>
