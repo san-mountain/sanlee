@@ -17,7 +17,7 @@ import QuestArrow, { type QuestTarget } from "./QuestArrow";
 import GazeHUD from "./GazeHUD";
 import { autoWalk, gaze, resetGaze } from "./gaze";
 import { finalBeam, restoreCovers } from "./Jabi";
-import BackupLine from "./BackupLine";
+import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
 
 const World = dynamic(() => import("./World"), { ssr: false });
@@ -26,6 +26,7 @@ const KEY = "sanlee-visited";
 const END_KEY = "sanlee-ending";
 const MET_KEY = "sanlee-met";
 const TALK_KEY = "sanlee-san-talked";
+const FOUND_KEY = "sanlee-endings-found";
 
 function hasWebGL() {
   try {
@@ -40,7 +41,7 @@ type Panel =
   | { kind: "section"; id: SectionId }
   | { kind: "painting"; work: number }
   | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean }
-  | { kind: "choice" }
+  | { kind: "choice"; settings?: boolean }
   | null;
 
 type EndKind = "accept" | "reject" | "ghost";
@@ -80,8 +81,8 @@ export default function ExploreClient() {
   // 수락 결말을 본 사람: 다시 오면 방공호가 아니라 줄 속에서 시작한다
   const [accepted, setAccepted] = useState(false);
   // 입장 전 쿠키 창: ask → busy(처리 중…) → yes(수락됨) → done
-  const [cookie, setCookie] = useState<"ask" | "busy" | "yes" | "done">("ask");
-  const [cookiePick, setCookiePick] = useState<"accept" | "reject" | null>(null);
+  // 발견한 결말 (거부 결말은 기록을 지우므로 남지 않는다)
+  const [found, setFound] = useState<string[]>([]);
   const rootRef = useRef<HTMLElement>(null);
   const labelEls = useRef<Record<string, HTMLDivElement | null>>({});
   const complete = visited.length >= sections.length;
@@ -99,6 +100,8 @@ export default function ExploreClient() {
       setMet(localStorage.getItem(MET_KEY) === "1");
       setTalked(localStorage.getItem(TALK_KEY) === "1");
       setAccepted(localStorage.getItem(END_KEY) === "accept");
+      const f = JSON.parse(localStorage.getItem(FOUND_KEY) || "[]");
+      if (Array.isArray(f)) setFound(f);
     } catch {}
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || "[]");
@@ -133,8 +136,11 @@ export default function ExploreClient() {
       setZone(to);
       setArrived(viaDoor);
       setTracked(false);
-      // 배전실 문을 나서는 순간 백업이 만들어진다
-      if (to === "city" && viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
+      // 배전실 문을 나서는 순간 도시가 위치를 기억한다. 첫 기억에는 '계속 걸으면 동의' 한 줄이 따라 나온다
+      // 방공호에서 방문 기록을 지웠다면 도시는 아무것도 기억하지 않고, 자비도 플레이어를 보지 못한다
+      if (to === "city") {
+        if (viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
+      }
       setTimeout(() => setFade(null), 500);
     }, 900);
   }, []);
@@ -176,22 +182,38 @@ export default function ExploreClient() {
           const n = npcs[it.npc!];
           const base = complete && n.after ? n.after : n.lines;
           // 한 번이라도 보관 처리됐다면 관리인은 알아본다
-          const lines = it.npc === "keeper" && getBackup().deaths > 0 ? [keeperAfterDeath, ...base] : base;
+          const bk = getBackup();
+          const lines = it.npc === "keeper" && bk.deaths > 0 ? [keeperAfterDeath, ...base] : base;
           setPanel({ kind: "dialog", name: n.name, lines, step: 0 });
           break;
         }
         case "door":
+          // 이산을 깨우기 전에는 방공호 밖으로 나갈 수 없다
+          if (it.to === "city" && !complete && !talked) {
+            setPanel({
+              kind: "dialog",
+              name: it.label,
+              lines: ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
+              step: 0,
+            });
+            break;
+          }
           goTo(it.to!);
           break;
         case "checkpoint":
-          // 백업을 지우고 한 번도 죽지 않은 사람: 검문소가 알아보지 못한다
-          if (complete && getBackup().deleted) startEndingRef.current("ghost");
-          else if (complete) setPanel({ kind: "choice" });
-          else setPanel({ kind: "dialog", name: it.label, lines: checkpoint.locked, step: 0 });
+          // 이산을 깨운 뒤에만 선택지가 열린다. 아직이면 무엇을 하면 되는지 그대로 알려 준다
+          if (complete || talked) setPanel({ kind: "choice" });
+          else
+            setPanel({
+              kind: "dialog",
+              name: it.label,
+              lines: checkpoint.locked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
+              step: 0,
+            });
           break;
       }
     },
-    [complete, goTo, markVisited, visited.length, met]
+    [complete, talked, goTo, markVisited, visited.length, met]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -355,6 +377,16 @@ export default function ExploreClient() {
   useEffect(() => {
     if (!ending) return;
     const { kind, step } = ending;
+    // 마지막 줄에 닿으면 발견한 결말로 남긴다 (거부 결말은 기록을 지우므로 제외)
+    if (kind !== "reject" && step === BEAT_MS[kind].length) {
+      setFound((f) => {
+        const next = f.includes(kind) ? f : [...f, kind];
+        try {
+          localStorage.setItem(FOUND_KEY, JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+    }
     if (kind === "accept") {
       if (step === 0) {
         gaze.mood = "calm";
@@ -385,7 +417,12 @@ export default function ExploreClient() {
         wipeBackup();
       }
     } else if (kind === "ghost") {
-      if (step === 0) gaze.mood = "blind";
+      if (step === 0) {
+        // 쿠키 설정에서 방문 기록을 전부 지웠다: 도시도 자비도 이 사람을 알아보지 못한다
+        // 기록을 지운다. 다음 방문까지 남기지 않도록 '삭제됨' 표시도 남기지 않고 깨끗이 비운다
+        wipeBackup();
+        gaze.mood = "blind";
+      }
       if (step === 2) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -430,9 +467,11 @@ export default function ExploreClient() {
     lock();
   };
   // 설정창의 '방문 기록 지우기': 수락한 시민에게는 줄 밖으로 돌아가는 유일한 길
+  // 설정창의 '방문 기록 지우기'는 농담일 뿐 진행을 지우지 않는다 (실수로 눌러 3/3이 사라지던 문제).
+  // 수락 결말 뒤에 줄에서 빠져나오는 용도로만 실제로 초기화한다
   const onReset = () => {
-    resetProgress();
     if (accepted) {
+      resetProgress();
       setPaused(false);
       restart();
     }
@@ -591,10 +630,10 @@ export default function ExploreClient() {
       <div className="hud-zone">
         {t(zone === "bunker" ? ui.zoneBunker : ui.zoneCity)}
         {tracked && !ending && <span className="tracked">{t(ui.tracked)}</span>}
-        {!intro && !ending && !accepted && <BackupLine zone={zone} />}
       </div>
 
       {toast && <div className="toast">{toast}</div>}
+      {!intro && !ending && !accepted && <SaveToast />}
       {notice && !panel && <div className="notice">{t(notice)}</div>}
 
       {active && near && verb && !touch && (
@@ -702,17 +741,50 @@ export default function ExploreClient() {
         <div className="choice-wrap">
           <div className="choice" role="dialog" aria-modal="true">
             <span className="choice-sys">SYS://SEOUL/CHECKPOINT · GATE-01</span>
-            <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 등급 산정 불가" : "▲ RESPONSE REQUIRED · UNGRADED UNTIL ANSWERED"}</span>
+            <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 통과 불가" : "▲ RESPONSE REQUIRED · NO PASSAGE UNTIL ANSWERED"}</span>
             <h2>{t(checkpoint.title)}</h2>
             <p>{t(checkpoint.body)}</p>
-            <div className="choice-actions">
-              <button className="choice-accept" onClick={() => choose("accept")}>
-                {t(ui.accept)}
-              </button>
-              <button className="choice-reject" onClick={() => choose("reject")}>
-                {t(ui.reject)}
-              </button>
-            </div>
+            {!panel.settings ? (
+              <>
+                <p className="choice-san">
+                  <span>{lang === "ko" ? "이산" : "San"}</span>“{t(checkpoint.sanWarn)}”
+                </p>
+                <div className="choice-actions">
+                  <button className="choice-accept" onClick={() => choose("accept")}>
+                    {t(ui.accept)}
+                    <small>{t(checkpoint.acceptSub)}</small>
+                  </button>
+                  <button className="choice-reject" onClick={() => choose("reject")}>
+                    {t(ui.reject)}
+                    <small>{t(checkpoint.rejectSub)}</small>
+                  </button>
+                </div>
+                {/* 현실의 쿠키 창처럼 세 번째 선택지는 작고 흐리게. 숨은 결말로 가는 길 */}
+                <button className="choice-settings" onClick={() => setPanel({ kind: "choice", settings: true })}>
+                  {t(checkpoint.settings)}
+                </button>
+              </>
+            ) : (
+              <div className="cookie-prefs">
+                <ul>
+                  {checkpoint.prefs.map((x, i) => (
+                    <li key={i}>
+                      <span>{t(x)}</span>
+                      <b>{t(checkpoint.prefOn)}</b>
+                    </li>
+                  ))}
+                </ul>
+                <p className="cookie-prefs-note">{t(checkpoint.prefsNote)}</p>
+                <div className="cookie-prefs-actions">
+                  <button className="btn" onClick={() => setPanel({ kind: "choice" })}>
+                    {t(checkpoint.prefsBack)}
+                  </button>
+                  <button className="cookie-clear" onClick={() => startEnding("ghost")}>
+                    {t(checkpoint.clearAll)}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -733,7 +805,7 @@ export default function ExploreClient() {
                     {ending.slots.length ? (
                       ending.slots.map((n, k) => (
                         <span key={n} style={{ animationDelay: `${0.25 + k * 0.22}s` }}>
-                          BACKUP #{n} <b>{t(checkpoint.slotErased)}</b>
+                          {lang === "ko" ? "방문 기록" : "VISIT"} #{n} <b>{t(checkpoint.slotErased)}</b>
                         </span>
                       ))
                     ) : (
@@ -751,6 +823,9 @@ export default function ExploreClient() {
             {ending.step >= (checkpoint[ending.kind] as Beat[]).length - 1 && (
               <div className="ending-actions">
                 <small>{t(ending.kind === "accept" ? checkpoint.endingAccept : ending.kind === "reject" ? checkpoint.endingReject : checkpoint.endingGhost)}</small>
+                <small className="ending-found">
+                  {ending.kind === "reject" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}
+                </small>
                 <div>
                   {ending.kind === "accept" ? (
                     <button className="btn" onClick={() => location.reload()}>
@@ -762,7 +837,7 @@ export default function ExploreClient() {
                     </button>
                   )}
                   <Link className="btn primary" href="/">
-                    {t(checkpoint.toPortfolio)}
+                    {t(ending.kind === "accept" ? ui.toPortfolio : checkpoint.toPortfolio)}
                   </Link>
                 </div>
               </div>
@@ -780,41 +855,9 @@ export default function ExploreClient() {
               <h2 className="glitch">{t(ui.title)}</h2>
               <LangToggle />
             </div>
-            {cookie !== "done" ? (
-              // 입장 전 쿠키 창: 무엇을 누르든 '수락됨'으로 끝난다
-              <div className="intro-cookie" role="dialog" aria-label={t(ui.cookieTitle)}>
-                <span className="choice-sys">{t(ui.cookieTitle)}</span>
-                <p>{t(ui.cookieBody)}</p>
-                {cookie === "ask" ? (
-                  <div className="intro-cookie-actions">
-                    {(["accept", "reject"] as const).map((k) => (
-                      <button
-                        key={k}
-                        className={`btn ${k === "accept" ? "primary" : ""}`}
-                        autoFocus={k === "accept"}
-                        onClick={() => {
-                          setCookiePick(k);
-                          setCookie("busy");
-                          setTimeout(() => setCookie("yes"), 1100);
-                          setTimeout(() => setCookie("done"), 2300);
-                        }}
-                      >
-                        {t(k === "accept" ? ui.accept : ui.reject)}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={`intro-cookie-status ${cookie}`}>
-                    {cookiePick === "reject" && <s>{t(ui.reject)}</s>} {cookie === "busy" ? t(ui.processing) : `✓ ${t(ui.acceptedAll)}`}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <>
-                {accepted ? <p>{t(ui.welcomeB)}</p> : ui.introLines.map((l, i) => <p key={i}>{t(l)}</p>)}
-                <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
-              </>
-            )}
+            {accepted ? <p>{t(ui.welcomeB)}</p> : ui.introLines.map((l, i) => <p key={i}>{t(l)}</p>)}
+            {found.length > 0 && <p className="intro-found">{t(ui.foundEndings).replace("{n}", String(found.length))}</p>}
+            <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
             <div className="panel-actions" style={{ justifyContent: "flex-end" }}>
               {/* 들어가지 않고 웹사이트로 돌아가는 보조 선택지 */}
               <Link href="/" className="btn ghost">
@@ -823,7 +866,6 @@ export default function ExploreClient() {
               <button
                 className="btn primary"
                 autoFocus
-                hidden={cookie !== "done"}
                 onClick={() => {
                   enter();
                   // 휴대폰: 시작 버튼을 누르는 순간 전체화면으로 (안드로이드 크롬 등에서 주소창이 사라진다)

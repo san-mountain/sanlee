@@ -245,7 +245,7 @@ function Gate({ lang }: { lang: Lang }) {
   const gateSign = useSign(
     [
       [lang === "ko" ? "통제 구역" : "RESTRICTED", 1.3],
-      [lang === "ko" ? "B등급 미만 시민 출입 불가" : "GRADE C AND BELOW MAY NOT PASS", 0.6],
+      [lang === "ko" ? "임시 방문자 출입 불가" : "TEMPORARY VISITORS MAY NOT PASS", 0.6],
     ],
     { color: "#ff2a3d", glow: true, mono: true, w: 1024, h: 256, bg: "#0a0204" }
   );
@@ -546,7 +546,7 @@ function Cameras({ onTracked }: { onTracked: (v: boolean) => void }) {
     });
     if (any !== tracked.current) {
       tracked.current = any;
-      onTracked(any);
+      onTracked(any && gaze.mood !== "blind");
     }
   });
   return (

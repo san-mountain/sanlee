@@ -55,7 +55,8 @@ export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<
       const m = gaze.meter / 100;
       const hot = gaze.state === "lock" || gaze.state === "fire" ? 1 : m;
       root?.style.setProperty("--gaze", String(hot));
-      const visible = gaze.inZone || gaze.meter > 1 || gaze.state === "fire" || gaze.state === "cool";
+      // 방문 기록을 지운 사람에게는 자비의 시선이 닿지 않으므로 게이지도 띄우지 않는다
+      const visible = gaze.mood !== "blind" && (gaze.inZone || gaze.meter > 1 || gaze.state === "fire" || gaze.state === "cool");
       if (wrap.current) {
         wrap.current.style.opacity = visible ? "1" : "0";
         wrap.current.dataset.state = gaze.state;
@@ -68,7 +69,7 @@ export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<
         if (label.current.textContent !== s) label.current.textContent = s;
       }
       // 처음 시선 구역에 들어가면 요령을 한 번 알려 준다
-      if (gaze.inZone && !shown.current) {
+      if (gaze.inZone && !shown.current && gaze.mood !== "blind") {
         shown.current = true;
         setTip(true);
         setTimeout(() => setTip(false), 15000);

@@ -2,24 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useLang } from "@/components/LangProvider";
-import { backupUi } from "./story";
-import { clock, getBackup, lastSlot } from "./backup";
-import type { Zone } from "./zones";
+import { backupUi, ui } from "./story";
 
-// 구역 이름 아래 흐린 한 줄. 저장되는 순간에만 2초 동안 밝아진다. 방공호 안에서는 신호가 없다.
-export default function BackupLine({ zone }: { zone: Zone }) {
+// 도시가 위치를 기억하는 순간 화면 아래 가운데에 잠깐 뜨는 알림. 세이브 포인트처럼 보이게 한다.
+// 첫 기억은 현실의 쿠키 배너를 흉내 낸 한 줄: 클릭할 필요 없이 지나가고, 거부는 검문소에서만 할 수 있다.
+export default function SaveToast() {
   const { t } = useLang();
-  const [, bump] = useState(0);
-  const [flash, setFlash] = useState<number | null>(null);
+  const [n, setN] = useState<number | null>(null);
+  const [touch, setTouch] = useState(false);
   useEffect(() => {
+    setTouch(window.matchMedia("(pointer: coarse)").matches);
     let to: ReturnType<typeof setTimeout>;
     const on = (e: Event) => {
-      bump((x) => x + 1);
-      if ((e as CustomEvent).detail === "save") {
-        setFlash(getBackup().n);
-        clearTimeout(to);
-        to = setTimeout(() => setFlash(null), 2000);
-      }
+      const d = (e as CustomEvent).detail as { kind: string; n: number } | string;
+      // 위치는 조용히 기억하고, 알림은 처음 한 번(쿠키 안내)만 띄운다
+      if (typeof d !== "object" || d.kind !== "save" || d.n !== 1) return;
+      setN(d.n);
+      clearTimeout(to);
+      to = setTimeout(() => setN(null), 6500);
     };
     window.addEventListener("sanlee-backup", on);
     return () => {
@@ -27,20 +27,19 @@ export default function BackupLine({ zone }: { zone: Zone }) {
       clearTimeout(to);
     };
   }, []);
-  const b = getBackup();
-  const slot = lastSlot();
-  let text: string;
-  let cls = "backup-line";
-  if (flash !== null) {
-    text = t(backupUi.saved).replace("{n}", String(flash));
-    cls += " flash";
-  } else if (zone === "bunker") {
-    text = t(backupUi.noSignal);
-    cls += " off";
-  } else if (b.deleted) {
-    text = t(backupUi.deleted);
-    cls += " gone";
-  } else if (slot) text = `BACKUP #${slot.n} · ${clock(slot.t)}`;
-  else text = t(backupUi.none);
-  return <div className={cls}>{text}</div>;
+  if (n === null) return null;
+  if (n === 1)
+    return (
+      <div className="save-toast cookie-notice" role="status">
+        <b>{t(ui.cookieNotice)}</b>
+        <span>{t(ui.cookieNoticeSub)}</span>
+        <em>{t(touch ? ui.cookieSettingsTouch : ui.cookieSettings)}</em>
+      </div>
+    );
+  return (
+    <div className="save-toast" role="status">
+      <b>{t(backupUi.saved)}</b>
+      {n <= 3 && <span>{t(ui.savedHint)}</span>}
+    </div>
+  );
 }
