@@ -1,5 +1,6 @@
 "use client";
 
+import { sfx } from "./sfx";
 import { useEffect, useState } from "react";
 import { useLang } from "@/components/LangProvider";
 import { backupUi, ui } from "./story";
@@ -18,6 +19,7 @@ export default function SaveToast() {
       // 위치는 조용히 기억하고, 알림은 처음 한 번(쿠키 안내)만 띄운다
       if (typeof d !== "object" || d.kind !== "save" || d.n !== 1) return;
       setN(d.n);
+      sfx.chime();
       clearTimeout(to);
       to = setTimeout(() => setN(null), 6500);
     };
