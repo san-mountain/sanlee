@@ -297,7 +297,8 @@ img { max-width: 100%; height: auto; display: block; }
 .notice { position: absolute; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 30; width: min(560px, 92vw);
   font-family: var(--mono); font-size: 12px; line-height: 1.5; text-align: center; color: #ffb02e;
   background: #0a0405cc; border-top: 1px solid #ffb02e66; border-bottom: 1px solid #ffb02e66; padding: 8px 12px;
-  pointer-events: none; animation: panelIn .4s ease-out; }
+  pointer-events: none; animation: noticeIn .4s ease-out; }
+@keyframes noticeIn { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
 .prompt { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 35;
   display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 13px; letter-spacing: .04em;
@@ -494,6 +495,10 @@ img { max-width: 100%; height: auto; display: block; }
 .explore-root .joy-zone { margin: 0 0 var(--sab) var(--sal); }
 .explore-root .panel-wrap, .explore-root .intro, .explore-root .pause-wrap, .explore-root .choice-wrap {
   top: var(--sat); right: var(--sar); bottom: var(--sab); left: var(--sal); }
+/* 결말 화면·저장 알림도 노치와 홈 막대를 피한다 */
+.explore-root .ending { padding: calc(24px + var(--sat)) calc(24px + var(--sar)) calc(24px + var(--sab)) calc(24px + var(--sal)); }
+.explore-root .ending.ending-ghost { padding-bottom: calc(7vh + var(--sab)); }
+.explore-root .save-toast { margin-bottom: var(--sab); }
 /* 세로 휴대폰: 퀘스트 표시가 구역 이름·미니맵과 겹치지 않게 한 줄 아래로 */
 @media (max-width: 480px) and (orientation: portrait) {
   .quest { top: 66px; max-width: calc(100vw - 130px); left: 14px; transform: none; overflow: hidden; }
@@ -700,7 +705,7 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .pause-row.backups .switch { white-space: nowrap; }
 .intro-cookie .choice-sys { position: static; display: block; }
 /* 거부 결말의 방공호 장면: 동상이 보이도록 글은 아래로 */
-.explore-root.thaw .ending { align-items: flex-end; padding-bottom: 7vh; }
+.explore-root.thaw .ending { align-items: flex-end; padding-bottom: calc(7vh + var(--sab)); }
 .explore-root.thaw .ending-inner, .ending.ending-ghost .ending-inner { background: none; }
 .explore-root.thaw .ending p.final { font-size: clamp(16px, 2vw, 20px); }
 .ending.ending-ghost { align-items: flex-end; padding-bottom: 7vh; }
