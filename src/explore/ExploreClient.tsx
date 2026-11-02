@@ -27,6 +27,7 @@ const KEY = "sanlee-visited";
 const END_KEY = "sanlee-ending";
 const MET_KEY = "sanlee-met";
 const TALK_KEY = "sanlee-san-talked";
+const LOGIN_KEY = "sanlee-last-login";
 const FOUND_KEY = "sanlee-endings-found";
 
 function hasWebGL() {
@@ -561,6 +562,10 @@ export default function ExploreClient() {
   // 입장: 수락한 시민은 곧장 줄 속에서 깨어난다
   const enter = () => {
     setIntro(false);
+    // 접속 기록: 들어오기만 해도 남는다. 웹사이트 꼬리말의 'delete seoul'은 이 기록이 있는 기기에만 나타난다
+    try {
+      localStorage.setItem(LOGIN_KEY, String(Date.now()));
+    } catch {}
     if (accepted) {
       gaze.mood = "calm";
       teleport.req = { x: LINE_SPOT.x, z: QUEUE_Z[30], yaw: 0 };

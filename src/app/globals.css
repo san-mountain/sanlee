@@ -487,7 +487,26 @@ img { max-width: 100%; height: auto; display: block; }
   color: #ffe6fb; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: .14em;
   text-shadow: 0 0 2px #fff, 0 0 6px #ff4fd8, 0 0 12px #ff2bd6; box-shadow: 0 0 4px #22f0ff, 0 0 10px #22f0ff88, inset 0 0 6px #22f0ff66; animation: neHum 6s infinite; }
 .forget-city:hover, .forget-city:focus-visible { color: #fff; text-shadow: 0 0 2px #fff, 0 0 8px #ff4fd8, 0 0 16px #ff2bd6, 0 0 30px #ff2bd6; box-shadow: 0 0 6px #22f0ff, 0 0 18px #22f0ffaa, inset 0 0 8px #22f0ff88; }
-.forget-city.done { cursor: default; padding: 0; border: 0; background: none; box-shadow: none; animation: none; text-shadow: none; color: var(--muted); font-family: inherit; font-weight: 400; letter-spacing: normal; font-size: inherit; }
+/* 누르면: 간판이 몇 번 깜빡이다 꺼지고 */
+.forget-city.dying { pointer-events: none; animation: forgetDie .9s steps(1) forwards; }
+@keyframes forgetDie {
+  0% { opacity: 1; } 10% { opacity: .2; text-shadow: none; } 18% { opacity: 1; } 30% { opacity: .1; text-shadow: none; box-shadow: none; }
+  38% { opacity: .9; } 52% { opacity: .05; text-shadow: none; box-shadow: none; } 60% { opacity: .5; }
+  72%, 100% { opacity: 0; text-shadow: none; box-shadow: none; } }
+/* 남아 있던 기록이 한 줄씩 나타나며 줄이 그어진다. 마지막 '기억'만 지워지지 않는다 */
+.forget-log { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 10px; border-radius: 4px; background: #0d0716;
+  border: 1px solid #7ff6ff55; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; line-height: 1.5; transition: background .8s, border-color .8s, padding .8s; }
+.forget-log > span { animation: forgetIn .25s ease-out both; }
+.forget-log .gone { color: #ffb6ef; text-decoration: line-through; text-decoration-color: #22f0ff; text-decoration-thickness: 1px;
+  animation: forgetIn .25s ease-out both, forgetStrike .35s .2s ease-in forwards; }
+.forget-log .kept { color: #ffffff; text-shadow: 0 0 6px #ff2bd6; }
+.forget-log .final { margin-top: 4px; color: #7ff6ff; }
+.forget-log.done { background: transparent; border-color: transparent; padding: 0; }
+.forget-log.done .gone { display: none; }
+.forget-log.done .kept { color: var(--ink); text-shadow: none; }
+.forget-log.done .final { margin-top: 0; color: var(--muted); font-family: inherit; letter-spacing: normal; }
+@keyframes forgetIn { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: none; } }
+@keyframes forgetStrike { to { opacity: .35; } }
 
 /* 모바일 안전 영역: 전체화면·홈 화면 앱으로 볼 때 노치, 둥근 모서리, 홈 막대를 피한다.
    평소(주소창이 있는 브라우저)에는 env() 값이 0이라 아무것도 바뀌지 않는다. */
