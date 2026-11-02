@@ -29,6 +29,7 @@ const MET_KEY = "sanlee-met";
 const TALK_KEY = "sanlee-san-talked";
 const LOGIN_KEY = "sanlee-last-login";
 const PROMISE_KEY = "sanlee-promise";
+const FORGOT_KEY = "sanlee-forgotten";
 const FOUND_KEY = "sanlee-endings-found";
 
 function hasWebGL() {
@@ -172,7 +173,9 @@ export default function ExploreClient() {
           setPanel({ kind: "painting", work: it.work! });
           break;
         case "statue":
-          if (it.id === "san")
+          // 기억으로 깨어난 이산은 약속을 되풀이하지 않는다 (이미 지키고 돌아온 사람이니까)
+          if (it.id === "san" && ghost) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: [whisper.awakeLine], step: 0 });
+          else if (it.id === "san")
             setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: getBackup().deaths > 0 ? [...sanCityLines, sanAfterDeath] : sanCityLines, step: 0 });
           else if (ghost) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: [whisper.awakeLine], step: 0 });
           else if (complete) {
@@ -184,7 +187,12 @@ export default function ExploreClient() {
           }
           else {
             // 기록이 하나도 없는 방문자에게만 동상에게 말을 건넬 수 있는 칸이 열린다
-            const blank = visited.length === 0 && found.length === 0 && getBackup().n === 0;
+            // 웹사이트 꼬리말에서 기록을 지우고 온 사람만 (처음 온 사람, 거부나 재시작으로 비워진 사람은 아님)
+            let forgot = false;
+            try {
+              forgot = localStorage.getItem(FORGOT_KEY) !== null;
+            } catch {}
+            const blank = forgot && visited.length === 0 && found.length === 0 && getBackup().n === 0;
             setPanel({ kind: "dialog", name: plaque[0], lines: statueLines[Math.min(visited.length, statueLines.length - 2)], step: 0, plaque: true, whisper: blank });
             setMet(true);
             try {
@@ -450,6 +458,9 @@ export default function ExploreClient() {
         // 기록을 지운다. 다음 방문까지 남기지 않도록 '삭제됨' 표시도 남기지 않고 깨끗이 비운다
         wipeBackup();
         gaze.mood = "blind";
+        try {
+          localStorage.removeItem(FORGOT_KEY);
+        } catch {}
       }
       // 3번째 줄(이산의 말)에서 굳어 가던 화면이 풀리고, 다음 줄에서 둘이 문을 지나 걸어 나간다
       if (step === 3) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };

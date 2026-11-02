@@ -8,6 +8,7 @@ import { useLang } from "./LangProvider";
 // 누르면 간판이 깜빡이다 꺼지고, 이 기기에 남은 도시의 기록이 한 줄씩 나타났다 지워진다. 실제로 지운다.
 // 언어·효과음 설정은 기록이 아니라서 남긴다
 const PROMISE_KEY = "sanlee-promise";
+const FORGOT_KEY = "sanlee-forgotten";
 const CITY_KEYS = [
   PROMISE_KEY,
   "sanlee-last-login",
@@ -80,6 +81,8 @@ export default function ForgetCity() {
     setLines(ls);
     try {
       CITY_KEYS.forEach((k) => localStorage.removeItem(k));
+      // 도시 밖(작가의 집)에서 지웠다는 표시만 남긴다: 동상에게 말을 건넬 칸은 이 표시가 있을 때만 열린다
+      localStorage.setItem(FORGOT_KEY, "1");
     } catch {}
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) {
