@@ -816,7 +816,7 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .works-bar { border-bottom: 0; flex-wrap: nowrap; align-items: center; }
 .works-bar .cat-tabs { min-width: 0; }
 .page > h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; }
-@media (max-width: 520px) { .works-bar .cat-tabs { gap: 18px; } }
+@media (max-width: 520px) { .cat-tabs { gap: 18px; } }
 /* 〈제목〉: 전각 괄호의 빈 반쪽을 걷어 내 왼쪽이 다른 줄과 맞도록 */
 .caption .ct, .caption strong, .wi-title { font-feature-settings: "halt"; }
 
@@ -893,7 +893,7 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 
 /* Works 보기 드롭다운: 아이콘만. 버튼은 탭 글자와 같은 줄 높이에 세로 가운데 */
 .works-bar { align-items: center; }
-.works-bar .cat-tabs button { line-height: 1.4; }
+.cat-tabs button { line-height: 1.4; }
 .view-menu { position: relative; flex: none; display: flex; align-items: center; padding-bottom: var(--s1); }
 .view-menu-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; padding: 4px 2px 4px 4px; color: var(--muted); }
 .view-menu-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -902,8 +902,8 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .view-menu-list button { all: unset; cursor: pointer; display: inline-flex; padding: 7px; color: var(--muted); }
 .view-menu-list button:hover, .view-menu-list button:focus-visible { background: #0000000a; }
 .view-menu-list button.on { background: #0000000f; }
-@media (max-width: 379px) { .works-bar .cat-tabs { gap: 14px; } }
-@media (max-width: 340px) { .works-bar .cat-tabs button { font-size: 15px; } .works-bar .cat-tabs { gap: 12px; } }
+@media (max-width: 379px) { .cat-tabs { gap: 14px; } }
+@media (max-width: 340px) { .cat-tabs button { font-size: 15px; } .cat-tabs { gap: 12px; } }
 /* 모바일 작품 확대 화면: 좌우 넘김 버튼을 그림 위가 아니라 화면 아래 양쪽으로 */
 @media (max-width: 719px) {
   .lightbox { padding-bottom: 84px; }
@@ -953,3 +953,5 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 /* 空 원이 펼쳐진 동안 화면을 덮는 투명한 막 (바깥 터치는 접기만) */
 .seal-veil { display: none; }
 @media (max-width: 719px) { .seal-veil { display: block; position: fixed; inset: 0; z-index: 29; background: transparent; -webkit-tap-highlight-color: transparent; } }
+/* Works와 Writing의 하위 탭을 같은 높이·같은 위치에 (Works는 오른쪽 보기 버튼 높이 34px에 맞춘다) */
+.cat-tabs { min-height: 34px; align-items: stretch; }
