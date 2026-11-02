@@ -511,6 +511,20 @@ img { max-width: 100%; height: auto; display: block; }
 /* 모바일 안전 영역: 전체화면·홈 화면 앱으로 볼 때 노치, 둥근 모서리, 홈 막대를 피한다.
    평소(주소창이 있는 브라우저)에는 env() 값이 0이라 아무것도 바뀌지 않는다. */
 .explore-root { --sat: env(safe-area-inset-top, 0px); --sar: env(safe-area-inset-right, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); }
+/* 안드로이드 전체화면(갤럭시 펀치홀 등)은 env() 값을 0으로 주는 경우가 있어, 터치 기기 전체화면에서는 최소 여백을 둔다.
+   세로: 위쪽 카메라 구멍, 가로: 양옆 카메라 구멍 */
+@media (pointer: coarse) and (orientation: portrait) {
+  :root:fullscreen .explore-root { --sat: max(env(safe-area-inset-top, 0px), 34px); }
+}
+@media (pointer: coarse) and (orientation: portrait) and (display-mode: fullscreen) {
+  .explore-root { --sat: max(env(safe-area-inset-top, 0px), 34px); }
+}
+@media (pointer: coarse) and (orientation: landscape) {
+  :root:fullscreen .explore-root { --sal: max(env(safe-area-inset-left, 0px), 34px); --sar: max(env(safe-area-inset-right, 0px), 34px); }
+}
+@media (pointer: coarse) and (orientation: landscape) and (display-mode: fullscreen) {
+  .explore-root { --sal: max(env(safe-area-inset-left, 0px), 34px); --sar: max(env(safe-area-inset-right, 0px), 34px); }
+}
 .explore-root .hud { margin: var(--sat) var(--sar) 0 var(--sal); }
 .explore-root .hud-zone { margin: var(--sat) 0 0 var(--sal); }
 .explore-root .minimap { margin: var(--sat) var(--sar) 0 0; }
