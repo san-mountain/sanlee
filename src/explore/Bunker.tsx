@@ -855,7 +855,7 @@ function WallText({ lang }: { lang: Lang }) {
   );
 }
 
-export default function Bunker({ lang, visited, onTap, secondStatue }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean }) {
+export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -889,7 +889,7 @@ export default function Bunker({ lang, visited, onTap, secondStatue }: { lang: L
             <Statue restored={0} lang={lang} second />
           </group>
         </>
-      ) : visited.length >= TERMINALS.length ? (
+      ) : awake || visited.length >= TERMINALS.length ? (
         <>
           <Pedestal lang={lang} empty />
           <SanNPC mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[0, 3]} />

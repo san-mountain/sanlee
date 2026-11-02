@@ -1,5 +1,6 @@
 import { contact } from "@/data/site";
 import EmailLink from "./EmailLink";
+import ForgetCity from "./ForgetCity";
 
 // 모든 일반 페이지 아래의 얇은 꼬리말: 이름과 연락처만
 export default function SiteFooter() {
@@ -13,6 +14,7 @@ export default function SiteFooter() {
             {l.label}
           </a>
         ))}
+        <ForgetCity />
       </span>
     </footer>
   );

@@ -206,7 +206,27 @@ export const statueLines: L[][] = [
 export const sanCityLines: L[] = [
   { ko: "다들 같은 쪽을 보고 서 있지. 나도 저기 서 있었어.", en: "They all face the same way. I used to stand there too." },
   { ko: "검문소는 큰길 끝이야. 서두를 필요는 없어.", en: "The checkpoint is at the end of the avenue. No need to hurry." },
+  { ko: "혹시 네가 기록을 전부 지우고 다시 오면, 나는 널 못 알아볼 거야. 도시가 날 깨운 게 아니라 기록이 날 깨운 거니까.", en: "If you ever erase every record and come back, I won't recognise you. It wasn't the city that woke me. It was the records." },
+  { ko: "그땐 동상한테 이렇게 말해 줘. '그대는 부를 수 없기에 아름답다.'", en: "Then say this to the statue: 'Beautiful, because you cannot be called.'" },
 ];
+
+// 숨은 결말 열쇠: 기기가 아니라 사람이 기억하는 말. 기록이 하나도 없는 방문자만 동상에게 건넬 수 있다
+export const whisper = {
+  // 이산의 시 〈이름 없는 사랑〉의 마지막 줄
+  // 띄어쓰기·문장부호·대소문자는 무시하고 비교한다
+  accept: ["그대는부를수없기에아름답다", "부를수없기에아름답다", "그대는부를수없어서아름답다", "beautifulbecauseyoucannotbecalled", "beautifulbecauseyoucantbecalled"],
+  prompt: { ko: "동상에게 말을 건넨다…", en: "Say something to the statue…" } as L,
+  say: { ko: "말하기", en: "Say" } as L,
+  silent: { ko: "동상은 대답하지 않는다.", en: "The statue does not answer." } as L,
+  // 말을 알아들은 이산: 기록이 아니라 기억으로 깨어난다
+  wake: [
+    { ko: "…", en: "…" },
+    { ko: "기록엔 아무것도 없는데… 너, 나 알지?", en: "There's nothing in the records… but you know me, don't you?" },
+    { ko: "그 말, 내가 한 거야. 어딘가에서. 기억은 안 나는데, 알 것 같아.", en: "I said that. Somewhere. I don't remember it, but I know it." },
+    { ko: "가자. 기록 없는 사람 둘이야. 이번엔 아무도 우릴 못 봐.", en: "Let's go. Two people with no record. This time nobody can see us." },
+  ] as L[],
+  awakeLine: { ko: "가자. 이번엔 아무도 우릴 못 봐.", en: "Let's go. This time nobody can see us." } as L,
+};
 // 한 번이라도 연결이 끊겼다면 지상의 이산이 덧붙이는 말
 export const sanAfterDeath: L = { ko: "너는 쓰러져도 금방 다시 오더라. 도시가 널 기억하니까. 부럽지는 않아. 그만큼 지켜본다는 뜻이니까.", en: "You fall and you're right back. The city remembers you. I'm not jealous. It means it's watching that closely." };
 
@@ -219,7 +239,7 @@ export const checkpoint = {
     { ko: "[검문소] 동행인 확인 중… 이산의 본인 인증이 끝나지 않았습니다. ({n}/3)", en: "[CHECKPOINT] Checking companion… San's identity check is not finished. ({n}/3)" },
     { ko: "방공호로 돌아가 남은 터미널을 열어 이산을 깨우자. 위쪽 화살표가 길을 알려 준다.", en: "Go back to the shelter and open the remaining terminals to wake San. The arrow at the top shows the way." },
   ] as L[],
-  // 세 번째 선택지: 현실의 쿠키 창처럼 작게 숨겨 둔 '설정'. 여기서 기록을 전부 지우면 숨은 결말
+  // 세 번째 선택지: 현실의 쿠키 창처럼 작게 숨겨 둔 '설정'. 기록 삭제는 여기서 안 되고, 도시 밖(웹사이트)에서만 된다
   settings: { ko: "쿠키 설정", en: "Cookie settings" },
   prefs: [
     { ko: "필수 쿠키 (도시 운영)", en: "Essential (running the city)" },
@@ -230,7 +250,7 @@ export const checkpoint = {
   prefOn: { ko: "켜짐 · 변경 불가", en: "ON · locked" },
   prefsNote: { ko: "모든 쿠키는 시민의 편의를 위해 켜져 있습니다.", en: "All cookies are on, for your convenience." },
   prefsBack: { ko: "뒤로", en: "Back" },
-  clearAll: { ko: "방문 기록 전부 삭제", en: "Clear all visit history" },
+  clearOutside: { ko: "방문 기록 삭제는 이 도시 밖에서만 할 수 있습니다.", en: "Visit history can only be deleted outside this city." },
   title: { ko: "이 기기를 기억할까요?", en: "REMEMBER THIS DEVICE?" },
   sanWarn: {
     ko: "수락하면 평생 자동 로그인이야. 거부하면? 활동 확인 불가. 그다음은… 나 봤지?",
@@ -252,17 +272,20 @@ export const checkpoint = {
   ] as Beat[],
   reject: [
     { ko: "거부 의사를 기억하기 위해 쿠키 1개를 저장했습니다. 그 밖의 활동은 확인되지 않습니다.", en: "One cookie has been stored to remember your refusal. No other activity found." },
+    { ko: "[대자비] 거부자 1명 확인. 동행인 1명 포함. 함께 보관 처리합니다.", en: "[GREAT COMPASSION] 1 refuser confirmed. 1 companion included. Archiving both." },
     { ko: "", en: "", slots: true },
     { ko: "끝까지 '모두 거부'를 누른 두 번째 사람.", en: "The second person who pressed 'Reject all' to the end.", plaque: true },
-    { ko: "이번에는 혼자가 아니었다.", en: "This time, they were not alone." },
+    { ko: "동상 아래, 거부 의사를 기억하는 쿠키 1개가 아직 남아 있다.", en: "Beneath the statue, one cookie that remembers the refusal is still there." },
     { ko: "도시는 이 결말을 기억하지 않습니다. 당신이 거부했으니까.", en: "The city will not remember this ending. Because you refused." },
   ] as Beat[],
+  // 숨은 결말: 기록을 지우면 도시의 규칙대로 멈춰야 한다. 그런데 이산이 기억하고 있어서 멈추지 않는다.
+  // 플레이어가 터미널로 이산을 다시 '확인'해 깨웠듯이, 이번엔 이산이 플레이어를 확인해 준다
   ghost: [
-    { ko: "[검문소] 방문 기록 없음.", en: "[CHECKPOINT] No visit history." },
-    { ko: "기록이 없는 방문자에게는 동의를 구할 수 없습니다.", en: "Consent cannot be requested from a visitor with no record." },
-    { ko: "문이 열린다.", en: "The gate opens." },
-    { ko: "대자비는 눈을 뜬 채 멈춰 있다. 기록에 없는 사람은 볼 수 없다.", en: "The Great Compassion stands still, eyes open. It cannot see anyone with no record." },
-    { ko: "아무 기록도 없으니까… 그냥 사람이네.", en: "No record at all… just a person.", say: true },
+    { ko: "[검문소] 방문 기록 0건. 이 방문자의 활동을 확인할 수 없습니다.", en: "[CHECKPOINT] 0 visits on record. This visitor's activity cannot be confirmed." },
+    { ko: "확인되지 않는 시민은 그 자리에 멈춘 것으로 처리됩니다.", en: "A citizen who cannot be confirmed is processed as stopped where they stand." },
+    { ko: "괜찮아, 움직여 봐. 대자비는 기록 없는 사람을 못 봐. 못 보면 쏠 수도 없어.", en: "It's okay, try moving. The Great Compassion can't see anyone with no record. What it can't see, it can't shoot.", say: true },
+    { ko: "검문소는 '통과자 없음'을 기록했다. 대자비는 빈 길을 바라보고 있다.", en: "The checkpoint logs 'no one passed'. The Great Compassion keeps watching an empty road." },
+    { ko: "도시의 기록에는 아무도 남지 않았다. 두 사람은 그 빈칸 속으로 걸어 나갔다.", en: "No one is left in the city's records. The two of them walk out into the blank." },
   ] as Beat[],
   slotErased: { ko: "삭제됨", en: "DELETED" },
   noSlots: { ko: "기억 없음", en: "NO MEMORY" },
@@ -288,6 +311,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[] }> = {
       { ko: "봤어? 동상이 일어났어. 몇 년을 저렇게 앉아 있었는데.", en: "Did you see? The statue stood up. Years, it sat like that." },
       { ko: "이산이 지상에 올라가겠대. 혼자 보내긴 싫고… 네가 같이 가 주면 좋겠어.", en: "San says they're going up to the surface. I don't want them going alone… I'd like you to go with them." },
       { ko: "방폭문은 저 뒤야. 올라가면 골목 끝 배전실 문으로 나와. 카메라랑 눈은 마주치지 말고.", en: "The blast door's behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
+      { ko: "…하나만 더. 도시의 기록은 도시 안에서는 못 지워. 정말 지우고 싶으면 도시 밖으로 나가 봐. 이 도시를 만든 사람의 집으로.", en: "…One more thing. The city's records can't be erased from inside the city. If you really want them gone, step outside it. Go to the house of the one who made this city." },
     ],
   },
   r07: {

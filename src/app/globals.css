@@ -481,6 +481,10 @@ img { max-width: 100%; height: auto; display: block; }
 .site-footer a { color: inherit; text-decoration: none; }
 .site-footer a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 .site-footer-links { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s2); }
+/* 숨은 결말의 열쇠: 눈에 띄지 않게, 꼬리말 글씨보다 한 톤 흐리게 */
+.forget-city { all: unset; cursor: pointer; color: #c4c2bb; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; }
+.forget-city:hover, .forget-city:focus-visible { color: var(--muted); text-decoration: line-through; }
+.forget-city.done { cursor: default; color: var(--muted); font-family: inherit; text-decoration: none; }
 
 /* 모바일 안전 영역: 전체화면·홈 화면 앱으로 볼 때 노치, 둥근 모서리, 홈 막대를 피한다.
    평소(주소창이 있는 브라우저)에는 env() 값이 0이라 아무것도 바뀌지 않는다. */
@@ -681,6 +685,8 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 @keyframes slotErase { 0% { opacity: 1; text-decoration: none; } 40% { opacity: 1; text-decoration: line-through; } 100% { opacity: .18; text-decoration: line-through; } }
 .ending.ending-ghost p { color: #dfe6ea; }
 .ending-ghost .canvas-wrap { filter: saturate(.55) brightness(1.05); }
+/* 숨은 결말: '멈춘 것으로 처리' 되는 순간 화면이 굳어 가다가, 이산의 말에 다시 풀린다 */
+.ending-ghost.ghost-freeze .canvas-wrap { filter: grayscale(1) contrast(1.15) brightness(.75); transition: filter 3s ease; }
 .explore-root.final-flash::after { content: ""; position: absolute; inset: 0; z-index: 57; pointer-events: none; animation: finalFlash 2.2s ease-out forwards; }
 @keyframes finalFlash { 0% { background: #fff; } 15% { background: #ff1030; } 100% { background: #000000f0; } }
 .ending.ending-accept p.say { color: #fff8e6; }
@@ -878,6 +884,13 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .cookie-prefs-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 12px; }
 .cookie-clear { all: unset; cursor: pointer; font-family: var(--mono); font-size: 10.5px; color: #6f6888; text-decoration: underline; text-underline-offset: 3px; }
 .cookie-clear:hover, .cookie-clear:focus-visible { color: #ff8a96; }
+span.cookie-clear { cursor: default; text-decoration: none; }
+/* 동상에게 말 건네기: 기록이 없는 방문자에게만 보인다 */
+.whisper { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 4px; }
+.whisper input { flex: 1 1 180px; min-width: 0; font: inherit; font-size: 14px; color: var(--fg); background: #0000004d; border: 0; border-bottom: 1px solid #ff2bd666; padding: 8px 2px; outline: none; }
+.whisper input:focus { border-bottom-color: var(--pink); }
+.whisper input::placeholder { color: #8d7fae; font-style: italic; }
+.whisper small { flex-basis: 100%; color: var(--dim); font-family: var(--mono); font-size: 11px; }
 /* 좁은 폰(380px 미만): 메뉴와 DELETE SEOUL을 한 줄에 두기 위해 간격을 줄이고 空 글자는 뺀다.
 */
 @media (max-width: 379px) {
