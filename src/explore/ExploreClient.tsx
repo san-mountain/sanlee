@@ -193,7 +193,7 @@ export default function ExploreClient() {
           break;
         case "checkpoint":
           // 이산을 깨운 뒤에만 선택지가 열린다. 아직이면 무엇을 하면 되는지 그대로 알려 준다
-          if (complete) setPanel({ kind: "choice" });
+          if (complete || talked) setPanel({ kind: "choice" });
           else
             setPanel({
               kind: "dialog",
@@ -204,7 +204,7 @@ export default function ExploreClient() {
           break;
       }
     },
-    [complete, goTo, markVisited, visited.length, met]
+    [complete, talked, goTo, markVisited, visited.length, met]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -457,9 +457,11 @@ export default function ExploreClient() {
     lock();
   };
   // 설정창의 '방문 기록 지우기': 수락한 시민에게는 줄 밖으로 돌아가는 유일한 길
+  // 설정창의 '방문 기록 지우기'는 농담일 뿐 진행을 지우지 않는다 (실수로 눌러 3/3이 사라지던 문제).
+  // 수락 결말 뒤에 줄에서 빠져나오는 용도로만 실제로 초기화한다
   const onReset = () => {
-    resetProgress();
     if (accepted) {
+      resetProgress();
       setPaused(false);
       restart();
     }
