@@ -3,10 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "./LangProvider";
 
-// 꼬리말 끝의 'delete seoul': 도시에 접속한 기록이 있는 기기에서만 보이는 작은 네온 간판.
+// 꼬리말 끝의 'delete seoul': 지상에서 이산이 '그 문장'을 남긴 기기에서만 켜지는 작은 네온 간판.
+// (관리인의 단서 "도시 밖, 이 도시를 만든 사람의 집으로"를 들은 뒤에야 집 앞에 불이 켜진다)
 // 누르면 간판이 깜빡이다 꺼지고, 이 기기에 남은 도시의 기록이 한 줄씩 나타났다 지워진다. 실제로 지운다.
 // 언어·효과음 설정은 기록이 아니라서 남긴다
+const PROMISE_KEY = "sanlee-promise";
 const CITY_KEYS = [
+  PROMISE_KEY,
   "sanlee-last-login",
   "sanlee-visited",
   "sanlee-met",
@@ -65,7 +68,7 @@ export default function ForgetCity() {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => {
     try {
-      setHas(CITY_KEYS.some((k) => localStorage.getItem(k) !== null));
+      setHas(localStorage.getItem(PROMISE_KEY) !== null);
     } catch {}
     const ts = timers.current;
     return () => ts.forEach(clearTimeout);

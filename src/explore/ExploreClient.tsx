@@ -28,6 +28,7 @@ const END_KEY = "sanlee-ending";
 const MET_KEY = "sanlee-met";
 const TALK_KEY = "sanlee-san-talked";
 const LOGIN_KEY = "sanlee-last-login";
+const PROMISE_KEY = "sanlee-promise";
 const FOUND_KEY = "sanlee-endings-found";
 
 function hasWebGL() {
@@ -391,6 +392,14 @@ export default function ExploreClient() {
   // 결말 연출: 줄마다 장면이 바뀐다
   const [secondStatue, setSecondStatue] = useState(false);
   const [whisperMiss, setWhisperMiss] = useState(false);
+  // 이산이 '그 문장'을 남긴 순간: 웹사이트 꼬리말의 delete seoul 간판이 이때부터 켜진다
+  const promiseLine = sanCityLines[sanCityLines.length - 1];
+  useEffect(() => {
+    if (panel?.kind === "dialog" && panel.lines[panel.step] === promiseLine)
+      try {
+        localStorage.setItem(PROMISE_KEY, "1");
+      } catch {}
+  }, [panel, promiseLine]);
   const [flash, setFlash] = useState(false);
   const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
