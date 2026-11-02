@@ -985,3 +985,11 @@ span.cookie-clear { cursor: default; text-decoration: none; }
   .choice-wrap.jabi-wrap { align-items: center; justify-content: flex-end; padding: 0 4vw 0 0; background: linear-gradient(to right, transparent 45%, #07030fcc); }
   .choice-wrap.jabi-wrap .jabi-intro { width: min(440px, 38vw); max-height: 92vh; overflow: auto; }
 }
+
+/* 시·일기 본문: 모바일에서 본문 폭을 조금 넓힌다.
+   글자 크기는 PC와 같은 17px을 유지하고, 모바일에서는 왼쪽 들여쓰기만 없앤다.
+   줄바꿈은 한국어 본문 관례대로 어절 단위(keep-all), 아주 긴 낱말만 넘칠 때 끊는다. */
+.poems .stanza { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+@media (max-width: 719px) {
+  .poems .poem-body { padding-left: 0; }
+}
