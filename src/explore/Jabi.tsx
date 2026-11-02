@@ -101,7 +101,7 @@ function GazeSystem() {
     const cover = blockedBy(px, pz, HEAD);
     gaze.hiddenBy = inLine ? "line" : cover >= 0 ? "cover" : "";
     // 방문 기록을 지운 사람은 도시의 기억에 없으므로 자비의 눈에도 보이지 않는다
-    gaze.seen = inZone && !inLine && cover < 0 && gaze.mood !== "blind";
+    gaze.seen = inZone && !inLine && cover < 0 && gaze.mood !== "blind" && !gaze.intro;
 
     if (gaze.state === "fire") {
       runBeam(dt, now);

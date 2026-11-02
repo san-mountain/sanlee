@@ -32,7 +32,9 @@ function TypeLine({ text, delay = 0, className }: { text: string; delay?: number
 
 type Dead = { kind: "restore"; line: string; cost: boolean } | { kind: "gone" };
 
-export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<HTMLElement | null>; onGone: () => void }) {
+export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.RefObject<HTMLElement | null>; onGone: () => void; onIntro?: () => void }) {
+  const introRef = useRef(onIntro);
+  introRef.current = onIntro;
   const { t } = useLang();
   const goneRef = useRef(onGone);
   goneRef.current = onGone;
@@ -69,10 +71,18 @@ export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<
         if (label.current.textContent !== s) label.current.textContent = s;
       }
       // 처음 시선 구역에 들어가면 요령을 한 번 알려 준다
+      // 처음 시선 구역에 들어서면 소개 장면을 연다 (브라우저마다 한 번). 이미 봤다면 짧은 요령만
       if (gaze.inZone && !shown.current && gaze.mood !== "blind") {
         shown.current = true;
-        setTip(true);
-        setTimeout(() => setTip(false), 15000);
+        let seenIntro = false;
+        try {
+          seenIntro = localStorage.getItem("sanlee-jabi-intro") === "1";
+        } catch {}
+        if (!seenIntro && introRef.current) introRef.current();
+        else {
+          setTip(true);
+          setTimeout(() => setTip(false), 15000);
+        }
       }
       if (gaze.meter >= 35) armed = true;
       if (armed && gaze.meter <= 0.5 && gaze.inZone && gaze.hiddenBy && !gaze.dead) {

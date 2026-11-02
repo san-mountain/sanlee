@@ -67,9 +67,25 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       s.pitch = 0;
       teleport.req = null;
     }
-    // 시점
-    s.yaw += input.look.yaw + turnKeys() * dt * 1.8;
-    s.pitch = Math.max(-1.1, Math.min(1.25, s.pitch + input.look.pitch));
+    // 시점. 소개 장면 중에는 입력을 버리고 대상 쪽으로 천천히 고개를 돌린다
+    const la = gaze.lookAt;
+    if (la) {
+      const k = Math.min(1, dt * 1.6);
+      const want = Math.atan2(-(la.x - s.x), -(la.z - s.z));
+      let dy = want - s.yaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      s.yaw += dy * k;
+      const wantP = Math.min(1.1, Math.atan2(la.y - EYE, Math.hypot(la.x - s.x, la.z - s.z)));
+      s.pitch += (wantP - s.pitch) * k;
+      // 다 돌아봤으면 알린다 (소개 팝업이 이때 뜬다)
+      if (Math.abs(dy) < 0.02 && Math.abs(wantP - s.pitch) < 0.02) {
+        gaze.lookAt = null;
+        window.dispatchEvent(new Event("sanlee-look-done"));
+      }
+    } else {
+      s.yaw += input.look.yaw + turnKeys() * dt * 1.8;
+      s.pitch = Math.max(-1.1, Math.min(1.25, s.pitch + input.look.pitch));
+    }
     input.look.yaw = 0;
     input.look.pitch = 0;
 
