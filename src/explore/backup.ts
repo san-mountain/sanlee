@@ -18,7 +18,8 @@ export function getBackup(): Backup {
   if (cache) return cache;
   try {
     const v = JSON.parse(localStorage.getItem(BACKUP_KEY) || "null");
-    cache = v && typeof v.n === "number" ? { ...empty(), ...v } : empty();
+    // 예전 버전에서 남은 '삭제됨' 표시는 무시한다 (남아 있으면 자비가 계속 꺼져 있었다)
+    cache = v && typeof v.n === "number" ? { ...empty(), ...v, deleted: false } : empty();
   } catch {
     cache = empty();
   }

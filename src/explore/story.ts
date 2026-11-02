@@ -47,6 +47,10 @@ export const ui = {
     { ko: "누구의 계정인지부터 알아야 할 것 같다. 가운데 동상에게 먼저 말을 걸어 보자.", en: "First, find out whose account this is. Speak to the statue in the middle." },
   ] as L[],
   toPortfolio: { ko: "웹사이트로 가기", en: "Go to the website" },
+  exitLocked: [
+    { ko: "[방폭문] 잠김. 동행인 없이 지상으로 나갈 수 없습니다.", en: "[BLAST DOOR] Locked. You may not go up without a companion." },
+    { ko: "먼저 가운데 동상, 이산을 깨우자. 터미널 세 대를 열면 된다. ({n}/3)", en: "First wake San, the statue in the middle. Open the three terminals. ({n}/3)" },
+  ] as L[],
   zoneBunker: { ko: "B-7 방공호 · 지하 40m", en: "SHELTER B-7 · 40m BELOW" },
   zoneCity: { ko: "지상 · 부유 감시구역 7 · 고도 2,400m", en: "SURFACE · FLOATING ZONE 7 · ALT 2,400m" },
   goingUp: { ko: "지상으로 올라가는 중…", en: "Ascending to the surface…" },

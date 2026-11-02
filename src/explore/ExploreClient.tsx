@@ -18,7 +18,7 @@ import GazeHUD from "./GazeHUD";
 import { autoWalk, gaze, resetGaze } from "./gaze";
 import { finalBeam, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
-import { deleteBackup, getBackup, saveBackup, wipeBackup } from "./backup";
+import { getBackup, saveBackup, wipeBackup } from "./backup";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -139,8 +139,7 @@ export default function ExploreClient() {
       // 배전실 문을 나서는 순간 도시가 위치를 기억한다. 첫 기억에는 '계속 걸으면 동의' 한 줄이 따라 나온다
       // 방공호에서 방문 기록을 지웠다면 도시는 아무것도 기억하지 않고, 자비도 플레이어를 보지 못한다
       if (to === "city") {
-        if (getBackup().deleted) gaze.mood = "blind";
-        else if (viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
+        if (viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
       }
       setTimeout(() => setFade(null), 500);
     }, 900);
@@ -189,6 +188,16 @@ export default function ExploreClient() {
           break;
         }
         case "door":
+          // 이산을 깨우기 전에는 방공호 밖으로 나갈 수 없다
+          if (it.to === "city" && !complete && !talked) {
+            setPanel({
+              kind: "dialog",
+              name: it.label,
+              lines: ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
+              step: 0,
+            });
+            break;
+          }
           goTo(it.to!);
           break;
         case "checkpoint":
@@ -410,7 +419,8 @@ export default function ExploreClient() {
     } else if (kind === "ghost") {
       if (step === 0) {
         // 쿠키 설정에서 방문 기록을 전부 지웠다: 도시도 자비도 이 사람을 알아보지 못한다
-        deleteBackup();
+        // 기록을 지운다. 다음 방문까지 남기지 않도록 '삭제됨' 표시도 남기지 않고 깨끗이 비운다
+        wipeBackup();
         gaze.mood = "blind";
       }
       if (step === 2) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
