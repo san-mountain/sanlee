@@ -1,5 +1,6 @@
 "use client";
 
+import { setSfx, sfx, sfxOn } from "./sfx";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LangToggle, useLang } from "@/components/LangProvider";
@@ -24,6 +25,7 @@ export default function PauseMenu({
   const { t, lang } = useLang();
   const [sens, setSens] = useState(input.sens);
   const [bob, setBob] = useState(input.bob);
+  const [sound, setSound] = useState(sfxOn());
   const [note, setNote] = useState<string | null>(null);
   const [free, setFree] = useState(true);
   const [line, setLine] = useState(0);
@@ -93,6 +95,21 @@ export default function PauseMenu({
               }}
             >
               {t(bob ? pause.on : pause.off)}
+            </button>
+          </div>
+
+          <div className="pause-row">
+            <span>{t(pause.sound)}</span>
+            <button
+              type="button"
+              className={`switch ${sound ? "on" : ""}`}
+              onClick={() => {
+                setSfx(!sound);
+                setSound(!sound);
+                if (!sound) sfx.blip();
+              }}
+            >
+              {t(sound ? pause.on : pause.off)}
             </button>
           </div>
 

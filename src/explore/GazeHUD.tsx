@@ -1,5 +1,6 @@
 "use client";
 
+import { sfx } from "./sfx";
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
 import { gaze, resetGaze } from "./gaze";
@@ -32,7 +33,9 @@ function TypeLine({ text, delay = 0, className }: { text: string; delay?: number
 
 type Dead = { kind: "restore"; line: string; cost: boolean } | { kind: "gone" };
 
-export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<HTMLElement | null>; onGone: () => void }) {
+export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.RefObject<HTMLElement | null>; onGone: () => void; onIntro?: () => void }) {
+  const introRef = useRef(onIntro);
+  introRef.current = onIntro;
   const { t } = useLang();
   const goneRef = useRef(onGone);
   goneRef.current = onGone;
@@ -49,8 +52,24 @@ export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<
     let raf = 0;
     let deadShown = false;
     let armed = false; // 게이지가 의심 이상까지 찼다가 숨어서 바닥을 치면 백업
+    let prevState = gaze.state;
+    let prevHidden = "";
     const loop = () => {
       raf = requestAnimationFrame(loop);
+      // 시선 단계가 올라갈 때, 그리고 숨는 데 성공했을 때 효과음
+      if (gaze.state !== prevState) {
+        const up = ["idle", "watch", "suspect", "charge", "lock"];
+        if (up.indexOf(gaze.state) > up.indexOf(prevState)) {
+          if (gaze.state === "watch") sfx.watch();
+          else if (gaze.state === "suspect") sfx.suspect();
+          else if (gaze.state === "charge") sfx.charge();
+          else if (gaze.state === "lock") sfx.lock();
+        }
+        prevState = gaze.state;
+      }
+      const hid = gaze.inZone ? gaze.hiddenBy : "";
+      if (hid && !prevHidden && gaze.meter > 20) sfx.hidden();
+      prevHidden = hid;
       const root = rootRef.current;
       const m = gaze.meter / 100;
       const hot = gaze.state === "lock" || gaze.state === "fire" ? 1 : m;
@@ -69,10 +88,18 @@ export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<
         if (label.current.textContent !== s) label.current.textContent = s;
       }
       // 처음 시선 구역에 들어가면 요령을 한 번 알려 준다
+      // 처음 시선 구역에 들어서면 소개 장면을 연다 (브라우저마다 한 번). 이미 봤다면 짧은 요령만
       if (gaze.inZone && !shown.current && gaze.mood !== "blind") {
         shown.current = true;
-        setTip(true);
-        setTimeout(() => setTip(false), 15000);
+        let seenIntro = false;
+        try {
+          seenIntro = localStorage.getItem("sanlee-jabi-intro") === "1";
+        } catch {}
+        if (!seenIntro && introRef.current) introRef.current();
+        else {
+          setTip(true);
+          setTimeout(() => setTip(false), 15000);
+        }
       }
       if (gaze.meter >= 35) armed = true;
       if (armed && gaze.meter <= 0.5 && gaze.inZone && gaze.hiddenBy && !gaze.dead) {
@@ -82,6 +109,7 @@ export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<
       if (gaze.dead && !deadShown) {
         deadShown = true;
         armed = false;
+        sfx.glitch();
         recordDeath();
         const b = getBackup();
         if (b.deleted) {
@@ -104,6 +132,7 @@ export default function GazeHUD({ rootRef, onGone }: { rootRef: React.RefObject<
           restoreCovers();
           resetGaze();
           recordRestore();
+          sfx.restore();
           deadShown = false;
           setDead(null);
         }, 3400);

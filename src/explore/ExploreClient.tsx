@@ -1,13 +1,14 @@
 "use client";
 
+import { sfx } from "./sfx";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { announcements, checkpoint, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
-import { CITY, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
+import { announcements, checkpoint, jabiUi, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
+import { CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
 import { input, loadSettings } from "./input";
@@ -40,8 +41,9 @@ function hasWebGL() {
 type Panel =
   | { kind: "section"; id: SectionId }
   | { kind: "painting"; work: number }
-  | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean }
+  | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean }
   | { kind: "choice"; settings?: boolean }
+  | { kind: "jabi" }
   | null;
 
 type EndKind = "accept" | "reject" | "ghost";
@@ -132,6 +134,7 @@ export default function ExploreClient() {
   const goTo = useCallback((to: Zone, viaDoor = true) => {
     setPanel(null);
     setFade(to === "city" ? "up" : "down");
+    if (viaDoor) sfx.door();
     setTimeout(() => {
       setZone(to);
       setArrived(viaDoor);
@@ -151,7 +154,7 @@ export default function ExploreClient() {
         case "section":
           // 동상과 먼저 이야기해야 기록 터미널이 열린다
           if (!met && !complete && visited.length === 0) {
-            setPanel({ kind: "dialog", name: it.label, lines: ui.terminalLocked, step: 0 });
+            setPanel({ kind: "dialog", name: it.label, lines: ui.terminalLocked, step: 0, locked: true });
             break;
           }
           setPanel({ kind: "section", id: it.section! });
@@ -193,6 +196,7 @@ export default function ExploreClient() {
             setPanel({
               kind: "dialog",
               name: it.label,
+              locked: true,
               lines: ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
               step: 0,
             });
@@ -207,6 +211,7 @@ export default function ExploreClient() {
             setPanel({
               kind: "dialog",
               name: it.label,
+              locked: true,
               lines: checkpoint.locked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
               step: 0,
             });
@@ -435,7 +440,11 @@ export default function ExploreClient() {
     setEnding({ kind, step: 0, a: b.deaths, r: b.restores, slots });
   };
   startEndingRef.current = startEnding;
-  const choose = (kind: "accept" | "reject") => startEnding(kind);
+  const choose = (kind: "accept" | "reject") => {
+    if (kind === "accept") sfx.accept();
+    else sfx.reject();
+    startEnding(kind);
+  };
 
   const resetProgress = () => {
     try {
@@ -476,6 +485,49 @@ export default function ExploreClient() {
       restart();
     }
   };
+  // 대자비 소개: 멈춤 → 카메라가 대자비 쪽으로 → 설명 팝업. 닫으면 게임이 이어진다
+  const introTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const hadJabi = useRef(false);
+  // 패널 효과음: 열릴 때, 대화가 한 줄 넘어갈 때, 잠긴 곳에 부딪혔을 때, 대자비 소개
+  const prevPanel = useRef<Panel>(null);
+  useEffect(() => {
+    const a = prevPanel.current;
+    prevPanel.current = panel;
+    if (!panel) return;
+    if (panel.kind === "jabi") return sfx.gong();
+    if (panel.kind === "dialog" && panel.locked && a?.kind !== "dialog") return sfx.denied();
+    if (!a || a.kind !== panel.kind) return sfx.open();
+    if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
+  }, [panel]);
+  const startJabiIntro = useCallback(() => {
+    gaze.intro = true;
+    gaze.frozen = true;
+    gaze.lookAt = { x: JABI.eye.x, y: JABI.eye.y, z: JABI.eye.z };
+    // 카메라가 대자비를 다 바라보면 잠깐 머문 뒤 팝업. 혹시 신호가 오지 않아도 5초 뒤에는 연다
+    const open = () => {
+      window.removeEventListener("sanlee-look-done", onDone);
+      clearTimeout(introTimer.current);
+      introTimer.current = setTimeout(() => setPanel({ kind: "jabi" }), 700);
+    };
+    const onDone = () => open();
+    window.addEventListener("sanlee-look-done", onDone);
+    clearTimeout(introTimer.current);
+    introTimer.current = setTimeout(open, 5000);
+  }, []);
+  const endJabiIntro = useCallback(() => {
+    try {
+      localStorage.setItem("sanlee-jabi-intro", "1");
+    } catch {}
+    gaze.intro = false;
+    gaze.frozen = false;
+    gaze.lookAt = null;
+  }, []);
+  // 팝업이 뜨면 카메라를 놓아 두고, 어떤 식으로 닫히든(Esc 포함) 소개 상태를 풀어 준다
+  useEffect(() => {
+    if (panel?.kind === "jabi") gaze.lookAt = null;
+    else if (!panel && gaze.intro && !gaze.lookAt && hadJabi.current) endJabiIntro();
+    hadJabi.current = panel?.kind === "jabi";
+  }, [panel, endJabiIntro]);
   // 백업이 없는 사람이 레이저에 맞으면: 처음부터 다시
   const onGone = useCallback(() => {
     try {
@@ -649,7 +701,7 @@ export default function ExploreClient() {
       {active && locked && <div className="crosshair" aria-hidden />}
       {active && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
-      {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} />}
+      {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} />}
       {active && touch && <Joystick />}
       {active && touch && (
         <JumpButton
@@ -737,6 +789,26 @@ export default function ExploreClient() {
         </div>
       )}
 
+      {panel?.kind === "jabi" && (
+        <div className="choice-wrap jabi-wrap">
+          <div className="choice jabi-intro" role="dialog" aria-modal="true">
+            <span className="choice-sys">{t(jabiUi.name)}</span>
+            <h2>{t(jabiUi.introTitle)}</h2>
+            <p>{t(jabiUi.introBody)}</p>
+            <ul className="jabi-rules">
+              {jabiUi.introRules.map((r, i) => (
+                <li key={i}>{t(r)}</li>
+              ))}
+            </ul>
+            <div className="panel-actions">
+              <button className="btn primary" autoFocus onClick={closePanel}>
+                {t(jabiUi.introOk)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {panel?.kind === "choice" && (
         <div className="choice-wrap">
           <div className="choice" role="dialog" aria-modal="true">
@@ -779,7 +851,13 @@ export default function ExploreClient() {
                   <button className="btn" onClick={() => setPanel({ kind: "choice" })}>
                     {t(checkpoint.prefsBack)}
                   </button>
-                  <button className="cookie-clear" onClick={() => startEnding("ghost")}>
+                  <button
+                    className="cookie-clear"
+                    onClick={() => {
+                      sfx.ghost();
+                      startEnding("ghost");
+                    }}
+                  >
                     {t(checkpoint.clearAll)}
                   </button>
                 </div>

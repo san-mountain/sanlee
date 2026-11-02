@@ -955,3 +955,10 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 @media (max-width: 719px) { .seal-veil { display: block; position: fixed; inset: 0; z-index: 29; background: transparent; -webkit-tap-highlight-color: transparent; } }
 /* Works와 Writing의 하위 탭을 같은 높이·같은 위치에 (Works는 오른쪽 보기 버튼 높이 34px에 맞춘다) */
 .cat-tabs { min-height: 34px; align-items: stretch; }
+/* 대자비 소개 팝업 */
+.jabi-intro { border-color: #ffc040 !important; box-shadow: 0 0 30px #ffc04033 !important; }
+.jabi-intro h2 { color: #ffd77a; }
+.jabi-rules { margin: 10px 0 4px; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; line-height: 1.55; color: #f1eaff; }
+.jabi-rules li::marker { color: #ffc040; }
+/* 대자비가 보이도록 배경을 흐리지 않고 팝업은 화면 아래쪽에 */
+.choice-wrap.jabi-wrap { background: linear-gradient(to bottom, transparent 35%, #07030fcc); -webkit-backdrop-filter: none; backdrop-filter: none; align-items: flex-end; padding-bottom: 5vh; }

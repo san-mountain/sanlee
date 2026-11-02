@@ -92,6 +92,7 @@ export const pause = {
   sens: { ko: "마우스 감도", en: "Mouse sensitivity" },
   sensNote: { ko: "당신의 손이 얼마나 예민한지 기록 중입니다.", en: "We are logging how sensitive your hand is." },
   bob: { ko: "걸을 때 화면 흔들림", en: "Head bob when walking" },
+  sound: { ko: "효과음", en: "Sound effects" },
   lang: { ko: "언어", en: "Language" },
   humanity: { ko: "인간성", en: "Humanity" },
   humanityNote: { ko: "관리자에 의해 잠김", en: "Locked by administrator" },
@@ -136,6 +137,19 @@ export const jabiUi = {
     ko: "큰길 끝의 대자비가 보고 있어요. 비석이나 컨테이너 뒤에 숨으면 게이지가 줄어요. 줄 선 시민들 사이에 서서 가만히 있어도 들키지 않아요.",
     en: "The Great Compassion at the end of the avenue is watching. Hide behind steles or containers to cool its gaze. Standing still among the queue also hides you.",
   },
+  // 처음 시선 구역에 들어설 때 뜨는 소개 팝업
+  introTitle: { ko: "저 위의 대자비가 보고 있습니다", en: "The Great Compassion is watching" },
+  introBody: {
+    ko: "큰길 끝, 구름 위에 선 거대한 입불이 대자비입니다. 도시의 모든 시민을 내려다봅니다. 검문소는 그 발밑에 있습니다.",
+    en: "The giant standing Buddha above the clouds at the end of the avenue is the Great Compassion. It looks down on every citizen. The checkpoint is at its feet.",
+  },
+  introRules: [
+    { ko: "탁 트인 곳에 서 있으면 화면 위 게이지가 차오릅니다.", en: "Stand in the open and the gauge at the top fills." },
+    { ko: "게이지가 다 차면 붉은 빛이 내려옵니다. 맞으면 연결이 끊기고, 마지막으로 머문 곳에서 다시 시작합니다.", en: "When it is full, a red beam comes down. If it hits you, the connection drops and you pick up where you last were." },
+    { ko: "비석이나 컨테이너 뒤에 숨으면 게이지가 줄어듭니다.", en: "Hide behind steles or containers and the gauge drains." },
+    { ko: "줄 선 시민들 사이에 가만히 서 있으면 시민으로 보입니다.", en: "Stand still among the queue and you pass for a citizen." },
+  ] as L[],
+  introOk: { ko: "알겠어요", en: "Got it" },
   deadTitle: { ko: "연결이 끊겼습니다", en: "CONNECTION LOST" },
   deadSub: { ko: "자비는 언제나 공정합니다. 처음 위치에서 다시 시작합니다.", en: "Mercy is always fair. Restarting from the last position." },
   restoreFrom: { ko: "다시 오셨군요. 마지막으로 머문 곳에서 이어갑니다.", en: "Welcome back. Picking up where you last were." },

@@ -15,6 +15,9 @@ export const gaze = {
   firstSeenAt: 0,
   // 결말 연출: calm = 수락 뒤 눈을 감고 금빛으로, blind = 기록 없는 사람을 보지 못해 멈춤
   mood: "" as "" | "calm" | "blind",
+  // 처음 시선 구역에 들어설 때의 소개 장면: 게이지를 멈추고 카메라가 lookAt을 바라본다
+  intro: false,
+  lookAt: null as { x: number; y: number; z: number } | null,
 };
 
 // 결말 연출에서 시점을 스스로 걷게 한다 (충돌 무시). Player가 읽는다

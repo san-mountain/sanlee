@@ -2,6 +2,7 @@
 
 // 대자비(大慈悲): 큰길 끝 섬에 선 거대한 입불. 이마의 렌즈로 큰길을 내려다보고,
 // 시선에 오래 노출되면 눈이 붉어지고 입꼬리가 올라가다가, 레이저로 바닥을 긁으며 쏜다.
+import { sfx } from "./sfx";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
@@ -101,7 +102,7 @@ function GazeSystem() {
     const cover = blockedBy(px, pz, HEAD);
     gaze.hiddenBy = inLine ? "line" : cover >= 0 ? "cover" : "";
     // 방문 기록을 지운 사람은 도시의 기억에 없으므로 자비의 눈에도 보이지 않는다
-    gaze.seen = inZone && !inLine && cover < 0 && gaze.mood !== "blind";
+    gaze.seen = inZone && !inLine && cover < 0 && gaze.mood !== "blind" && !gaze.intro;
 
     if (gaze.state === "fire") {
       runBeam(dt, now);
@@ -143,6 +144,7 @@ export function finalBeam() {
 }
 
 function startBeam() {
+  sfx.beam();
   gaze.state = "fire";
   beam.on = true;
   beam.t = 0;
