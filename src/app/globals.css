@@ -861,13 +861,12 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
   font-family: var(--mono); background: #04121add; border: 1px solid #22f0ff66; padding: 9px 16px; box-shadow: 0 0 22px #22f0ff33; animation: saveIn 2.6s ease both; }
 .save-toast b { display: block; font-weight: 500; font-size: 13px; letter-spacing: .14em; color: #9ff8ff; text-shadow: 0 0 10px #22f0ff; }
 .save-toast span { display: block; margin-top: 3px; font-size: 11px; color: #cfe9ee; letter-spacing: .04em; }
+.save-toast.cookie-notice { animation-duration: 6.5s; }
+.save-toast em { display: block; margin-top: 6px; font-style: normal; font-size: 9.5px; letter-spacing: .12em; color: #8aa9b0; text-decoration: underline; text-underline-offset: 2px; opacity: .7; }
 @keyframes saveIn { 0% { opacity: 0; transform: translate(-50%, 8px); } 10%, 80% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; } }
 .choice-san { font-family: var(--font-serif), serif; font-size: 14px !important; color: #fff !important; border-left: 2px solid var(--pink); padding-left: 10px; }
 .choice-san span { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .2em; color: var(--pink); margin-bottom: 2px; }
 .choice-actions button small { display: block; margin-top: 3px; font-size: 10px; letter-spacing: .04em; font-weight: 400; opacity: .85; }
-.consent-status { font-family: var(--mono); color: #ff8a96 !important; letter-spacing: .08em; }
-.consent-status s { opacity: .5; margin-right: 6px; }
-.consent-backup { font-family: var(--mono); font-size: 13px !important; color: #9ff8ff !important; text-shadow: 0 0 10px #22f0ff88; }
 .backup-term { border-color: #ff2a3d88 !important; }
 .backup-term h2 { color: #ff8a96; }
 .bt-sub { color: var(--dim); font-size: 13px; }

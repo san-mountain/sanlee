@@ -42,7 +42,6 @@ type Panel =
   | { kind: "painting"; work: number }
   | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean }
   | { kind: "choice" }
-  | { kind: "consent"; step: "ask" | "busy" | "done"; pick?: "accept" | "reject" }
   | { kind: "backup"; step: "view" | "confirm" | "done" }
   | null;
 
@@ -138,12 +137,11 @@ export default function ExploreClient() {
       setZone(to);
       setArrived(viaDoor);
       setTracked(false);
-      // 배전실 문을 나서는 순간 백업이 만들어진다
-      // 처음 지상에 나서면 시스템이 붙잡고 동의를 받는다. 그다음부터는 문을 나설 때마다 조용히 백업
-      if (to === "city" && viaDoor) {
-        const b = getBackup();
-        if (b.n === 0 && !b.deleted) setTimeout(() => setPanel({ kind: "consent", step: "ask" }), 900);
-        else setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
+      // 배전실 문을 나서는 순간 도시가 위치를 기억한다. 첫 기억에는 '계속 걸으면 동의' 한 줄이 따라 나온다
+      // 방공호에서 방문 기록을 지웠다면 도시는 아무것도 기억하지 않고, 자비도 플레이어를 보지 못한다
+      if (to === "city") {
+        if (getBackup().deleted) gaze.mood = "blind";
+        else if (viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
       }
       setTimeout(() => setFade(null), 500);
     }, 900);
@@ -312,8 +310,6 @@ export default function ExploreClient() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (performance.now() - unlockAt.current < 250) return; // 잠금 해제와 같은 Esc
-        // 시스템의 동의 요청은 Esc로 피할 수 없다
-        if (panelRef.current?.kind === "consent") return;
         if (panelRef.current) setPanel(null);
         else if (pausedRef.current) resume();
         else if (activeRef.current) setPaused(true);
@@ -750,52 +746,6 @@ export default function ExploreClient() {
         </div>
       )}
 
-      {panel?.kind === "consent" && (
-        <div className="choice-wrap">
-          <div className="choice consent" role="dialog" aria-modal="true">
-            <span className="choice-sys">{t(ui.consentSys)}</span>
-            <span className="choice-alert">{lang === "ko" ? "▲ 이동 정지 · 응답 필요" : "▲ MOVEMENT HALTED · RESPONSE REQUIRED"}</span>
-            <h2>{t(ui.consentTitle)}</h2>
-            <p>{t(ui.consentBody)}</p>
-            {panel.step === "ask" && (
-              <div className="choice-actions">
-                {(["accept", "reject"] as const).map((k) => (
-                  <button
-                    key={k}
-                    className={k === "accept" ? "choice-accept" : "choice-reject"}
-                    autoFocus={k === "accept"}
-                    onClick={() => {
-                      setPanel({ kind: "consent", step: "busy", pick: k });
-                      setTimeout(() => {
-                        saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]);
-                        setPanel((p) => (p?.kind === "consent" ? { ...p, step: "done" } : p));
-                      }, 1300);
-                    }}
-                  >
-                    {t(k === "accept" ? ui.accept : ui.reject)}
-                  </button>
-                ))}
-              </div>
-            )}
-            {panel.step !== "ask" && (
-              <p className="consent-status">
-                {panel.pick === "reject" && <s>{t(ui.reject)}</s>} {panel.step === "busy" ? t(ui.processing) : `✓ ${t(ui.acceptedAll)}`}
-              </p>
-            )}
-            {panel.step === "done" && (
-              <>
-                <p className="consent-backup">● {t(ui.consentDone)}</p>
-                <div className="panel-actions">
-                  <button className="btn primary" autoFocus onClick={closePanel}>
-                    {t(ui.consentOk)}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
       {panel?.kind === "backup" && (
         <div className="panel-wrap">
           <div className="panel backup-term">
@@ -814,7 +764,7 @@ export default function ExploreClient() {
                     .reverse()
                     .map((x) => (
                       <li key={x.n}>
-                        BACKUP #{x.n} · {clock(x.t)}
+                        {lang === "ko" ? "방문 기록" : "VISIT"} #{x.n} · {clock(x.t)}
                       </li>
                     ))}
                 </ol>
@@ -869,7 +819,7 @@ export default function ExploreClient() {
                     {ending.slots.length ? (
                       ending.slots.map((n, k) => (
                         <span key={n} style={{ animationDelay: `${0.25 + k * 0.22}s` }}>
-                          BACKUP #{n} <b>{t(checkpoint.slotErased)}</b>
+                          {lang === "ko" ? "방문 기록" : "VISIT"} #{n} <b>{t(checkpoint.slotErased)}</b>
                         </span>
                       ))
                     ) : (
