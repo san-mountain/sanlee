@@ -9,6 +9,8 @@ import { useLang } from "./LangProvider";
 // DELETE SEOUL 입구: 空이 적힌 네온 원. 둘레의 글자가 천천히 돈다.
 // 한 번 누르면 원이 펼쳐지며 전체 제목이 드러나고, 다시 누르면 지워지며 도시로 건너간다.
 // 휴대폰 화면에서만 보인다(오른쪽 아래). 태블릿·PC는 메뉴 줄의 원래 간판을 쓴다.
+const TIP_KEY = "sanlee-seal-tip";
+
 export default function NeonSeal() {
   const router = useRouter();
   const { t } = useLang();
@@ -16,6 +18,22 @@ export default function NeonSeal() {
   const [fullH, setFullH] = useState(0);
   const ref = useRef<HTMLAnchorElement>(null);
   const fullRef = useRef<HTMLSpanElement>(null);
+  // 처음 온 사람에게만 한 번: 원 옆에 '도시로 들어가기' 말풍선이 잠깐 떴다가 사라진다
+  const [tip, setTip] = useState(false);
+  useEffect(() => {
+    let seen = true;
+    try {
+      seen = localStorage.getItem(TIP_KEY) !== null;
+      if (!seen) localStorage.setItem(TIP_KEY, "1");
+    } catch {}
+    if (seen) return;
+    const a = setTimeout(() => setTip(true), 1200);
+    const b = setTimeout(() => setTip(false), 5200);
+    return () => {
+      clearTimeout(a);
+      clearTimeout(b);
+    };
+  }, []);
 
   // 펼친 높이는 세로로 세운 제목의 실제 높이로 (글꼴이 바뀌어도 맞게)
   useEffect(() => {
@@ -54,6 +72,11 @@ export default function NeonSeal() {
           setOpen(false);
         }}
       />
+    )}
+    {!open && (
+      <span className={`seal-tip${tip ? " on" : ""}`} aria-hidden>
+        {t(ui.sealTip)}
+      </span>
     )}
     <a
       ref={ref}
