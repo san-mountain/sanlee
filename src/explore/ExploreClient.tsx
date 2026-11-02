@@ -8,7 +8,7 @@ import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
 import { announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
-import { CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
+import { alleyWaypoint, CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
 import { input, loadSettings } from "./input";
@@ -604,12 +604,7 @@ export default function ExploreClient() {
       return h ? { pos: h.pos, label: t(quest.back) } : null;
     }
     // 골목(띠 A)에 있으면 먼저 남쪽 광장으로 나가는 길을 가리킨다
-    if (Math.abs(px) > 11.5 && pz < 14) {
-      const exits = [-58, -37.75, 37.75, 58, 23.75].map((x) => ({ x, z: 16 }));
-      let best = exits[0];
-      for (const e of exits) if (Math.hypot(e.x - px, e.z - pz) < Math.hypot(best.x - px, best.z - pz)) best = e;
-      return { pos: best, label: t(quest.plaza) };
-    }
+    if (Math.abs(px) > 11.5 && pz < 14) return { pos: alleyWaypoint(px, pz), label: t(quest.plaza) };
     const cp = find("checkpoint");
     return cp ? { pos: cp.pos, label: t(quest.checkpoint) } : null;
   };

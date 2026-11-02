@@ -230,6 +230,48 @@ export const HATCH = { pos: [-COLS[1][0], 0, 10.6] as Vec3, alleyX: -(COLS[0][1]
 // 골목 남쪽 입구를 막은 잡동사니 더미 (그래서 막다른 골목)
 export const JUNK = box(HATCH.alleyX, 13.3, ALLEY, 1.4);
 
+// 방공호에서 나온 골목에서 광장까지: 갈림길마다 다음 목표를 고른다 (직선 거리로 고르면 벽 너머를 가리킨다)
+const NS1 = COLS[0][1] + ALLEY / 2; // 23.75: 방공호 골목 (왼쪽은 남쪽이 막혀 있다)
+const NS2 = COLS[1][1] + ALLEY / 2; // 37.75
+const WALK = (COLS[2][1] + EDGE.x) / 2; // 58: 바깥 산책로
+const EW_Z = [-13.25, 1.25]; // 동서 골목 두 개의 가운데
+const inEW = (z: number) => EW_Z.find((e) => Math.abs(z - e) < ALLEY / 2 + 0.2);
+export function alleyWaypoint(px: number, pz: number): { x: number; z: number } {
+  const s = px < 0 ? -1 : 1;
+  const ax = Math.abs(px);
+  const near = (c: number) => Math.abs(ax - c) < ALLEY / 2 + 0.4;
+  const out = (c: number) => ({ x: s * c, z: 16 });
+  if (near(NS2)) return out(NS2);
+  if (ax > COLS[2][1] - 0.5) return out(WALK);
+  const ez = inEW(pz);
+  if (ez !== undefined) {
+    // 동서 골목: 남쪽이 열린 가장 가까운 남북 골목으로
+    const open = s > 0 ? [NS1, NS2, WALK] : [NS2, WALK];
+    let best = open[0];
+    for (const c of open) if (Math.abs(c - ax) < Math.abs(best - ax)) best = c;
+    return { x: s * best, z: ez };
+  }
+  if (near(NS1)) {
+    if (s > 0) return out(NS1);
+    // 막다른 방공호 골목: 가까운 동서 골목 입구로
+    return { x: s * NS1, z: pz > -6 ? EW_Z[1] : EW_Z[0] };
+  }
+  // 그 밖(교차로 가장자리 등): 남쪽 출구 중 가장 가까운 곳
+  const exits = (s > 0 ? [NS1, NS2, WALK] : [NS2, WALK]).map(out);
+  let best = exits[0];
+  for (const e of exits) if (Math.hypot(e.x - px, e.z - pz) < Math.hypot(best.x - px, best.z - pz)) best = e;
+  return best;
+}
+// 골목 사람들이 바닥에 남긴 분필 화살표: 방공호 골목에서 광장까지 (rotY 0 = 북쪽, π/2 = 서쪽, π = 남쪽)
+export const CHALK: { x: number; z: number; rotY: number; turn?: boolean }[] = [
+  { x: -NS1, z: 6.2, rotY: 0 },
+  { x: -NS1 + 0.2, z: 2.2, rotY: 0, turn: true },
+  { x: -30.5, z: 1.3, rotY: Math.PI / 2 },
+  { x: -NS2 + 0.6, z: 1.0, rotY: Math.PI / 2, turn: true },
+  { x: -NS2, z: 7.5, rotY: Math.PI },
+  { x: -NS2, z: 12.8, rotY: Math.PI },
+];
+
 export const QUEUE_X = [-3.6, 3.6];
 export const QUEUE_Z: number[] = Array.from({ length: 58 }, (_, i) => -22 - i * 1.75);
 export const CAMERA_POLES: Vec3[] = [-1, 1].flatMap((s) => [8, -14, -40, -64, -84, -104, -124].map((z) => [s * (AVENUE - 0.6), 0, z] as Vec3));
