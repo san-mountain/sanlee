@@ -681,6 +681,8 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 @keyframes slotErase { 0% { opacity: 1; text-decoration: none; } 40% { opacity: 1; text-decoration: line-through; } 100% { opacity: .18; text-decoration: line-through; } }
 .ending.ending-ghost p { color: #dfe6ea; }
 .ending-ghost .canvas-wrap { filter: saturate(.55) brightness(1.05); }
+/* 숨은 결말: '멈춘 것으로 처리' 되는 순간 화면이 굳어 가다가, 이산의 말에 다시 풀린다 */
+.ending-ghost.ghost-freeze .canvas-wrap { filter: grayscale(1) contrast(1.15) brightness(.75); transition: filter 3s ease; }
 .explore-root.final-flash::after { content: ""; position: absolute; inset: 0; z-index: 57; pointer-events: none; animation: finalFlash 2.2s ease-out forwards; }
 @keyframes finalFlash { 0% { background: #fff; } 15% { background: #ff1030; } 100% { background: #000000f0; } }
 .ending.ending-accept p.say { color: #fff8e6; }

@@ -52,7 +52,7 @@ type Ending = { kind: EndKind; step: number; a: number; r: number; slots: number
 const BEAT_MS: Record<EndKind, number[]> = {
   accept: [2600, 3200, 3800, 3200],
   reject: [2800, 3800, 4800, 3400],
-  ghost: [2600, 3600, 5600, 4400],
+  ghost: [3000, 3600, 4600, 4600],
 };
 // 수락한 시민이 다시 들어오면 서게 되는 줄 속 자리
 // 줄 한가운데, 두 사람 사이. 여기서는 문 너머로 금빛이 된 대자비의 얼굴이 보인다
@@ -428,7 +428,8 @@ export default function ExploreClient() {
         wipeBackup();
         gaze.mood = "blind";
       }
-      if (step === 2) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
+      // 3번째 줄(이산의 말)에서 굳어 가던 화면이 풀리고, 다음 줄에서 둘이 문을 지나 걸어 나간다
+      if (step === 3) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
@@ -630,6 +631,7 @@ export default function ExploreClient() {
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
     ending?.kind === "reject" && ending.step >= 2 ? "thaw" : "",
+    ending?.kind === "ghost" && ending.step === 1 ? "ghost-freeze" : "",
     flash ? "final-flash" : "",
     tracked && !ending ? "is-tracked" : "",
   ].join(" ");
@@ -646,7 +648,7 @@ export default function ExploreClient() {
             onNear={setNear}
             onTracked={setTracked}
             labelEls={labelEls}
-            sanMode={ending?.kind === "accept" ? "stay" : ending?.kind === "ghost" && ending.step >= 3 ? "beside" : undefined}
+            sanMode={ending?.kind === "accept" ? "stay" : ending?.kind === "ghost" && ending.step >= 2 ? "beside" : undefined}
             hideSan={accepted}
             secondStatue={secondStatue}
             arrived={arrived}
