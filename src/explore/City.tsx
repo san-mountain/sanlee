@@ -9,7 +9,7 @@ import type { Lang } from "@/data/site";
 import { billboards, ticker } from "./story";
 import { AVENUE, CAMERA_POLES, CITY, CITY_NPCS, CROSS, EDGE, ISLANDS, LOTS, OVERSEER_ISLAND, QUEUE_X, QUEUE_Z } from "./zones";
 import { AirTraffic, Arks, Bridge, CloudSea, Islands, Platform, Sky, TwinBuddhas } from "./CityWorld";
-import { AlleyDecor, AlleyPeople, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
+import { AlleyDecor, AlleyPeople, ChalkMarks, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
 import { citizenGeometry, roofGeometry, visorGeometry } from "./models";
 import { towerMaterial } from "./towerMaterial";
 import { concreteTexture, hazardTexture, signTexture } from "./textures";
@@ -1024,6 +1024,7 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
       <VendorReplica />
       <Whisper onTap={onTap} />
       <AlleyDecor />
+      <ChalkMarks />
       <AlleyPeople />
       <Hatch lang={lang} onTap={onTap} />
       <Grandma lang={lang} onTap={onTap} />

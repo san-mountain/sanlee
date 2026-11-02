@@ -230,6 +230,18 @@ export const HATCH = { pos: [-COLS[1][0], 0, 10.6] as Vec3, alleyX: -(COLS[0][1]
 // 골목 남쪽 입구를 막은 잡동사니 더미 (그래서 막다른 골목)
 export const JUNK = box(HATCH.alleyX, 13.3, ALLEY, 1.4);
 
+const NS1 = COLS[0][1] + ALLEY / 2; // 23.75: 방공호 골목
+const NS2 = COLS[1][1] + ALLEY / 2; // 37.75
+// 골목 사람들이 바닥에 남긴 분필 화살표: 방공호 골목에서 광장까지 (rotY 0 = 북쪽, π/2 = 서쪽, π = 남쪽)
+export const CHALK: { x: number; z: number; rotY: number; turn?: boolean }[] = [
+  { x: -NS1, z: 6.2, rotY: 0 },
+  { x: -NS1 + 0.2, z: 2.2, rotY: 0, turn: true },
+  { x: -30.5, z: 1.3, rotY: Math.PI / 2 },
+  { x: -NS2 + 0.6, z: 1.0, rotY: Math.PI / 2, turn: true },
+  { x: -NS2, z: 7.5, rotY: Math.PI },
+  { x: -NS2, z: 12.8, rotY: Math.PI },
+];
+
 export const QUEUE_X = [-3.6, 3.6];
 export const QUEUE_Z: number[] = Array.from({ length: 58 }, (_, i) => -22 - i * 1.75);
 export const CAMERA_POLES: Vec3[] = [-1, 1].flatMap((s) => [8, -14, -40, -64, -84, -104, -124].map((z) => [s * (AVENUE - 0.6), 0, z] as Vec3));

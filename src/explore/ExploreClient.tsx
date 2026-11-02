@@ -629,12 +629,8 @@ export default function ExploreClient() {
       return h ? { pos: h.pos, label: t(quest.back) } : null;
     }
     // 골목(띠 A)에 있으면 먼저 남쪽 광장으로 나가는 길을 가리킨다
-    if (Math.abs(px) > 11.5 && pz < 14) {
-      const exits = [-58, -37.75, 37.75, 58, 23.75].map((x) => ({ x, z: 16 }));
-      let best = exits[0];
-      for (const e of exits) if (Math.hypot(e.x - px, e.z - pz) < Math.hypot(best.x - px, best.z - pz)) best = e;
-      return { pos: best, label: t(quest.plaza) };
-    }
+    // 골목(띠 A)에서는 화살표를 감춘다: 바닥의 분필 화살표가 광장까지 길을 안내한다
+    if (Math.abs(px) > 11.5 && pz < 14) return null;
     const cp = find("checkpoint");
     return cp ? { pos: cp.pos, label: t(quest.checkpoint) } : null;
   };

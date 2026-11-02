@@ -137,3 +137,34 @@ export function barcodeTexture() {
   g.fillText("CITIZEN 0000-0000", 10, 60);
   return finish(c);
 }
+
+// 골목 바닥에 분필로 그린 화살표 (위쪽이 앞). 손으로 여러 번 긋듯 획을 겹친다
+export function chalkArrowTexture(turn = false) {
+  const [c, g] = canvas(256, 256);
+  g.lineCap = "round";
+  g.lineJoin = "round";
+  for (let pass = 0; pass < 3; pass++) {
+    const j = () => (Math.random() - 0.5) * 6;
+    g.strokeStyle = `rgba(255, 238, 200, ${0.42 - pass * 0.1})`;
+    g.lineWidth = 16 - pass * 4;
+    g.beginPath();
+    if (turn) {
+      // 아래에서 올라와 왼쪽으로 꺾는 화살표
+      g.moveTo(170 + j(), 236 + j());
+      g.lineTo(170 + j(), 110 + j());
+      g.quadraticCurveTo(170 + j(), 80, 130 + j(), 80 + j());
+      g.lineTo(40 + j(), 80 + j());
+      g.moveTo(84 + j(), 36 + j());
+      g.lineTo(36 + j(), 80 + j());
+      g.lineTo(84 + j(), 124 + j());
+    } else {
+      g.moveTo(128 + j(), 236 + j());
+      g.lineTo(128 + j(), 30 + j());
+      g.moveTo(72 + j(), 86 + j());
+      g.lineTo(128 + j(), 26 + j());
+      g.lineTo(184 + j(), 86 + j());
+    }
+    g.stroke();
+  }
+  return finish(c);
+}

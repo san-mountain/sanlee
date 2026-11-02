@@ -6,9 +6,9 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
-import { ALLEYS, ALLEY_PEOPLE, AVENUE, BELL, CITY_NPCS, HATCH, JUNK, LOTS, PAGODA, SCOPES } from "./zones";
+import { ALLEYS, ALLEY_PEOPLE, AVENUE, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOTS, PAGODA, SCOPES } from "./zones";
 import { citizenGeometry, roofGeometry } from "./models";
-import { concreteTexture, signTexture } from "./textures";
+import { chalkArrowTexture, concreteTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
 
@@ -27,6 +27,21 @@ const tmpE = new THREE.Euler();
 const lotAt = (x: number, z: number) => LOTS.some((l) => x > l.x0 && x < l.x1 && z > l.z0 && z < l.z1);
 
 export const LOTUS_COLORS = ["#ff5a8a", "#ffd23f", "#6dff8a", "#ff4040", "#f4f0ff", "#4fb0ff"];
+
+/* ---------- 분필 화살표: 방공호 골목에서 광장까지, 골목 사람들이 바닥에 그려 둔 길 ---------- */
+export function ChalkMarks() {
+  const tex = useMemo(() => ({ straight: chalkArrowTexture(false), turn: chalkArrowTexture(true) }), []);
+  return (
+    <group>
+      {CHALK.map((m, i) => (
+        <mesh key={i} position={[m.x, 0.025, m.z]} rotation={[-Math.PI / 2, 0, m.rotY]} renderOrder={1}>
+          <planeGeometry args={[2.2, 2.2]} />
+          <meshBasicMaterial map={m.turn ? tex.turn : tex.straight} transparent depthWrite={false} toneMapped={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
 
 /* ---------- 연등: 줄에 매단 색색의 등 (인스턴스) ---------- */
 export function LotusStrings({ strings }: { strings: { a: THREE.Vector3; b: THREE.Vector3; sag: number; n: number; seed: number }[] }) {
