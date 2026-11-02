@@ -9,13 +9,14 @@ import { autoWalk, gaze } from "./gaze";
 import type { Interactable, ZoneDef } from "./zones";
 
 const EYE = 1.65;
+const INTRO_LIFT = 34;
 const WALK = 3.4;
 const RUN = 6.2;
 const RADIUS = 0.38;
 const JUMP_V = 6.2;
 const GRAVITY = 19;
 
-export const player = { pos: new THREE.Vector3(), yaw: 0, air: 0 };
+export const player = { pos: new THREE.Vector3(), yaw: 0, pitch: 0, air: 0 };
 // 디버그(?debug)에서 순간이동할 때 쓰는 요청
 export const teleport: { req: { x: number; z: number; yaw: number } | null } = { req: null };
 
@@ -30,6 +31,9 @@ type Props = {
 export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const aspect = useThree((s) => s.size.width / s.size.height);
+  const lookDone = useRef(false);
+  // 소개 장면: 시선이 큰길 끝 건물에 가리지 않도록 카메라가 잠시 높이 떠오른다
+  const lift = useRef(0);
   const st = useRef({ yaw: 0, pitch: 0, x: 0, z: 0, bob: 0, near: null as string | null, y: 0, vy: 0 });
 
   useEffect(() => {
@@ -69,20 +73,24 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     }
     // 시점. 소개 장면 중에는 입력을 버리고 대상 쪽으로 천천히 고개를 돌린다
     const la = gaze.lookAt;
+    if (!la) lookDone.current = false;
+    lift.current += ((gaze.intro ? INTRO_LIFT : 0) - lift.current) * Math.min(1, dt * 1.4);
     if (la) {
       const k = Math.min(1, dt * 1.6);
       const want = Math.atan2(-(la.x - s.x), -(la.z - s.z));
       let dy = want - s.yaw;
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       s.yaw += dy * k;
-      const wantP = Math.min(1.1, Math.atan2(la.y - EYE, Math.hypot(la.x - s.x, la.z - s.z)));
+      // 세로 화면은 팝업이 아래 절반을 덮으므로 얼굴이 화면 위쪽에 오도록 덜 올려다본다. 가로 화면은 팝업이 오른쪽에 뜬다
+      const wantP = Math.min(1.1, Math.atan2(la.y - EYE - lift.current, Math.hypot(la.x - s.x, la.z - s.z)) - (aspect < 1 ? 0.56 : 0.12));
       s.pitch += (wantP - s.pitch) * k;
       // 다 돌아봤으면 알린다 (소개 팝업이 이때 뜬다)
-      if (Math.abs(dy) < 0.02 && Math.abs(wantP - s.pitch) < 0.02) {
-        gaze.lookAt = null;
+      if (!lookDone.current && Math.abs(dy) < 0.02 && Math.abs(wantP - s.pitch) < 0.02) {
+        lookDone.current = true;
         window.dispatchEvent(new Event("sanlee-look-done"));
       }
-    } else {
+    } else if (!gaze.intro) {
+      // 소개 팝업이 떠 있는 동안에는 마우스가 움직여도 시선이 대자비에 머문다
       s.yaw += input.look.yaw + turnKeys() * dt * 1.8;
       s.pitch = Math.max(-1.1, Math.min(1.25, s.pitch + input.look.pitch));
     }
@@ -138,7 +146,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     if (grounded) s.bob += moved * (mv.run ? 2.2 : 2.6);
 
     const bobY = input.bob && grounded ? Math.sin(s.bob * 2) * 0.035 * Math.min(1, moved / (dt * 2 + 1e-4)) : 0;
-    camera.position.set(s.x, EYE + s.y + bobY, s.z);
+    camera.position.set(s.x, EYE + s.y + bobY + lift.current, s.z);
     camera.rotation.set(s.pitch, s.yaw, 0, "YXZ");
     // 대자비가 분노하면 화면이 흔들린다
     const sh = gaze.shake;
@@ -150,6 +158,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     }
     player.pos.set(s.x, EYE, s.z);
     player.yaw = s.yaw;
+    player.pitch = s.pitch;
     player.air = s.y;
 
     // 가까이 있는 상호작용 대상 찾기 (앞쪽에 있는 것 우선)

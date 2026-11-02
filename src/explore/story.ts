@@ -150,6 +150,11 @@ export const jabiUi = {
     { ko: "줄 선 시민들 사이에 가만히 서 있으면 시민으로 보입니다.", en: "Stand still among the queue and you pass for a citizen." },
   ] as L[],
   introOk: { ko: "알겠어요", en: "Got it" },
+  // 소개 팝업의 두 장면 (게임 화면에서 찍은 것)
+  introShots: [
+    { src: "/deleteseoul/jabi-lock.webp", cap: { ko: "눈과 입이 붉어지면: 조준", en: "Eyes and mouth turn red: locked on" } },
+    { src: "/deleteseoul/jabi-fire.webp", cap: { ko: "빛이 내려오면: 연결 끊김", en: "The light comes down: disconnected" } },
+  ] as { src: string; cap: L }[],
   deadTitle: { ko: "연결이 끊겼습니다", en: "CONNECTION LOST" },
   deadSub: { ko: "자비는 언제나 공정합니다. 처음 위치에서 다시 시작합니다.", en: "Mercy is always fair. Restarting from the last position." },
   restoreFrom: { ko: "다시 오셨군요. 마지막으로 머문 곳에서 이어갑니다.", en: "Welcome back. Picking up where you last were." },
