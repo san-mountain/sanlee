@@ -976,10 +976,10 @@ span.cookie-clear { cursor: default; text-decoration: none; }
 .choice-wrap.jabi-wrap { background: linear-gradient(to bottom, transparent 35%, #07030fcc); -webkit-backdrop-filter: none; backdrop-filter: none; align-items: flex-end; padding-bottom: 5vh; }
 
 /* 시·일기 본문: 모바일에서도 30자 안팎의 한 행이 한 줄에 들어가도록.
-   들여쓰기를 없애고, 글자 크기를 본문 폭에 맞춰 13~17px 사이로 줄인다(본문 폭 = 약 23자).
+   들여쓰기를 없애고 모바일 본문 표준 크기인 16px로, 자간을 살짝 좁힌다(390px 폭 이상의 폰에서 한 줄).
    줄바꿈은 한국어 본문 관례대로 어절 단위(keep-all), 아주 긴 낱말만 넘칠 때 끊는다. */
 .poems .stanza { word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
 @media (max-width: 719px) {
-  .poems .poem-body { padding-left: 0; container-type: inline-size; }
-  .poems .stanza { font-size: clamp(13px, calc(100cqi / 22.8), 17px); letter-spacing: 0; }
+  .poems .poem-body { padding-left: 0; }
+  .poems .stanza { font-size: 16px; letter-spacing: -.02em; }
 }
