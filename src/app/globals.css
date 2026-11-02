@@ -544,11 +544,11 @@ img { max-width: 100%; height: auto; display: block; }
 .poem-title, .poem .stanza, .wi-title { font-family: var(--font-serif), "Noto Serif KR", serif; }
 .poem-title { font-weight: 600; }
 
-/* DELETE SEOUL에 마우스를 올리면 페이지가 살짝 깜빡이며 부서질 기미 */
+/* DELETE SEOUL에 마우스를 올리는 순간 페이지가 한 번만 살짝 깜빡인다 (흔들림 없이, 반복 없이) */
 @media (hover: hover) {
-  body:has(.nav-explore:hover):not(.deleting) .page { animation: preDelete 1.6s steps(1) infinite; }
+  body:has(.nav-explore:hover):not(.deleting) .page { animation: preDelete .5s steps(1) 1; }
 }
-@keyframes preDelete { 0%, 88%, 100% { opacity: 1; transform: none; } 89% { opacity: .82; transform: translateX(1px); } 91% { opacity: 1; transform: translateX(-1px); } 93% { opacity: .9; transform: none; } }
+@keyframes preDelete { 0%, 100% { opacity: 1; } 20% { opacity: .82; } 40% { opacity: 1; } 60% { opacity: .9; } }
 /* 건너가는 중: 바탕이 어두워지고 그림·선이 사라진다 (글자는 스크립트가 한 글자씩 지운다) */
 body { transition: background-color .9s ease; }
 html:has(body.deleting), body.deleting { background: #07030f; transition: background-color .9s ease; }
