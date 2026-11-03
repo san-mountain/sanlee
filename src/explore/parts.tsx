@@ -9,12 +9,29 @@ import { addRim } from "./rim";
 
 export type TapFn = (id: string) => void;
 
-// 끌어서 둘러보다 손을 뗀 경우는 무시하고, 짧게 누른 것만 '탭'으로 처리
+// A·B 모두: 3D 물체를 바로 누르는 모바일 입력을 확실하게 처리한다.
+// 드래그 회전은 유지하고, 짧은 탭만 실행한다. 뒤이어 발생하는 click 중복 실행 방지.
 export function Tap({ id, onTap, children }: { id: string; onTap: TapFn; children: ReactNode }) {
+  const start = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const lastTouch = useRef(0);
   return (
     <group
+      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+        if (e.pointerType !== "touch") return;
+        start.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY };
+      }}
+      onPointerUp={(e: ThreeEvent<PointerEvent>) => {
+        if (e.pointerType !== "touch" || !start.current || start.current.pointerId !== e.pointerId) return;
+        const moved = Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y);
+        start.current = null;
+        if (moved > 12) return;
+        lastTouch.current = performance.now();
+        e.stopPropagation();
+        onTap(id);
+      }}
+      onPointerCancel={() => { start.current = null; }}
       onClick={(e: ThreeEvent<MouseEvent>) => {
-        if (e.delta > 8) return;
+        if (e.delta > 8 || (lastTouch.current > 0 && performance.now() - lastTouch.current < 650)) return;
         e.stopPropagation();
         onTap(id);
       }}
