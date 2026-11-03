@@ -262,12 +262,13 @@ export default function ExploreClient() {
         }
         case "door":
           // 이산을 깨우기 전에는 방공호 밖으로 나갈 수 없다
-          if (it.to === "city" && !complete && !talked) {
+          // 터미널을 다 열었어도, 풀려난 이산과 이야기하기 전에는 함께 나갈 동행이 없다
+          if (it.to === "city" && !talked) {
             setPanel({
               kind: "dialog",
               name: it.label,
               locked: true,
-              lines: ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
+              lines: complete ? [ui.exitLocked[0], ui.exitTalk] : ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
               step: 0,
             });
             break;
@@ -619,7 +620,7 @@ export default function ExploreClient() {
   }, []);
   const endJabiIntro = useCallback(() => {
     try {
-      localStorage.setItem("sanlee-jabi-intro", "1");
+      sessionStorage.setItem("sanlee-jabi-intro", "1");
     } catch {}
     if (gaze.intro) flashCut();
     setCctv(false);

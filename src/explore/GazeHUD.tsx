@@ -102,13 +102,13 @@ export default function GazeHUD({
         if (label.current.textContent !== s) label.current.textContent = s;
       }
       // 처음 시선 구역에 들어가면 요령을 한 번 알려 준다
-      // 처음 시선 구역에 들어서면 소개 장면을 연다 (브라우저마다 한 번). 이미 봤다면 짧은 요령만
+      // 처음 시선 구역에 들어서면 소개 장면을 연다 (방문마다 한 번: 탭을 새로 열면 다시 나온다). 이미 봤다면 짧은 요령만
       if (gaze.inZone && !shown.current && gaze.mood !== "blind") {
         shown.current = true;
         stageRef.current?.();
         let seenIntro = false;
         try {
-          seenIntro = localStorage.getItem("sanlee-jabi-intro") === "1";
+          seenIntro = sessionStorage.getItem("sanlee-jabi-intro") === "1";
         } catch {}
         if (!seenIntro && introRef.current) introRef.current();
         else {
