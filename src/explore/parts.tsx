@@ -31,7 +31,7 @@ export function Tap({ id, onTap, children }: { id: string; onTap: TapFn; childre
         onTap(id);
       }}
       onClick={(e: ThreeEvent<MouseEvent>) => {
-        if (e.delta > 8 || performance.now() - lastTouch.current < 650) return;
+        if (e.delta > 8 || (lastTouch.current > 0 && performance.now() - lastTouch.current < 650)) return;
         e.stopPropagation();
         onTap(id);
       }}
