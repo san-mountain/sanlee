@@ -15,12 +15,14 @@ export default function PauseMenu({
   onBunker,
   since,
   inBunker,
+  onLeave,
 }: {
   onResume: () => void;
   onReset: () => void;
   onBunker?: () => void;
   since: number;
   inBunker: boolean;
+  onLeave?: (e: React.MouseEvent) => void;
 }) {
   const { t, lang } = useLang();
   const [sens, setSens] = useState(input.sens);
@@ -167,7 +169,7 @@ export default function PauseMenu({
         </p>
 
         <div className="pause-actions">
-          <Link className="btn" href="/">
+          <Link className="btn" href="/" onClick={onLeave}>
             {t(pause.leave)}
           </Link>
           {onBunker && (

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Gowun_Batang, Inter, Noto_Serif_KR } from "next/font/google";
 import "./globals.css";
 import { LangProvider } from "@/components/LangProvider";
+import RestoreCrossing from "@/components/RestoreCrossing";
 
 export const metadata: Metadata = {
   title: "SAN LEE",
@@ -28,7 +29,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko" className={`${sans.variable} ${serif.variable} ${brush.variable}`}>
       <body>
-        <LangProvider>{children}</LangProvider>
+        <LangProvider>
+          {children}
+          <RestoreCrossing />
+        </LangProvider>
       </body>
     </html>
   );
