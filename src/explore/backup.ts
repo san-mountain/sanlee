@@ -83,6 +83,7 @@ export function forgetCityRecords() {
   protection.reset();
   try {
     [
+      "sanlee-face-auth-v1",
       "sanlee-promise",
       "sanlee-last-login",
       "sanlee-visited",

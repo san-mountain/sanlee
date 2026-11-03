@@ -1110,3 +1110,10 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 /* 음악 크레딧 */
 .ending-credit { display: block; margin-top: 6px; opacity: .6; letter-spacing: .06em; }
 .ending-credit a, .pause-note a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+.face-panel { max-width: 780px; max-height: 90dvh; overflow-y: auto; }
+.face-comparison { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+.face-comparison figure { margin: 8px; text-align: center; flex: 1; min-width: 150px; }
+.face-panel .panel-actions { flex-wrap: wrap; gap: 10px; margin-block: 14px; }
+.face-panel button { min-height: 44px; }
+.face-panel button[aria-pressed="true"] { outline: 2px solid #43dce1; }

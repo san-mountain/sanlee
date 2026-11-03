@@ -8,7 +8,7 @@ export type Zone = "bunker" | "city";
 
 export type Interactable = {
   id: string;
-  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup" | "bell";
+  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup" | "bell" | "face";
   pos: THREE.Vector3; // NPC처럼 움직이는 것은 컴포넌트가 이 값을 갱신
   radius: number;
   label: L;
@@ -132,6 +132,13 @@ export const BUNKER: ZoneDef = {
       color: t.color,
       label: { ko: `${t.id.toUpperCase()} 터미널`, en: `${t.id.toUpperCase()} terminal` },
     })),
+    { id: "face-auth", kind: "face", pos: v(-3, 1.5, -5), radius: 1.8, label: { ko: "얼굴 인증 장치", en: "face-auth" } },
+    { id: "face-scanner", kind: "face", pos: v(2.7, 1.5, 0), radius: 1.8, label: { ko: "스캐너 높이 전환", en: "face-scanner" } },
+    { id: "face-front", kind: "face", pos: v(0, 1.5, 3), radius: 1.8, label: { ko: "정면 관찰", en: "face-front" } },
+    { id: "face-side", kind: "face", pos: v(3, 1.5, 0), radius: 1.8, label: { ko: "측면 관찰", en: "face-side" } },
+    { id: "face-specs", kind: "face", pos: v(-4.7, 1.5, -4), radius: 1.8, label: { ko: "보정 명세판", en: "face-specs" } },
+    { id: "face-lamp", kind: "face", pos: v(2.7, 1.5, -2), radius: 1.8, label: { ko: "검사등 조절", en: "face-lamp" } },
+    ...PAINTINGS.filter(p => p.w.title.ko === "자화상").map(p => ({ id: "face-portrait", kind: "painting" as const, work: p.work, pos: v(p.pos[0], 1.5, p.pos[2]), radius: 3, label: p.w.title })),
     // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
     {

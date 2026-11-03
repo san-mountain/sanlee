@@ -5,10 +5,10 @@ export const CITIZEN_RECORDS_CAPACITY = 512;
 
 export type CitizenActivity = { id: string; kind: string; sourceId: string; occurredAt: number };
 export type CitizenRecordSnapshot = { schema: 1; pending: CitizenActivity[]; synced: CitizenActivity[] };
-export type ActivityContext = { zone: "bunker" | "city"; unregistered?: boolean };
+export type ActivityContext = { zone: "bunker" | "city"; unregistered?: boolean; requireProtection?: boolean };
 export type ActivityResult =
   | { status: "recorded"; entry: CitizenActivity }
-  | { status: "protected" | "unregistered" | "full" };
+  | { status: "protected" | "unregistered" | "full" | "protection-expired" };
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 type Options = {
   storage?: () => StorageLike | undefined;
@@ -72,6 +72,7 @@ export function createCitizenRecords({
       if (context.unregistered) return { status: "unregistered" };
       // 이번 장치는 무명사만 보호한다. 도시의 시선·레이저와 연결하지 않는다.
       if (context.zone === "bunker" && isProtected(at)) return { status: "protected" };
+      if (context.requireProtection) return { status: "protection-expired" };
       const state = read();
       if (state.pending.length + state.synced.length >= limit) return { status: "full" };
       let id: string;

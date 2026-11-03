@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
+import { player } from "./Player";
 import { addRim } from "./rim";
 import { useFrame } from "@react-three/fiber";
 import type { Lang } from "@/data/site";
@@ -127,7 +128,8 @@ export function Pedestal({ lang, empty, second }: { lang: Lang; empty?: boolean;
 const LEAN = 0.5; // 앞으로 웅크린 각도
 
 // 받침대 위에 주저앉아 머리를 감싸 쥔 동상
-export default function Statue({ restored, lang, second }: { restored: number; lang: Lang; second?: boolean }) {
+export default function Statue({ restored, lang, second, faceMethod }: { restored: number; lang: Lang; second?: boolean; faceMethod?: "standard" | "exception" | null }) {
+  const faceHead = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
   const head = usePartMaterial("head", restored);
   const torso = usePartMaterial("torso", restored);
@@ -155,7 +157,11 @@ export default function Statue({ restored, lang, second }: { restored: number; l
   useFrame((s) => {
     if (!body.current) return;
     const t = s.clock.elapsedTime;
-    const glitch = Math.sin(t * 13.7) > 0.985 - restored * 0.004;
+    if (faceHead.current && faceMethod) {
+      faceHead.current.rotation.x = THREE.MathUtils.lerp(faceHead.current.rotation.x, -0.35, 0.025);
+      faceHead.current.rotation.y = THREE.MathUtils.lerp(faceHead.current.rotation.y, Math.max(-0.45, Math.min(0.45, Math.atan2(player.pos.x, player.pos.z))), 0.025);
+    }
+    const glitch = !faceMethod && Math.sin(t * 13.7) > 0.985;
     body.current.position.x = glitch ? (Math.random() - 0.5) * 0.18 : 0;
     body.current.scale.x = glitch ? S * (1 + (Math.random() - 0.5) * 0.08) : S;
     body.current.scale.y = S * (1 + Math.sin(t * 1.2) * 0.004 * restored);
@@ -184,10 +190,14 @@ export default function Statue({ restored, lang, second }: { restored: number; l
           <mesh position={[0, 0.69, 0.01]} material={head}>
             <cylinderGeometry args={[0.048, 0.058, 0.1, 12]} />
           </mesh>
-          <group position={[0, 0.8, 0.05]} rotation={[0.55, 0.12, 0.08]}>
+          <group ref={faceHead} position={[0, 0.8, 0.05]} rotation={[0.55, 0.12, 0.08]}>
             <mesh scale={[0.9, 1.12, 1]} material={head}>
               <sphereGeometry args={[0.115, 20, 16]} />
             </mesh>
+            {faceMethod && <>
+              {[-1, 1].map(k => <mesh key={k} position={[k * 0.04, 0.02, 0.108]}><sphereGeometry args={[0.012, 8, 6]}/><meshBasicMaterial color="#f3f5ee"/></mesh>)}
+              <mesh position={[0, -0.047, 0.105]} rotation={[0, 0, faceMethod === "standard" ? Math.PI : 0]}>{faceMethod === "standard" ? <torusGeometry args={[0.028, 0.004, 6, 16, Math.PI]}/> : <boxGeometry args={[0.055, 0.006, 0.006]}/>}<meshBasicMaterial color="#251c2c"/></mesh>
+            </>}
             <mesh position={[0, -0.01, 0.112]} rotation={[0.2, 0, 0]} material={head}>
               <coneGeometry args={[0.018, 0.05, 8]} />
             </mesh>

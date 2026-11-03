@@ -28,6 +28,9 @@ import RecordProtectionStatus from "./RecordProtectionStatus";
 import { protection } from "./recordProtection";
 import { getCitizenRecords, recordCitizenActivity, syncCitizenRecords } from "./citizenRecords";
 
+import FaceAuthPanel from "./FaceAuthPanel";
+import { emptyFace, loadFace, saveFace, type FaceState } from "./faceAuth";
+
 const World = dynamic(() => import("./World"), { ssr: false });
 
 const KEY = "sanlee-visited";
@@ -63,6 +66,7 @@ type Panel =
   | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean; whisper?: boolean; link?: { href: string; label: L } }
   | { kind: "choice"; settings?: boolean; confirm?: number; game?: boolean }
   | { kind: "jabi" }
+  | { kind: "face" }
   | null;
 
 type EndKind = "accept" | "reject" | "ghost";
@@ -84,6 +88,9 @@ export default function ExploreClient() {
   const [intro, setIntro] = useState(true);
   const [zone, setZone] = useState<Zone>("bunker");
   const [panel, setPanel] = useState<Panel>(null);
+  const faceProtectionIntended = useRef(false);
+  const [face, setFace] = useState<FaceState>(emptyFace);
+  const updateFace = useCallback((next: FaceState) => { saveFace(next); setFace(next); }, []);
   const [visited, setVisited] = useState<SectionId[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [near, setNear] = useState<Interactable | null>(null);
@@ -110,7 +117,7 @@ export default function ExploreClient() {
   const [ghost, setGhost] = useState(false);
   const ghostRef = useRef(false);
   ghostRef.current = ghost;
-  const complete = visited.length >= sections.length || ghost;
+  const complete = (visited.length >= sections.length && face.legacy) || ghost;
   // 실행 시점에만 시민 기록을 판정한다. 기존 방문·진행 저장은 이 경로와 분리한다.
   const commitActivity = useCallback((kind: string, sourceId: string) => recordCitizenActivity(
     { kind, sourceId }, { zone, unregistered: unregisteredVisit(ghost) },
@@ -159,6 +166,7 @@ export default function ExploreClient() {
   }, []);
 
   useEffect(() => {
+    setFace(loadFace());
     setWebgl(hasWebGL());
     setTouch(window.matchMedia("(pointer: coarse)").matches);
     loadSettings();
@@ -219,9 +227,24 @@ export default function ExploreClient() {
   const interact = useCallback(
     (it: Interactable) => {
       switch (it.kind) {
+        case "face": {
+          if (it.id === "face-auth") setPanel({ kind: "face" });
+          else if (it.id === "face-scanner") {
+            updateFace({ ...face, scanner: face.scanner === "low" ? "high" : "low" });
+            showToast(face.scanner === "low" ? "스캐너: 머리 높이" : "스캐너: 손 높이");
+          } else if (it.id === "face-front" || it.id === "face-side") {
+            updateFace({ ...face, [it.id === "face-front" ? "front" : "side"]: true });
+            showToast(it.id === "face-front" ? "손이 얼굴 앞을 가리고 있다. 머리는 그 뒤에 있다." : "측면에서 머리 윤곽이 보인다. 검사 위치를 올려야 한다.");
+          } else if (it.id === "face-specs") {
+            updateFace({ ...face, specs: true });
+            setPanel({ kind: "dialog", name: { ko: "보정 명세판", en: "Correction specification" }, step: 0, lines: [{ ko: "촬영 결과: 얼굴 일부 가림 / 표정 정보: 미확인 / 미확인 항목 처리: 표준 미소 적용 / 대칭 보정: 자동", en: "Capture: partially occluded / Expression: unknown / Unknown values: standard smile / Symmetry: automatic" }] });
+          } else if (it.id === "face-lamp") { updateFace({ ...face, lampDim: !face.lampDim }); showToast(face.lampDim ? "검사등을 원래대로 돌렸다." : "검사등을 낮춰 직접 닿는 빛을 줄였다."); }
+          break;
+        }
         case "bell":
           if (zone !== "bunker") break;
           if (protection.ring()) {
+            if (face.prepared) faceProtectionIntended.current = true;
             sfx.gong();
           } else {
             showToast(t({ ko: "보호 장치가 준비 중입니다", en: "The protection device is not ready yet" }));
@@ -241,9 +264,14 @@ export default function ExploreClient() {
           }
           break;
         case "painting":
+          if (works[it.work!]?.title.ko === "자화상") updateFace({ ...face, portrait: true });
           setPanel({ kind: "painting", work: it.work! });
           break;
         case "statue":
+          if (!complete && !face.legacy && !unregisteredVisit(ghost) && it.id === "statue") {
+            setMet(true); try { localStorage.setItem(MET_KEY, "1"); } catch {}
+            setPanel({ kind: "dialog", name: plaque[0], lines: [{ ko: face.method ? "머리의 색이 돌아왔다. 이산은 아직 받침대에 머물러 있다." : "이산은 두 손으로 얼굴을 감싼 채 멈춰 있다. 옆의 얼굴 인증 장치를 확인하십시오.", en: "San remains on the pedestal. Inspect the face authentication terminal nearby." }], step: 0 }); break;
+          }
           // 기억으로 깨어난 이산은 약속을 되풀이하지 않는다 (이미 지키고 돌아온 사람이니까)
           if (it.id === "san" && ghost) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: [whisper.awakeLine], step: 0 });
           else if (it.id === "san")
@@ -312,7 +340,7 @@ export default function ExploreClient() {
           break;
       }
     },
-    [complete, talked, goTo, markVisited, visited.length, met, ghost, found.length, zone, showToast, t, commitActivity]
+    [complete, talked, goTo, markVisited, visited.length, met, ghost, found.length, zone, showToast, t, commitActivity, face, updateFace]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -769,6 +797,7 @@ export default function ExploreClient() {
             zone={zone}
             lang={lang}
             visited={visited}
+            face={face}
             onTap={onTap}
             onNear={setNear}
             onTracked={setTracked}
@@ -870,6 +899,7 @@ export default function ExploreClient() {
         />
       )}
 
+      {panel?.kind === "face" && <FaceAuthPanel protectionIntended={faceProtectionIntended.current} state={face} update={updateFace} close={() => setPanel(null)} commit={(method, requireProtection) => recordCitizenActivity({ kind: "face.authenticate", sourceId: method }, { zone, unregistered: unregisteredVisit(ghost), requireProtection })} />}
       {panel?.kind === "section" && sectionMeta && (
         <div className="panel-wrap">
           <div className="panel">

@@ -11,7 +11,10 @@ import Labels, { type LabelEls } from "./Labels";
 import Effects from "./Effects";
 import { CITY, ZONES, type Interactable, type Zone } from "./zones";
 
+import type { FaceState } from "./faceAuth";
+
 type Props = {
+  face: FaceState;
   zone: Zone;
   lang: Lang;
   visited: SectionId[];
@@ -28,14 +31,14 @@ type Props = {
 
 const POPUP = [{ key: "popup", pos: [1.7, 4.5, 1.6] as [number, number, number], scaleAt: 6, maxScale: 1 }];
 
-export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanMode, hideSan, secondStatue, arrived, awake }: Props) {
-  const complete = visited.length >= sections.length || !!awake;
+export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanMode, hideSan, secondStatue, arrived, awake, face }: Props) {
+  const complete = (visited.length >= sections.length && face.legacy) || !!awake;
   return (
     <Canvas dpr={[1, 1.75]} gl={{ antialias: true, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
       <Player zone={ZONES[zone]} zoneKey={zone} onNear={onNear} arrived={arrived} />
       <Suspense fallback={null}>
         {zone === "bunker" ? (
-          <Bunker lang={lang} visited={visited} onTap={onTap} secondStatue={secondStatue} awake={awake} />
+          <Bunker face={face} lang={lang} visited={visited} onTap={onTap} secondStatue={secondStatue} awake={awake} />
         ) : (
           <>
             <City lang={lang} onTap={onTap} onTracked={onTracked} />
