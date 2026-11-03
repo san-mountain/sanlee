@@ -641,92 +641,55 @@ export const faceUi = {
 };
 
 // ---------------- 퍼즐 B 「없었던 3초」 ----------------
-// 퍼즐 A와 같은 구조: 말하는 대사(auditLines, 고유 ID·화자·자막 시간)와 화면 문구(auditUi)를 나눈다.
-// 도시의 말(city)과 장치의 말(verifier, guarantor), 이산의 말(san)을 화자로 구분한다.
+// 퍼즐 B v0.5: 도시는 '거부' 위에 계속 '동의'를 찍는다.
+// 버튼 시험·문서 대조는 폐기. 이야기의 규칙은 물리 기계의 움직임으로 전달한다.
 export const auditLines = {
-  // 기록 재생 손잡이를 돌리면 장치가 안내한다 (기록 내용 자체는 화면 문구 auditUi.record)
-  replay: { id: "b.verifier.replay", speaker: "verifier", ms: 2600, ko: "시민 이산의 마지막 공식 기록을 재생합니다.", en: "Replaying citizen San Lee's last official record." },
-  // 재생이 끝나고 시험 버튼이 켜질 때
-  gap: { id: "b.verifier.gap", speaker: "verifier", ms: 3000, ko: "입력 원본 3초 누락. 입력 시험이 가능합니다.", en: "3 seconds of source input missing. Input test available." },
-  // 수락을 누르면: 도시가 기분 좋게 받아 준다
-  thanks: { id: "b.city.thanks", speaker: "city", ms: 2400, ko: "동의해 주셔서 감사합니다.", en: "Thank you for your consent." },
-  // 거부를 누르면: 정중하게, 그리고 수락으로
-  respect: { id: "b.city.respect", speaker: "city", ms: 2400, ko: "고객님의 선택을 존중합니다.", en: "We respect your choice." },
-  acceptedAll: { id: "b.city.accepted-all", speaker: "city", ms: 2800, ko: "모두 수락이 완료되었습니다.", en: "Accept all is complete." },
-  // 불일치를 확인한 장치가 옆면의 감사 기록함을 연다
-  mismatch: { id: "b.verifier.mismatch", speaker: "verifier", ms: 2800, ko: "입력과 처리 결과 불일치. 감사 기록함 잠금 해제.", en: "Input and output do not match. Audit box unlocked." },
-  // 기록지를 꺼낸 뒤: 도시 안내가 말하다 끊긴다
+  mismatch: {
+    id: "b.verifier.press-stopped", speaker: "verifier", ms: 1900,
+    ko: "기록 수정 중단. 원본이 노출되었습니다.", en: "Record revision stopped. Original exposed.",
+  },
   cut: { id: "b.city.cut", speaker: "city", ms: 1100, ko: "고객님의 기록은 언제나 안전하게 보—", en: "Your records are always kept safe and—" },
   refused: { id: "b.san.refused", speaker: "san", ms: 3600, ko: "……내가 거부했었구나.", en: "...So I did refuse." },
   stillHere: { id: "b.san.still-here", speaker: "san", ms: 4200, ko: "그런데 난 왜 아직 여기 있는 거지?", en: "Then why am I still stuck here?" },
-  // 무명사의 마지막 장치에 불이 들어온다 (퍼즐 C 예고)
   guarantor: { id: "b.guarantor.required", speaker: "guarantor", ms: 3800, ko: "보증인 등록이 필요합니다.", en: "Guarantor registration required." },
-  // B를 끝낸 뒤 이산에게 다시 말을 걸면
   after: { id: "b.san.after", speaker: "san", ms: 5000, ko: "난 거부했어. 그런데 도시의 기록에선 아직도 동의한 시민이야.", en: "I refused. But in the city's records, I'm still a citizen who consented." },
 } satisfies Record<string, Line>;
 
 export const auditScenes = {
-  replay: [auditLines.replay],
-  ready: [auditLines.gap],
-  accept: [auditLines.thanks],
-  reject: [auditLines.respect, auditLines.acceptedAll],
   mismatch: [auditLines.mismatch],
-  // 도시 안내가 끊김 → 침묵 → 이산 두 마디 → 보증 장치
   cut: [auditLines.cut],
   san: [auditLines.refused, auditLines.stillHere],
   guarantor: [auditLines.guarantor],
   after: [auditLines.after],
 };
 
-// 말하지 않는 화면 문구: 퀘스트, 조작 이름, 장치 화면, 기록지, 끝 카드
 export const auditUi = {
-  quest: { ko: "이산의 마지막 기록을 확인하십시오", en: "Check San's last record" },
-  questTest: { ko: "입력을 시험하십시오", en: "Test the input" },
-  questBox: { ko: "감사 기록함", en: "Audit box" },
-  machine: { ko: "기록 검증 장치", en: "Record verifier" },
-  handle: { ko: "기록 재생 손잡이", en: "Replay handle" },
-  acceptBtn: { ko: "모두 수락", en: "Accept all" },
-  rejectBtn: { ko: "모두 거부", en: "Reject all" },
-  box: { ko: "감사 기록함", en: "Audit box" },
-  turn: { ko: "돌리기", en: "Turn" },
-  press: { ko: "누르기", en: "Press" },
-  take: { ko: "기록지 꺼내기", en: "Take the slip" },
-  read: { ko: "기록지 읽기", en: "Read the slip" },
-  // 재생 화면: 짧은 줄 세 개. 마지막 줄의 누락 표시가 크게 깜박인다
-  record: [
-    { ko: "14:02 — 추천 감정 구매 승인", en: "14:02 — RECOMMENDED EMOTION PURCHASE APPROVED" },
-    { ko: "시민 동의: 확인됨", en: "CITIZEN CONSENT: CONFIRMED" },
-    { ko: "입력 원본: 일부 누락 (3초)", en: "SOURCE INPUT: PARTLY MISSING (3s)" },
-  ] as L[],
-  input: { ko: "입력", en: "INPUT" },
-  output: { ko: "처리 결과", en: "OUTPUT" },
-  accepted: { ko: "수락", en: "ACCEPT" },
-  rejected: { ko: "거부", en: "REJECT" },
-  mismatch: { ko: "불일치", en: "MISMATCH" },
-  match: { ko: "일치", en: "MATCH" },
-  // 기록지 (감사 기록함에서 꺼낸 아날로그 출력)
-  slipTag: { ko: "감사 기록 · 물리 입력 원본", en: "AUDIT LOG · PHYSICAL INPUT SOURCE" },
-  slipLine: { ko: "14:02:01 — 실제 입력: 모두 거부", en: "14:02:01 — ACTUAL INPUT: REJECT ALL" },
-  slipWho: { ko: "시민: 이산 · 단말기 SEOUL-T 7 · 중앙 서버와 분리된 보존 기록", en: "Citizen: San Lee · terminal SEOUL-T 7 · kept apart from the central server" },
+  quest: { ko: "붉은 거부 기록이 덮여 쓰이고 있습니다", en: "The red refusal is being overwritten" },
+  questTest: { ko: "도장을 멈추십시오", en: "Stop the stamp" },
+  questBox: { ko: "드러난 원본 테이프를 꺼내십시오", en: "Pull out the exposed original" },
+  machine: { ko: "기록 수정 장치", en: "Record revision press" },
+  stop: { ko: "도장 멈추기", en: "Stop the stamp" },
+  take: { ko: "원본 꺼내기", en: "Take original" },
+  slipTag: { ko: "도시 전송 전 · 원본 입력 기록", en: "BEFORE CITY UPLOAD · ORIGINAL INPUT" },
+  slipLine: { ko: "14:02:01 — 모두 거부", en: "14:02:01 — REJECT ALL" },
+  slipWho: { ko: "시민: 이산 · 단말기 SEOUL-T 7", en: "Citizen: San Lee · terminal SEOUL-T 7" },
   slipNote: {
-    ko: "무전수가 지상에서 떼어 온 단말기 안쪽에 남아 있던 기록이다. 도시는 중앙 서버의 공식 기록을 고쳤지만, 이 종이는 지우지 못했다.",
-    en: "This was left inside the terminal the radio operator pried loose from the surface. The city rewrote the official record on its central server, but it could not erase this paper.",
+    ko: "이산은 거부했다. 기계는 그 위에 동의를 찍었다. 도시는 지금도 이 기록을 동의라고 부른다.",
+    en: "San refused. The machine stamped consent over it. The city still calls this consent.",
   },
-  slipOfficial: { ko: "공식 기록: 여전히 '동의한 시민'", en: "Official record: still 'a citizen who consented'" },
-  slipClose: { ko: "기록지 내려놓기", en: "Put the slip down" },
-  // 보증 장치 (퍼즐 C 예고: 외형과 표시등만)
+  slipOfficial: { ko: "공식 기록: 동의한 시민", en: "Official record: a citizen who consented" },
+  slipClose: { ko: "원본 보관하기", en: "Keep the original" },
   guarantorSign: { ko: "보증인 등록", en: "GUARANTOR" },
   guarantorLook: { ko: "보증 장치는 아직 아무 대답도 하지 않는다. 다음 이야기는 준비 중입니다.", en: "The guarantor unit gives no answer yet. The next part is in progress." },
-  // 시제품 끝 카드
   endTag: { ko: "시제품 · 퍼즐 B 끝", en: "PROTOTYPE · PUZZLE B COMPLETE" },
   endTitle: { ko: "보증인 등록이 필요합니다", en: "Guarantor registration required" },
   endBody: {
-    ko: "이산은 '모두 거부'를 눌렀습니다. 원본 증거는 확보했지만, 도시의 공식 기록은 여전히 '동의'로 남아 있습니다. 이산의 다리는 아직 굳어 있습니다.",
-    en: "San pressed 'Reject all'. You hold the original evidence, but the city's official record still says 'consented'. San's legs are still stone.",
+    ko: "이산은 '모두 거부'를 선택했습니다. 원본은 확보했지만, 도시의 공식 기록은 아직 '동의'입니다. 이산의 다리는 여전히 굳어 있습니다.",
+    en: "San chose Reject all. You recovered the original, but the city's official record still says consent. His legs remain stone.",
   },
   endNext: { ko: "다음 이야기는 준비 중입니다.", en: "The next part is in progress." },
-  recProtected: { ko: "범종의 보호로 시험 입력은 시민 활동 기록에 남지 않았습니다.", en: "Under the bell's protection, your test inputs left no citizen activity record." },
-  recRecorded: { ko: "시험 입력은 시민 활동 기록에 남았습니다.", en: "Your test inputs were kept in your citizen activity record." },
+  recProtected: { ko: "범종의 보호로 기계 중단 행동은 시민 활동 기록에 남지 않았습니다.", en: "The bell hid your intervention from the citizen activity log." },
+  recRecorded: { ko: "기계 중단 행동은 시민 활동 기록에 남았습니다.", en: "Your intervention was added to the citizen activity log." },
 };
 
 // 방공호 사람들의 진행별 대사 (새 경로 전용). a = 얼굴 복원 전, b = 기록 확인 전, c = 퍼즐 B 이후
