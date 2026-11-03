@@ -12,6 +12,10 @@ import { AirTraffic, Arks, Bridge, CloudSea, Islands, Platform, Sky, TwinBuddhas
 import { AlleyDecor, AlleyPeople, ChalkMarks, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
 import { citizenGeometry, roofGeometry, visorGeometry } from "./models";
 import { towerMaterial } from "./towerMaterial";
+import { useNeoPost } from "./neoPost";
+import { addRim } from "./rim";
+import { useQuality } from "./quality";
+import { MeshReflectorMaterial } from "@react-three/drei";
 import { concreteTexture, hazardTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
@@ -95,6 +99,7 @@ function Towers() {
   const eaveRef = useRef<THREE.InstancedMesh>(null);
   const trimRef = useRef<THREE.InstancedMesh>(null);
   const mat = useMemo(() => towerMaterial(), []);
+  useNeoPost(mat);
   const body = useRef<THREE.InstancedMesh>(null);
   const lights = useRef<THREE.InstancedMesh>(null);
   const antennas = useRef<THREE.InstancedMesh>(null);
@@ -176,6 +181,7 @@ const MIRROR_LITTER: [number, number, number, number][] = (() => {
 })();
 
 function Ground() {
+  const q = useQuality();
   const curb = useMemo(() => {
     const t = concreteTexture(4, 70);
     t.repeat.set(1, 30);
@@ -192,7 +198,25 @@ function Ground() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, (EDGE.z1 + EDGE.z0) / 2]} receiveShadow>
         <planeGeometry args={[W, D]} />
-        <meshStandardMaterial color="#0c0d11" roughness={0.22} metalness={0.75} />
+        {q === "high" ? (
+          // 비 젖은 아스팔트: 네온이 바닥에 번져 비친다 (프레임이 떨어지면 일반 재질로)
+          <MeshReflectorMaterial
+            resolution={512}
+            blur={[200, 60]}
+            mixBlur={1.2}
+            mixStrength={7}
+            mixContrast={1}
+            mirror={0.8}
+            depthScale={0.6}
+            minDepthThreshold={0.4}
+            maxDepthThreshold={1.3}
+            color="#0c0d11"
+            roughness={0.38}
+            metalness={0.6}
+          />
+        ) : (
+          <meshStandardMaterial color="#0c0d11" roughness={0.22} metalness={0.75} />
+        )}
       </mesh>
       {/* 큰길 양옆 인도 */}
       {[-1, 1].map((sd) => (
@@ -754,7 +778,7 @@ function Queue() {
   return (
     <group>
       <instancedMesh ref={body} args={[geo, undefined, slots.length]} frustumCulled={false}>
-        <meshStandardMaterial color="#5a5d66" roughness={0.6} metalness={0.2} />
+        <meshStandardMaterial ref={(m) => void (m && addRim(m))} color="#5a5d66" roughness={0.6} metalness={0.2} />
       </instancedMesh>
       <instancedMesh ref={visor} args={[vGeo, undefined, slots.length]} frustumCulled={false}>
         <meshBasicMaterial color="#22f0ff" toneMapped={false} />
@@ -797,7 +821,7 @@ function Marchers() {
   return (
     <group>
       <instancedMesh ref={body} args={[geo, undefined, rows.length]} frustumCulled={false}>
-        <meshStandardMaterial color="#3e4048" roughness={0.6} metalness={0.25} />
+        <meshStandardMaterial ref={(m) => void (m && addRim(m, "#ff3fa8", 0.8))} color="#3e4048" roughness={0.6} metalness={0.25} />
       </instancedMesh>
       <instancedMesh ref={visor} args={[vGeo, undefined, rows.length]} frustumCulled={false}>
         <meshBasicMaterial color="#ff2a3d" toneMapped={false} />

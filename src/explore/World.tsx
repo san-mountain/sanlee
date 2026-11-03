@@ -8,6 +8,7 @@ import Bunker from "./Bunker";
 import City from "./City";
 import SanNPC from "./SanNPC";
 import Labels, { type LabelEls } from "./Labels";
+import Effects from "./Effects";
 import { CITY, ZONES, type Interactable, type Zone } from "./zones";
 
 type Props = {
@@ -44,6 +45,7 @@ export default function World({ zone, lang, visited, onTap, onNear, onTracked, l
           </>
         )}
       </Suspense>
+      <Effects />
       <Labels anchors={zone === "bunker" && !complete ? POPUP : []} els={labelEls} />
     </Canvas>
   );
