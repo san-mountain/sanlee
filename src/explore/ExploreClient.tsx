@@ -24,6 +24,9 @@ import { autoWalk, gaze, resetGaze } from "./gaze";
 import { finalBeam, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
+import RecordProtectionStatus from "./RecordProtectionStatus";
+import { protection } from "./recordProtection";
+import { getCitizenRecords, recordCitizenActivity, syncCitizenRecords } from "./citizenRecords";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -35,6 +38,15 @@ const LOGIN_KEY = "sanlee-last-login";
 const PROMISE_KEY = "sanlee-promise";
 const FORGOT_KEY = "sanlee-forgotten";
 const FOUND_KEY = "sanlee-endings-found";
+
+function unregisteredVisit(ghost: boolean) {
+  if (ghost) return true;
+  try {
+    return localStorage.getItem(FORGOT_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
 
 function hasWebGL() {
   try {
@@ -99,6 +111,10 @@ export default function ExploreClient() {
   const ghostRef = useRef(false);
   ghostRef.current = ghost;
   const complete = visited.length >= sections.length || ghost;
+  // 실행 시점에만 시민 기록을 판정한다. 기존 방문·진행 저장은 이 경로와 분리한다.
+  const commitActivity = useCallback((kind: string, sourceId: string) => recordCitizenActivity(
+    { kind, sourceId }, { zone, unregistered: unregisteredVisit(ghost) },
+  ), [zone, ghost]);
 
   // 로그아웃: 화면이 오래된 모니터처럼 한 줄로 접혀 꺼지고, 웹사이트에서는 지워졌던 글자가 다시 쓰인다
   const router = useRouter();
@@ -191,6 +207,8 @@ export default function ExploreClient() {
       // 배전실 문을 나서는 순간 도시가 위치를 기억한다. 첫 기억에는 '계속 걸으면 동의' 한 줄이 따라 나온다
       // 방공호에서 방문 기록을 지웠다면 도시는 아무것도 기억하지 않고, 자비도 플레이어를 보지 못한다
       if (to === "city") {
+        // 세계관 속 중앙 동기화를 클라이언트 데이터로 표현한다. 네트워크 전송은 없다.
+        if (!unregisteredVisit(ghostRef.current)) syncCitizenRecords();
         if (ghostRef.current) gaze.mood = "blind";
         else if (viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
       }
@@ -201,6 +219,14 @@ export default function ExploreClient() {
   const interact = useCallback(
     (it: Interactable) => {
       switch (it.kind) {
+        case "bell":
+          if (zone !== "bunker") break;
+          if (protection.ring()) {
+            sfx.gong();
+          } else {
+            showToast(t({ ko: "보호 장치가 준비 중입니다", en: "The protection device is not ready yet" }));
+          }
+          break;
         case "section":
           // 동상과 먼저 이야기해야 기록 터미널이 열린다
           if (!met && !complete && visited.length === 0) {
@@ -209,7 +235,10 @@ export default function ExploreClient() {
           }
           setPanel({ kind: "section", id: it.section! });
           // 기억으로 깨어난 사람은 터미널을 열어도 기록이 남지 않는다
-          if (!ghost) markVisited(it.section!);
+          if (!ghost) {
+            markVisited(it.section!);
+            commitActivity("terminal.open", it.section!);
+          }
           break;
         case "painting":
           setPanel({ kind: "painting", work: it.work! });
@@ -283,7 +312,7 @@ export default function ExploreClient() {
           break;
       }
     },
-    [complete, talked, goTo, markVisited, visited.length, met, ghost, found.length]
+    [complete, talked, goTo, markVisited, visited.length, met, ghost, found.length, zone, showToast, t, commitActivity]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -314,8 +343,11 @@ export default function ExploreClient() {
       look: (pitch: number) => (input.look.pitch += pitch),
       gaze,
       end: (k: EndKind) => startEndingRef.current(k),
+      // ?debug에서만 제공: 보호 중에도 진행 저장은 기존 UI 경로로 별도 확인한다.
+      recordProtection: { snapshot: protection.snapshot },
+      citizenRecords: { read: getCitizenRecords, commit: (sourceId: string) => commitActivity("debug.action", sourceId) },
     };
-  }, [goTo]);
+  }, [goTo, commitActivity]);
 
   const active = !intro && !panel && !fade && !ending && !paused;
   const activeRef = useRef(active);
@@ -718,7 +750,7 @@ export default function ExploreClient() {
 
   const sectionMeta = panel?.kind === "section" ? sections.find((s) => s.id === panel.id)! : null;
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  const verb = near ? (near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
+  const verb = near ? (near.kind === "bell" ? { ko: "종 치기", en: "Ring" } : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
   const rootClass = [
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
@@ -787,6 +819,7 @@ export default function ExploreClient() {
         {t(zone === "bunker" ? ui.zoneBunker : ui.zoneCity)}
         {tracked && !ending && <span className="tracked">{t(ui.tracked)}</span>}
       </div>
+      {!intro && !ending && zone === "bunker" && <RecordProtectionStatus />}
 
       {toast && <div className="toast">{toast}</div>}
       {!intro && !ending && !accepted && <SaveToast />}

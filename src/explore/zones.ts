@@ -8,7 +8,7 @@ export type Zone = "bunker" | "city";
 
 export type Interactable = {
   id: string;
-  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup";
+  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup" | "bell";
   pos: THREE.Vector3; // NPC처럼 움직이는 것은 컴포넌트가 이 값을 갱신
   radius: number;
   label: L;
@@ -38,6 +38,8 @@ export const BUNKER_W = 24;
 export const BUNKER_Z0 = -20;
 export const BUNKER_Z1 = 14;
 export const BUNKER_H = 7.5;
+// 기존 방공호 사찰 공간 안의 구형 기록 보호 장치. 지상 범종각에는 보호 기능을 부여하지 않는다.
+export const BUNKER_BELL = { pos: [-5, 0, -9] as Vec3 };
 
 export const TERMINALS: { id: SectionId; pos: Vec3; rotY: number; color: string; sub: L }[] = [
   { id: "about", pos: [-10.9, 0, -4], rotY: Math.PI / 2, color: "#22f0ff", sub: { ko: "소개", en: "who" } },
@@ -100,6 +102,7 @@ export const BUNKER: ZoneDef = {
   ceiling: BUNKER_H,
   bounds: { x0: -12, x1: 12, z0: -19.6, z1: 14 },
   boxes: [
+    box(BUNKER_BELL.pos[0], BUNKER_BELL.pos[2], 2.3, 1.8),
     ...PILLARS.map(([x, , z]) => box(x, z, 1.2, 1.2)),
     ...TERMINALS.map((t) => (Math.abs(t.pos[0]) > 1 ? box(t.pos[0] + Math.sign(t.pos[0]) * 0.3, t.pos[2], 1.4, 1.6) : box(t.pos[0], t.pos[2] + 0.3, 1.6, 1.4))),
     box(-4.6, -18.6, 2.8, 1.2), // 관리인 책상
@@ -119,6 +122,7 @@ export const BUNKER: ZoneDef = {
     { x: BUNKER_NPCS.dj.pos[0], z: BUNKER_NPCS.dj.pos[2], r: 0.4 },
   ],
   items: [
+    { id: "record-bell", kind: "bell", pos: v(BUNKER_BELL.pos[0], 1.5, BUNKER_BELL.pos[2] + 0.8), radius: 2.8, label: { ko: "구형 기록 보호 장치", en: "Legacy record protection device" } },
     ...TERMINALS.map<Interactable>((t) => ({
       id: t.id,
       kind: "section",

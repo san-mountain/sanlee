@@ -14,6 +14,7 @@ import SanNPC from "./SanNPC";
 import { player } from "./Player";
 import { BUNKER } from "./zones";
 import { LotusStrings } from "./CityAlleys";
+import BunkerBell from "./BunkerBell";
 
 const W = 12; // 방의 반폭
 const LEN = BUNKER_Z1 - BUNKER_Z0;
@@ -914,6 +915,7 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { 
       <Fixtures />
       <Pillars />
       <WallText lang={lang} />
+      <BunkerBell lang={lang} onTap={onTap} />
       {TERMINALS.map((t) => (
         <Terminal key={t.id} {...t} lang={lang} visited={visited.includes(t.id)} onTap={onTap} />
       ))}
