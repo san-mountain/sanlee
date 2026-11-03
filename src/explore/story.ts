@@ -57,6 +57,7 @@ export const ui = {
     { ko: "[방폭문] 잠김. 동행인 없이 지상으로 나갈 수 없습니다.", en: "[BLAST DOOR] Locked. You may not go up without a companion." },
     { ko: "먼저 가운데 정지 시민, 이산을 깨우자. 터미널 세 대를 열면 된다. ({n}/3)", en: "First wake San, the suspended citizen in the middle. Open the three terminals. ({n}/3)" },
   ] as L[],
+  exitTalk: { ko: "이산이 풀려났다. 먼저 이산에게 말을 걸자.", en: "San is free. Talk to San first." },
   zoneBunker: { ko: "B-7 방공호 · 지하 40m", en: "SHELTER B-7 · 40m BELOW" },
   zoneCity: { ko: "지상 · 부유 감시구역 7 · 고도 2,400m", en: "SURFACE · FLOATING ZONE 7 · ALT 2,400m" },
   goingUp: { ko: "지상으로 올라가는 중…", en: "Ascending to the surface…" },
@@ -163,8 +164,7 @@ export const jabiUi = {
   ] as { src: string; cap: L }[],
   deadTitle: { ko: "연결이 끊겼습니다", en: "CONNECTION LOST" },
   deadSub: { ko: "자비는 언제나 공정합니다. 처음 위치에서 다시 시작합니다.", en: "Mercy is always fair. Restarting from the last position." },
-  restoreFrom: { ko: "다시 오셨군요. 마지막으로 머문 곳에서 이어갑니다.", en: "Welcome back. Picking up where you last were." },
-  restoreFresh: { ko: "다시 오셨군요. 처음 들어온 곳에서 이어갑니다.", en: "Welcome back. Picking up where you came in." },
+  restoreStart: { ko: "다시 오셨군요. 대자비 앞, 처음 그 자리부터 다시 시작합니다.", en: "Welcome back. Starting over from where you first stood before the Great Compassion." },
   cost: { ko: "다시 올 때마다 도시는 당신을 조금 더 잘 알게 됩니다.", en: "Every time you come back, the city knows you a little better." },
   noBackup: { ko: "이 도시는 당신을 기억하지 못합니다.", en: "This city does not remember you." },
   noBackupSub: { ko: "처음부터 다시 시작합니다.", en: "Starting again from the beginning." },
@@ -325,7 +325,26 @@ export const checkpoint = {
 };
 
 // after: 이산이 석상에서 풀려난 뒤(터미널 셋 복원)의 대사. 없으면 같은 대사를 쓴다
-export const npcs: Record<string, { name: L; lines: L[]; after?: L[] }> = {
+// 배경음악을 만든 사람. 방공호 한쪽에서 음악을 틀고 있다
+export const MUSIC_URL = "https://soundcloud.com/user-787015749";
+export const credits = {
+  music: { ko: "음악 · Jinseong Baek", en: "Music · Jinseong Baek" },
+  listen: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" },
+};
+
+export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { href: string; label: L } }> = {
+  dj: {
+    name: { ko: "음향 담당 진성", en: "Jinseong, on sound" },
+    lines: [
+      { ko: "쉿, 지금 믹싱 중이야. …아, 이 음악? 내가 트는 거야. 전기는 무전수 몰래 끌어다 쓰고 있어.", en: "Shh, I'm mixing. …Oh, this music? That's me. I'm borrowing power from the radio operator. Don't tell." },
+      { ko: "여기 흐르는 곡은 D!mple. 지상에선 웃으면 표정 인식에 걸리거든. 여기선 보조개 정도는 보여 줘도 돼.", en: "What's playing down here is D!mple. Up there, smiling trips the face scanners. Down here you can show a dimple or two." },
+      { ko: "지상 곡 제목은 0x48 0x4F 0x50 0x45. 시스템은 숫자는 그냥 흘려 읽더라. 무슨 뜻인지는 네가 풀어 봐.", en: "The surface track is called 0x48 0x4F 0x50 0x45. The system skims right past numbers. Work out what it says yourself." },
+      { ko: "대자비 앞에서 나오는 건 Sti그ma. 1분부터 틀어 놨어. 앞부분까지 기다려 줄 분이 아니라서.", en: "In front of Great Mercy it's Sti그ma. I start it at the one-minute mark. She doesn't wait for intros." },
+      { ko: "엔딩 곡은 空. 끝까지 가면 들려. 스포일러는 여기까지.", en: "The ending track is 空. You'll hear it if you make it to the end. That's all the spoilers you get." },
+      { ko: "나? 백진성. 지상 등급은 없어. 대신 사운드클라우드가 있지.", en: "Me? Jinseong Baek. No surface grade. I've got a SoundCloud instead." },
+    ],
+    link: { href: MUSIC_URL, label: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" } },
+  },
   keeper: {
     name: { ko: "방공호 관리인", en: "Shelter keeper" },
     lines: [
