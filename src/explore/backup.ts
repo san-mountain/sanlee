@@ -64,13 +64,31 @@ export function deleteBackup() {
   write({ ...b, list: [], deleted: true }, "delete");
 }
 
-// 거부 결말·처음부터 다시: 아무것도 남기지 않는다
+// 거부 결말·처음부터 다시·도시 밖 기록 삭제: 저장소와 메모리에서 함께 지운다
 export function wipeBackup() {
   cache = empty();
   try {
     localStorage.removeItem(BACKUP_KEY);
   } catch {}
   window.dispatchEvent(new CustomEvent("sanlee-backup", { detail: "wipe" }));
+}
+
+// 도시 밖에서 기록을 지운다. 언어·효과음 설정과 기존 숨은 결말의 표시는 유지한다.
+export function forgetCityRecords() {
+  wipeBackup();
+  try {
+    [
+      "sanlee-promise",
+      "sanlee-last-login",
+      "sanlee-visited",
+      "sanlee-met",
+      "sanlee-san-talked",
+      "sanlee-ending",
+      "sanlee-endings-found",
+      "sanlee-jabi-intro",
+    ].forEach((k) => localStorage.removeItem(k));
+    localStorage.setItem("sanlee-forgotten", "1");
+  } catch {}
 }
 
 export const clock = (t: number) => new Date(t).toLocaleTimeString("en-GB", { hour12: false });
