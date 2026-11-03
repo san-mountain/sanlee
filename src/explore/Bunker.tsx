@@ -910,10 +910,11 @@ function WallText({ lang }: { lang: Lang }) {
   );
 }
 
-import type { FaceState } from "./faceAuth";
-import FaceAuthObjects from "./FaceAuthObjects";
+import { SOLUTION, type FaceState } from "./faceAuth";
+import type { FacePhase } from "./faceRuntime";
+import FaceMachine, { FaceConduit } from "./FaceMachine";
 
-export default function Bunker({ face, lang, visited, onTap, secondStatue, awake }: { face: FaceState; lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
+export default function Bunker({ face, facePhase, lang, visited, onTap, secondStatue, awake }: { face: FaceState; facePhase: FacePhase; lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -925,7 +926,9 @@ export default function Bunker({ face, lang, visited, onTap, secondStatue, awake
       <Pillars />
       <WallText lang={lang} />
       <BunkerBell lang={lang} onTap={onTap} />
-      <FaceAuthObjects state={face} onTap={onTap} lang={lang} />
+      {/* 이산 옆의 얼굴 복원 장치. 기존 터미널 경로로 이미 깨운 저장에서는 맞춰진 채 멈춰 있다 */}
+      <FaceMachine drums={face.legacy ? SOLUTION : face.drums} phase={facePhase} method={face.method} lang={lang} onTap={onTap} />
+      {!secondStatue && <FaceConduit />}
       {TERMINALS.map((t) => (
         <Terminal key={t.id} {...t} lang={lang} visited={visited.includes(t.id)} onTap={onTap} />
       ))}
@@ -957,10 +960,10 @@ export default function Bunker({ face, lang, visited, onTap, secondStatue, awake
         </>
       ) : (
         <Tap id="statue" onTap={onTap}>
-          <Statue restored={face.legacy ? visited.length : face.method ? 1 : 0} faceMethod={face.method} lang={lang} />
+          <Statue restored={face.legacy ? visited.length : 0} faceMethod={face.legacy ? null : face.method} faceFlow={!face.legacy} lang={lang} />
         </Tap>
       )}
-      <spotLight position={[0, BUNKER_H - 0.2, 4]} target-position={[0, 2.5, 0]} angle={0.5} penumbra={0.6} intensity={face.lampDim ? 15 : 120} distance={16} color="#f2efe8" />
+      <spotLight position={[0, BUNKER_H - 0.2, 4]} target-position={[0, 2.5, 0]} angle={0.5} penumbra={0.6} intensity={120} distance={16} color="#f2efe8" />
       <Sparkles count={60} scale={[22, 6, 30]} position={[0, 3.5, MIDZ]} size={1.6} speed={0.15} color="#d8d2c0" opacity={0.5} />
     </group>
   );

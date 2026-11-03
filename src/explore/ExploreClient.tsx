@@ -6,11 +6,11 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RESTORE_KEY } from "@/components/RestoreCrossing";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, credits, announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
+import { MUSIC_URL, credits, announcements, checkpoint, faceScenes, faceUi, jabiUi, speakers, type Line, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
 import { CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -26,10 +26,10 @@ import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
 import RecordProtectionStatus from "./RecordProtectionStatus";
 import { protection } from "./recordProtection";
-import { getCitizenRecords, recordCitizenActivity, syncCitizenRecords } from "./citizenRecords";
-
-import FaceAuthPanel from "./FaceAuthPanel";
-import { emptyFace, loadFace, saveFace, type FaceState } from "./faceAuth";
+import { getCitizenRecords, recordCitizenActivity, syncCitizenRecords, type ActivityResult } from "./citizenRecords";
+import { FACE_KEY, emptyFace, executeFace, loadFace, rotateDrum, saveFace, seamJoined, type FaceMethod, type FaceState } from "./faceAuth";
+import { faceRt, setFacePhase, type FacePhase } from "./faceRuntime";
+import { playLines } from "./dialogue";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -66,7 +66,8 @@ type Panel =
   | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean; whisper?: boolean; link?: { href: string; label: L } }
   | { kind: "choice"; settings?: boolean; confirm?: number; game?: boolean }
   | { kind: "jabi" }
-  | { kind: "face" }
+  // 범종을 쳤는데 보호가 끝난 뒤 선택하려 할 때: 기록이 남는다는 확인
+  | { kind: "faceConfirm"; method: FaceMethod }
   | null;
 
 type EndKind = "accept" | "reject" | "ghost";
@@ -88,9 +89,34 @@ export default function ExploreClient() {
   const [intro, setIntro] = useState(true);
   const [zone, setZone] = useState<Zone>("bunker");
   const [panel, setPanel] = useState<Panel>(null);
+  // 퍼즐 A: 진행 저장(face)과 연출 단계(facePhase)는 시민 활동 기록과 분리되어 있다
   const faceProtectionIntended = useRef(false);
   const [face, setFace] = useState<FaceState>(emptyFace);
-  const updateFace = useCallback((next: FaceState) => { saveFace(next); setFace(next); }, []);
+  const faceRef = useRef(face);
+  faceRef.current = face;
+  const updateFace = useCallback((next: FaceState) => {
+    saveFace(next);
+    faceRef.current = next;
+    faceRt.drums = next.drums;
+    faceRt.method = next.method;
+    setFace(next);
+  }, []);
+  const [facePhase, setFacePhaseState] = useState<FacePhase>("idle");
+  const toPhase = useCallback((p: FacePhase) => {
+    setFacePhase(p);
+    setFacePhaseState(p);
+  }, []);
+  // 화면 아래 자막: 장치·도시·이산의 말
+  const [faceLine, setFaceLine] = useState<Line | null>(null);
+  const [faceRecord, setFaceRecord] = useState<ActivityResult["status"] | null>(null);
+  // 시제품의 끝을 알리는 카드
+  const [faceEnd, setFaceEnd] = useState(false);
+  const faceTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const later = useCallback((ms: number, fn: () => void) => {
+    faceTimers.current.push(setTimeout(fn, ms));
+  }, []);
+  const lineEvents = useMemo(() => ({ show: setFaceLine, later }), [later]);
+  const faceCine = facePhase === "restored" || facePhase === "twist" || facePhase === "applying" || facePhase === "wake";
   const [visited, setVisited] = useState<SectionId[]>([]);
   const [toast, setToast] = useState<string | null>(null);
   const [near, setNear] = useState<Interactable | null>(null);
@@ -166,7 +192,13 @@ export default function ExploreClient() {
   }, []);
 
   useEffect(() => {
-    setFace(loadFace());
+    const f = loadFace();
+    faceRef.current = f;
+    faceRt.drums = f.drums;
+    faceRt.method = f.method;
+    setFace(f);
+    // 이미 끝낸 저장은 깨어난 상태로, 맞춰 놓고 고르지 않은 저장은 선택 단계로 바로 돌아온다
+    toPhase(f.legacy || f.method ? "done" : f.solved ? "choice" : "idle");
     setWebgl(hasWebGL());
     setTouch(window.matchMedia("(pointer: coarse)").matches);
     loadSettings();
@@ -196,7 +228,8 @@ export default function ExploreClient() {
         try {
           localStorage.setItem(KEY, JSON.stringify(next));
         } catch {}
-        showToast(`${t(ui.restored)} · ${next.length}/${sections.length}`);
+        // 기존 경로에서만 터미널이 인증 진행이다. 새 경로에서 터미널은 작품을 보는 곳일 뿐이다
+        if (faceRef.current.legacy) showToast(`${t(ui.restored)} · ${next.length}/${sections.length}`);
         return next;
       });
     },
@@ -224,38 +257,111 @@ export default function ExploreClient() {
     }, 900);
   }, []);
 
+  // 퍼즐 A: 바라보는 원통을 한 칸 돌린다. 다 맞으면 장치가 잠기고, 도시가 끼어든 뒤 두 조작부가 켜진다
+  const turnDrum = useCallback(
+    (i: number) => {
+      if (faceRt.phase !== "idle") return;
+      const cur = faceRef.current;
+      const next = rotateDrum(cur, i);
+      if (next === cur) return;
+      faceRt.turnedAt[i] = performance.now();
+      updateFace(next);
+      sfx.ratchet();
+      setTimeout(() => sfx.clunk(), 380);
+      const joined = ([0, 1] as const).some((seam) => seamJoined(next.drums, seam) && !seamJoined(cur.drums, seam));
+      if (!next.solved) {
+        if (joined) setTimeout(() => sfx.seam(), 440);
+        return;
+      }
+      // 마지막 조각이 걸리는 순간부터 기계가 스스로 움직인다
+      toPhase("restored");
+      // 잠김 → 장치의 말 → 도시의 반전 → 두 조작부. 각 단계는 앞 대사가 끝나야 넘어간다
+      later(450, () => {
+        sfx.faceLock();
+        playLines(faceScenes.lock, lineEvents, () => {
+          toPhase("twist");
+          sfx.cityVoice();
+          playLines(faceScenes.twist, lineEvents, () => toPhase("choice"));
+        });
+      });
+    },
+    [updateFace, toPhase, later, lineEvents]
+  );
+
+  const finishWake = useCallback(() => {
+    toPhase("done");
+    gaze.frozen = false;
+    gaze.lookAt = null;
+    duckBgm(false);
+    setFaceEnd(true);
+  }, [toPhase]);
+  // 이산이 고개를 든다: 카메라가 천천히 이산을 바라보고, 두세 마디 뒤 시제품의 끝 카드
+  const startWake = useCallback(
+    (method: FaceMethod) => {
+      toPhase("wake");
+      sfx.wake();
+      duckBgm(true);
+      gaze.frozen = true;
+      gaze.lookAt = { x: 0, y: 3, z: 0.3 };
+      setFaceLine(null);
+      // 고개를 드는 동안은 말없이, 그다음 이산의 대사. 마지막 줄이 끝나면 끝 카드
+      later(3800, () => playLines(faceScenes.wake[method], lineEvents, finishWake));
+    },
+    [toPhase, later, lineEvents, finishWake]
+  );
+
+  // 최종 선택. 이 순간에만 시민 활동 기록을 판정한다 (범종 보호 중이면 기록이 생기지 않는다)
+  const chooseFace = useCallback(
+    (method: FaceMethod, confirmed = false) => {
+      if (faceRt.phase !== "choice") return;
+      const cur = faceRef.current;
+      const intended = faceProtectionIntended.current;
+      const result = executeFace(cur, method, intended, protection.isProtected(), confirmed);
+      if (result.status === "expired") {
+        setPanel({ kind: "faceConfirm", method });
+        return;
+      }
+      if (result.status !== "success") return;
+      const rec = recordCitizenActivity({ kind: "face.authenticate", sourceId: method }, { zone, unregistered: unregisteredVisit(ghostRef.current), requireProtection: intended && !confirmed });
+      if (rec.status === "protection-expired") {
+        setPanel({ kind: "faceConfirm", method });
+        return;
+      }
+      faceProtectionIntended.current = false;
+      setFaceRecord(rec.status);
+      setPanel(null);
+      updateFace(result.state);
+      toPhase("applying");
+      if (method === "standard") sfx.press();
+      else sfx.lever();
+      playLines(faceScenes.apply[method], lineEvents, () => startWake(method));
+    },
+    [zone, updateFace, toPhase, startWake, lineEvents]
+  );
+  useEffect(() => () => faceTimers.current.forEach(clearTimeout), []);
+
   const interact = useCallback(
     (it: Interactable) => {
+      // 얼굴이 잠기고 이산이 깨어나는 동안에는 다른 것을 건드리지 않는다
+      if (faceCine) return;
       switch (it.kind) {
-        case "face": {
-          if (it.id === "face-auth") setPanel({ kind: "face" });
-          else if (it.id === "face-scanner") {
-            updateFace({ ...face, scanner: face.scanner === "low" ? "high" : "low" });
-            showToast(face.scanner === "low" ? "스캐너: 머리 높이" : "스캐너: 손 높이");
-          } else if (it.id === "face-front" || it.id === "face-side") {
-            updateFace({ ...face, [it.id === "face-front" ? "front" : "side"]: true });
-            showToast(it.id === "face-front" ? "손이 얼굴 앞을 가리고 있다. 머리는 그 뒤에 있다." : "측면에서 머리 윤곽이 보인다. 검사 위치를 올려야 한다.");
-          } else if (it.id === "face-specs") {
-            updateFace({ ...face, specs: true });
-            setPanel({ kind: "dialog", name: { ko: "보정 명세판", en: "Correction specification" }, step: 0, lines: [{ ko: "촬영 결과: 얼굴 일부 가림 / 표정 정보: 미확인 / 미확인 항목 처리: 표준 미소 적용 / 대칭 보정: 자동", en: "Capture: partially occluded / Expression: unknown / Unknown values: standard smile / Symmetry: automatic" }] });
-          } else if (it.id === "face-lamp") { updateFace({ ...face, lampDim: !face.lampDim }); showToast(face.lampDim ? "검사등을 원래대로 돌렸다." : "검사등을 낮춰 직접 닿는 빛을 줄였다."); }
+        case "face":
+          if (it.id === "face-machine") turnDrum(faceRt.aim);
+          else if (it.id === "face-std") chooseFace("standard");
+          else if (it.id === "face-keep") chooseFace("exception");
           break;
-        }
         case "bell":
           if (zone !== "bunker") break;
           if (protection.ring()) {
-            if (face.prepared) faceProtectionIntended.current = true;
+            // 얼굴을 맞춘 뒤 고르기 전에 쳤다면, 최종 선택을 보호하려는 뜻으로 본다
+            if (faceRt.phase === "restored" || faceRt.phase === "twist" || faceRt.phase === "choice") faceProtectionIntended.current = true;
             sfx.gong();
           } else {
             showToast(t({ ko: "보호 장치가 준비 중입니다", en: "The protection device is not ready yet" }));
           }
           break;
         case "section":
-          // 동상과 먼저 이야기해야 기록 터미널이 열린다
-          if (!met && !complete && visited.length === 0) {
-            setPanel({ kind: "dialog", name: it.label, lines: ui.terminalLocked, step: 0, locked: true });
-            break;
-          }
+          // 작품 터미널은 처음부터 열려 있다 (얼굴 복원 진행과 무관)
           setPanel({ kind: "section", id: it.section! });
           // 기억으로 깨어난 사람은 터미널을 열어도 기록이 남지 않는다
           if (!ghost) {
@@ -264,13 +370,18 @@ export default function ExploreClient() {
           }
           break;
         case "painting":
-          if (works[it.work!]?.title.ko === "자화상") updateFace({ ...face, portrait: true });
           setPanel({ kind: "painting", work: it.work! });
           break;
         case "statue":
+          // 얼굴 복원 경로: 굳어 있을 때는 상태만, 깨어난 뒤에는 이산과 짧게 이야기한다
           if (!complete && !face.legacy && !unregisteredVisit(ghost) && it.id === "statue") {
-            setMet(true); try { localStorage.setItem(MET_KEY, "1"); } catch {}
-            setPanel({ kind: "dialog", name: plaque[0], lines: [{ ko: face.method ? "머리의 색이 돌아왔다. 이산은 아직 받침대에 머물러 있다." : "이산은 두 손으로 얼굴을 감싼 채 멈춰 있다. 옆의 얼굴 인증 장치를 확인하십시오.", en: "San remains on the pedestal. Inspect the face authentication terminal nearby." }], step: 0 }); break;
+            setMet(true);
+            try {
+              localStorage.setItem(MET_KEY, "1");
+            } catch {}
+            if (face.method && faceRt.phase === "done") setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: faceScenes.after[face.method], step: 0 });
+            else setPanel({ kind: "dialog", name: plaque[0], lines: [faceUi.frozen], step: 0 });
+            break;
           }
           // 기억으로 깨어난 이산은 약속을 되풀이하지 않는다 (이미 지키고 돌아온 사람이니까)
           if (it.id === "san" && ghost) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: [whisper.awakeLine], step: 0 });
@@ -311,6 +422,11 @@ export default function ExploreClient() {
         case "door":
           // 이산을 깨우기 전에는 방공호 밖으로 나갈 수 없다
           // 터미널을 다 열었어도, 풀려난 이산과 이야기하기 전에는 함께 나갈 동행이 없다
+          if (it.to === "city" && !talked && !face.legacy && !complete) {
+            // 시제품은 방공호에서 끝난다. 새 경로에는 아직 지상으로 나갈 동행이 없다
+            setPanel({ kind: "dialog", name: it.label, locked: true, lines: [ui.exitLocked[0], faceUi.doorLocked], step: 0 });
+            break;
+          }
           if (it.to === "city" && !talked) {
             setPanel({
               kind: "dialog",
@@ -340,7 +456,7 @@ export default function ExploreClient() {
           break;
       }
     },
-    [complete, talked, goTo, markVisited, visited.length, met, ghost, found.length, zone, showToast, t, commitActivity, face, updateFace]
+    [complete, talked, goTo, markVisited, visited.length, ghost, found.length, zone, showToast, t, commitActivity, face, turnDrum, chooseFace, faceCine]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -349,14 +465,23 @@ export default function ExploreClient() {
   const onTap = useCallback(
     (id: string) => {
       // PC에서는 클릭이 마우스 잠금·상호작용(E)으로 쓰이므로 물체 직접 탭은 터치 화면에서만
-      if (!touch || panel || intro || fade || ending || paused) return;
+      if (!touch || panel || intro || fade || ending || paused || faceEnd) return;
+      // 원통을 직접 누르면 그 원통이 돈다 (터치 화면)
+      if (id.startsWith("face-drum-")) {
+        const n = Number(id.slice(-1));
+        if (faceRt.near) {
+          faceRt.aim = n;
+          turnDrum(n);
+        }
+        return;
+      }
       const it = ZONES[zone].items.find((i) => i.id === id);
       if (!it) return;
       const d = Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z);
       if (d > 10) return;
       interact(it);
     },
-    [touch, panel, intro, fade, ending, paused, zone, interact]
+    [touch, panel, intro, fade, ending, paused, zone, interact, faceEnd, turnDrum]
   );
 
   // 테스트용: 주소 끝에 ?debug 를 붙이면 콘솔에서 이동·복원을 조작할 수 있다
@@ -374,10 +499,12 @@ export default function ExploreClient() {
       // ?debug에서만 제공: 보호 중에도 진행 저장은 기존 UI 경로로 별도 확인한다.
       recordProtection: { snapshot: protection.snapshot },
       citizenRecords: { read: getCitizenRecords, commit: (sourceId: string) => commitActivity("debug.action", sourceId) },
+      // 읽기 전용: 테스트가 실제 입력으로 플레이하면서 상태를 확인한다
+      face: { rt: () => ({ ...faceRt, drums: [...faceRt.drums] }), state: () => faceRef.current },
     };
   }, [goTo, commitActivity]);
 
-  const active = !intro && !panel && !fade && !ending && !paused;
+  const active = !intro && !panel && !fade && !ending && !paused && !faceEnd;
   const activeRef = useRef(active);
   activeRef.current = active;
   const touchRef = useRef(touch);
@@ -444,16 +571,32 @@ export default function ExploreClient() {
   }, [hasPanel]);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  const faceEndRef = useRef(faceEnd);
+  faceEndRef.current = faceEnd;
+  const faceEndAt = useRef(0);
+  useEffect(() => {
+    if (faceEnd) faceEndAt.current = performance.now();
+  }, [faceEnd]);
+  const closeFaceEnd = useCallback(() => {
+    setFaceEnd(false);
+    lock();
+  }, [lock]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (performance.now() - unlockAt.current < 250) return; // 잠금 해제와 같은 Esc
         if (panelRef.current) setPanel(null);
+        else if (faceEndRef.current) closeFaceEnd();
         else if (pausedRef.current) resume();
         else if (activeRef.current) setPaused(true);
         return;
       }
       const p = panelRef.current;
+      if ((e.code === "KeyE" || e.code === "Enter") && !e.repeat && !p && faceEndRef.current && performance.now() - faceEndAt.current > 600) {
+        e.preventDefault();
+        closeFaceEnd();
+        return;
+      }
       if (e.code === "KeyE" && !e.repeat && p?.kind === "dialog" && performance.now() - panelAt.current > 250) {
         e.preventDefault();
         if (p.step < p.lines.length - 1) setPanel({ ...p, step: p.step + 1 });
@@ -468,7 +611,7 @@ export default function ExploreClient() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [resume, closePanel]);
+  }, [resume, closePanel, closeFaceEnd]);
 
   // 지상에서는 관리 AI 방송이 주기적으로 흘러나옴
   useEffect(() => {
@@ -604,10 +747,22 @@ export default function ExploreClient() {
       localStorage.removeItem(END_KEY);
       localStorage.removeItem(MET_KEY);
       localStorage.removeItem(TALK_KEY);
+      localStorage.removeItem(FACE_KEY);
     } catch {}
     setVisited([]);
     setMet(false);
     setTalked(false);
+    // 퍼즐 A도 처음으로 (진행 기록을 지운 뒤라 기존 경로가 아닌 새 경로로 시작한다)
+    faceTimers.current.forEach(clearTimeout);
+    faceTimers.current = [];
+    faceProtectionIntended.current = false;
+    const f = loadFace();
+    updateFace(f);
+    faceRt.wokeAt = 0;
+    toPhase("idle");
+    setFaceLine(null);
+    setFaceEnd(false);
+    setFaceRecord(null);
   };
   const clearScene = () => {
     clearTimeout(sceneTimer.current);
@@ -724,6 +879,12 @@ export default function ExploreClient() {
     const px = player.pos.x;
     const pz = player.pos.z;
     if (zone === "bunker") {
+      // 얼굴 복원 경로: 장치 하나만 가리킨다. 이산이 깨어나면 시제품이 끝나 화살표를 거둔다
+      if (!complete && !face.legacy) {
+        if (faceRt.phase === "done" || faceCine) return null;
+        const m = find("face-machine");
+        return m ? { pos: m.pos, label: t(faceUi.quest) } : null;
+      }
       if (!complete && !met && visited.length === 0) {
         const it = find("statue");
         return it ? { pos: it.pos, label: t(quest.statue) } : null;
@@ -778,7 +939,8 @@ export default function ExploreClient() {
 
   const sectionMeta = panel?.kind === "section" ? sections.find((s) => s.id === panel.id)! : null;
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  const verb = near ? (near.kind === "bell" ? { ko: "종 치기", en: "Ring" } : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
+  const sanAwake = complete || (!face.legacy && !!face.method && facePhase === "done");
+  const verb = near ? (near.kind === "face" ? (near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : faceUi.turn) : near.kind === "bell" ? { ko: "종 치기", en: "Ring" } : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
   const rootClass = [
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
@@ -798,6 +960,7 @@ export default function ExploreClient() {
             lang={lang}
             visited={visited}
             face={face}
+            facePhase={facePhase}
             onTap={onTap}
             onNear={setNear}
             onTracked={setTracked}
@@ -837,7 +1000,7 @@ export default function ExploreClient() {
         </Link>
         <span className="hud-title glitch">{t(ui.title)}</span>
         <span className="hud-right">
-          <span className="hud-progress">{visited.length}/{sections.length}</span>
+          {face.legacy && <span className="hud-progress">{visited.length}/{sections.length}</span>}
           <LangToggle />
           <button type="button" className="hud-gear" aria-label="settings" onClick={() => !intro && !ending && setPaused(true)}>
             ⚙
@@ -848,7 +1011,7 @@ export default function ExploreClient() {
         {t(zone === "bunker" ? ui.zoneBunker : ui.zoneCity)}
         {tracked && !ending && <span className="tracked">{t(ui.tracked)}</span>}
       </div>
-      {!intro && !ending && zone === "bunker" && <RecordProtectionStatus />}
+      {!intro && !ending && zone === "bunker" && <RecordProtectionStatus nearBell={near?.kind === "bell"} />}
 
       {toast && <div className="toast">{toast}</div>}
       {!intro && !ending && !accepted && <SaveToast />}
@@ -860,27 +1023,27 @@ export default function ExploreClient() {
         </div>
       )}
 
-      {active && near && verb && !touch && (
+      {active && !faceCine && near && verb && !touch && (
         <button type="button" className="prompt" onClick={() => interact(near)} style={{ borderColor: near.color, color: near.color }}>
           {!touch && <kbd>{locked ? "E / Click" : "E"}</kbd>}
           <span>
-            {t(near.id === "statue" && complete ? { ko: "이산", en: "San" } : near.label)} · {t(verb)}
+            {near.id === "face-machine" ? t(verb) : `${t(near.id === "statue" && sanAwake ? { ko: "이산", en: "San" } : near.label)} · ${t(verb)}`}
           </span>
         </button>
       )}
 
-      {active && !near && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
+      {active && !near && !faceCine && !faceLine && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
       {active && locked && <div className="crosshair" aria-hidden />}
-      {active && <QuestArrow get={getQuest} />}
+      {active && !faceCine && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
       {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
       {active && touch && <Joystick />}
       {active && touch && (
         <JumpButton
           action={
-            near && verb
+            near && verb && !faceCine
               ? {
-                  label: `${t(near.id === "statue" && complete ? { ko: "이산", en: "San" } : near.label)} · ${t(verb)}`,
+                  label: near.id === "face-machine" ? t(verb) : `${t(near.id === "statue" && sanAwake ? { ko: "이산", en: "San" } : near.label)} · ${t(verb)}`,
                   color: near.color,
                   run: () => interact(near),
                 }
@@ -899,7 +1062,50 @@ export default function ExploreClient() {
         />
       )}
 
-      {panel?.kind === "face" && <FaceAuthPanel protectionIntended={faceProtectionIntended.current} state={face} update={updateFace} close={() => setPanel(null)} commit={(method, requireProtection) => recordCitizenActivity({ kind: "face.authenticate", sourceId: method }, { zone, unregistered: unregisteredVisit(ghost), requireProtection })} />}
+      {faceLine && zone === "bunker" && (
+        <div className={`face-line who-${faceLine.speaker}`} role="status" aria-live="polite" data-line={faceLine.id}>
+          <b>{t(speakers[faceLine.speaker])}</b>
+          <span>{t(faceLine)}</span>
+        </div>
+      )}
+      {panel?.kind === "faceConfirm" && (
+        <div className="panel-wrap">
+          <div className="panel dialog face-confirm" role="dialog" aria-modal="true" aria-labelledby="face-confirm-title">
+            <div className="speaker" id="face-confirm-title">{t(faceUi.expiredTitle)}</div>
+            <p className="line">{t(faceUi.expiredBody)}</p>
+            <div className="panel-actions">
+              <button className="btn" onClick={closePanel}>
+                {t(faceUi.expiredBack)}
+              </button>
+              <button className="btn primary" autoFocus onClick={() => chooseFace(panel.method, true)}>
+                {t(faceUi.expiredGo)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {faceEnd && !panel && (
+        <div className="face-end-wrap">
+          <div className="face-end" role="dialog" aria-modal="true" aria-labelledby="face-end-title">
+            <span className="face-end-tag">{t(faceUi.endTag)}</span>
+            <h2 id="face-end-title">{t(faceUi.endTitle)}</h2>
+            <p>{t(faceUi.endBody)}</p>
+            <ul className="face-end-meta">
+              <li>{t(face.method === "standard" ? faceUi.endStandard : faceUi.endException)}</li>
+              {faceRecord && <li>{t(faceRecord === "protected" ? faceUi.recProtected : faceRecord === "unregistered" ? faceUi.recNone : faceUi.recRecorded)}</li>}
+              <li>{t(faceUi.endWorks)}</li>
+            </ul>
+            <div className="panel-actions">
+              <Link href="/" className="btn" onClick={logout}>
+                {t(faceUi.endHome)}
+              </Link>
+              <button className="btn primary" autoFocus onClick={closeFaceEnd}>
+                {t(faceUi.endStay)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {panel?.kind === "section" && sectionMeta && (
         <div className="panel-wrap">
           <div className="panel">

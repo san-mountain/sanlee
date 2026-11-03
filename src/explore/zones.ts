@@ -2,6 +2,8 @@ import * as THREE from "three";
 import type { L, SectionId } from "@/data/site";
 import { works } from "@/data/site";
 import { box, type Box, type Circle } from "./collide";
+import { faceRt } from "./faceRuntime";
+import { faceUi } from "./story";
 
 export type Vec3 = [number, number, number];
 export type Zone = "bunker" | "city";
@@ -17,6 +19,8 @@ export type Interactable = {
   work?: number;
   npc?: string;
   to?: Zone;
+  // false면 지금은 가까이 가도 상호작용 대상이 아니다 (연출 단계에 따라 켜고 끈다)
+  when?: () => boolean;
 };
 
 export type ZoneDef = {
@@ -40,6 +44,15 @@ export const BUNKER_Z1 = 14;
 export const BUNKER_H = 7.5;
 // 기존 방공호 사찰 공간 안의 구형 기록 보호 장치. 지상 범종각에는 보호 기능을 부여하지 않는다.
 export const BUNKER_BELL = { pos: [-5, 0, -9] as Vec3 };
+// 이산 옆의 얼굴 복원 장치. 정면이 다가오는 사람(방 입구 쪽)과 이산 사이를 향한다
+export const FACE_MACHINE = { pos: [3.3, 0, 1.3] as Vec3, rotY: -0.55 };
+// 장치 기준 좌표(정면 +z)를 방 좌표로
+export function machinePoint(x: number, y: number, z: number) {
+  const c = Math.cos(FACE_MACHINE.rotY);
+  const s = Math.sin(FACE_MACHINE.rotY);
+  return new THREE.Vector3(FACE_MACHINE.pos[0] + x * c + z * s, y, FACE_MACHINE.pos[2] - x * s + z * c);
+}
+
 
 export const TERMINALS: { id: SectionId; pos: Vec3; rotY: number; color: string; sub: L }[] = [
   { id: "about", pos: [-10.9, 0, -4], rotY: Math.PI / 2, color: "#22f0ff", sub: { ko: "소개", en: "who" } },
@@ -103,6 +116,7 @@ export const BUNKER: ZoneDef = {
   bounds: { x0: -12, x1: 12, z0: -19.6, z1: 14 },
   boxes: [
     box(BUNKER_BELL.pos[0], BUNKER_BELL.pos[2], 2.3, 1.8),
+    box(FACE_MACHINE.pos[0], FACE_MACHINE.pos[2], 1.5, 1.3), // 얼굴 복원 장치
     ...PILLARS.map(([x, , z]) => box(x, z, 1.2, 1.2)),
     ...TERMINALS.map((t) => (Math.abs(t.pos[0]) > 1 ? box(t.pos[0] + Math.sign(t.pos[0]) * 0.3, t.pos[2], 1.4, 1.6) : box(t.pos[0], t.pos[2] + 0.3, 1.6, 1.4))),
     box(-4.6, -18.6, 2.8, 1.2), // 관리인 책상
@@ -132,13 +146,10 @@ export const BUNKER: ZoneDef = {
       color: t.color,
       label: { ko: `${t.id.toUpperCase()} 터미널`, en: `${t.id.toUpperCase()} terminal` },
     })),
-    { id: "face-auth", kind: "face", pos: v(-3, 1.5, -5), radius: 1.8, label: { ko: "얼굴 인증 장치", en: "face-auth" } },
-    { id: "face-scanner", kind: "face", pos: v(2.7, 1.5, 0), radius: 1.8, label: { ko: "스캐너 높이 전환", en: "face-scanner" } },
-    { id: "face-front", kind: "face", pos: v(0, 1.5, 3), radius: 1.8, label: { ko: "정면 관찰", en: "face-front" } },
-    { id: "face-side", kind: "face", pos: v(3, 1.5, 0), radius: 1.8, label: { ko: "측면 관찰", en: "face-side" } },
-    { id: "face-specs", kind: "face", pos: v(-4.7, 1.5, -4), radius: 1.8, label: { ko: "보정 명세판", en: "face-specs" } },
-    { id: "face-lamp", kind: "face", pos: v(2.7, 1.5, -2), radius: 1.8, label: { ko: "검사등 조절", en: "face-lamp" } },
-    ...PAINTINGS.filter(p => p.w.title.ko === "자화상").map(p => ({ id: "face-portrait", kind: "painting" as const, work: p.work, pos: v(p.pos[0], 1.5, p.pos[2]), radius: 3, label: p.w.title })),
+    // 얼굴 복원 장치: 맞추는 동안에는 장치 전체가 하나의 대상(바라보는 원통을 돌린다), 선택 단계에서는 두 조작부
+    { id: "face-machine", kind: "face", pos: machinePoint(0, 1.7, 0.35), radius: 3.2, label: faceUi.turn, when: () => faceRt.phase === "idle" },
+    { id: "face-std", kind: "face", pos: machinePoint(-0.58, 1, 0.55), radius: 3, color: "#ff5fb0", label: faceUi.applyStandard, when: () => faceRt.phase === "choice" },
+    { id: "face-keep", kind: "face", pos: machinePoint(0.58, 1, 0.55), radius: 3, color: "#e8c27a", label: faceUi.keepOriginal, when: () => faceRt.phase === "choice" },
     // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
     {

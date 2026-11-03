@@ -11,7 +11,8 @@
   font: 11px/1.5 var(--mono);
   pointer-events: none;
 }
-.status strong, .status small { display: block; font-weight: normal; }
+.status strong { display: inline; font-weight: normal; margin-right: 8px; }
+.status small { display: block; font-weight: normal; }
 .status span { display: inline-block; font-variant-numeric: tabular-nums; }
 .status small { font-size: 10px; opacity: 0.8; }
 .status[data-active="true"] { border-color: #82efce; color: #baf5de; }
