@@ -15,6 +15,7 @@ import { player } from "./Player";
 import { BUNKER } from "./zones";
 import { LotusStrings } from "./CityAlleys";
 import BunkerBell from "./BunkerBell";
+import { useLightPool } from "./atmosphere";
 
 const W = 12; // 방의 반폭
 const LEN = BUNKER_Z1 - BUNKER_Z0;
@@ -218,6 +219,8 @@ function Terminal({ id, pos, rotY, color, lang, visited, onTap }: { id: SectionI
 
 function Paintings({ lang }: { lang: Lang }) {
   const tex = useTexture(PAINTINGS.map((p) => p.w.image!));
+  const wallWash = useLightPool("#ffe6c0", 2.4, "top");
+  const paintWash = useLightPool("#fff0d8", 0.3, "top");
   tex.forEach((t) => {
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 4;
@@ -251,9 +254,12 @@ function Paintings({ lang }: { lang: Lang }) {
                 <boxGeometry args={[0.6, 0.015, 0.05]} />
                 <meshBasicMaterial color="#fff4dc" toneMapped={false} />
               </mesh>
-              <mesh position={[0, 0.1, 0.34]} rotation={[0.12, 0, 0]}>
-                <coneGeometry args={[pw * 0.62, ph + 0.4, 20, 1, true]} />
-                <meshBasicMaterial color="#fff2d0" transparent opacity={0.018} depthWrite={false} side={THREE.DoubleSide} />
+              {/* 그림등이 닿은 자리: 위에서 아래로 옅어지는 빛. 공중에 빛기둥을 세우지 않아 그림을 가리지 않는다 */}
+              <mesh position={[0, 0.12, 0.004]} material={wallWash}>
+                <planeGeometry args={[pw + 1.2, ph + 0.9]} />
+              </mesh>
+              <mesh position={[0, 0, 0.067]} material={paintWash}>
+                <planeGeometry args={[pw, ph]} />
               </mesh>
             </group>
           </group>

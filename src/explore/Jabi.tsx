@@ -100,6 +100,7 @@ function planPath(ax: number, az: number) {
 }
 let coolT = 0;
 const last = { x: 0, z: 0 };
+const track = { x: 0, z: 0 };
 
 function GazeSystem() {
   useFrame((s, rawDt) => {
@@ -124,7 +125,13 @@ function GazeSystem() {
     } else if (gaze.state === "lock") {
       lockT -= dt;
       // 길이 바닥에 비친 처음 절반(0.15초) 동안은 가는 선이 플레이어를 따라온다. 마지막 0.15초에 고정된다
-      if (lockT < PREVIEW && lockT > PREVIEW / 2) planPath(player.pos.x, player.pos.z);
+      // 끊겨 튀지 않도록, 겨눈 점이 플레이어 쪽으로 미끄러지듯 따라간다
+      if (lockT < PREVIEW && lockT > PREVIEW / 2) {
+        const k = 1 - Math.exp(-dt * 16);
+        track.x += (player.pos.x - track.x) * k;
+        track.z += (player.pos.z - track.z) * k;
+        planPath(track.x, track.z);
+      }
       gaze.shake = 0.1 + (0.9 - lockT) * 0.12;
       if (lockT <= 0) startBeam(aimAt);
     } else if (gaze.state === "cool") {
@@ -150,6 +157,8 @@ function GazeSystem() {
         // 눈이 붉어지는 순간의 자리를 겨눈다. 그래서 붉어지면 바로 옆으로 뛰어 피할 수 있다
         aimAt.set(player.pos.x, 0, player.pos.z);
         planPath(aimAt.x, aimAt.z);
+        track.x = aimAt.x;
+        track.z = aimAt.z;
       }
       gaze.shake = m >= 70 ? ((m - 70) / 30) * 0.06 : 0;
     }
@@ -287,7 +296,7 @@ function Beam() {
         lane.current.rotation.set(-Math.PI / 2, 0, Math.atan2(path.end.x - path.start.x, path.end.z - path.start.z));
         lane.current.scale.set(0.14, len, 1);
         const k = 1 - Math.max(0, lockT) / PREVIEW;
-        (lane.current.material as THREE.MeshBasicMaterial).opacity = (0.35 + 0.5 * k) * (Math.sin(now * 40) > -0.3 ? 1 : 0.5);
+        (lane.current.material as THREE.MeshBasicMaterial).opacity = (0.35 + 0.5 * k) * (0.8 + 0.2 * Math.sin(now * 40));
       }
     }
     // 바닥 자국: 처음엔 녹은 주황, 몇 초 뒤 검게 식는다
