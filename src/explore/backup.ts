@@ -85,6 +85,7 @@ export function forgetCityRecords() {
     [
       "sanlee-face-auth-v1",
       "sanlee-record-audit-v1",
+      "sanlee-record-audit-v2",
       "sanlee-promise",
       "sanlee-last-login",
       "sanlee-visited",

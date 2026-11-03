@@ -640,14 +640,11 @@ export const faceUi = {
   endWorks: { ko: "방공호의 작품 터미널과 그림은 계속 볼 수 있습니다.", en: "The work terminals and paintings in the shelter stay open." },
 };
 
-// ---------------- 퍼즐 B 「없었던 3초」 ----------------
-// 퍼즐 B v0.5: 도시는 '거부' 위에 계속 '동의'를 찍는다.
-// 버튼 시험·문서 대조는 폐기. 이야기의 규칙은 물리 기계의 움직임으로 전달한다.
+// ---------------- 퍼즐 B 「되감긴 3초」 v0.6 ----------------
+// 작동 원리는 글이 아니라 기계(돌아가는 릴, 움직이는 종이, 내려찍는 도장, 물리는 기어)로 보여 준다.
+// 그래서 퍼즐 도중의 대사는 없다. 원본이 드러난 뒤의 마무리만 말한다.
 export const auditLines = {
-  mismatch: {
-    id: "b.verifier.press-stopped", speaker: "verifier", ms: 1900,
-    ko: "기록 수정 중단. 원본이 노출되었습니다.", en: "Record revision stopped. Original exposed.",
-  },
+  // 원본이 드러나는 순간 도시 안내가 끼어들려다 끊긴다
   cut: { id: "b.city.cut", speaker: "city", ms: 1100, ko: "고객님의 기록은 언제나 안전하게 보—", en: "Your records are always kept safe and—" },
   refused: { id: "b.san.refused", speaker: "san", ms: 3600, ko: "……내가 거부했었구나.", en: "...So I did refuse." },
   stillHere: { id: "b.san.still-here", speaker: "san", ms: 4200, ko: "그런데 난 왜 아직 여기 있는 거지?", en: "Then why am I still stuck here?" },
@@ -656,40 +653,39 @@ export const auditLines = {
 } satisfies Record<string, Line>;
 
 export const auditScenes = {
-  mismatch: [auditLines.mismatch],
   cut: [auditLines.cut],
   san: [auditLines.refused, auditLines.stillHere],
   guarantor: [auditLines.guarantor],
   after: [auditLines.after],
 };
 
+// 말하지 않는 화면 문구 (판독창 글자는 recordAudit.ts FRAMES)
 export const auditUi = {
-  quest: { ko: "붉은 거부 기록이 덮여 쓰이고 있습니다", en: "The red refusal is being overwritten" },
-  questTest: { ko: "도장을 멈추십시오", en: "Stop the stamp" },
-  questBox: { ko: "드러난 원본 테이프를 꺼내십시오", en: "Pull out the exposed original" },
-  machine: { ko: "기록 수정 장치", en: "Record revision press" },
-  stop: { ko: "도장 멈추기", en: "Stop the stamp" },
-  take: { ko: "원본 꺼내기", en: "Take original" },
-  slipTag: { ko: "도시 전송 전 · 원본 입력 기록", en: "BEFORE CITY UPLOAD · ORIGINAL INPUT" },
-  slipLine: { ko: "14:02:01 — 모두 거부", en: "14:02:01 — REJECT ALL" },
-  slipWho: { ko: "시민: 이산 · 단말기 SEOUL-T 7", en: "Citizen: San Lee · terminal SEOUL-T 7" },
-  slipNote: {
-    ko: "이산은 거부했다. 기계는 그 위에 동의를 찍었다. 도시는 지금도 이 기록을 동의라고 부른다.",
-    en: "San refused. The machine stamped consent over it. The city still calls this consent.",
-  },
-  slipOfficial: { ko: "공식 기록: 동의한 시민", en: "Official record: a citizen who consented" },
-  slipClose: { ko: "원본 보관하기", en: "Keep the original" },
+  quest: { ko: "이산의 마지막 기록을 확인하십시오", en: "Check San's last record" },
+  machine: { ko: "기록 기계", en: "Record machine" },
+  // 모바일 행동 버튼의 보조 라벨 (부품 이름은 띄우지 않는다)
+  use: { ko: "조작", en: "Use" },
+  reelOfficial: { ko: "공식", en: "OFFICIAL" },
+  reelOriginal: { ko: "원본", en: "ORIGINAL" },
   guarantorSign: { ko: "보증인 등록", en: "GUARANTOR" },
   guarantorLook: { ko: "보증 장치는 아직 아무 대답도 하지 않는다. 다음 이야기는 준비 중입니다.", en: "The guarantor unit gives no answer yet. The next part is in progress." },
   endTag: { ko: "시제품 · 퍼즐 B 끝", en: "PROTOTYPE · PUZZLE B COMPLETE" },
   endTitle: { ko: "보증인 등록이 필요합니다", en: "Guarantor registration required" },
   endBody: {
-    ko: "이산은 '모두 거부'를 선택했습니다. 원본은 확보했지만, 도시의 공식 기록은 아직 '동의'입니다. 이산의 다리는 여전히 굳어 있습니다.",
-    en: "San chose Reject all. You recovered the original, but the city's official record still says consent. His legs remain stone.",
+    ko: "원본 기록에는 '모두 거부'가 남아 있었습니다. 하지만 도시의 공식 기록은 여전히 '모두 동의'입니다. 이산의 다리는 아직 굳어 있습니다.",
+    en: "The original record still held 'Reject all'. But the city's official record still says 'Accept all'. San's legs are still stone.",
   },
   endNext: { ko: "다음 이야기는 준비 중입니다.", en: "The next part is in progress." },
-  recProtected: { ko: "범종의 보호로 기계 중단 행동은 시민 활동 기록에 남지 않았습니다.", en: "The bell hid your intervention from the citizen activity log." },
-  recRecorded: { ko: "기계 중단 행동은 시민 활동 기록에 남았습니다.", en: "Your intervention was added to the citizen activity log." },
+  recProtected: { ko: "범종의 보호로 기계를 멈춘 행동은 시민 활동 기록에 남지 않았습니다.", en: "Under the bell's protection, stopping the machine left no citizen activity record." },
+  recRecorded: { ko: "기계를 멈춘 행동은 시민 활동 기록에 남았습니다.", en: "Stopping the machine was kept in your citizen activity record." },
+};
+
+// 개발·검수용 재시작 (?debug에서만 설정창에 보인다)
+export const testUi = {
+  title: { ko: "테스트", en: "TEST" },
+  restartA: { ko: "A부터 다시 플레이", en: "Replay from puzzle A" },
+  restartB: { ko: "B부터 다시 플레이", en: "Replay from puzzle B" },
+  done: { ko: "테스트 시작 상태로 돌렸습니다", en: "Reset to the test start" },
 };
 
 // 방공호 사람들의 진행별 대사 (새 경로 전용). a = 얼굴 복원 전, b = 기록 확인 전, c = 퍼즐 B 이후
@@ -704,7 +700,7 @@ export const npcStages: Record<string, Partial<Record<"a" | "b" | "c", L[]>>> = 
     ],
     b: [
       { ko: "이산이 고개를 들었어. 그런데 다리는 아직이야.", en: "San has raised their head. The legs, not yet." },
-      { ko: "이산 반대편에 있는 기록 검증 장치를 봐. 이산이 멈추던 날의 공식 기록이 거기 들어 있어.", en: "Look at the record verifier on San's other side. The official record from the day San stopped is in there." },
+      { ko: "이산 반대편의 기록 기계 봤어? 이산이 멈추던 날의 기록이 거기 감겨 있어. 저 도장은 쉬지를 않아.", en: "Seen the record machine on San's other side? The record from the day San stopped is wound in there. That stamp never rests." },
     ],
     c: [
       { ko: "거부했는데 동의로 남았다니. 위에서는 그걸 '처리'라고 부르지.", en: "Refused, and filed as consent. Up there they call that 'processing'." },
@@ -713,18 +709,18 @@ export const npcStages: Record<string, Partial<Record<"a" | "b" | "c", L[]>>> = 
   },
   radio: {
     b: [
-      { ko: "그 기록 검증 장치? 내가 지상 검문소에서 떼어 온 단말기야. 이산이 멈추던 그날 쓰던 거.", en: "That record verifier? A terminal I pried off a surface checkpoint. The one San used the day they stopped." },
-      { ko: "중앙 서버랑 끊어 놨으니 도시가 손을 못 대. 안쪽 기계는 아직 그대로고.", en: "I cut it off from the central server, so the city can't touch it. The machinery inside is untouched." },
+      { ko: "그 기록 기계? 내가 지상 검문소에서 떼어 온 거야. 이산이 멈추던 그날 쓰던 거.", en: "That record machine? I pried it off a surface checkpoint. The one San used the day they stopped." },
+      { ko: "도시가 쓰는 건 흰 릴뿐이야. 옆의 낡은 릴은 처음 달려 있던 그대로 뒀어.", en: "The city only writes to the white reel. I left the old reel beside it just as it came." },
     ],
     c: [
-      { ko: "역시 안쪽에 종이가 남아 있었구나. 도시는 서버만 고칠 줄 알지, 종이는 몰라.", en: "So there was paper left inside. The city only knows how to edit servers. It doesn't know paper." },
-      { ko: "공식 기록은 여전히 '동의'야. 그 종이가 있다고 서버가 바뀌진 않아. 아직은.", en: "The official record still says 'consented'. Having that paper won't change the server. Not yet." },
+      { ko: "역시 낡은 릴에 남아 있었구나. 도시는 자기 릴만 고칠 줄 알지.", en: "So it was still on the old reel. The city only knows how to rewrite its own." },
+      { ko: "공식 기록은 여전히 '동의'야. 원본을 봤다고 도시의 기록이 바뀌진 않아. 아직은.", en: "The official record still says 'consented'. Seeing the original won't change the city's record. Not yet." },
     ],
   },
   monk: {
     b: [
       { ko: "…앉게. 여기서는 아무도 자네 호흡을 세지 않네.", en: "…Sit. Down here, no one counts your breaths." },
-      { ko: "얼굴을 찾았으니 이제 그 사람이 무엇을 골랐는지 볼 차례지. 기록은 기계 옆에 있네.", en: "The face is found. Now it's time to see what they chose. The record is by the machine." },
+      { ko: "얼굴을 찾았으니 이제 그 사람이 무엇을 골랐는지 볼 차례지. 기록은 저 기계에 감겨 있네.", en: "The face is found. Now it's time to see what they chose. The record is wound in that machine." },
     ],
     c: [
       { ko: "아니라고 했는데 그렇다고 적혔군. 그래도 자네는 그 '아니오'를 손에 쥐었네.", en: "They said no, and it was written down as yes. Still, you hold that 'no' in your hand." },

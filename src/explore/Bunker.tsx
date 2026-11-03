@@ -934,7 +934,7 @@ export default function Bunker({ face, facePhase, audit, lang, visited, onTap, s
       {/* 퍼즐 B의 기록 검증 장치와 보증 장치(퍼즐 C 예고). 새 경로에서만 놓인다 (기존 저장의 방공호는 그대로) */}
       {!face.legacy && (
         <>
-          <AuditMachine lang={lang} input={audit.input} output={audit.output} onTap={onTap} />
+          <AuditMachine lang={lang} braked={audit.braked} link={audit.link} pos={audit.pos} solved={audit.solved} onTap={onTap} />
           <Guarantor lang={lang} litAt={audit.litAt} />
         </>
       )}

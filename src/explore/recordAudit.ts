@@ -1,55 +1,74 @@
-// 퍼즐 B 「없었던 3초」: 기록 검증 장치에서 수락·거부를 직접 시험해 입력과 처리 결과의 불일치를 찾고,
-// 옆면 감사 기록함에서 이산의 실제 입력(모두 거부)을 꺼낸다.
-// 진행 저장만 다룬다. 시민 활동 기록(citizenRecords)과는 분리되어 있고, 퍼즐 A 저장(faceAuth)도 건드리지 않는다.
+// 퍼즐 B 「되감긴 3초」 v0.6
+// 기록 기계에는 릴이 두 개 있다. 공식 기록 릴(도시가 동의 도장을 찍어 덮어쓴 기록)과 원본 기록 릴(수정 전 입력 흔적).
+// 제동 레버로 자동 운전을 멈추면 수동 바퀴로 연결된 릴을 1초씩 되감을 수 있다. 바퀴는 처음에 공식 릴에 물려 있다.
+// 공식 릴을 끝까지 되감아도 '동의'만 나온다. 연결 장치를 원본 릴로 옮겨 3초를 되감으면 14:02:01 '모두 거부'가 드러나고, 그 순간 해결된다.
+// 진행 저장만 다룬다. 시민 활동 기록(citizenRecords)과 퍼즐 A 저장(faceAuth)은 건드리지 않는다.
 import type { FaceState } from "./faceAuth";
 
-export const AUDIT_KEY = "sanlee-record-audit-v1";
-export type AuditChoice = "accept" | "reject";
+export const AUDIT_KEY = "sanlee-record-audit-v2";
+// 이전 B(v0.4 버튼 시험·v0.5 도장 정지)의 저장. 새 퍼즐과 구조가 달라 끝낸 기록만 옮기고, 초기화·삭제 때 함께 지운다
+export const AUDIT_KEY_V1 = "sanlee-record-audit-v1";
+
+export type Reel = "official" | "original";
+// 되감을 수 있는 칸 수: 14:02:04(지금) → 03 → 02 → 01
+export const REWIND_STEPS = 3;
+
 export type AuditState = {
-  schema: 1;
-  // 기록 재생 손잡이를 돌려 이산의 마지막 공식 기록을 보았는가
-  played: boolean;
-  // 마지막 시험: 입력(플레이어가 누른 버튼)과 처리 결과(도시가 기록한 결과). 새로고침 뒤 표시등을 그대로 되살린다
-  last: { input: AuditChoice; output: AuditChoice } | null;
-  // 시험해 본 입력
-  tried: AuditChoice[];
-  // 입력 ≠ 처리 결과를 직접 확인했는가 (감사 기록함이 열린다)
-  mismatch: boolean;
-  // 감사 기록지를 꺼냈는가 = 퍼즐 해결. 공식 기록은 그대로 조작된 채 남는다
-  taken: boolean;
-  // 꺼낸 뒤의 마무리(이산의 말, 보증 장치 점등)까지 보았는가
+  schema: 2;
+  // 제동 레버로 자동 운전(도장·이송)을 멈췄는가
+  braked: boolean;
+  // 수동 바퀴가 물려 있는 릴
+  link: Reel;
+  // 각 릴을 되감은 칸 수 (0 = 14:02:04, 3 = 14:02:01)
+  pos: Record<Reel, number>;
+  // 원본 릴의 14:02:01 '모두 거부'가 드러났는가 = 퍼즐 해결. 도시의 공식 기록은 그대로 '동의'다
+  solved: boolean;
+  // 해결 뒤의 마무리(이산의 말, 보증 장치)까지 보았는가
   done: boolean;
 };
 
-export const emptyAudit = (): AuditState => ({ schema: 1, played: false, last: null, tried: [], mismatch: false, taken: false, done: false });
+export const emptyAudit = (): AuditState => ({ schema: 2, braked: false, link: "official", pos: { official: 0, original: 0 }, solved: false, done: false });
 
-// 새 경로에서 퍼즐 A를 끝낸 저장에서만 열린다. 기존(legacy) 저장의 지상 경로에는 나타나지 않는다
+// 새 경로에서 퍼즐 A를 끝낸 저장에서만 기계가 돈다. 기존(legacy) 저장에는 나타나지 않는다
 export const auditAvailable = (face: Pick<FaceState, "legacy" | "method">) => !face.legacy && !!face.method;
 
-const choice = (v: unknown): v is AuditChoice => v === "accept" || v === "reject";
+const step = (n: unknown) => (Number.isInteger(n) && (n as number) >= 0 && (n as number) <= REWIND_STEPS ? (n as number) : 0);
 
-// 저장을 읽는다. 앞 단계가 빠진 저장은 앞 단계까지 채워서 모순이 없게 맞춘다
-export function parseAudit(raw: string | null): AuditState {
+// 저장을 읽는다. 모순되는 값은 앞 단계 기준으로 맞춘다
+export function parseAudit(raw: string | null, legacyRaw: string | null = null): AuditState {
   const s = emptyAudit();
-  if (!raw) return s;
   try {
-    const d = JSON.parse(raw);
-    if (!d || d.schema !== 1) return s;
-    s.done = d.done === true;
-    s.taken = d.taken === true || s.done;
-    s.mismatch = d.mismatch === true || s.taken;
-    s.played = d.played === true || s.mismatch;
-    s.tried = Array.isArray(d.tried) ? (["accept", "reject"] as const).filter((c) => d.tried.includes(c)) : [];
-    if (d.last && choice(d.last.input) && choice(d.last.output)) s.last = { input: d.last.input, output: d.last.output };
-    if (s.mismatch && !s.tried.includes("reject")) s.tried.push("reject");
-    if (s.mismatch && !s.last) s.last = { input: "reject", output: "accept" };
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d && d.schema === 2) {
+        s.braked = d.braked === true;
+        s.link = d.link === "original" ? "original" : "official";
+        s.pos = { official: step(d.pos?.official), original: step(d.pos?.original) };
+        s.solved = d.solved === true || s.pos.original === REWIND_STEPS;
+        s.done = d.done === true && s.solved;
+        if (!s.braked) s.pos = { official: 0, original: 0 };
+        if (s.solved) {
+          s.braked = true;
+          s.link = "original";
+          s.pos.original = REWIND_STEPS;
+        }
+        return s;
+      }
+    }
+    // 이전 B를 끝낸 저장은 끝난 것으로 옮긴다 (도중 저장은 새 퍼즐을 처음부터)
+    if (legacyRaw) {
+      const d = JSON.parse(legacyRaw);
+      if (d && d.schema === 1 && (d.done === true || d.taken === true)) return solvedAudit(true);
+    }
   } catch {}
   return s;
 }
 
+const solvedAudit = (done: boolean): AuditState => ({ schema: 2, braked: true, link: "original", pos: { official: 0, original: REWIND_STEPS }, solved: true, done });
+
 export function loadAudit(): AuditState {
   try {
-    return parseAudit(localStorage.getItem(AUDIT_KEY));
+    return parseAudit(localStorage.getItem(AUDIT_KEY), localStorage.getItem(AUDIT_KEY_V1));
   } catch {
     return emptyAudit();
   }
@@ -61,65 +80,83 @@ export function saveAudit(state: AuditState) {
   } catch {}
 }
 
-export function playRecord(state: AuditState): AuditState {
-  return state.played ? state : { ...state, played: true };
+export function clearAudit() {
+  try {
+    localStorage.removeItem(AUDIT_KEY);
+    localStorage.removeItem(AUDIT_KEY_V1);
+  } catch {}
 }
 
-// 도시의 처리: 무엇을 누르든 결과는 '모두 수락'이다
-export const cityProcess = (_input: AuditChoice): AuditChoice => "accept";
+// 조작 결과. jammed = 자동 운전 중이라 걸려서 안 움직임, end = 릴 끝에 닿음
+export type AuditResult =
+  | { status: "braked"; state: AuditState }
+  | { status: "jammed" | "end" | "noop"; state: AuditState }
+  | { status: "linked"; state: AuditState }
+  | { status: "rewound"; reel: Reel; pos: number; solved: boolean; state: AuditState };
 
-// 버튼 하나를 시험한다. 기록을 재생하기 전에는 장치가 켜지지 않는다
-export function pressTest(state: AuditState, input: AuditChoice) {
-  if (!state.played || state.taken) return { status: "idle" as const, state };
-  const output = cityProcess(input);
-  const mismatch = input !== output;
-  const next: AuditState = {
-    ...state,
-    last: { input, output },
-    tried: state.tried.includes(input) ? state.tried : [...state.tried, input],
-    mismatch: state.mismatch || mismatch,
-  };
-  return { status: mismatch ? ("mismatch" as const) : ("match" as const), firstMismatch: mismatch && !state.mismatch, state: next };
+// 제동 레버: 한 번 당기면 자동 운전이 멈춘 채로 있다
+export function pullBrake(state: AuditState): AuditResult {
+  if (state.solved || state.braked) return { status: "noop", state };
+  return { status: "braked", state: { ...state, braked: true } };
 }
 
-// 프레스의 물리적 덮어쓰기를 멈춘다. 기존 v1 B 저장·핵심 로직의 불일치 단계를
-// '원본을 드러내는 단계'로 보존하여 업데이트 이전 저장에서도 진행할 수 있게 한다.
-export function interruptRevisionPress(state: AuditState) {
-  return pressTest(playRecord(state), "reject");
+// 연결 장치: 수동 바퀴를 다른 릴로 옮긴다. 자동 운전 중에는 걸려서 움직이지 않는다
+export function shiftLink(state: AuditState, to?: Reel): AuditResult {
+  if (state.solved) return { status: "noop", state };
+  if (!state.braked) return { status: "jammed", state };
+  const link: Reel = to ?? (state.link === "official" ? "original" : "official");
+  if (link === state.link) return { status: "noop", state };
+  return { status: "linked", state: { ...state, link } };
 }
 
-// 감사 기록지를 꺼낸다. 불일치를 직접 확인하기 전에는 기록함이 잠겨 있다
-export function takeSlip(state: AuditState): AuditState {
-  if (!state.mismatch) return state;
-  return state.taken ? state : { ...state, taken: true };
+// 수동 바퀴: 연결된 릴을 1초 되감는다. 원본을 끝까지 되감는 순간 해결
+export function turnWheel(state: AuditState): AuditResult {
+  if (state.solved) return { status: "noop", state };
+  if (!state.braked) return { status: "jammed", state };
+  const reel = state.link;
+  if (state.pos[reel] >= REWIND_STEPS) return { status: "end", state };
+  const pos = state.pos[reel] + 1;
+  const solved = reel === "original" && pos === REWIND_STEPS;
+  return { status: "rewound", reel, pos, solved, state: { ...state, pos: { ...state.pos, [reel]: pos }, solved } };
 }
 
 export function finishAudit(state: AuditState): AuditState {
-  if (!state.taken) return state;
+  if (!state.solved) return state;
   return state.done ? state : { ...state, done: true };
 }
 
-// 새로고침·재접속 뒤 장치가 돌아갈 단계 (연출 도중이면 그 직전의 쉬는 단계로)
+// 각 릴의 판독창에 보이는 기록. 공식 릴은 어느 칸이든 동의 도장이 찍혀 있고, 원본은 실제 입력 흔적이다
+export type Frame = { time: string; mark: "accept" | "reject" | "trace" | "none"; word: { ko: string; en: string } };
+export const FRAMES: Record<Reel, Frame[]> = {
+  official: [
+    { time: "14:02:04", mark: "accept", word: { ko: "모두 동의", en: "ACCEPT ALL" } },
+    { time: "14:02:03", mark: "accept", word: { ko: "동의", en: "CONSENT" } },
+    { time: "14:02:02", mark: "accept", word: { ko: "동의", en: "CONSENT" } },
+    { time: "14:02:01", mark: "accept", word: { ko: "모두 동의", en: "ACCEPT ALL" } },
+  ],
+  original: [
+    { time: "14:02:04", mark: "none", word: { ko: "기록 끝", en: "END OF TAPE" } },
+    { time: "14:02:03", mark: "trace", word: { ko: "손 · 오른쪽 아래로", en: "HAND · TO LOWER RIGHT" } },
+    { time: "14:02:02", mark: "trace", word: { ko: "손 · 거부 위에 멈춤", en: "HAND · RESTS ON REJECT" } },
+    { time: "14:02:01", mark: "reject", word: { ko: "모두 거부", en: "REJECT ALL" } },
+  ],
+};
+export const frameOf = (state: Pick<AuditState, "pos">, reel: Reel) => FRAMES[reel][state.pos[reel]];
+
+// 연출 단계 (런타임). 저장에서 돌아올 때는 쉬는 단계 중 하나로
 export type AuditPhase =
-  | "dormant" // 퍼즐 A가 아직이거나 기존(legacy) 저장: 장치가 꺼져 있다
-  | "idle" // 기록 재생 손잡이를 기다린다
-  | "replay" // 이산의 마지막 공식 기록을 재생 중
-  | "test" // 수락·거부 버튼이 켜져 있다
-  | "processing" // 누른 입력을 도시가 처리 중
-  | "unlock" // 불일치: 감사 기록함의 잠금이 풀린다
-  | "slip" // 덮개가 조금 열려 있다. 기록지를 꺼낼 수 있다
-  | "reading" // 기록지를 읽는 중
-  | "ending" // 장치가 멈추고 이산이 말한다, 보증 장치에 불이 들어온다
+  | "dormant" // 퍼즐 A가 아직이거나 legacy 저장: 기계가 꺼져 있다
+  | "auto" // 자동 운전: 도장이 계속 공식 기록에 '동의'를 찍는다
+  | "manual" // 제동됨: 연결 장치와 수동 바퀴를 쓸 수 있다
+  | "moving" // 레버·연결 장치·바퀴가 움직이는 짧은 동안 (입력 무시)
+  | "reveal" // 원본 14:02:01이 드러났다: 기계가 멈추고, 이산이 말하고, 보증 장치가 켜진다
   | "done";
 
 export function restPhase(face: Pick<FaceState, "legacy" | "method">, state: AuditState): AuditPhase {
   if (!auditAvailable(face)) return "dormant";
-  if (state.done) return "done";
-  // 기록지를 꺼낸 뒤 마무리 전에 나갔다면, 열린 기록함에서 다시 꺼내 읽고 마무리로 이어진다
-  if (state.mismatch) return "slip";
-  // A 복원 직후 도장은 자동으로 돌아간다. 플레이어에게 재생 손잡이를 찾게 하지 않는다.
-  return "test";
+  // 해결 뒤에 나갔다면 마무리는 이미 지난 것으로 본다 (원본은 판독창에 그대로 보인다)
+  if (state.solved) return "done";
+  return state.braked ? "manual" : "auto";
 }
 
-// 퍼즐 해결 여부: 공식 기록 수정이 아니라, 독립적인 원본 증거를 확보한 것
-export const auditSolved = (state: AuditState) => state.taken;
+export const auditSolved = (state: AuditState) => state.solved;

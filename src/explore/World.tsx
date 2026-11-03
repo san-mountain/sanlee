@@ -13,10 +13,10 @@ import { CITY, ZONES, type Interactable, type Zone } from "./zones";
 
 import type { FaceState } from "./faceAuth";
 import type { FacePhase } from "./faceRuntime";
-import type { AuditChoice } from "./recordAudit";
+import type { Reel } from "./recordAudit";
 
-// 기록 검증 장치의 표시등(마지막 시험의 입력·처리 결과)과 보증 장치가 켜지는 시각
-export type AuditView = { input: AuditChoice | null; output: AuditChoice | null; litAt: number };
+// 기록 기계의 저장 상태(제동·연결·되감은 칸)와 보증 장치가 켜지는 시각
+export type AuditView = { braked: boolean; link: Reel; pos: Record<Reel, number>; solved: boolean; litAt: number };
 
 type Props = {
   face: FaceState;

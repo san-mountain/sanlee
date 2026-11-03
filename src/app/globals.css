@@ -1133,18 +1133,11 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .face-end .btn { min-height: 44px; }
 @media (max-width: 640px) { .face-line { bottom: 150px; font-size: 15px; } }
 
-/* 퍼즐 B 「없었던 3초」: 자막 화자 색, 감사 기록지 */
+/* 퍼즐 B 자막 화자 색 */
 .face-line.who-verifier b { color: #ffc76a; }
 .face-line.who-guarantor { color: #fff0c8; }
 .face-line.who-guarantor b { color: #ffd27a; }
-.panel.audit-slip { width: min(400px, calc(100% - 32px)); max-height: calc(100% - 24px); overflow: auto; padding: 22px 22px 16px;
-  background: #e9e1cc; color: #1d1a14; border: 0; box-shadow: 0 10px 40px #000c; text-align: center; line-height: 1.55; word-break: keep-all; }
-.audit-slip-tag { display: block; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; color: #5d5442; padding-bottom: 8px; border-bottom: 2px solid #4b4232; }
-.audit-slip-mark { font-size: 64px; line-height: 1; color: #b0201a; margin: 14px 0 4px; font-weight: 700; }
-.audit-slip-line { margin: 0 0 8px; font-size: 22px; font-weight: 700; }
-.audit-slip-who { margin: 0 0 12px; font-size: 12px; color: #5d5442; }
-.audit-slip-note { margin: 0 0 10px; font-size: 14px; text-align: left; }
-.audit-slip-official { margin: 0 0 14px; font-size: 13px; color: #8a2c22; font-weight: 700; }
-.audit-slip .panel-actions { justify-content: center; }
-.audit-slip .btn { min-height: 44px; }
-@media (max-width: 640px) { .audit-slip-line { font-size: 19px; } .audit-slip-mark { font-size: 52px; } }
+/* ?debug 테스트 재시작 (설정창 안) */
+.pause-test { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px dashed #ffffff33; }
+.pause-test span { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: #ffb02e; margin-right: 4px; }
+.pause-test .btn { min-height: 40px; font-size: 13px; }

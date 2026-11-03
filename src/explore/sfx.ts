@@ -274,6 +274,34 @@ export const sfx = {
     tone(60, 0.25, { type: "sawtooth", f2: 30, vol: 0.3, attack: 0.002 });
     noise(0.08, { vol: 0.25, from: 5000, to: 2000 });
   },
+  // 기록 기계: 도장이 종이를 내려찍는 둔탁한 소리 (자동 운전 중 반복)
+  stamp: () => {
+    tone(120, 0.1, { type: "triangle", f2: 70, vol: 0.18, attack: 0.002 });
+    noise(0.06, { vol: 0.08, from: 1800, to: 600, q: 1.2 });
+  },
+  // 자동 운전이 멈춘다: 모터가 잦아들고 걸쇠가 걸린다
+  brake: () => {
+    tone(160, 0.9, { type: "sawtooth", f2: 40, vol: 0.12 });
+    tone(110, 0.2, { type: "triangle", f2: 70, vol: 0.4, at: 0.55, attack: 0.002 });
+    noise(0.3, { vol: 0.1, from: 900, to: 300, q: 3, at: 0.5 });
+  },
+  // 걸려서 안 움직인다
+  jam: () => {
+    tone(90, 0.12, { type: "square", vol: 0.16, attack: 0.002 });
+    noise(0.1, { vol: 0.12, from: 700, to: 300, q: 3 });
+  },
+  // 되감기: 종이가 사르륵 감기며 톱니가 딸깍거린다
+  rewind: () => {
+    noise(0.7, { vol: 0.09, from: 2600, to: 1400, q: 1.5 });
+    for (let i = 0; i < 6; i++) tone(1500 - i * 60, 0.025, { type: "square", vol: 0.04, at: i * 0.11 });
+    tone(150, 0.1, { type: "triangle", f2: 90, vol: 0.28, at: 0.7, attack: 0.002 });
+  },
+  // 원본 14:02:01이 드러난다
+  reveal: () => {
+    tone(196, 2.4, { vol: 0.12, attack: 0.05 });
+    tone(233, 2.2, { vol: 0.08, attack: 0.08, at: 0.1 });
+    tone(587, 1.6, { vol: 0.05, attack: 0.1, at: 0.3 });
+  },
   // 보증 장치에 불이 들어온다: 낮고 긴 한 음
   guarantor: () => {
     tone(73.4, 2.4, { type: "triangle", vol: 0.3, attack: 0.03 });

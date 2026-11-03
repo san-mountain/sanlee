@@ -1,22 +1,43 @@
 "use client";
 
-// 퍼즐 B 「없었던 3초」: 거부 원본 위에 '동의'를 계속 찍는 실제 기계.
-// 플레이어는 도장 잠금쇠를 직접 당겨 덮어쓰기를 멈추고, 노출된 원본 테이프를 꺼낸다.
-// 화면 위 조작 레이블 없이, 큰 레버·노출된 종이와 광원으로만 다음 행동을 보여 준다.
+// 퍼즐 B 「되감긴 3초」 v0.6: 무명사의 기록 기계.
+// 왼쪽 릴 = 원본 기록(낡은 나무·놋쇠), 오른쪽 릴 = 공식 기록(도시의 흰 플라스틱·초록 띠).
+// 각 릴에서 종이가 판독창으로 내려온다. 공식 쪽 종이에는 도장이 계속 '동의'를 찍는다.
+// 왼쪽 제동 레버 = 자동 운전 정지. 두 릴 앞을 가로지르는 축 위의 작은 기어(연결 장치) = 어느 릴이 수동 바퀴에 물렸는지.
+// 오른쪽 아래 큰 바퀴 = 물린 릴을 1초씩 되감는다. 설명 글 대신 기어가 맞물리고 릴과 종이가 실제로 움직인다.
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import type { Lang } from "@/data/site";
 import { Tap, type TapFn } from "./parts";
 import { signTexture } from "./textures";
-import { AUDIT_MACHINE, GUARANTOR } from "./zones";
-import { auditRt } from "./auditRuntime";
+import { AUDIT_MACHINE, GUARANTOR, AUDIT_PARTS } from "./zones";
+import { auditRt, type AuditPart } from "./auditRuntime";
+import { ACCEPT_COLOR, REJECT_COLOR, frameTexture, tapeTexture, wheelFaceTexture } from "./auditArt";
+import { FRAMES, type Reel } from "./recordAudit";
+import { player } from "./Player";
+import { sfx } from "./sfx";
 import { auditUi } from "./story";
 
 const IRON = "#22252a";
+const IRON_EDGE = "#33363c";
 const BRASS = "#bc985c";
 const WOOD = "#4d3327";
-const PAPER = "#e5d8bc";
+const WOOD_DARK = "#2c1a10";
+const CITY = "#e9efeb";
+
+const REEL_Y = 1.86;
+const REEL_R = 0.3;
+const REEL_X: Record<Reel, number> = { original: -0.45, official: 0.45 };
+const WINDOW_Y = 1.2;
+const RAIL_Y = REEL_Y - 0.16; // 연결 기어가 오가는 축 (두 릴의 허브 기어 바로 아래)
+const STEP_S = 0.75; // 바퀴 한 번에 되감는 시간
+const STAMP_PERIOD = 1.5;
+const ROD_X = 0.78; // 바퀴와 위 축을 잇는 세로 축 (오른쪽 판독창 바깥)
+
+const now = () => performance.now();
+const since = (t: number) => (t ? (now() - t) / 1000 : 99);
+const ease = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
 
 function useTex(make: () => THREE.Texture, key: unknown[]) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -25,215 +46,455 @@ function useTex(make: () => THREE.Texture, key: unknown[]) {
   return texture;
 }
 
-function StampWorks({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
-  const ko = lang === "ko";
-  const rejectTex = useTex(() => signTexture([[ko ? "✕ 거부" : "✕ REFUSED", 1]], {
-    color: "#bb383b", bg: "#eee0c3", w: 512, h: 208, mono: !ko,
-  }), [ko]);
-  const acceptTex = useTex(() => signTexture([[ko ? "✓ 동의" : "✓ ACCEPTED", 1]], {
-    color: "#243c30", bg: "#e5d8bc", w: 512, h: 208, mono: !ko,
-  }), [ko]);
-  const plaque = useTex(() => signTexture([[ko ? "기록 수정 장치" : "RECORD REVISION", 1]], {
-    color: "#e6ca9e", bg: "#2b201a", w: 720, h: 124, border: true,
-  }), [ko]);
-  const stripSign = useTex(() => signTexture([[ko ? "14:02:01  ·  모두 거부" : "14:02:01  ·  REJECT ALL", 1]], {
-    color: "#9b292f", bg: "#e5d8bc", w: 768, h: 128, mono: !ko,
-  }), [ko]);
+// 지금 움직이는 중인 칸의 진행도(0~1). 되감기는 STEP_S 동안 이어진다
+const windK = () => (auditRt.moved === "wheel" ? ease(since(auditRt.movedAt) / STEP_S) : 1);
+// 부품의 은은한 반응: 가까이 있을 때 지금 쓸 수 있는 부품만, 조준하면 조금 더
+function glow(part: AuditPart) {
+  const p = auditRt.phase;
+  const usable = part === "brake" ? p === "auto" : p === "manual";
+  if (!usable || !auditRt.near) return 0;
+  return auditRt.aim === part ? 0.75 : 0.28;
+}
+// 걸려서 덜컥 흔들리는 양
+const jolt = (part: AuditPart) => (auditRt.jammed === part ? Math.sin(since(auditRt.jammedAt) * 60) * Math.exp(-since(auditRt.jammedAt) * 7) : 0);
 
-  const hammer = useRef<THREE.Group>(null);
-  const lever = useRef<THREE.Group>(null);
-  const movingTape = useRef<THREE.Group>(null);
-  const marks = useRef<(THREE.Mesh | null)[]>([]);
-  const original = useRef<THREE.Group>(null);
-  const workLamp = useRef<THREE.MeshStandardMaterial>(null);
-  const stopLamp = useRef<THREE.MeshStandardMaterial>(null);
-  const pressLight = useRef<THREE.PointLight>(null);
-  const originalLight = useRef<THREE.PointLight>(null);
-  const stamp = useRef<THREE.Mesh>(null);
-  const begin = useRef(performance.now());
-
-  useFrame((st) => {
-    const p = auditRt.phase;
-    const running = p === "test" || p === "replay";
-    const stopped = p === "unlock" || p === "slip" || p === "reading" || p === "ending" || p === "done";
-    const elapsed = (performance.now() - begin.current) / 1000;
-    const beat = elapsed * 3.6;
-    // 위에서 떨어지는 도장과 롤러는 시선을 끄는 주된 연출. 뒤쪽에 작은 메시지 창을 두지 않는다.
-    const strike = running ? Math.pow(Math.max(0, Math.sin(beat)), 8) : 0;
-    if (hammer.current) {
-      const wanted = stopped ? 0.27 : -strike * 0.24;
-      hammer.current.position.y += (wanted - hammer.current.position.y) * 0.23;
-    }
-    if (stamp.current) stamp.current.rotation.z = running ? Math.sin(beat) * 0.035 : 0;
-    if (movingTape.current) movingTape.current.visible = running;
-    // 실제 기록의 '거부'가 이동하며 프레스 아래를 통과한 뒤 '동의'가 되는 과정.
-    // 텍스트 독해 없이도 원본을 덮어쓰는 행위를 이해할 수 있게 한다.
-    marks.current.forEach((mesh, index) => {
-      if (!mesh || !running) return;
-      const x = ((elapsed * 0.45 + index * 0.58) % 1.74) - 0.87;
-      mesh.position.x = x;
-      const material = mesh.material as THREE.MeshBasicMaterial;
-      const expected = x > 0.13 ? acceptTex : rejectTex;
-      if (material.map !== expected) { material.map = expected; material.needsUpdate = true; }
-    });
-    if (original.current) {
-      original.current.visible = stopped;
-      const target = p === "unlock" ? 0.18 : stopped ? 0.55 : 0;
-      original.current.position.z += (target - original.current.position.z) * 0.11;
-    }
-    if (lever.current) lever.current.rotation.x += ((stopped ? -0.7 : 0.2) - lever.current.rotation.x) * 0.18;
-    if (workLamp.current) workLamp.current.emissiveIntensity = running ? (0.45 + strike * 1.5) : 0.02;
-    if (stopLamp.current) stopLamp.current.emissiveIntensity = stopped ? 0.03 : (0.35 + Math.sin(st.clock.elapsedTime * 3) * 0.18);
-    if (pressLight.current) pressLight.current.intensity = running ? (0.35 + strike * 1.0) : 0;
-    if (originalLight.current) originalLight.current.intensity = stopped ? (0.7 + Math.sin(st.clock.elapsedTime * 2.8) * 0.2) : 0;
-  });
-
+// 투명한 넓은 판정 (모바일 탭·PC 조준). 보이는 부품보다 넉넉하다
+function Hit({ size, register, part }: { size: [number, number, number]; register: (p: AuditPart, m: THREE.Mesh | null) => void; part: AuditPart }) {
   return (
-    <group position={AUDIT_MACHINE.pos} rotation={[0, AUDIT_MACHINE.rotY, 0]}>
-      {/* 낮고 넓은 나무 받침 위 황동 프레스. 원통이나 버튼이 여러 개 달린 단말기로 보이지 않게 한다 */}
-      <mesh position={[0, 0.43, 0]} castShadow receiveShadow>
-        <boxGeometry args={[1.8, 0.84, 1.04]} />
-        <meshStandardMaterial color={WOOD} roughness={0.84} />
-      </mesh>
-      <mesh position={[0, 0.88, 0]} receiveShadow>
-        <boxGeometry args={[1.9, 0.09, 1.1]} />
-        <meshStandardMaterial color="#37241c" roughness={0.78} />
-      </mesh>
-      {[-0.87, 0.87].map((x) => (
-        <mesh key={x} position={[x, 0.5, 0.52]}>
-          <boxGeometry args={[0.035, 0.7, 0.022]} />
-          <meshStandardMaterial color={BRASS} metalness={0.76} roughness={0.32} />
-        </mesh>
-      ))}
-      <mesh position={[0, 0.99, 0.23]}>
-        <boxGeometry args={[1.65, 0.12, 0.71]} />
-        <meshStandardMaterial color={IRON} metalness={0.65} roughness={0.48} />
-      </mesh>
+    <mesh ref={(m) => register(part, m)}>
+      <boxGeometry args={size} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
+    </mesh>
+  );
+}
 
-      {/* 원본은 왼쪽에서 들어오고 도장이 지나면 오른쪽에서 '동의'로 바뀐다. */}
-      <group ref={movingTape} position={[-0.04, 0, 0]}>
-        <mesh position={[0, 1.064, 0.25]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[1.6, 0.53]} />
-          <meshStandardMaterial color={PAPER} roughness={0.94} side={THREE.DoubleSide} />
-        </mesh>
-        {[0, 1, 2].map((i) => (
-          <mesh key={i} ref={(m) => { marks.current[i] = m; }} position={[i * 0.55 - 0.8, 1.071, 0.25]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[0.39, 0.22]} />
-            <meshBasicMaterial map={rejectTex} toneMapped={false} />
-          </mesh>
-        ))}
-      </group>
-      {/* 빨간 X가 들어간 뒤 초록 승인이 나오는 것을 한눈에 이해할 수 있게 판에 작은 레일을 덧댄다 */}
-      {[-0.1, 0.58].map((z) => (
-        <mesh key={z} position={[0, 1.08, z]}>
-          <boxGeometry args={[1.73, 0.045, 0.035]} />
-          <meshStandardMaterial color={BRASS} roughness={0.48} metalness={0.7} />
-        </mesh>
-      ))}
-      {[-0.74, 0.74].map((x) => (
-        <mesh key={x} position={[x, 1.10, 0.24]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.11, 0.11, 0.58, 16]} />
-          <meshStandardMaterial color="#6b5745" metalness={0.55} roughness={0.56} />
-        </mesh>
-      ))}
-
-      {/* 덮어쓰는 도장 본체: 반복해서 종이를 때리고, 멈추면 높이 올라간다 */}
-      {[-0.58, 0.58].map((x) => (
-        <mesh key={x} position={[x, 1.64, -0.12]} castShadow>
-          <boxGeometry args={[0.095, 1.07, 0.1]} />
-          <meshStandardMaterial color={BRASS} metalness={0.74} roughness={0.36} />
-        </mesh>
-      ))}
-      <mesh position={[0, 2.17, -0.10]}>
-        <boxGeometry args={[1.32, 0.17, 0.38]} />
+function Body({ lang }: { lang: Lang }) {
+  const ko = lang === "ko";
+  const plaque = useTex(() => signTexture([[ko ? auditUi.machine.ko : auditUi.machine.en.toUpperCase(), 1]], { color: "#e6ca9e", bg: "#2b201a", w: 720, h: 124, border: true }), [ko]);
+  return (
+    <group>
+      {/* 나무 장 */}
+      <mesh position={[0, 0.42, 0]} castShadow receiveShadow>
+        <boxGeometry args={[1.72, 0.84, 0.82]} />
         <meshStandardMaterial color={WOOD} roughness={0.75} />
       </mesh>
-      <group ref={hammer}>
-        <mesh position={[0, 1.82, 0.24]} castShadow>
-          <cylinderGeometry args={[0.085, 0.085, 0.66, 18]} />
-          <meshStandardMaterial color={BRASS} metalness={0.84} roughness={0.34} />
-        </mesh>
-        <mesh ref={stamp} position={[0, 1.43, 0.24]} castShadow>
-          <boxGeometry args={[0.59, 0.22, 0.46]} />
-          <meshStandardMaterial color="#383132" metalness={0.62} roughness={0.4} />
-        </mesh>
-        <mesh position={[0, 1.30, 0.24]}>
-          <boxGeometry args={[0.52, 0.045, 0.4]} />
-          <meshStandardMaterial color="#a93d3d" emissive="#67161b" emissiveIntensity={0.4} />
-        </mesh>
-      </group>
-      <mesh position={[0, 2.24, 0.04]}>
-        <planeGeometry args={[0.97, 0.16]} />
-        <meshBasicMaterial map={plaque} toneMapped={false} />
+      <mesh position={[0, 0.06, 0]}>
+        <boxGeometry args={[1.8, 0.12, 0.88]} />
+        <meshStandardMaterial color={WOOD_DARK} roughness={0.85} />
       </mesh>
-      <mesh position={[0, 2.06, 0.09]}>
-        <sphereGeometry args={[0.06, 14, 10]} />
-        <meshStandardMaterial ref={workLamp} color="#9a7437" emissive="#ffbc54" emissiveIntensity={0.4} toneMapped={false} />
+      <mesh position={[0, 0.86, 0.02]}>
+        <boxGeometry args={[1.78, 0.04, 0.86]} />
+        <meshStandardMaterial color={WOOD_DARK} roughness={0.6} />
       </mesh>
-      <pointLight ref={pressLight} position={[0, 1.55, 0.44]} color="#f4ad65" intensity={0} distance={2.2} />
-
-      {/* 조작할 수 있는 유일한 레버. 레버 자신이 빛나며 위치를 알려 준다. */}
-      <Tap id="audit-test" onTap={onTap}>
-        <group position={[0.75, 1.36, 0.45]}>
-          <mesh position={[0, 0.10, 0]}>
-            <boxGeometry args={[0.57, 0.70, 0.51]} />
-            <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
-          </mesh>
-          <mesh position={[0, -0.22, 0]}>
-            <boxGeometry args={[0.25, 0.16, 0.25]} />
-            <meshStandardMaterial color="#282527" metalness={0.5} roughness={0.55} />
-          </mesh>
-          <group ref={lever}>
-            <mesh position={[0, 0.14, 0]}>
-              <cylinderGeometry args={[0.037, 0.048, 0.45, 14]} />
-              <meshStandardMaterial color={BRASS} metalness={0.8} roughness={0.36} />
-            </mesh>
-            <mesh position={[0, 0.37, 0]}>
-              <sphereGeometry args={[0.115, 18, 12]} />
-              <meshStandardMaterial ref={stopLamp} color="#b64742" emissive="#e64a45" emissiveIntensity={0.4} toneMapped={false} />
-            </mesh>
-          </group>
-        </group>
-      </Tap>
-
-      {/* 레버를 당기면 도장이 들리고, 가려져 있던 원본 종이가 앞으로 길게 튀어나온다 */}
-      <Tap id="audit-box" onTap={onTap}>
-        <group ref={original} visible={false} position={[0, 0, 0]}>
-          <mesh position={[0, 1.12, 0.63]}>
-            <boxGeometry args={[1.24, 0.22, 0.44]} />
-            <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
-          </mesh>
-          <mesh position={[0, 1.06, 0.62]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.25, 0.48]} />
-            <meshStandardMaterial color={PAPER} side={THREE.DoubleSide} roughness={0.94} />
-          </mesh>
-          <mesh position={[0, 1.069, 0.62]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[1.08, 0.26]} />
-            <meshBasicMaterial map={stripSign} toneMapped={false} side={THREE.DoubleSide} />
-          </mesh>
-          <mesh position={[0, 1.09, 0.84]}>
-            <boxGeometry args={[1.31, 0.04, 0.055]} />
-            <meshStandardMaterial color="#d2aa64" emissive="#9f7b3e" emissiveIntensity={0.48} />
-          </mesh>
-        </group>
-      </Tap>
-      <pointLight ref={originalLight} position={[0, 1.21, 1.10]} color="#ffe0aa" intensity={0} distance={2.2} />
+      {/* 검은 철 뒤판과 기둥 */}
+      <mesh position={[0, 1.6, -0.3]} castShadow>
+        <boxGeometry args={[1.72, 1.5, 0.08]} />
+        <meshStandardMaterial color={IRON} metalness={0.55} roughness={0.5} />
+      </mesh>
+      {[-0.84, 0.84].map((x) => (
+        <mesh key={x} position={[x, 1.6, -0.14]}>
+          <boxGeometry args={[0.08, 1.5, 0.3]} />
+          <meshStandardMaterial color={IRON_EDGE} metalness={0.6} roughness={0.45} />
+        </mesh>
+      ))}
+      <mesh position={[0, 2.38, -0.16]}>
+        <boxGeometry args={[1.8, 0.1, 0.36]} />
+        <meshStandardMaterial color={IRON_EDGE} metalness={0.6} roughness={0.45} />
+      </mesh>
+      {/* 현판 */}
+      <mesh position={[0, 2.38, 0.025]}>
+        <planeGeometry args={[0.9, 0.16]} />
+        <meshStandardMaterial map={plaque} roughness={0.7} />
+      </mesh>
     </group>
   );
 }
 
-export default function AuditMachine({
-  lang, onTap,
-}: {
-  lang: Lang;
-  input: "accept" | "reject" | null; // 이전 저장/World props 호환 (더 이상 화면에서 사용하지 않음)
-  output: "accept" | "reject" | null;
-  onTap: TapFn;
-}) {
-  return <StampWorks lang={lang} onTap={onTap} />;
+// 릴 하나: 허브 기어, 살, 감긴 종이. 공식 = 도시의 흰 플라스틱·초록 띠, 원본 = 낡은 나무·붉은 띠
+function ReelUnit({ reel, lang, pos, solved }: { reel: Reel; lang: Lang; pos: number; solved: boolean }) {
+  const ko = lang === "ko";
+  const official = reel === "official";
+  const x = REEL_X[reel];
+  const name = official ? auditUi.reelOfficial : auditUi.reelOriginal;
+  const sign = useTex(() => signTexture([[ko ? `${name.ko} · ${name.en}` : name.en, 1]], { color: official ? "#1e7a58" : "#e8c98a", bg: official ? "#e9efeb" : "#2b1a0f", w: 512, h: 96, mono: !ko }), [ko, official]);
+  const frame = FRAMES[reel][pos];
+  const frameTex = useTex(() => frameTexture(reel, frame, ko ? frame.word.ko : frame.word.en, solved && !official), [reel, pos, ko, solved]);
+  const tape = useTex(() => tapeTexture(reel), [reel]);
+  const spin = useRef<THREE.Group>(null);
+  const windowMat = useRef<THREE.MeshBasicMaterial>(null);
+  const back = useRef<THREE.PointLight>(null);
+  const shown = useRef(pos);
+  const autoT = useRef(0);
+  useFrame((_, dt) => {
+    const p = auditRt.phase;
+    const running = p === "auto";
+    // 되감은 칸 수만큼 반시계로 (되감기). 자동 운전 중 공식 릴은 앞으로 천천히 감긴다
+    const winding = auditRt.moved === "wheel" && auditRt.link === reel ? windK() : 1;
+    const target = auditRt.pos[reel];
+    if (winding >= 1) shown.current = target;
+    const cur = winding < 1 ? target - 1 + winding : shown.current;
+    if (running && official) autoT.current += dt;
+    const ang = cur * 2.1 - autoT.current * 1.2;
+    if (spin.current) spin.current.rotation.z = ang;
+    tape.offset.y = cur * 0.25 - autoT.current * 0.35;
+    const linked = auditRt.link === reel && (p === "manual" || p === "moving");
+    const lit = p === "dormant" ? 0.25 : solved && !official ? 1.15 : linked ? 1 : 0.62;
+    // 되감는 동안 판독창이 지직거린다
+    const flick = winding < 1 ? 0.55 + Math.random() * 0.3 : 1;
+    if (windowMat.current) windowMat.current.color.setScalar(Math.min(1, lit) * flick);
+    if (back.current) back.current.intensity = (solved && !official ? 2.6 : linked ? 0.9 : 0.2) * (p === "dormant" ? 0 : 1);
+  });
+  const rim = official ? CITY : "#5a3a22";
+  const band = official ? ACCEPT_COLOR : REJECT_COLOR;
+  return (
+    <group position={[x, 0, 0]}>
+      {/* 이름판 */}
+      <mesh position={[0, REEL_Y + REEL_R + 0.1, -0.05]}>
+        <planeGeometry args={[0.42, 0.08]} />
+        <meshBasicMaterial map={sign} toneMapped={false} />
+      </mesh>
+      {/* 회전하는 릴 */}
+      <group position={[0, REEL_Y, -0.08]}>
+        <group ref={spin}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[REEL_R, REEL_R, 0.03, 32]} />
+            <meshStandardMaterial color={rim} roughness={official ? 0.3 : 0.7} metalness={official ? 0.05 : 0.2} />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.06]}>
+            <cylinderGeometry args={[REEL_R * 0.72, REEL_R * 0.72, 0.09, 28]} />
+            <meshStandardMaterial color={official ? "#f4f6f0" : "#d9cdb0"} roughness={0.9} />
+          </mesh>
+          <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.12]}>
+            <torusGeometry args={[REEL_R - 0.02, 0.018, 8, 32]} />
+            <meshStandardMaterial color={band} emissive={band} emissiveIntensity={0.25} />
+          </mesh>
+          {/* 살 셋: 돌고 있는지 바로 보인다 */}
+          {[0, 1, 2].map((k) => (
+            <mesh key={k} position={[0, 0, 0.115]} rotation={[0, 0, (k * Math.PI * 2) / 3]}>
+              <boxGeometry args={[0.05, REEL_R * 1.4, 0.02]} />
+              <meshStandardMaterial color={official ? "#c9d4cf" : BRASS} metalness={official ? 0.1 : 0.8} roughness={0.4} />
+            </mesh>
+          ))}
+          {/* 허브 기어 (연결 기어가 이 아래에서 물린다) */}
+          <mesh position={[0, 0, 0.13]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.09, 0.09, 0.04, 12]} />
+            <meshStandardMaterial color={BRASS} metalness={0.85} roughness={0.35} />
+          </mesh>
+        </group>
+      </group>
+      {/* 릴에서 판독창으로 내려오는 종이 */}
+      <mesh position={[0, (REEL_Y - REEL_R * 0.72 + WINDOW_Y + 0.15) / 2, 0.02]}>
+        <planeGeometry args={[0.2, REEL_Y - REEL_R * 0.72 - WINDOW_Y - 0.15]} />
+        <meshStandardMaterial map={tape} roughness={0.9} />
+      </mesh>
+      {/* 판독창 */}
+      <mesh position={[0, WINDOW_Y, 0.03]}>
+        <boxGeometry args={[0.5, 0.34, 0.05]} />
+        <meshStandardMaterial color={official ? "#c9d4cf" : IRON_EDGE} metalness={official ? 0.1 : 0.6} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, WINDOW_Y, 0.058]}>
+        <planeGeometry args={[0.44, 0.275]} />
+        <meshBasicMaterial ref={windowMat} map={frameTex} toneMapped={false} />
+      </mesh>
+      <pointLight ref={back} position={[0, WINDOW_Y, 0.4]} color={official ? "#d8ffe9" : "#ffd9b8"} intensity={0} distance={1.6} decay={2} />
+    </group>
+  );
 }
 
-// 퍼즐 C 예고용 장치는 B의 리디자인과 무관하므로 원형 유지.
+// 도장: 공식 종이 위에서 앞뒤로 내려찍는다. 제동하면 위로 들린 채 멈춘다
+function Stamp() {
+  const head = useRef<THREE.Group>(null);
+  const ink = useRef<THREE.MeshStandardMaterial>(null);
+  const lastBeat = useRef(-1);
+  const t0 = useRef(now());
+  useFrame(() => {
+    const p = auditRt.phase;
+    let k = 0; // 0 = 들림, 1 = 종이에 닿음
+    if (p === "auto") {
+      const t = (now() - t0.current) / 1000 / STAMP_PERIOD;
+      const f = t % 1;
+      k = f < 0.12 ? f / 0.12 : f < 0.2 ? 1 : f < 0.45 ? 1 - (f - 0.2) / 0.25 : 0;
+      const beat = Math.floor(t);
+      if (f > 0.12 && beat !== lastBeat.current) {
+        lastBeat.current = beat;
+        if (Math.hypot(player.pos.x - AUDIT_MACHINE.pos[0], player.pos.z - AUDIT_MACHINE.pos[2]) < 9) sfx.stamp();
+      }
+    } else if (p === "dormant") k = 0.2;
+    if (head.current) head.current.position.z = 0.46 - k * 0.32 + (p === "auto" ? 0 : 0.06);
+    if (ink.current) ink.current.emissiveIntensity = p === "auto" ? 0.25 + k * 0.6 : 0.05;
+  });
+  const x = REEL_X.official;
+  const y = (REEL_Y - REEL_R * 0.72 + WINDOW_Y + 0.15) / 2;
+  return (
+    <group position={[x, y, 0]}>
+      {/* 오른쪽 기둥에서 나온 철 팔 */}
+      <mesh position={[0.3, 0.12, 0.38]}>
+        <boxGeometry args={[0.36, 0.05, 0.05]} />
+        <meshStandardMaterial color={IRON_EDGE} metalness={0.6} roughness={0.45} />
+      </mesh>
+      <group ref={head} position={[0, 0, 0.46]}>
+        <mesh position={[0, 0.12, 0]}>
+          <boxGeometry args={[0.04, 0.2, 0.04]} />
+          <meshStandardMaterial color={BRASS} metalness={0.8} roughness={0.4} />
+        </mesh>
+        <mesh position={[0, 0, -0.04]}>
+          <boxGeometry args={[0.22, 0.14, 0.1]} />
+          <meshStandardMaterial color="#e9efeb" roughness={0.3} />
+        </mesh>
+        <mesh position={[0, 0, -0.095]}>
+          <boxGeometry args={[0.2, 0.12, 0.012]} />
+          <meshStandardMaterial ref={ink} color={ACCEPT_COLOR} emissive={ACCEPT_COLOR} emissiveIntensity={0.2} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+// 제동 레버 (왼쪽): 서 있으면 자동 운전, 앞으로 당겨 내리면 정지
+function Brake({ onTap, register }: { onTap: TapFn; register: (p: AuditPart, m: THREE.Mesh | null) => void }) {
+  const [x, y, z] = AUDIT_PARTS.brake;
+  const arm = useRef<THREE.Group>(null);
+  const knob = useRef<THREE.MeshStandardMaterial>(null);
+  useFrame(() => {
+    const down = auditRt.braked ? (auditRt.moved === "brake" ? ease(since(auditRt.movedAt) / 0.6) : 1) : 0;
+    if (arm.current) arm.current.rotation.x = -0.25 + down * 1.35 + jolt("brake") * 0.05;
+    if (knob.current) knob.current.emissiveIntensity = glow("brake");
+  });
+  return (
+    <Tap id="audit-brake" onTap={onTap}>
+      <group position={[x, y, z]}>
+        <group position={[0, 0.25, 0.05]}>
+          <Hit part="brake" register={register} size={[0.36, 0.75, 0.6]} />
+        </group>
+        {/* 축받이 */}
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.07, 0.07, 0.12, 16]} />
+          <meshStandardMaterial color={BRASS} metalness={0.85} roughness={0.35} />
+        </mesh>
+        <group ref={arm}>
+          <mesh position={[0, 0.27, 0]}>
+            <cylinderGeometry args={[0.025, 0.03, 0.54, 10]} />
+            <meshStandardMaterial color={IRON_EDGE} metalness={0.6} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 0.56, 0]}>
+            <sphereGeometry args={[0.07, 16, 12]} />
+            <meshStandardMaterial ref={knob} color="#b0261c" roughness={0.45} emissive="#ff6a4a" emissiveIntensity={0} />
+          </mesh>
+        </group>
+      </group>
+    </Tap>
+  );
+}
+
+// 연결 장치: 두 릴 앞을 가로지르는 사각 축 위의 작은 기어와 손잡이. 물린 릴의 허브 기어 바로 아래에 있다
+function Link({ onTap, register }: { onTap: TapFn; register: (p: AuditPart, m: THREE.Mesh | null) => void }) {
+  const carriage = useRef<THREE.Group>(null);
+  const pinion = useRef<THREE.Mesh>(null);
+  const rail = useRef<THREE.Mesh>(null);
+  const grip = useRef<THREE.MeshStandardMaterial>(null);
+  const from = useRef(auditRt.link);
+  const xNow = useRef(REEL_X[auditRt.link]);
+  useFrame(() => {
+    const to = auditRt.link;
+    let x = REEL_X[to];
+    if (auditRt.moved === "link") {
+      const k = ease(since(auditRt.movedAt) / 0.7);
+      x = REEL_X[from.current] + (REEL_X[to] - REEL_X[from.current]) * k;
+      if (k >= 1) from.current = to;
+    } else from.current = to;
+    x += jolt("link") * 0.02;
+    xNow.current = x;
+    if (carriage.current) carriage.current.position.x = x;
+    // 바퀴를 돌리는 동안 축과 기어가 함께 돈다
+    const turning = auditRt.moved === "wheel" && windK() < 1 ? since(auditRt.movedAt) : 0;
+    if (pinion.current) pinion.current.rotation.z = -turning * 9 - auditRt.pos[to] * 2.1 * 3.3;
+    if (rail.current) rail.current.rotation.x = turning * 9;
+    if (grip.current) grip.current.emissiveIntensity = glow("link");
+  });
+  return (
+    <group position={[0, RAIL_Y, 0.07]}>
+      {/* 사각 축 (바퀴와 이어져 함께 돈다) */}
+      <mesh ref={rail} rotation={[0, 0, Math.PI / 2]}>
+        <boxGeometry args={[0.035, 1.62, 0.035]} />
+        <meshStandardMaterial color={BRASS} metalness={0.85} roughness={0.35} />
+      </mesh>
+      <Tap id="audit-link" onTap={onTap}>
+        <group ref={carriage}>
+          <group position={[0, -0.08, 0.15]}>
+            <Hit part="link" register={register} size={[0.36, 0.42, 0.42]} />
+          </group>
+          {/* 연결 기어: 위의 허브 기어와 맞물린다 */}
+          <mesh ref={pinion} position={[0, 0, -0.02]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.065, 0.065, 0.05, 10]} />
+            <meshStandardMaterial color="#d8b46a" metalness={0.85} roughness={0.3} />
+          </mesh>
+          {/* 축을 감싼 집과 앞으로 나온 T자 손잡이 */}
+          <mesh position={[0, 0, 0.04]}>
+            <boxGeometry args={[0.12, 0.08, 0.06]} />
+            <meshStandardMaterial color={IRON_EDGE} metalness={0.6} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, -0.09, 0.14]} rotation={[0.9, 0, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.26, 8]} />
+            <meshStandardMaterial color={IRON_EDGE} metalness={0.6} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, -0.17, 0.25]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.035, 0.035, 0.2, 12]} />
+            <meshStandardMaterial ref={grip} color="#6b3a1e" roughness={0.6} emissive="#ffb54a" emissiveIntensity={0} />
+          </mesh>
+        </group>
+      </Tap>
+    </group>
+  );
+}
+
+// 수동 바퀴 (오른쪽 아래): 한 번 누르면 반시계로 한 바퀴 = 연결된 릴을 1초 되감는다. 세로 축으로 위의 사각 축과 이어진다
+function Wheel({ onTap, register }: { onTap: TapFn; register: (p: AuditPart, m: THREE.Mesh | null) => void }) {
+  const [x, y, z] = AUDIT_PARTS.wheel;
+  const face = useTex(() => wheelFaceTexture(), []);
+  const wheel = useRef<THREE.Group>(null);
+  const rod = useRef<THREE.Mesh>(null);
+  const rimMat = useRef<THREE.MeshStandardMaterial>(null);
+  useFrame(() => {
+    const turned = auditRt.pos.official + auditRt.pos.original;
+    const k = auditRt.moved === "wheel" ? windK() : 1;
+    const ang = (turned - 1 + k) * Math.PI * 2 + jolt("wheel") * 0.12;
+    if (wheel.current) wheel.current.rotation.z = ang;
+    if (rod.current) rod.current.rotation.y = ang;
+    if (rimMat.current) rimMat.current.emissiveIntensity = glow("wheel");
+  });
+  return (
+    <group>
+      {/* 바퀴에서 위 축까지 올라가는 세로 축 */}
+      <mesh ref={rod} position={[ROD_X, (y + RAIL_Y) / 2, 0.07]}>
+        <boxGeometry args={[0.035, RAIL_Y - y, 0.035]} />
+        <meshStandardMaterial color={BRASS} metalness={0.85} roughness={0.35} />
+      </mesh>
+      {[y, RAIL_Y].map((yy) => (
+        <mesh key={yy} position={[ROD_X, yy, 0.07]}>
+          <boxGeometry args={[0.09, 0.09, 0.09]} />
+          <meshStandardMaterial color={IRON_EDGE} metalness={0.6} roughness={0.4} />
+        </mesh>
+      ))}
+      <Tap id="audit-wheel" onTap={onTap}>
+        <group position={[x, y, z]}>
+          <Hit part="wheel" register={register} size={[0.66, 0.66, 0.3]} />
+          <group ref={wheel}>
+            <mesh>
+              <torusGeometry args={[0.24, 0.028, 10, 32]} />
+              <meshStandardMaterial ref={rimMat} color={BRASS} metalness={0.8} roughness={0.35} emissive="#ffb54a" emissiveIntensity={0} />
+            </mesh>
+            {[0, 1, 2, 3].map((k) => (
+              <mesh key={k} rotation={[0, 0, (k * Math.PI) / 4 + Math.PI / 8]}>
+                <boxGeometry args={[0.025, 0.46, 0.02]} />
+                <meshStandardMaterial color={BRASS} metalness={0.8} roughness={0.35} />
+              </mesh>
+            ))}
+            {/* 돌리는 손잡이 */}
+            <mesh position={[0.22, 0.1, 0.06]} rotation={[Math.PI / 2, 0, 0]}>
+              <cylinderGeometry args={[0.03, 0.03, 0.12, 10]} />
+              <meshStandardMaterial color="#6b3a1e" roughness={0.6} />
+            </mesh>
+          </group>
+          {/* 가운데 판: 반시계 화살표 = 되감기 */}
+          <mesh position={[0, 0, 0.02]}>
+            <circleGeometry args={[0.085, 24]} />
+            <meshBasicMaterial map={face} toneMapped={false} />
+          </mesh>
+          <mesh position={[0, 0, -0.08]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.03, 0.03, 0.16, 10]} />
+            <meshStandardMaterial color={BRASS} metalness={0.85} roughness={0.35} />
+          </mesh>
+        </group>
+      </Tap>
+    </group>
+  );
+}
+
+export type AuditMachineProps = { lang: Lang; onTap: TapFn; braked: boolean; link: Reel; pos: Record<Reel, number>; solved: boolean };
+
+export default function AuditMachine({ lang, onTap, pos, solved }: AuditMachineProps) {
+  const camera = useThree((s) => s.camera);
+  const root = useRef<THREE.Group>(null);
+  const hits = useRef<Partial<Record<AuditPart, THREE.Mesh>>>({});
+  const register = useMemo(() => (p: AuditPart, m: THREE.Mesh | null) => {
+    if (m) hits.current[p] = m;
+    else delete hits.current[p];
+  }, []);
+  const ray = useMemo(() => new THREE.Raycaster(), []);
+  const center = useMemo(() => new THREE.Vector2(0, 0), []);
+  const tmp = useMemo(() => new THREE.Vector3(), []);
+  // 화면 가운데가 향한 부품: 투명 판정 상자에 시선을 쏜다. 빗나가면 화면 가운데에 가장 가까운 부품(넉넉하게)
+  useFrame(() => {
+    const dist = Math.hypot(player.pos.x - AUDIT_MACHINE.pos[0], player.pos.z - AUDIT_MACHINE.pos[2]);
+    auditRt.near = dist < 4.6;
+    const g = root.current;
+    if (!g) return;
+    let aim: AuditPart | null = null;
+    if (auditRt.near) {
+      ray.setFromCamera(center, camera);
+      let best = Infinity;
+      for (const [p, m] of Object.entries(hits.current) as [AuditPart, THREE.Mesh][]) {
+        const hit = ray.intersectObject(m, false)[0];
+        if (hit && hit.distance < best) {
+          best = hit.distance;
+          aim = p;
+        }
+      }
+      if (!aim) {
+        let bestD = 0.16;
+        for (const [p, m] of Object.entries(hits.current) as [AuditPart, THREE.Mesh][]) {
+          m.getWorldPosition(tmp).project(camera);
+          const d = Math.hypot(tmp.x, tmp.y) / 2;
+          if (tmp.z < 1 && d < bestD) {
+            bestD = d;
+            aim = p;
+          }
+        }
+      }
+    }
+    auditRt.aim = aim;
+    for (const [p, m] of Object.entries(hits.current) as [AuditPart, THREE.Mesh][]) {
+      m.getWorldPosition(tmp).project(camera);
+      auditRt.screen[p] = tmp.z < 1 ? [(tmp.x + 1) / 2, (1 - tmp.y) / 2] : [-1, -1];
+    }
+  });
+  return (
+    <group ref={root} position={AUDIT_MACHINE.pos} rotation={[0, AUDIT_MACHINE.rotY, 0]}>
+      <Body lang={lang} />
+      <ReelUnit reel="original" lang={lang} pos={pos.original} solved={solved} />
+      <ReelUnit reel="official" lang={lang} pos={pos.official} solved={solved} />
+      <Stamp />
+      <Brake onTap={onTap} register={register} />
+      <Link onTap={onTap} register={register} />
+      <Wheel onTap={onTap} register={register} />
+      {/* 원본이 드러나면 위에서 비추는 작업등 */}
+      <RevealLight />
+    </group>
+  );
+}
+
+function RevealLight() {
+  const light = useRef<THREE.SpotLight>(null);
+  const target = useMemo(() => {
+    const o = new THREE.Object3D();
+    o.position.set(REEL_X.original, WINDOW_Y, 0.05);
+    return o;
+  }, []);
+  useFrame(() => {
+    const p = auditRt.phase;
+    const on = p === "reveal" || p === "done";
+    if (light.current) light.current.intensity += ((on ? 14 : 0) - light.current.intensity) * 0.08;
+  });
+  return (
+    <>
+      <primitive object={target} />
+      <spotLight ref={light} position={[REEL_X.original, 2.9, 1.1]} target={target} angle={0.32} penumbra={0.6} intensity={0} distance={4} color="#ffe6c8" />
+    </>
+  );
+}
+
+
+// 받침대 뒤의 보증 장치 (퍼즐 C 예고). 외형과 표시등뿐이다
 export function Guarantor({ lang, litAt }: { lang: Lang; litAt: number }) {
   const ko = lang === "ko";
   const sign = useTex(() => signTexture([[ko ? auditUi.guarantorSign.ko : auditUi.guarantorSign.en, 1]], { color: "#ffd27a", bg: "#1a120a", w: 512, h: 128, glow: true }), [ko]);

@@ -17,6 +17,7 @@ export default function PauseMenu({
   since,
   inBunker,
   onLeave,
+  test,
 }: {
   onResume: () => void;
   onReset: () => void;
@@ -24,6 +25,8 @@ export default function PauseMenu({
   since: number;
   inBunker: boolean;
   onLeave?: (e: React.MouseEvent) => void;
+  // ?debug에서만: 퍼즐 A·B 테스트 재시작
+  test?: React.ReactNode;
 }) {
   const { t, lang } = useLang();
   const [sens, setSens] = useState(input.sens);
@@ -172,6 +175,8 @@ export default function PauseMenu({
             </button>
           </div>
         </div>
+
+        {test}
 
         <p className="pause-wall" key={line}>
           {note ?? fill(t(fourthWall[line % fourthWall.length]))}

@@ -62,12 +62,10 @@ export function auditPoint(x: number, y: number, z: number) {
   const s = Math.sin(AUDIT_MACHINE.rotY);
   return new THREE.Vector3(AUDIT_MACHINE.pos[0] + x * c + z * s, y, AUDIT_MACHINE.pos[2] - x * s + z * c);
 }
-// 장치 기준 위치 (AuditMachine.tsx와 같은 값)
+// 장치 기준 위치 (AuditMachine.tsx와 같은 값): 왼쪽 제동 레버, 오른쪽 아래 수동 바퀴
 export const AUDIT_PARTS = {
-  handle: [0.72, 1.5, 0.05] as Vec3,
-  accept: [-0.3, 0.98, 0.24] as Vec3,
-  reject: [0.3, 0.98, 0.24] as Vec3,
-  box: [-0.86, 0.62, 0.16] as Vec3,
+  brake: [-0.98, 1.0, 0.18] as Vec3,
+  wheel: [0.56, 0.52, 0.47] as Vec3,
 };
 
 export const TERMINALS: { id: SectionId; pos: Vec3; rotY: number; color: string; sub: L }[] = [
@@ -168,12 +166,8 @@ export const BUNKER: ZoneDef = {
     { id: "face-machine", kind: "face", pos: machinePoint(0, 1.7, 0.35), radius: 3.2, label: faceUi.turn, when: () => faceRt.phase === "idle" },
     { id: "face-std", kind: "face", pos: machinePoint(-0.58, 1, 0.55), radius: 3, color: "#ff5fb0", label: faceUi.applyStandard, when: () => faceRt.phase === "choice" },
     { id: "face-keep", kind: "face", pos: machinePoint(0.58, 1, 0.55), radius: 3, color: "#e8c27a", label: faceUi.keepOriginal, when: () => faceRt.phase === "choice" },
-    // 퍼즐 B의 조작 대상은 두 개뿐: 크게 움직이는 도장 정지 레버, 앞으로 나온 원본 테이프.
-    // 다수의 작은 버튼/손잡이, 단계별 플로팅 레이블은 제거한다.
-    { id: "audit-test", kind: "audit", pos: auditPoint(0.75, 1.42, 0.45), radius: 3.35, color: "#e7735c",
-      label: { ko: "황동 정지 레버", en: "Stamp stop lever" }, when: () => auditRt.phase === "test" },
-    { id: "audit-box", kind: "audit", pos: auditPoint(0, 1.15, 0.85), radius: 3.35, color: "#e8c27a",
-      label: { ko: "드러난 원본 기록지", en: "Exposed original tape" }, when: () => auditRt.phase === "slip" },
+    // 퍼즐 B 기록 기계: 장치 전체가 하나의 대상. 화면 가운데가 향한 부품(제동 레버·연결 장치·수동 바퀴)을 조작한다
+    { id: "audit-machine", kind: "audit", pos: auditPoint(0, 1.3, 0.45), radius: 3.6, label: auditUi.machine, when: () => auditRt.phase === "auto" || auditRt.phase === "manual" || auditRt.phase === "moving" },
     { id: "audit-guarantor", kind: "audit", pos: v(GUARANTOR.pos[0], 1.2, GUARANTOR.pos[2]), radius: 2.6, color: "#ffd27a", label: { ko: "보증 장치", en: "Guarantor unit" }, when: () => auditRt.phase === "done" },
     // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
