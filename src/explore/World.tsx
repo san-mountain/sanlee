@@ -13,10 +13,15 @@ import { CITY, ZONES, type Interactable, type Zone } from "./zones";
 
 import type { FaceState } from "./faceAuth";
 import type { FacePhase } from "./faceRuntime";
+import type { AuditChoice } from "./recordAudit";
+
+// 기록 검증 장치의 표시등(마지막 시험의 입력·처리 결과)과 보증 장치가 켜지는 시각
+export type AuditView = { input: AuditChoice | null; output: AuditChoice | null; litAt: number };
 
 type Props = {
   face: FaceState;
   facePhase: FacePhase;
+  audit: AuditView;
   zone: Zone;
   lang: Lang;
   visited: SectionId[];
@@ -33,14 +38,14 @@ type Props = {
 
 const POPUP = [{ key: "popup", pos: [1.7, 4.5, 1.6] as [number, number, number], scaleAt: 6, maxScale: 1 }];
 
-export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanMode, hideSan, secondStatue, arrived, awake, face, facePhase }: Props) {
+export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanMode, hideSan, secondStatue, arrived, awake, face, facePhase, audit }: Props) {
   const complete = (visited.length >= sections.length && face.legacy) || !!awake;
   return (
     <Canvas dpr={[1, 1.75]} gl={{ antialias: true, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
       <Player zone={ZONES[zone]} zoneKey={zone} onNear={onNear} arrived={arrived} />
       <Suspense fallback={null}>
         {zone === "bunker" ? (
-          <Bunker face={face} facePhase={facePhase} lang={lang} visited={visited} onTap={onTap} secondStatue={secondStatue} awake={awake} />
+          <Bunker face={face} facePhase={facePhase} audit={audit} lang={lang} visited={visited} onTap={onTap} secondStatue={secondStatue} awake={awake} />
         ) : (
           <>
             <City lang={lang} onTap={onTap} onTracked={onTracked} />

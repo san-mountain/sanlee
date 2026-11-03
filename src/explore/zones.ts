@@ -3,14 +3,15 @@ import type { L, SectionId } from "@/data/site";
 import { works } from "@/data/site";
 import { box, type Box, type Circle } from "./collide";
 import { faceRt } from "./faceRuntime";
-import { faceUi } from "./story";
+import { auditUi, faceUi } from "./story";
+import { auditRt } from "./auditRuntime";
 
 export type Vec3 = [number, number, number];
 export type Zone = "bunker" | "city";
 
 export type Interactable = {
   id: string;
-  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup" | "bell" | "face";
+  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup" | "bell" | "face" | "audit";
   pos: THREE.Vector3; // NPC처럼 움직이는 것은 컴포넌트가 이 값을 갱신
   radius: number;
   label: L;
@@ -53,6 +54,21 @@ export function machinePoint(x: number, y: number, z: number) {
   return new THREE.Vector3(FACE_MACHINE.pos[0] + x * c + z * s, y, FACE_MACHINE.pos[2] - x * s + z * c);
 }
 
+// 퍼즐 B: 이산의 다른 쪽에 놓인 기록 검증 장치(얼굴 복원 장치와 마주 보는 자리)와, 받침대 뒤의 보증 장치(퍼즐 C 예고, 외형만)
+export const AUDIT_MACHINE = { pos: [-3.3, 0, 1.3] as Vec3, rotY: 0.55 };
+export const GUARANTOR = { pos: [-2.05, 0, -1.95] as Vec3, rotY: 0.55 };
+export function auditPoint(x: number, y: number, z: number) {
+  const c = Math.cos(AUDIT_MACHINE.rotY);
+  const s = Math.sin(AUDIT_MACHINE.rotY);
+  return new THREE.Vector3(AUDIT_MACHINE.pos[0] + x * c + z * s, y, AUDIT_MACHINE.pos[2] - x * s + z * c);
+}
+// 장치 기준 위치 (AuditMachine.tsx와 같은 값)
+export const AUDIT_PARTS = {
+  handle: [0.72, 1.5, 0.05] as Vec3,
+  accept: [-0.3, 0.98, 0.24] as Vec3,
+  reject: [0.3, 0.98, 0.24] as Vec3,
+  box: [-0.86, 0.62, 0.16] as Vec3,
+};
 
 export const TERMINALS: { id: SectionId; pos: Vec3; rotY: number; color: string; sub: L }[] = [
   { id: "about", pos: [-10.9, 0, -4], rotY: Math.PI / 2, color: "#22f0ff", sub: { ko: "소개", en: "who" } },
@@ -117,6 +133,8 @@ export const BUNKER: ZoneDef = {
   boxes: [
     box(BUNKER_BELL.pos[0], BUNKER_BELL.pos[2], 2.3, 1.8),
     box(FACE_MACHINE.pos[0], FACE_MACHINE.pos[2], 1.5, 1.3), // 얼굴 복원 장치
+    box(AUDIT_MACHINE.pos[0], AUDIT_MACHINE.pos[2], 2.0, 1.7), // 기록 검증 장치
+    box(GUARANTOR.pos[0], GUARANTOR.pos[2], 0.6, 0.6), // 보증 장치
     ...PILLARS.map(([x, , z]) => box(x, z, 1.2, 1.2)),
     ...TERMINALS.map((t) => (Math.abs(t.pos[0]) > 1 ? box(t.pos[0] + Math.sign(t.pos[0]) * 0.3, t.pos[2], 1.4, 1.6) : box(t.pos[0], t.pos[2] + 0.3, 1.6, 1.4))),
     box(-4.6, -18.6, 2.8, 1.2), // 관리인 책상
@@ -150,6 +168,11 @@ export const BUNKER: ZoneDef = {
     { id: "face-machine", kind: "face", pos: machinePoint(0, 1.7, 0.35), radius: 3.2, label: faceUi.turn, when: () => faceRt.phase === "idle" },
     { id: "face-std", kind: "face", pos: machinePoint(-0.58, 1, 0.55), radius: 3, color: "#ff5fb0", label: faceUi.applyStandard, when: () => faceRt.phase === "choice" },
     { id: "face-keep", kind: "face", pos: machinePoint(0.58, 1, 0.55), radius: 3, color: "#e8c27a", label: faceUi.keepOriginal, when: () => faceRt.phase === "choice" },
+    // 기록 검증 장치: 단계마다 한 가지만 켜진다. 두 버튼은 하나의 대상이고, 바라보는(또는 탭한) 버튼을 누른다
+    { id: "audit-handle", kind: "audit", pos: auditPoint(...AUDIT_PARTS.handle), radius: 3, color: "#e8c27a", label: auditUi.handle, when: () => auditRt.phase === "idle" },
+    { id: "audit-test", kind: "audit", pos: auditPoint(0, 1, 0.3), radius: 3, color: "#ff6a5f", label: auditUi.machine, when: () => auditRt.phase === "test" },
+    { id: "audit-box", kind: "audit", pos: auditPoint(...AUDIT_PARTS.box), radius: 3, color: "#ffb03a", label: auditUi.box, when: () => auditRt.phase === "slip" },
+    { id: "audit-guarantor", kind: "audit", pos: v(GUARANTOR.pos[0], 1.2, GUARANTOR.pos[2]), radius: 2.6, color: "#ffd27a", label: { ko: "보증 장치", en: "Guarantor unit" }, when: () => auditRt.phase === "done" },
     // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
     {

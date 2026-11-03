@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import "./register-typescript.mjs";
 import { emptyFace, executeFace, faceConsequences, isSolved, loadFace, rotateDrum, saveFace, seamJoined, FACE_KEY, FACES, SOLUTION, START } from "../src/explore/faceAuth.ts";
 
 const memory = (seed = {}) => {

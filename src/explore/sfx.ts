@@ -235,4 +235,48 @@ export const sfx = {
     tone(196, 5.5, { vol: 0.08, attack: 2, at: 0.6 });
     tone(329.6, 5, { vol: 0.05, attack: 2.2, at: 1.4 });
   },
+  // 기록 검증 장치(퍼즐 B): 재생 손잡이를 돌리면 테이프가 감기듯 덜덜거린다
+  handle: () => {
+    for (let i = 0; i < 6; i++) tone(260 + i * 30, 0.04, { type: "square", vol: 0.05, at: i * 0.09 });
+    noise(0.7, { vol: 0.08, from: 700, to: 1800, q: 3 });
+    tone(140, 0.12, { type: "triangle", f2: 90, vol: 0.3, at: 0.62, attack: 0.002 });
+  },
+  // 묵직한 금속 버튼
+  button: () => {
+    tone(180, 0.09, { type: "triangle", f2: 110, vol: 0.36, attack: 0.002 });
+    noise(0.07, { vol: 0.14, from: 2000, to: 700, q: 1.2 });
+  },
+  // 입력 = 처리 결과: 정상 처리의 밝은 두 음
+  auditOk: () => {
+    tone(880, 0.16, { vol: 0.14 });
+    tone(1318, 0.42, { vol: 0.12, at: 0.13 });
+  },
+  // 입력 ≠ 처리 결과: 기계가 걸리는 소리와 반음 어긋난 화음
+  auditError: () => {
+    tone(220, 0.5, { type: "sawtooth", vol: 0.12 });
+    tone(233, 0.5, { type: "sawtooth", vol: 0.12 });
+    tone(110, 0.16, { type: "square", vol: 0.14, at: 0.55 });
+    tone(104, 0.3, { type: "square", vol: 0.14, at: 0.72 });
+  },
+  // 감사 기록함: 작은 걸쇠가 풀리고 덮개가 들린다
+  unlatch: () => {
+    tone(1200, 0.05, { type: "square", vol: 0.08 });
+    tone(320, 0.08, { type: "triangle", f2: 200, vol: 0.3, at: 0.12, attack: 0.002 });
+    noise(0.35, { vol: 0.08, from: 900, to: 400, q: 4, at: 0.2 });
+  },
+  // 기록지가 롤러에서 끌려 나온다
+  slip: () => {
+    noise(0.55, { vol: 0.12, from: 3200, to: 2200, q: 1.5 });
+    for (let i = 0; i < 5; i++) tone(90, 0.03, { type: "square", vol: 0.06, at: i * 0.1 });
+  },
+  // 장치가 멈추고 도시 안내가 툭 끊긴다
+  cut: () => {
+    tone(60, 0.25, { type: "sawtooth", f2: 30, vol: 0.3, attack: 0.002 });
+    noise(0.08, { vol: 0.25, from: 5000, to: 2000 });
+  },
+  // 보증 장치에 불이 들어온다: 낮고 긴 한 음
+  guarantor: () => {
+    tone(73.4, 2.4, { type: "triangle", vol: 0.3, attack: 0.03 });
+    tone(587, 0.9, { vol: 0.06, at: 0.2, attack: 0.05 });
+  },
 };

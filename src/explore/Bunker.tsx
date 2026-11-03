@@ -913,8 +913,10 @@ function WallText({ lang }: { lang: Lang }) {
 import { SOLUTION, type FaceState } from "./faceAuth";
 import type { FacePhase } from "./faceRuntime";
 import FaceMachine, { FaceConduit } from "./FaceMachine";
+import AuditMachine, { Guarantor } from "./AuditMachine";
+import type { AuditView } from "./World";
 
-export default function Bunker({ face, facePhase, lang, visited, onTap, secondStatue, awake }: { face: FaceState; facePhase: FacePhase; lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
+export default function Bunker({ face, facePhase, audit, lang, visited, onTap, secondStatue, awake }: { face: FaceState; facePhase: FacePhase; audit: AuditView; lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -929,6 +931,13 @@ export default function Bunker({ face, facePhase, lang, visited, onTap, secondSt
       {/* 이산 옆의 얼굴 복원 장치. 기존 터미널 경로로 이미 깨운 저장에서는 맞춰진 채 멈춰 있다 */}
       <FaceMachine drums={face.legacy ? SOLUTION : face.drums} phase={facePhase} method={face.method} lang={lang} onTap={onTap} />
       {!secondStatue && <FaceConduit />}
+      {/* 퍼즐 B의 기록 검증 장치와 보증 장치(퍼즐 C 예고). 새 경로에서만 놓인다 (기존 저장의 방공호는 그대로) */}
+      {!face.legacy && (
+        <>
+          <AuditMachine lang={lang} input={audit.input} output={audit.output} onTap={onTap} />
+          <Guarantor lang={lang} litAt={audit.litAt} />
+        </>
+      )}
       {TERMINALS.map((t) => (
         <Terminal key={t.id} {...t} lang={lang} visited={visited.includes(t.id)} onTap={onTap} />
       ))}
