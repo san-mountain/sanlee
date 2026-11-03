@@ -325,7 +325,26 @@ export const checkpoint = {
 };
 
 // after: 이산이 석상에서 풀려난 뒤(터미널 셋 복원)의 대사. 없으면 같은 대사를 쓴다
-export const npcs: Record<string, { name: L; lines: L[]; after?: L[] }> = {
+// 배경음악을 만든 사람. 방공호 한쪽에서 음악을 틀고 있다
+export const MUSIC_URL = "https://soundcloud.com/user-787015749";
+export const credits = {
+  music: { ko: "음악 · Jinseong Baek", en: "Music · Jinseong Baek" },
+  listen: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" },
+};
+
+export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { href: string; label: L } }> = {
+  dj: {
+    name: { ko: "음향 담당 진성", en: "Jinseong, on sound" },
+    lines: [
+      { ko: "쉿, 지금 믹싱 중이야. …아, 이 음악? 내가 트는 거야. 전기는 무전수 몰래 끌어다 쓰고 있어.", en: "Shh, I'm mixing. …Oh, this music? That's me. I'm borrowing power from the radio operator. Don't tell." },
+      { ko: "여기 흐르는 곡은 D!mple. 지상에선 웃으면 표정 인식에 걸리거든. 여기선 보조개 정도는 보여 줘도 돼.", en: "What's playing down here is D!mple. Up there, smiling trips the face scanners. Down here you can show a dimple or two." },
+      { ko: "지상 곡 제목은 0x48 0x4F 0x50 0x45. 시스템은 숫자는 그냥 흘려 읽더라. 무슨 뜻인지는 네가 풀어 봐.", en: "The surface track is called 0x48 0x4F 0x50 0x45. The system skims right past numbers. Work out what it says yourself." },
+      { ko: "대자비 앞에서 나오는 건 Sti그ma. 1분부터 틀어 놨어. 앞부분까지 기다려 줄 분이 아니라서.", en: "In front of Great Mercy it's Sti그ma. I start it at the one-minute mark. She doesn't wait for intros." },
+      { ko: "엔딩 곡은 空. 끝까지 가면 들려. 스포일러는 여기까지.", en: "The ending track is 空. You'll hear it if you make it to the end. That's all the spoilers you get." },
+      { ko: "나? 백진성. 지상 등급은 없어. 대신 사운드클라우드가 있지.", en: "Me? Jinseong Baek. No surface grade. I've got a SoundCloud instead." },
+    ],
+    link: { href: MUSIC_URL, label: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" } },
+  },
   keeper: {
     name: { ko: "방공호 관리인", en: "Shelter keeper" },
     lines: [

@@ -1,6 +1,6 @@
 "use client";
 
-import { sfx } from "./sfx";
+import { tension, sfx } from "./sfx";
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
 import { gaze, resetGaze } from "./gaze";
@@ -85,6 +85,8 @@ export default function GazeHUD({
       const root = rootRef.current;
       const m = gaze.meter / 100;
       const hot = gaze.state === "lock" || gaze.state === "fire" ? 1 : m;
+      // 게이지가 차오르는 동안 긴장음 (발사되거나 쓰러지면 멈춘다)
+      tension(gaze.dead || gaze.state === "fire" || gaze.mood === "blind" || gaze.intro ? 0 : m);
       root?.style.setProperty("--gaze", String(hot));
       // 방문 기록을 지운 사람에게는 자비의 시선이 닿지 않으므로 게이지도 띄우지 않는다
       const visible = gaze.mood !== "blind" && (gaze.inZone || gaze.meter > 1 || gaze.state === "fire" || gaze.state === "cool");
@@ -152,7 +154,10 @@ export default function GazeHUD({
       }
     };
     loop();
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      tension(0);
+    };
   }, [rootRef]);
 
   return (

@@ -81,6 +81,8 @@ export const BUNKER_NPCS = {
   kid: { pos: [5.6, 0, -19.1] as Vec3, rotY: Math.PI },
   // 간이침대에서 잠든 사람
   sleeper: { pos: [-10.6, 0, 11.4] as Vec3, rotY: 0 },
+  // 벽 쪽 믹서 앞에서 음악을 트는 음향 담당
+  dj: { pos: [-11.3, 0, -7.4] as Vec3, rotY: -Math.PI / 2 },
 };
 const bnpc = (id: keyof typeof BUNKER_NPCS, label: L, y = 1.2, radius = 2.6): Interactable => ({
   id,
@@ -105,6 +107,7 @@ export const BUNKER: ZoneDef = {
     box(-9.6, -19.3, 2.4, 1.1), // 불단
     box(10.9, -16.8, 1.2, 2.4), // 무전 탁자
     box(-10.75, 11.4, 1.1, 2.3), // 간이침대
+    box(-10.3, -7.4, 0.9, 1.8), // 믹서 탁자
   ],
   circles: [
     { x: 0, z: 0, r: 2.15 },
@@ -113,6 +116,7 @@ export const BUNKER: ZoneDef = {
     { x: BUNKER_NPCS.monk.pos[0], z: BUNKER_NPCS.monk.pos[2], r: 0.55 },
     { x: BUNKER_NPCS.radio.pos[0], z: BUNKER_NPCS.radio.pos[2], r: 0.45 },
     { x: BUNKER_NPCS.kid.pos[0], z: BUNKER_NPCS.kid.pos[2], r: 0.3 },
+    { x: BUNKER_NPCS.dj.pos[0], z: BUNKER_NPCS.dj.pos[2], r: 0.4 },
   ],
   items: [
     ...TERMINALS.map<Interactable>((t) => ({
@@ -145,6 +149,7 @@ export const BUNKER: ZoneDef = {
     bnpc("monk", { ko: "스님", en: "Monk" }, 0.9),
     bnpc("radio", { ko: "무전수", en: "Radio operator" }),
     bnpc("kid", { ko: "그림 그리는 아이", en: "Child drawing" }, 0.9, 2.4),
+    bnpc("dj", { ko: "음향 담당 진성", en: "Jinseong, on sound" }),
     bnpc("sleeper", { ko: "잠든 사람", en: "Sleeper" }, 0.6, 2.4),
     { id: "exit", kind: "door", to: "city", pos: v(0, 1.6, -19), radius: 3.6, label: { ko: "지상으로 올라가기", en: "Go up to the surface" } },
   ],

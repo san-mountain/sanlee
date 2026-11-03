@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
+import { MUSIC_URL, credits, announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
 import { CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -48,7 +48,7 @@ function hasWebGL() {
 type Panel =
   | { kind: "section"; id: SectionId }
   | { kind: "painting"; work: number }
-  | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean; whisper?: boolean }
+  | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean; whisper?: boolean; link?: { href: string; label: L } }
   | { kind: "choice"; settings?: boolean; confirm?: number; game?: boolean }
   | { kind: "jabi" }
   | null;
@@ -257,7 +257,7 @@ export default function ExploreClient() {
           // 한 번이라도 보관 처리됐다면 관리인은 알아본다
           const bk = getBackup();
           const lines = it.npc === "keeper" && bk.deaths > 0 ? [keeperAfterDeath, ...base] : base;
-          setPanel({ kind: "dialog", name: n.name, lines, step: 0 });
+          setPanel({ kind: "dialog", name: n.name, lines, step: 0, link: n.link });
           break;
         }
         case "door":
@@ -930,6 +930,11 @@ export default function ExploreClient() {
               <button className="btn" onClick={closePanel}>
                 {t(ui.close)}
               </button>
+              {panel.link && panel.step === panel.lines.length - 1 && (
+                <a className="btn primary" href={panel.link.href} target="_blank" rel="noopener noreferrer">
+                  {t(panel.link.label)}
+                </a>
+              )}
               {panel.step < panel.lines.length - 1 && (
                 <button className="btn primary" autoFocus onClick={() => setPanel({ ...panel, step: panel.step + 1 })}>
                   {t(ui.next)}
@@ -1089,6 +1094,9 @@ export default function ExploreClient() {
                 <small>{t(ending.kind === "accept" ? checkpoint.endingAccept : ending.kind === "reject" ? checkpoint.endingReject : checkpoint.endingGhost)}</small>
                 <small className="ending-found">
                   {ending.kind !== "accept" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}
+                </small>
+                <small className="ending-credit">
+                  ♪ 空 · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
                 </small>
                 <div>
                   {ending.kind === "accept" ? (

@@ -75,6 +75,51 @@ function noise(d: number, { vol = 0.3, at = 0, from = 1800, to = 300, q = 0.8 } 
   src.stop(t + d + 0.02);
 }
 
+// 대자비 게이지 긴장음: 게이지가 차오를수록 심장 박동이 빨라지고, 낮은 웅웅거림이 커지며 높아진다.
+// 매 프레임 0~1 값을 넘기면 알아서 박자를 맞춘다. 0이면 서서히 사라진다
+let drone: { a: OscillatorNode; b: OscillatorNode; lp: BiquadFilterNode; g: GainNode } | null = null;
+let nextBeat = 0;
+export function tension(m: number) {
+  if (!on || m < 0.03) {
+    if (drone && ctx) drone.g.gain.setTargetAtTime(0, ctx.currentTime, 0.12);
+    nextBeat = 0;
+    return;
+  }
+  const c = ac();
+  if (!c || !master) return;
+  const now = c.currentTime;
+  if (!drone) {
+    const a = c.createOscillator();
+    const b = c.createOscillator();
+    a.type = "sawtooth";
+    b.type = "sawtooth";
+    b.detune.value = 14;
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.Q.value = 6;
+    const g = c.createGain();
+    g.gain.value = 0;
+    a.connect(lp);
+    b.connect(lp);
+    lp.connect(g).connect(master);
+    a.start();
+    b.start();
+    drone = { a, b, lp, g };
+  }
+  const f = 46 + 50 * m;
+  drone.a.frequency.setTargetAtTime(f, now, 0.1);
+  drone.b.frequency.setTargetAtTime(f * 1.5, now, 0.1);
+  drone.lp.frequency.setTargetAtTime(160 + 2200 * m * m, now, 0.1);
+  drone.g.gain.setTargetAtTime(0.05 + 0.3 * m * m, now, 0.1);
+  if (now >= nextBeat) {
+    // 쿵-쿵 두 번 뛰는 심장. 게이지가 높으면 위로 날카로운 경고음이 겹친다
+    tone(62, 0.16, { f2: 38, vol: 0.45 + 0.4 * m, attack: 0.003 });
+    tone(58, 0.12, { f2: 36, vol: 0.3 + 0.35 * m, at: 0.17, attack: 0.003 });
+    if (m > 0.45) tone(700 + 900 * m, 0.06, { type: "square", vol: 0.04 + 0.1 * m, at: 0.02 });
+    nextBeat = now + Math.max(0.24, 1.0 - 0.8 * m);
+  }
+}
+
 export const sfx = {
   // 대화 넘김, 작은 버튼
   blip: () => tone(1180, 0.05, { type: "square", vol: 0.08 }),
@@ -102,11 +147,19 @@ export const sfx = {
   // 대자비 시선 단계
   watch: () => tone(220, 0.15, { type: "sine", vol: 0.12 }),
   suspect: () => {
-    tone(330, 0.12, { type: "triangle", vol: 0.18 });
-    tone(330, 0.12, { type: "triangle", vol: 0.18, at: 0.18 });
+    tone(660, 0.1, { type: "square", vol: 0.14 });
+    tone(660, 0.1, { type: "square", vol: 0.14, at: 0.14 });
   },
-  charge: () => tone(260, 0.9, { type: "sawtooth", f2: 620, vol: 0.12 }),
-  lock: () => tone(1400, 0.6, { type: "square", f2: 1900, vol: 0.07 }),
+  // 사이렌처럼 두 번 치솟는다
+  charge: () => {
+    tone(300, 0.55, { type: "sawtooth", f2: 900, vol: 0.16 });
+    tone(300, 0.55, { type: "sawtooth", f2: 900, vol: 0.16, at: 0.6 });
+  },
+  // 조준 고정: 짧고 빠른 경보
+  lock: () => {
+    for (let i = 0; i < 4; i++) tone(1500, 0.07, { type: "square", vol: 0.12, at: i * 0.11 });
+    tone(80, 0.5, { type: "sawtooth", f2: 50, vol: 0.25 });
+  },
   beam: () => {
     tone(900, 1.4, { type: "sawtooth", f2: 60, vol: 0.18 });
     noise(1.4, { vol: 0.25, from: 3000, to: 200 });
