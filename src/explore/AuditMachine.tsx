@@ -43,6 +43,7 @@ function StampWorks({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
   const hammer = useRef<THREE.Group>(null);
   const lever = useRef<THREE.Group>(null);
   const movingTape = useRef<THREE.Group>(null);
+  const marks = useRef<(THREE.Mesh | null)[]>([]);
   const original = useRef<THREE.Group>(null);
   const workLamp = useRef<THREE.MeshStandardMaterial>(null);
   const stopLamp = useRef<THREE.MeshStandardMaterial>(null);
@@ -64,10 +65,17 @@ function StampWorks({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
       hammer.current.position.y += (wanted - hammer.current.position.y) * 0.23;
     }
     if (stamp.current) stamp.current.rotation.z = running ? Math.sin(beat) * 0.035 : 0;
-    if (movingTape.current) {
-      movingTape.current.visible = running;
-      movingTape.current.position.x = running ? -0.04 + Math.sin(elapsed * 2) * 0.035 : 0;
-    }
+    if (movingTape.current) movingTape.current.visible = running;
+    // 실제 기록의 '거부'가 이동하며 프레스 아래를 통과한 뒤 '동의'가 되는 과정.
+    // 텍스트 독해 없이도 원본을 덮어쓰는 행위를 이해할 수 있게 한다.
+    marks.current.forEach((mesh, index) => {
+      if (!mesh || !running) return;
+      const x = ((elapsed * 0.45 + index * 0.58) % 1.74) - 0.87;
+      mesh.position.x = x;
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      const expected = x > 0.13 ? acceptTex : rejectTex;
+      if (material.map !== expected) { material.map = expected; material.needsUpdate = true; }
+    });
     if (original.current) {
       original.current.visible = stopped;
       const target = p === "unlock" ? 0.18 : stopped ? 0.55 : 0;
@@ -108,14 +116,12 @@ function StampWorks({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
           <planeGeometry args={[1.6, 0.53]} />
           <meshStandardMaterial color={PAPER} roughness={0.94} side={THREE.DoubleSide} />
         </mesh>
-        <mesh position={[-0.51, 1.071, 0.25]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.43, 0.22]} />
-          <meshBasicMaterial map={rejectTex} toneMapped={false} />
-        </mesh>
-        <mesh position={[0.51, 1.071, 0.25]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[0.43, 0.22]} />
-          <meshBasicMaterial map={acceptTex} toneMapped={false} />
-        </mesh>
+        {[0, 1, 2].map((i) => (
+          <mesh key={i} ref={(m) => { marks.current[i] = m; }} position={[i * 0.55 - 0.8, 1.071, 0.25]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[0.39, 0.22]} />
+            <meshBasicMaterial map={rejectTex} toneMapped={false} />
+          </mesh>
+        ))}
       </group>
       {/* 빨간 X가 들어간 뒤 초록 승인이 나오는 것을 한눈에 이해할 수 있게 판에 작은 레일을 덧댄다 */}
       {[-0.1, 0.58].map((z) => (
