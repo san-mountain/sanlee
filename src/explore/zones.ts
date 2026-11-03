@@ -168,10 +168,12 @@ export const BUNKER: ZoneDef = {
     { id: "face-machine", kind: "face", pos: machinePoint(0, 1.7, 0.35), radius: 3.2, label: faceUi.turn, when: () => faceRt.phase === "idle" },
     { id: "face-std", kind: "face", pos: machinePoint(-0.58, 1, 0.55), radius: 3, color: "#ff5fb0", label: faceUi.applyStandard, when: () => faceRt.phase === "choice" },
     { id: "face-keep", kind: "face", pos: machinePoint(0.58, 1, 0.55), radius: 3, color: "#e8c27a", label: faceUi.keepOriginal, when: () => faceRt.phase === "choice" },
-    // 기록 검증 장치: 단계마다 한 가지만 켜진다. 두 버튼은 하나의 대상이고, 바라보는(또는 탭한) 버튼을 누른다
-    { id: "audit-handle", kind: "audit", pos: auditPoint(...AUDIT_PARTS.handle), radius: 3, color: "#e8c27a", label: auditUi.handle, when: () => auditRt.phase === "idle" },
-    { id: "audit-test", kind: "audit", pos: auditPoint(0, 1, 0.3), radius: 3, color: "#ff6a5f", label: auditUi.machine, when: () => auditRt.phase === "test" },
-    { id: "audit-box", kind: "audit", pos: auditPoint(...AUDIT_PARTS.box), radius: 3, color: "#ffb03a", label: auditUi.box, when: () => auditRt.phase === "slip" },
+    // 퍼즐 B의 조작 대상은 두 개뿐: 크게 움직이는 도장 정지 레버, 앞으로 나온 원본 테이프.
+    // 다수의 작은 버튼/손잡이, 단계별 플로팅 레이블은 제거한다.
+    { id: "audit-test", kind: "audit", pos: auditPoint(0.75, 1.42, 0.45), radius: 3.35, color: "#e7735c",
+      label: { ko: "황동 정지 레버", en: "Stamp stop lever" }, when: () => auditRt.phase === "test" },
+    { id: "audit-box", kind: "audit", pos: auditPoint(0, 1.15, 0.85), radius: 3.35, color: "#e8c27a",
+      label: { ko: "드러난 원본 기록지", en: "Exposed original tape" }, when: () => auditRt.phase === "slip" },
     { id: "audit-guarantor", kind: "audit", pos: v(GUARANTOR.pos[0], 1.2, GUARANTOR.pos[2]), radius: 2.6, color: "#ffd27a", label: { ko: "보증 장치", en: "Guarantor unit" }, when: () => auditRt.phase === "done" },
     // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
