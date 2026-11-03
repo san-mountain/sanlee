@@ -189,4 +189,50 @@ export const sfx = {
   },
   reject: () => tone(110, 1.2, { type: "sawtooth", f2: 55, vol: 0.15 }),
   ghost: () => noise(2.2, { vol: 0.18, from: 200, to: 2400, q: 0.5 }),
+  // 얼굴 복원 장치: 원통이 돌아가는 톱니 소리와 제자리에 걸리는 소리
+  ratchet: () => {
+    for (let i = 0; i < 4; i++) tone(1900 + i * 90, 0.025, { type: "square", vol: 0.05, at: i * 0.075 });
+    noise(0.32, { vol: 0.07, from: 2600, to: 900, q: 2 });
+  },
+  clunk: () => {
+    tone(150, 0.12, { type: "triangle", f2: 90, vol: 0.32, attack: 0.002 });
+    noise(0.09, { vol: 0.16, from: 1400, to: 500, q: 1.4 });
+  },
+  // 두 조각의 외곽선이 이어졌다: 짧고 맑은 울림
+  seam: () => {
+    tone(1046, 0.6, { vol: 0.07 });
+    tone(1568, 0.7, { vol: 0.05, at: 0.05 });
+  },
+  // 얼굴이 맞아 장치가 잠긴다: 무거운 걸쇠, 그리고 낮은 화음
+  faceLock: () => {
+    tone(90, 0.3, { type: "triangle", f2: 60, vol: 0.45, attack: 0.002 });
+    noise(0.2, { vol: 0.2, from: 1000, to: 300 });
+    tone(392, 1.6, { vol: 0.12, at: 0.35, attack: 0.03 });
+    tone(523, 1.8, { vol: 0.1, at: 0.45, attack: 0.03 });
+    tone(784, 2.2, { vol: 0.07, at: 0.6, attack: 0.03 });
+  },
+  // 도시의 목소리가 끼어든다: 매끈하고 밝은 안내음 위에 지직거림
+  cityVoice: () => {
+    noise(0.35, { vol: 0.16, from: 5000, to: 1200 });
+    tone(1318, 0.16, { vol: 0.12, at: 0.3 });
+    tone(1760, 0.16, { vol: 0.12, at: 0.46 });
+    tone(2093, 0.42, { vol: 0.1, at: 0.62 });
+  },
+  // 분홍 버튼: 말랑한 플라스틱 누름
+  press: () => {
+    tone(620, 0.08, { type: "sine", f2: 380, vol: 0.2 });
+    tone(1046, 0.5, { vol: 0.1, at: 0.15 });
+    tone(1318, 0.6, { vol: 0.08, at: 0.3 });
+  },
+  // 나무 레버: 삐걱 당기고 덜컥 걸린다
+  lever: () => {
+    noise(0.45, { vol: 0.12, from: 500, to: 260, q: 5 });
+    tone(110, 0.25, { type: "triangle", f2: 70, vol: 0.4, at: 0.42, attack: 0.002 });
+  },
+  // 이산이 깨어난다: 낮고 따뜻하게 차오르는 소리
+  wake: () => {
+    tone(130.8, 5, { vol: 0.12, attack: 1.6 });
+    tone(196, 5.5, { vol: 0.08, attack: 2, at: 0.6 });
+    tone(329.6, 5, { vol: 0.05, attack: 2.2, at: 1.4 });
+  },
 };
