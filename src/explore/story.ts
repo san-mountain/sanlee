@@ -152,7 +152,7 @@ export const jabiUi = {
   },
   introRules: [
     { ko: "탁 트인 곳에 서 있으면 화면 위 게이지가 차오릅니다.", en: "Stand in the open and the gauge at the top fills." },
-    { ko: "게이지가 다 차면 눈이 붉어지고, 곧 붉은 빛이 그 자리를 긁고 지나갑니다. 붉어지는 순간 옆으로 뛰면 피할 수 있어요. 맞으면 대자비 앞, 처음 자리에서 다시 시작합니다.", en: "When it is full, its eyes turn red and a beam soon scrapes across the spot where you stood. Dash sideways the moment they turn red to dodge it. If it hits you, you start over from where you first stood before it." },
+    { ko: "게이지가 다 차면 눈이 붉어지고, 바닥에 가는 붉은 선이 비칩니다. 선이 멈추면 곧 그 길을 붉은 빛이 긁고 지나가요. 그때 옆으로 뛰면 피할 수 있어요. 맞으면 대자비 앞, 처음 자리에서 다시 시작합니다.", en: "When it is full, its eyes turn red and a thin red line appears on the ground. Once the line stops, a beam scrapes along it. Dash sideways then to dodge it. If it hits you, you start over from where you first stood before it." },
     { ko: "비석이나 컨테이너 뒤에 숨으면 게이지가 줄어듭니다.", en: "Hide behind steles or containers and the gauge drains." },
     { ko: "줄 선 시민들 사이에 가만히 서 있으면 시민으로 보입니다.", en: "Stand still among the queue and you pass for a citizen." },
   ] as L[],
