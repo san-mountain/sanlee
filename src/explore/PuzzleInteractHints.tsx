@@ -70,7 +70,8 @@ export default function PuzzleInteractHints({
             add("face-keep", "keep", ko ? "원본 보존" : "Keep original", "◇", "#e8c27a", faceRt.screen, 9, -35);
           }
         }
-        if (facing(AUDIT_MACHINE.pos, AUDIT_MACHINE.rotY, 4.5)) {
+        // 감사 기록함은 본체 옆면에 있다. 옆으로 돌아가도 표식이 사라지지 않도록 거리만 검사한다.
+        if (Math.hypot(player.pos.x - AUDIT_MACHINE.pos[0], player.pos.z - AUDIT_MACHINE.pos[2]) < 4.5) {
           if (auditRt.phase === "idle") {
             add("audit-handle", "handle", ko ? "기록 재생" : "Replay", "▶", "#e8c27a", auditRt.screen, 24, -20);
           } else if (auditRt.phase === "test") {
