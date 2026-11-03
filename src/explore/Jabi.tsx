@@ -83,6 +83,7 @@ const beam = {
 };
 const scorch: { x: number; z: number; born: number }[] = [];
 let lockT = 0;
+const aimAt = new THREE.Vector3();
 let coolT = 0;
 const last = { x: 0, z: 0 };
 
@@ -109,7 +110,7 @@ function GazeSystem() {
     } else if (gaze.state === "lock") {
       lockT -= dt;
       gaze.shake = 0.1 + (0.9 - lockT) * 0.12;
-      if (lockT <= 0) startBeam();
+      if (lockT <= 0) startBeam(aimAt);
     } else if (gaze.state === "cool") {
       coolT -= dt;
       gaze.shake = Math.max(0, gaze.shake - dt * 0.4);
@@ -120,14 +121,19 @@ function GazeSystem() {
         const near = THREE.MathUtils.clamp(1 - (dist - 90) / 90, 0, 1);
         const run = moved / Math.max(dt, 1e-4) > 4.5 ? 1.25 : 1;
         if (!gaze.firstSeenAt) gaze.firstSeenAt = performance.now();
-        gaze.meter += 13 * (1 + 0.9 * near) * run * dt;
+        // 분노가 빨리 차오른다: 먼 곳에서 약 5초, 가까이 가면 약 2.6초면 가득 찬다
+        gaze.meter += 20 * (1 + 0.9 * near) * run * dt;
       } else {
         gaze.meter -= (inZone ? 20 : 30) * dt;
       }
       gaze.meter = THREE.MathUtils.clamp(gaze.meter, 0, 100);
       const m = gaze.meter;
       gaze.state = m >= 100 ? "lock" : m >= 70 ? "charge" : m >= 35 ? "suspect" : m > 2 ? "watch" : "idle";
-      if (gaze.state === "lock") lockT = 0.9;
+      if (gaze.state === "lock") {
+        lockT = 0.9;
+        // 눈이 붉어지는 순간의 자리를 겨눈다. 그래서 붉어지면 바로 옆으로 뛰어 피할 수 있다
+        aimAt.set(player.pos.x, 0, player.pos.z);
+      }
       gaze.shake = m >= 70 ? ((m - 70) / 30) * 0.06 : 0;
     }
     // 불타는 엄폐물 잔해
@@ -143,29 +149,34 @@ export function finalBeam() {
   startBeam();
 }
 
-function startBeam() {
+function startBeam(at?: THREE.Vector3) {
+  const ax = at ? at.x : player.pos.x;
+  const az = at ? at.z : player.pos.z;
   sfx.beam();
   gaze.state = "fire";
   beam.on = true;
   beam.t = 0;
-  // 레이저는 플레이어 앞쪽(눈 쪽으로 16m) 바닥에 먼저 떨어져서 플레이어를 향해 긁어 온다
-  const dx = JABI.eye.x - player.pos.x;
-  const dz = JABI.eye.z - player.pos.z;
+  // 레이저는 플레이어 앞쪽(눈 쪽으로 9m) 바닥에 떨어져, 눈이 붉어진 순간 플레이어가 서 있던 자리를 지나 4m 더 긁고 간다.
+  // 플레이어를 따라오지 않으므로, 붉은 조준 신호를 보고 옆으로 뛰면 피할 수 있다
+  const dx = JABI.eye.x - ax;
+  const dz = JABI.eye.z - az;
   const d = Math.hypot(dx, dz) || 1;
-  beam.p.set(player.pos.x + (dx / d) * 16, 0, player.pos.z + (dz / d) * 16);
+  beam.p.set(ax + (dx / d) * 9, 0, az + (dz / d) * 9);
   beam.p.x = THREE.MathUtils.clamp(beam.p.x, -AVENUE - 2, AVENUE + 2);
-  beam.target.set(player.pos.x, 0, player.pos.z);
+  const sx = ax - beam.p.x;
+  const sz = az - beam.p.z;
+  const sl = Math.hypot(sx, sz) || 1;
+  beam.target.set(ax + (sx / sl) * 4, 0, az + (sz / sl) * 4);
   beam.lastDrop.copy(beam.p);
   gaze.shake = 0.28;
 }
 
 function runBeam(dt: number, now: number) {
   beam.t += dt;
-  if (gaze.seen) beam.target.set(player.pos.x, 0, player.pos.z);
   const dx = beam.target.x - beam.p.x;
   const dz = beam.target.z - beam.p.z;
   const d = Math.hypot(dx, dz);
-  const step = Math.min(d, 12 * dt);
+  const step = Math.min(d, 14 * dt);
   if (d > 1e-4) {
     beam.p.x += (dx / d) * step;
     beam.p.z += (dz / d) * step;
@@ -196,7 +207,7 @@ function runBeam(dt: number, now: number) {
     }
   }
   gaze.shake = 0.22 + Math.sin(now * 40) * 0.04;
-  if (beam.t > 3.4 || (d < 0.3 && beam.t > 2.2)) endBeam(1.6);
+  if (beam.t > 3.4 || (d < 0.3 && beam.t > 1.4)) endBeam(1.6);
 }
 
 function endBeam(cool: number) {
