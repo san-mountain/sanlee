@@ -1083,3 +1083,26 @@ span.cookie-clear { cursor: default; text-decoration: none; }
 .cg-result { margin: 12px 0 0 !important; font-family: var(--mono); font-size: 12px !important; color: #ffd36b !important; }
 .cookie-game.lose .cg-result { color: #ff4a5a !important; }
 @media (prefers-reduced-motion: reduce) { .cg-item.back button { animation: none; } }
+
+/* 로그아웃: 오래된 모니터가 꺼지듯 위아래가 닫히며 한 줄이 되고, 그 줄이 점으로 사라진다 */
+.logout-crt { position: absolute; inset: 0; z-index: 90; pointer-events: all; overflow: hidden; }
+.logout-crt::before, .logout-crt::after { content: ""; position: absolute; left: 0; right: 0; height: 50%; background: #000; animation: crtClose .45s cubic-bezier(.7, 0, .9, .6) forwards; }
+.logout-crt::before { top: 0; transform: translateY(-100%); }
+.logout-crt::after { bottom: 0; transform: translateY(100%); }
+@keyframes crtClose { to { transform: translateY(0); } }
+.logout-line { position: absolute; z-index: 1; left: 0; right: 0; top: 50%; height: 2px; margin-top: -1px; background: #e8fff4; box-shadow: 0 0 12px #22f0ff, 0 0 30px #22f0ff;
+  opacity: 0; animation: crtLine .55s ease-in .4s forwards; }
+@keyframes crtLine { 0% { opacity: 1; transform: scaleX(1); } 70% { opacity: 1; transform: scaleX(.02); } 100% { opacity: 0; transform: scaleX(0); } }
+.logout-text { position: absolute; z-index: 1; left: 0; right: 0; top: calc(50% + 18px); text-align: center; font-family: var(--mono); font-size: 11px; letter-spacing: .16em; color: #22f0ff;
+  opacity: 0; animation: logoutTextIn .3s ease .7s forwards; }
+@keyframes logoutTextIn { to { opacity: .8; } }
+.explore-root.logging-out .hud, .explore-root.logging-out .minimap, .explore-root.logging-out .quest { opacity: 0; transition: opacity .3s; }
+
+/* 로그아웃 뒤 웹사이트: 어두운 바탕에서 글자가 다시 쓰이며 밝아진다 (들어갈 때 장면의 반대) */
+html:has(body.restoring:not(.restoring-light)), body.restoring:not(.restoring-light) { background: #07030f; }
+body.restoring:not(.restoring-light) .page, body.restoring:not(.restoring-light) .nav-logo, body.restoring:not(.restoring-light) .nav-links > a,
+body.restoring:not(.restoring-light) .site-footer { color: #6b6385; }
+body.restoring:not(.restoring-light) .page img, body.restoring:not(.restoring-light) .feature-art { opacity: 0; }
+html:has(body.restoring-light), body.restoring-light { transition: background-color .9s ease; }
+body.restoring-light .page, body.restoring-light .nav-logo, body.restoring-light .nav-links > a, body.restoring-light .site-footer { transition: color .8s ease; }
+body.restoring-light .page img, body.restoring-light .feature-art { transition: opacity .9s ease .25s; }

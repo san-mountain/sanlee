@@ -3,6 +3,8 @@
 import { sfx } from "./sfx";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { RESTORE_KEY } from "@/components/RestoreCrossing";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
@@ -105,6 +107,22 @@ export default function ExploreClient() {
   const ghostRef = useRef(false);
   ghostRef.current = ghost;
   const complete = visited.length >= sections.length || ghost;
+
+  // 로그아웃: 화면이 오래된 모니터처럼 한 줄로 접혀 꺼지고, 웹사이트에서는 지워졌던 글자가 다시 쓰인다
+  const router = useRouter();
+  const [leaving, setLeaving] = useState(false);
+  const logout = (e: React.MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    if (leaving) return;
+    try {
+      sessionStorage.setItem(RESTORE_KEY, "1");
+    } catch {}
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return router.push("/");
+    setLeaving(true);
+    sfx.glitch();
+    setTimeout(() => router.push("/"), 1100);
+  };
 
   // 일반 페이지에서 DELETE SEOUL로 지워지며 들어왔다면 그 흔적(그림 숨김 등)을 풀어 준다
   useEffect(() => {
@@ -697,6 +715,7 @@ export default function ExploreClient() {
     ending?.kind === "ghost" && ending.step === 1 ? "ghost-freeze" : "",
     flash ? "final-flash" : "",
     tracked && !ending ? "is-tracked" : "",
+    leaving ? "logging-out" : "",
   ].join(" ");
 
   return (
@@ -734,8 +753,16 @@ export default function ExploreClient() {
         </div>
       )}
 
+      {leaving && (
+        <div className="logout-crt" aria-live="polite">
+          <span className="logout-line" />
+          <span className="logout-text">{lang === "ko" ? "세션 종료 · 웹사이트로 돌아갑니다" : "SESSION CLOSED · BACK TO THE WEBSITE"}</span>
+        </div>
+      )}
       <div className="hud">
-        <Link href="/">{t(ui.home)}</Link>
+        <Link href="/" onClick={logout}>
+          {t(ui.home)}
+        </Link>
         <span className="hud-title glitch">{t(ui.title)}</span>
         <span className="hud-right">
           <span className="hud-progress">{visited.length}/{sections.length}</span>
@@ -795,6 +822,7 @@ export default function ExploreClient() {
           onBunker={zone === "city" && !ending && !accepted ? backToBunker : undefined}
           since={since}
           inBunker={zone === "bunker"}
+          onLeave={logout}
         />
       )}
 
@@ -1049,7 +1077,7 @@ export default function ExploreClient() {
                       {t(checkpoint.again)}
                     </button>
                   )}
-                  <Link className="btn primary" href="/">
+                  <Link className="btn primary" href="/" onClick={logout}>
                     {t(ending.kind === "accept" ? ui.toPortfolio : checkpoint.toPortfolio)}
                   </Link>
                 </div>
@@ -1080,7 +1108,7 @@ export default function ExploreClient() {
             <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
             <div className="panel-actions" style={{ justifyContent: "flex-end" }}>
               {/* 들어가지 않고 웹사이트로 돌아가는 보조 선택지 */}
-              <Link href="/" className="btn ghost">
+              <Link href="/" className="btn ghost" onClick={logout}>
                 {t(ui.goBack)}
               </Link>
               <button
