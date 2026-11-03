@@ -308,7 +308,7 @@ img { max-width: 100%; height: auto; display: block; }
 .intro-controls { color: var(--dim); font-family: var(--mono); font-size: 12px; }
 
 /* 가상 조이스틱: 화면 왼쪽 아래 영역 아무 데나 엄지를 대면 생김 */
-.joy-zone { position: absolute; left: 0; bottom: 0; width: 46%; height: 48%; z-index: 25; touch-action: none; }
+.joy-zone { position: absolute; left: 0; bottom: 0; width: 32%; height: 37%; z-index: 25; touch-action: none; }
 .joy-base { position: absolute; left: 90px; top: calc(100% - 110px); width: 104px; height: 104px; margin: -52px 0 0 -52px;
   border-radius: 50%; border: 1px solid #ffffff40; background: #ffffff0d; opacity: .55; transition: opacity .2s; }
 .joy-base.on { opacity: 1; }
@@ -359,7 +359,7 @@ img { max-width: 100%; height: auto; display: block; }
   .panel-wrap { align-items: stretch; justify-content: flex-end; padding: 8px 10px; }
   .panel { width: min(440px, 52vw); max-height: none; height: 100%; padding: 14px 16px 12px; }
   .intro .panel { width: min(560px, 80vw); height: auto; max-height: 92vh; }
-  .joy-zone { width: 40%; height: 70%; }
+  .joy-zone { width: 30%; height: 62%; }
   .joy-base { left: 86px; top: calc(100% - 86px); }
   .prompt { bottom: 14px; }
   .notice { bottom: 62px; }
