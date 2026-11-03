@@ -10,6 +10,8 @@ const SRC: Record<Track, string> = {
   ending: "/audio/bgm-ending.mp3",
 };
 const VOL = 0.3;
+// 곡마다 원래 음량이 달라서(대자비가 가장 크다) 방공호 곡에 맞춰 낮춘다
+const LEVEL: Record<Track, number> = { bunker: 1, ground: 0.83, jabi: 0.68, ending: 0.87 };
 const FADE = 1.6;
 
 let ctx: AudioContext | null = null;
@@ -51,7 +53,7 @@ function apply() {
   const on = sfxOn();
   (Object.keys(chans) as Track[]).forEach((t) => {
     const ch = chans[t]!;
-    const target = on && t === want ? VOL * duck : 0;
+    const target = on && t === want ? VOL * LEVEL[t] * duck : 0;
     if (c) {
       const g = ch.gain.gain;
       g.cancelScheduledValues(c.currentTime);
