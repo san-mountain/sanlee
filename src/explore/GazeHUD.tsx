@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
 import { gaze, resetGaze } from "./gaze";
 import { player, teleport } from "./Player";
-import { getBackup, lastSlot, mmss, recordDeath, recordRestore, saveBackup } from "./backup";
+import { getBackup, recordDeath, recordRestore, saveBackup } from "./backup";
 import { restoreCovers } from "./Jabi";
 import { jabiUi } from "./story";
 
@@ -137,13 +137,11 @@ export default function GazeHUD({
           }, 4200);
           return;
         }
-        const slot = lastSlot();
-        const lost = mmss(Date.now() - (slot?.t ?? Date.now() - 1000 * (20 + Math.random() * 40)));
-        const tt = tRef.current;
-        const line = (slot ? tt(jabiUi.restoreFrom).replace("{n}", String(slot.n)) : tt(jabiUi.restoreFresh)).replace("{t}", lost);
+        // 쓰러지면 그 자리가 아니라 시선 구역 입구, 대자비 앞에서 처음부터 다시 시작한다
+        const line = tRef.current(jabiUi.restoreStart);
         setDead({ kind: "restore", line, cost: b.deaths >= 3 });
         setTimeout(() => {
-          teleport.req = slot ? { x: slot.x, z: slot.z, yaw: 0 } : { x: 0, z: 7, yaw: 0 };
+          teleport.req = { x: 0, z: 7, yaw: 0 };
           restoreCovers();
           resetGaze();
           recordRestore();
