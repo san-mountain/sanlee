@@ -11,10 +11,27 @@ export type TapFn = (id: string) => void;
 
 // 끌어서 둘러보다 손을 뗀 경우는 무시하고, 짧게 누른 것만 '탭'으로 처리
 export function Tap({ id, onTap, children }: { id: string; onTap: TapFn; children: ReactNode }) {
+  // 일부 모바일 브라우저/3D 입력 환경에서는 click이 누락될 수 있어,
+  // 터치는 pointerup에서도 짧은 탭인지 검사한다. 뒤이은 click은 중복 실행하지 않는다.
+  const start = useRef<{ pointerId: number; x: number; y: number } | null>(null);
+  const lastTouch = useRef(0);
   return (
     <group
+      onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+        if (e.pointerType !== "touch") return;
+        start.current = { pointerId: e.pointerId, x: e.clientX, y: e.clientY };
+      }}
+      onPointerUp={(e: ThreeEvent<PointerEvent>) => {
+        if (e.pointerType !== "touch" || !start.current || start.current.pointerId !== e.pointerId) return;
+        const distance = Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y);
+        start.current = null;
+        if (distance > 12) return; // 화면을 드래그해서 둘러본 것은 누르기로 취급하지 않는다
+        lastTouch.current = performance.now();
+        e.stopPropagation();
+        onTap(id);
+      }}
       onClick={(e: ThreeEvent<MouseEvent>) => {
-        if (e.delta > 8) return;
+        if (e.delta > 8 || performance.now() - lastTouch.current < 650) return;
         e.stopPropagation();
         onTap(id);
       }}
