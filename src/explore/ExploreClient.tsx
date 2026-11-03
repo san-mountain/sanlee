@@ -29,7 +29,7 @@ import { protection } from "./recordProtection";
 import { getCitizenRecords, recordCitizenActivity, syncCitizenRecords, type ActivityResult } from "./citizenRecords";
 import { FACE_KEY, emptyFace, executeFace, loadFace, rotateDrum, saveFace, seamJoined, type FaceMethod, type FaceState } from "./faceAuth";
 import { faceRt, setFacePhase, type FacePhase } from "./faceRuntime";
-import { AUDIT_KEY, emptyAudit, finishAudit, loadAudit, playRecord, pressTest, restPhase, saveAudit, takeSlip, type AuditChoice, type AuditPhase, type AuditState } from "./recordAudit";
+import { AUDIT_KEY, emptyAudit, finishAudit, loadAudit, playRecord, pressTest, restPhase, saveAudit, takeSlip, type AuditPhase, type AuditState } from "./recordAudit";
 import { auditRt, setAuditPhase } from "./auditRuntime";
 import { GUARANTOR } from "./zones";
 import type { AuditView } from "./World";
@@ -137,9 +137,8 @@ export default function ExploreClient() {
     setAuditPhaseState(p);
   }, []);
   const [auditView, setAuditView] = useState<AuditView>({ input: null, output: null, litAt: 0 });
-  // 이번 방문에서 시험 입력이 시민 활동 기록에 남았는지 (끝 카드에 한 줄로 보여 준다)
+  // 이번 방문에서 도장 중단 행동이 시민 활동 기록에 남았는지 (끝 카드에 한 줄로 보여 준다)
   const auditRecs = useRef<ActivityResult["status"][]>([]);
-  const [auditAim, setAuditAim] = useState<AuditChoice>("accept");
   const auditCine = auditPhase === "replay" || auditPhase === "processing" || auditPhase === "unlock" || auditPhase === "ending";
   const cine = faceCine || auditCine;
   const [visited, setVisited] = useState<SectionId[]>([]);
@@ -386,54 +385,29 @@ export default function ExploreClient() {
   );
 
   // ---------------- 퍼즐 B 「없었던 3초」 ----------------
-  // 1) 재생 손잡이: 이산의 마지막 공식 기록이 한 줄씩 찍히고, 3초 누락을 알린 뒤 두 버튼이 켜진다
-  const startReplay = useCallback(() => {
-    if (auditRt.phase !== "idle") return;
-    updateAudit(playRecord(auditRef.current));
-    toAuditPhase("replay");
-    sfx.handle();
-    later(700, () => playLines([...auditScenes.replay, ...auditScenes.ready], lineEvents, () => toAuditPhase("test"), 300));
-  }, [updateAudit, toAuditPhase, later, lineEvents]);
-
-  // 3) 감사 기록함이 반응한다: 경고등 → 걸쇠 → 덮개가 조금 들린다
-  const startUnlock = useCallback(() => {
+  // 붉은 거부 기록을 '동의' 도장이 계속 덮어쓴다.
+  // 플레이어는 큰 레버로 도장을 멈추고, 앞으로 나온 원본 테이프를 직접 꺼낸다.
+  // 재생 손잡이/선택 시험 버튼은 없다: A가 끝나면 기계가 곧바로 작동한다.
+  const stopStamp = useCallback(() => {
+    if (auditRt.phase !== "test") return;
+    // 기존 v1 저장·테스트와의 호환을 위해 '불일치 발견' 상태를 그대로 재사용한다.
+    // 이 이벤트는 플레이어의 거부 입력이 아니라 기계적 기록 조작의 중단이다.
+    const r = pressTest(playRecord(auditRef.current), "reject");
+    if (r.status !== "mismatch") return;
+    const rec = recordCitizenActivity(
+      { kind: "audit.interrupt", sourceId: "revision-press" },
+      { zone, unregistered: unregisteredVisit(ghostRef.current) }
+    );
+    auditRecs.current.push(rec.status);
+    updateAudit(r.state);
     toAuditPhase("unlock");
-    later(600, () => sfx.unlatch());
-    playLines(auditScenes.mismatch, lineEvents, () => toAuditPhase("slip"));
-  }, [toAuditPhase, later, lineEvents]);
+    sfx.button();
+    sfx.auditError();
+    later(440, () => sfx.unlatch());
+    playLines(auditScenes.mismatch, lineEvents, () => toAuditPhase("slip"), 240);
+  }, [zone, updateAudit, toAuditPhase, later, lineEvents]);
 
-  // 2) 버튼 시험. 입력은 누른 그대로, 처리 결과는 언제나 '수락'. 거부를 누르면 두 표시등이 어긋난 채 남는다
-  const pressAudit = useCallback(
-    (input: AuditChoice) => {
-      if (auditRt.phase !== "test") return;
-      const r = pressTest(auditRef.current, input);
-      if (r.status === "idle") return;
-      // 퍼즐 진행 저장과 별개로, 도시가 이 입력을 시민 활동으로 기록한다 (범종 보호 중이면 남지 않는다. 진행은 그대로 저장)
-      const rec = recordCitizenActivity({ kind: "audit.test", sourceId: input }, { zone, unregistered: unregisteredVisit(ghostRef.current) });
-      auditRecs.current.push(rec.status);
-      updateAudit(r.state);
-      auditRt.pressed = input;
-      auditRt.pressedAt = performance.now();
-      auditRt.input = input;
-      auditRt.output = r.state.last!.output;
-      setAuditView((v) => ({ ...v, input, output: r.state.last!.output }));
-      toAuditPhase("processing");
-      sfx.button();
-      if (r.status === "match") {
-        later(700, () => sfx.auditOk());
-        later(800, () => playLines(auditScenes.accept, lineEvents, () => toAuditPhase("test")));
-        return;
-      }
-      later(700, () => sfx.auditError());
-      later(1300, () => {
-        sfx.cityVoice();
-        playLines(auditScenes.reject, lineEvents, () => later(400, startUnlock), 250);
-      });
-    },
-    [zone, updateAudit, toAuditPhase, later, lineEvents, startUnlock]
-  );
-
-  // 4) 기록지를 꺼낸다 = 퍼즐 해결 (원본 증거 확보. 도시의 공식 기록은 바뀌지 않는다)
+  // 노출된 원본 테이프를 집어서 읽는다.
   const takeAuditSlip = useCallback(() => {
     if (auditRt.phase !== "slip") return;
     updateAudit(takeSlip(auditRef.current));
@@ -482,17 +456,6 @@ export default function ExploreClient() {
   }, [toAuditPhase, later, lineEvents, finishAuditFlow]);
 
   // 두 버튼 앞에 서 있는 동안: 조준한 버튼이 바뀌면 안내 문구도 바꾼다
-  const nearAuditTest = near?.id === "audit-test";
-  useEffect(() => {
-    if (!nearAuditTest) return;
-    let raf = 0;
-    const tick = () => {
-      setAuditAim(auditRt.aim);
-      raf = requestAnimationFrame(tick);
-    };
-    tick();
-    return () => cancelAnimationFrame(raf);
-  }, [nearAuditTest]);
 
   // 기록지를 어떤 식으로 닫든(버튼, E, Esc) 마무리로 넘어간다
   const hadSlip = useRef(false);
@@ -514,8 +477,7 @@ export default function ExploreClient() {
           else if (it.id === "face-keep") chooseFace("exception");
           break;
         case "audit":
-          if (it.id === "audit-handle") startReplay();
-          else if (it.id === "audit-test") pressAudit(auditRt.aim);
+          if (it.id === "audit-test") stopStamp();
           else if (it.id === "audit-box") takeAuditSlip();
           else if (it.id === "audit-guarantor") setPanel({ kind: "dialog", name: it.label, lines: [auditUi.guarantorLook], step: 0 });
           break;
@@ -629,7 +591,7 @@ export default function ExploreClient() {
           break;
       }
     },
-    [complete, talked, goTo, markVisited, visited.length, ghost, found.length, zone, showToast, t, commitActivity, face, turnDrum, chooseFace, cine, startReplay, pressAudit, takeAuditSlip]
+    [complete, talked, goTo, markVisited, visited.length, ghost, found.length, zone, showToast, t, commitActivity, face, turnDrum, chooseFace, cine, stopStamp, takeAuditSlip]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -648,22 +610,13 @@ export default function ExploreClient() {
         }
         return;
       }
-      // 수락·거부 버튼을 직접 탭하면 그 버튼을 누른다 (넓은 판정, 장치 가까이에서만)
-      if (id === "audit-accept" || id === "audit-reject") {
-        const test = ZONES[zone].items.find((i) => i.id === "audit-test");
-        if (!test || cine || Math.hypot(test.pos.x - player.pos.x, test.pos.z - player.pos.z) > 4.5) return;
-        const kind = id === "audit-accept" ? "accept" : "reject";
-        auditRt.aim = kind;
-        pressAudit(kind);
-        return;
-      }
       const it = ZONES[zone].items.find((i) => i.id === id);
       if (!it) return;
       const d = Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z);
-      if (d > 10) return;
+      if (d > (it.kind === "audit" || it.kind === "face" ? 4.6 : 10)) return;
       interact(it);
     },
-    [touch, panel, intro, fade, ending, paused, zone, interact, faceEnd, turnDrum, cine, pressAudit]
+    [touch, panel, intro, fade, ending, paused, zone, interact, faceEnd, turnDrum, cine]
   );
 
   // 테스트용: 주소 끝에 ?debug 를 붙이면 콘솔에서 이동·복원을 조작할 수 있다
@@ -1081,9 +1034,9 @@ export default function ExploreClient() {
           return m ? { pos: m.pos, label: t(faceUi.quest) } : null;
         }
         // 퍼즐 B: 지금 켜진 부분 하나만 가리킨다. 안내 문구는 같은 한 줄
-        const id = auditRt.phase === "idle" ? "audit-handle" : auditRt.phase === "test" ? "audit-test" : auditRt.phase === "slip" ? "audit-box" : null;
+        const id = auditRt.phase === "test" ? "audit-test" : auditRt.phase === "slip" ? "audit-box" : null;
         const it = id && find(id);
-        return it ? { pos: it.pos, label: t(auditUi.quest) } : null;
+        return it ? { pos: it.pos, label: t(id === "audit-test" ? auditUi.questTest : auditUi.questBox) } : null;
       }
       if (!complete && !met && visited.length === 0) {
         const it = find("statue");
@@ -1140,16 +1093,14 @@ export default function ExploreClient() {
   const sectionMeta = panel?.kind === "section" ? sections.find((s) => s.id === panel.id)! : null;
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
   const sanAwake = complete || (!face.legacy && !!face.method && facePhase === "done");
-  const verb = near ? (near.kind === "audit" ? (near.id === "audit-handle" ? auditUi.turn : near.id === "audit-test" ? auditUi.press : near.id === "audit-box" ? auditUi.take : ui.view) : near.kind === "face" ? (near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : faceUi.turn) : near.kind === "bell" ? { ko: "종 치기", en: "Ring" } : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
+  const verb = near ? (near.kind === "audit" ? (near.id === "audit-test" ? auditUi.stop : near.id === "audit-box" ? auditUi.take : ui.view) : near.kind === "face" ? (near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : faceUi.turn) : near.kind === "bell" ? { ko: "종 치기", en: "Ring" } : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
   // 바라보는 대상의 이름 · 동사. 두 버튼은 조준한 쪽 이름으로
   const nearText = near && verb
     ? near.id === "face-machine"
       ? t(verb)
-      : near.id === "audit-test"
-        ? `${t(auditAim === "accept" ? auditUi.acceptBtn : auditUi.rejectBtn)} · ${t(verb)}`
-        : `${t(near.id === "statue" && sanAwake ? { ko: "이산", en: "San" } : near.label)} · ${t(verb)}`
+      : `${t(near.id === "statue" && sanAwake ? { ko: "이산", en: "San" } : near.label)} · ${t(verb)}`
     : "";
-  const nearColor = near?.id === "audit-test" ? (auditAim === "accept" ? "#2fe3c0" : "#ff4a3d") : near?.color;
+  const nearColor = near?.color;
   const rootClass = [
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
