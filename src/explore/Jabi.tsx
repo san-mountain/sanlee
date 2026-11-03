@@ -8,7 +8,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
-import { AVENUE, BARRIERS, COVERS, GAZE_ZONE, JABI, QUEUE_Z } from "./zones";
+import { AVENUE, BARRIERS, COVER_HP, COVERS, GAZE_ZONE, JABI, QUEUE_Z } from "./zones";
 import { gaze } from "./gaze";
 import { player } from "./Player";
 import { hazardTexture, signTexture } from "./textures";
@@ -21,11 +21,11 @@ const tmpS = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 
 /* ---------- 엄폐물 상태 (파괴되면 alive=false) ---------- */
-export const coverState = COVERS.map(() => ({ alive: true, hp: 1.1, burn: 0 }));
+export const coverState = COVERS.map((c) => ({ alive: true, hp: COVER_HP[c.kind], burn: 0 }));
 export function restoreCovers() {
-  coverState.forEach((c) => {
+  coverState.forEach((c, i) => {
     c.alive = true;
-    c.hp = 1.1;
+    c.hp = COVER_HP[COVERS[i].kind];
     c.burn = 0;
   });
 }
@@ -340,6 +340,11 @@ function useStoneTex() {
 
 function Covers() {
   const stone = useStoneTex();
+  const hazardStripe = useMemo(() => {
+    const t = hazardTexture();
+    t.repeat.set(6, 1);
+    return t;
+  }, []);
   const refs = useRef<{ whole: THREE.Group | null; rubble: THREE.Group | null; fire: THREE.Group | null }[]>([]);
   useFrame(() => {
     coverState.forEach((c, i) => {
@@ -382,14 +387,21 @@ function Covers() {
                   <boxGeometry args={[c.w, c.h, c.d]} />
                   <meshStandardMaterial color="#8a2a22" roughness={0.6} metalness={0.5} />
                 </mesh>
-                {[-0.9, -0.3, 0.3, 0.9].map((x) => (
-                  <mesh key={x} position={[x, c.h / 2, c.d / 2 + 0.01]}>
-                    <boxGeometry args={[0.08, c.h * 0.92, 0.04]} />
-                    <meshStandardMaterial color="#5a1a14" roughness={0.6} metalness={0.5} />
-                  </mesh>
-                ))}
+                {[-0.35, -0.12, 0.12, 0.35].map((f) =>
+                  c.w >= c.d ? (
+                    <mesh key={f} position={[f * c.w, c.h / 2, c.d / 2 + 0.01]}>
+                      <boxGeometry args={[0.08, c.h * 0.92, 0.04]} />
+                      <meshStandardMaterial color="#5a1a14" roughness={0.6} metalness={0.5} />
+                    </mesh>
+                  ) : (
+                    <mesh key={f} position={[c.w / 2 + 0.01, c.h / 2, f * c.d]}>
+                      <boxGeometry args={[0.04, c.h * 0.92, 0.08]} />
+                      <meshStandardMaterial color="#5a1a14" roughness={0.6} metalness={0.5} />
+                    </mesh>
+                  )
+                )}
                 <mesh position={[0, c.h + 0.06, 0]}>
-                  <boxGeometry args={[c.w * 0.4, 0.12, 0.3]} />
+                  <boxGeometry args={[Math.min(c.w, c.d) * 0.4, 0.12, 0.3]} />
                   <meshBasicMaterial color="#ffb02e" toneMapped={false} />
                 </mesh>
               </>
@@ -404,6 +416,56 @@ function Covers() {
                   <planeGeometry args={[c.w, 0.4]} />
                   <meshBasicMaterial color="#ffd23f" />
                 </mesh>
+              </>
+            )}
+            {c.kind === "kiosk" && (
+              <>
+                {/* 무인 동의 키오스크: 화면에 '모두 수락' */}
+                <mesh position={[0, c.h / 2, 0]}>
+                  <boxGeometry args={[c.w, c.h, c.d]} />
+                  <meshStandardMaterial color="#23262e" roughness={0.5} metalness={0.4} />
+                </mesh>
+                <mesh position={[0, c.h * 0.62, c.d / 2 + 0.01]}>
+                  <planeGeometry args={[c.w * 0.75, c.h * 0.32]} />
+                  <meshBasicMaterial color="#22f0ff" toneMapped={false} />
+                </mesh>
+                <mesh position={[0, c.h * 0.36, c.d / 2 + 0.01]}>
+                  <planeGeometry args={[c.w * 0.5, 0.18]} />
+                  <meshBasicMaterial color="#ff2bd6" toneMapped={false} />
+                </mesh>
+                <mesh position={[0, c.h + 0.05, 0]}>
+                  <boxGeometry args={[c.w + 0.2, 0.1, c.d + 0.2]} />
+                  <meshStandardMaterial color="#14161b" />
+                </mesh>
+              </>
+            )}
+            {c.kind === "truck" && (
+              <>
+                {/* 멈춰 선 수거 트럭: 짐칸과 운전석, 바퀴 */}
+                <mesh position={[0, c.h / 2 + 0.25, 0.7]}>
+                  <boxGeometry args={[c.w, c.h - 0.5, c.d - 1.6]} />
+                  <meshStandardMaterial color="#c9c6bd" roughness={0.7} metalness={0.2} />
+                </mesh>
+                <mesh position={[0, 0.9, 0.7]}>
+                  <boxGeometry args={[c.w + 0.02, 0.35, c.d - 1.6]} />
+                  <meshBasicMaterial map={hazardStripe} />
+                </mesh>
+                <mesh position={[0, 1.35, -c.d / 2 + 0.75]}>
+                  <boxGeometry args={[c.w * 0.92, 2.2, 1.5]} />
+                  <meshStandardMaterial color="#3b4048" roughness={0.6} metalness={0.3} />
+                </mesh>
+                <mesh position={[0, 1.75, -c.d / 2 - 0.01]} rotation={[0, Math.PI, 0]}>
+                  <planeGeometry args={[c.w * 0.8, 0.7]} />
+                  <meshStandardMaterial color="#0b0d10" metalness={0.8} roughness={0.2} />
+                </mesh>
+                {[-1, 1].flatMap((sx) =>
+                  [-c.d / 2 + 0.9, c.d / 2 - 1.2].map((wz) => (
+                    <mesh key={`${sx}${wz}`} position={[sx * (c.w / 2 - 0.05), 0.42, wz]} rotation={[0, 0, Math.PI / 2]}>
+                      <cylinderGeometry args={[0.42, 0.42, 0.3, 12]} />
+                      <meshStandardMaterial color="#111" roughness={0.9} />
+                    </mesh>
+                  ))
+                )}
               </>
             )}
           </group>
