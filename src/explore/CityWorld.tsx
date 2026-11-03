@@ -126,7 +126,7 @@ function Underside({ r, depth, lights = 16 }: { r: number; depth: number; lights
       </mesh>
       <mesh position={[0, -depth - 2.6 - r * 0.4, 0]}>
         <coneGeometry args={[r * 0.18, r * 0.8, 16, 1, true]} />
-        <meshBasicMaterial color="#22f0ff" transparent opacity={0.08} depthWrite={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#22f0ff" transparent opacity={0.08} depthWrite={false} blending={THREE.AdditiveBlending} fog={false} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );
@@ -521,7 +521,7 @@ function Ark({ len }: { len: number }) {
         </mesh>
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -R * 1.2]}>
           <coneGeometry args={[R * 0.33, R * 2.4, 20, 1, true]} />
-          <meshBasicMaterial color="#22f0ff" transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} />
+          <meshBasicMaterial color="#22f0ff" transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} fog={false} />
         </mesh>
       </group>
       {/* 기낭 꼭대기의 탑 */}
@@ -580,7 +580,7 @@ function Ark({ len }: { len: number }) {
           </mesh>
           <mesh position={[0, -45, 0]}>
             <coneGeometry args={[R * 0.9, 90, 24, 1, true]} />
-            <meshBasicMaterial color="#ff9a9a" transparent opacity={0.045} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} />
+            <meshBasicMaterial color="#ff9a9a" transparent opacity={0.045} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} fog={false} />
           </mesh>
         </group>
       </group>
