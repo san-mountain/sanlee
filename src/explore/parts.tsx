@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { citizenGeometry, visorGeometry } from "./models";
 import { signTexture } from "./textures";
+import { addRim } from "./rim";
 
 export type TapFn = (id: string) => void;
 
@@ -70,7 +71,7 @@ export function Human({
     <group position={position} rotation={[0, rotationY, 0]}>
       <group ref={ref}>
         <mesh geometry={geo}>
-          <meshStandardMaterial color={color} roughness={0.85} />
+          <meshStandardMaterial ref={(m) => void (m && addRim(m))} color={color} roughness={0.85} />
         </mesh>
         {/* 얼굴과 손은 피부색으로 덧씌움 */}
         <mesh position={[0, 1.62, 0.004]} scale={[0.93, 1.13, 1.01]}>

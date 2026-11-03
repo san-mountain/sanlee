@@ -3,6 +3,7 @@
 // 지상의 사람 사는 쪽: 골목 장식, 골목 사람들, 숨겨진 방공호 입구, 포장마차, 범종각과 석탑, 망원경, 새 NPC들
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { addRim } from "./rim";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
@@ -308,7 +309,7 @@ export function AlleyPeople() {
   return (
     <group>
       <instancedMesh ref={ref} args={[geo, undefined, ALLEY_PEOPLE.length]} frustumCulled={false}>
-        <meshStandardMaterial roughness={0.85} />
+        <meshStandardMaterial ref={(m) => void (m && addRim(m, "#ff9a3c", 0.6))} roughness={0.85} />
       </instancedMesh>
       <instancedMesh ref={heads} args={[undefined, undefined, ALLEY_PEOPLE.length]} frustumCulled={false}>
         <sphereGeometry args={[0.112, 12, 10]} />

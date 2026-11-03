@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
+import { addRim } from "./rim";
 import { useFrame } from "@react-three/fiber";
 import type { Lang } from "@/data/site";
 import { useSign } from "./parts";
@@ -15,7 +16,7 @@ const COLORS: Record<Part, string> = { head: "#ff2bd6", torso: "#22f0ff", arms: 
 
 // 회색 돌에서 방문한 터미널 수만큼 부위별로 색이 돌아오는 재질
 function usePartMaterial(part: Part, restored: number) {
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: GREY, roughness: 0.75, metalness: 0.05 }), []);
+  const mat = useMemo(() => addRim(new THREE.MeshStandardMaterial({ color: GREY, roughness: 0.75, metalness: 0.05 }), "#3fd6ff", 0.7), []);
   const target = restored >= RESTORE_AT[part];
   const tColor = useMemo(() => new THREE.Color(COLORS[part]), [part]);
   const dim = useMemo(() => tColor.clone().multiplyScalar(0.5), [tColor]);

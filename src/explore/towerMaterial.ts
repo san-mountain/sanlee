@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { NEO_POST_GLSL } from "./neoPost";
 
 // 빌딩 외벽: 월드 좌표로 창문 격자를 그려서, 인스턴스 크기가 달라도 창문 크기가 일정하다
 export function towerMaterial() {
@@ -26,7 +27,7 @@ export function towerMaterial() {
         #include <fog_vertex>
       }
     `,
-    fragmentShader: /* glsl */ `
+    fragmentShader: NEO_POST_GLSL + /* glsl */ `
       #include <common>
       #include <fog_pars_fragment>
       uniform float uTime;
@@ -61,6 +62,7 @@ export function towerMaterial() {
         }
         gl_FragColor = vec4(col, 1.0);
         #include <fog_fragment>
+        gl_FragColor.rgb = neoPost(gl_FragColor.rgb);
       }
     `,
   });
