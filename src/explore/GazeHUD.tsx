@@ -1,5 +1,6 @@
 "use client";
 
+import useSessionTimers from "./useSessionTimers";
 import { sfx } from "./sfx";
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
@@ -34,6 +35,7 @@ function TypeLine({ text, delay = 0, className }: { text: string; delay?: number
 type Dead = { kind: "restore"; line: string; cost: boolean } | { kind: "gone" };
 
 export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.RefObject<HTMLElement | null>; onGone: () => void; onIntro?: () => void }) {
+  const schedule = useSessionTimers();
   const introRef = useRef(onIntro);
   introRef.current = onIntro;
   const { t } = useLang();
@@ -98,7 +100,7 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
         if (!seenIntro && introRef.current) introRef.current();
         else {
           setTip(true);
-          setTimeout(() => setTip(false), 15000);
+          schedule(() => setTip(false), 15000);
         }
       }
       if (gaze.meter >= 35) armed = true;
@@ -115,7 +117,7 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
         if (b.deleted) {
           // 숨은 결말의 대가: 백업을 지운 사람은 되살아나지 않는다
           setDead({ kind: "gone" });
-          setTimeout(() => {
+          schedule(() => {
             deadShown = false;
             setDead(null);
             goneRef.current();
@@ -127,7 +129,7 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
         const tt = tRef.current;
         const line = (slot ? tt(jabiUi.restoreFrom).replace("{n}", String(slot.n)) : tt(jabiUi.restoreFresh)).replace("{t}", lost);
         setDead({ kind: "restore", line, cost: b.deaths >= 3 });
-        setTimeout(() => {
+        schedule(() => {
           teleport.req = slot ? { x: slot.x, z: slot.z, yaw: 0 } : { x: 0, z: 7, yaw: 0 };
           restoreCovers();
           resetGaze();
@@ -140,7 +142,7 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
     };
     loop();
     return () => cancelAnimationFrame(raf);
-  }, [rootRef]);
+  }, [rootRef, schedule]);
 
   return (
     <>

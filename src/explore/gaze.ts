@@ -31,3 +31,17 @@ export function resetGaze() {
   gaze.dead = 0;
   gaze.frozen = false;
 }
+
+// 입장·퇴장 전용 초기화. 복원·구역 이동에서 쓰는 resetGaze의 의미는 유지한다.
+export function resetGazeSession() {
+  resetGaze();
+  autoWalk.to = null;
+  gaze.inZone = false;
+  gaze.hiddenBy = "";
+  gaze.enabled = false;
+  gaze.deaths = 0;
+  gaze.firstSeenAt = 0;
+  gaze.mood = "";
+  gaze.intro = false;
+  gaze.lookAt = null;
+}

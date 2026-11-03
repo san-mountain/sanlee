@@ -19,10 +19,12 @@ import Minimap from "./Minimap";
 import QuestArrow, { type QuestTarget } from "./QuestArrow";
 import CookieGame from "./CookieGame";
 import GazeHUD from "./GazeHUD";
-import { autoWalk, gaze, resetGaze } from "./gaze";
+import { autoWalk, gaze, resetGaze, resetGazeSession } from "./gaze";
 import { finalBeam, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
+
+import useSessionTimers from "./useSessionTimers";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -66,6 +68,19 @@ const LINE_SPOT = { x: 3.6, z: (QUEUE_Z[44] + QUEUE_Z[45]) / 2 };
 
 export default function ExploreClient() {
   const { t, lang } = useLang();
+  const schedule = useSessionTimers();
+  useEffect(() => {
+    resetGazeSession();
+    return () => {
+      resetGazeSession();
+      teleport.req = null;
+      input.keys.clear();
+      input.joy.x = input.joy.y = 0;
+      input.look.yaw = input.look.pitch = 0;
+      input.jump = input.jumpHeld = input.runLatch = false;
+      input.enabled = false;
+    };
+  }, []);
   const [webgl, setWebgl] = useState<boolean | null>(null);
   const [touch, setTouch] = useState(false);
   const [intro, setIntro] = useState(true);
@@ -83,7 +98,7 @@ export default function ExploreClient() {
   const flashCut = () => {
     setCut(true);
     clearTimeout(cutTimer.current);
-    cutTimer.current = setTimeout(() => setCut(false), 260);
+    cutTimer.current = schedule(() => setCut(false), 260);
   };
   const [notice, setNotice] = useState<L | null>(null);
   const [ending, setEnding] = useState<Ending>(null);
@@ -121,7 +136,7 @@ export default function ExploreClient() {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return router.push("/");
     setLeaving(true);
     sfx.glitch();
-    setTimeout(() => router.push("/"), 1100);
+    schedule(() => router.push("/"), 1100);
   };
 
   // 일반 페이지에서 DELETE SEOUL로 지워지며 들어왔다면 그 흔적(그림 숨김 등)을 풀어 준다
@@ -148,8 +163,8 @@ export default function ExploreClient() {
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 2600);
-  }, []);
+    schedule(() => setToast(null), 2600);
+  }, [schedule]);
 
   const markVisited = useCallback(
     (id: SectionId) => {
@@ -170,7 +185,7 @@ export default function ExploreClient() {
     setPanel(null);
     setFade(to === "city" ? "up" : "down");
     if (viaDoor) sfx.door();
-    setTimeout(() => {
+    schedule(() => {
       setZone(to);
       setArrived(viaDoor);
       setTracked(false);
@@ -178,11 +193,11 @@ export default function ExploreClient() {
       // 방공호에서 방문 기록을 지웠다면 도시는 아무것도 기억하지 않고, 자비도 플레이어를 보지 못한다
       if (to === "city") {
         if (ghostRef.current) gaze.mood = "blind";
-        else if (viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
+        else if (viaDoor) schedule(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
       }
-      setTimeout(() => setFade(null), 500);
+      schedule(() => setFade(null), 500);
     }, 900);
-  }, []);
+  }, [schedule]);
 
   const interact = useCallback(
     (it: Interactable) => {
@@ -402,9 +417,9 @@ export default function ExploreClient() {
     let hide: ReturnType<typeof setTimeout>;
     const show = () => {
       setNotice(announcements[i++ % announcements.length]);
-      hide = setTimeout(() => setNotice(null), 6500);
+      hide = schedule(() => setNotice(null), 6500);
     };
-    const first = setTimeout(show, 3500);
+    const first = schedule(show, 3500);
     const iv = setInterval(show, 17000);
     return () => {
       clearTimeout(first);
@@ -420,7 +435,7 @@ export default function ExploreClient() {
     if (!ending) return;
     const ms = BEAT_MS[ending.kind][ending.step];
     if (ms === undefined) return;
-    const id = setTimeout(() => setEnding((e) => (e ? { ...e, step: e.step + 1 } : e)), ms);
+    const id = schedule(() => setEnding((e) => (e ? { ...e, step: e.step + 1 } : e)), ms);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
@@ -445,7 +460,7 @@ export default function ExploreClient() {
   }, [panel, promiseLine, unlock]);
   useEffect(() => {
     if (unlock !== "show") return;
-    const h = setTimeout(() => setUnlock(null), 9000);
+    const h = schedule(() => setUnlock(null), 9000);
     return () => clearTimeout(h);
   }, [unlock]);
   const [flash, setFlash] = useState(false);
@@ -468,7 +483,7 @@ export default function ExploreClient() {
         gaze.mood = "calm";
         // 줄 옆을 따라 걸어가 빈자리에 들어선다
         autoWalk.to = { x: 2.3, z: LINE_SPOT.z, speed: 3.6, pitch: 0.2 };
-        sceneTimer.current = setTimeout(() => (autoWalk.to = { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.6, pitch: 0.42 }), 6800);
+        sceneTimer.current = schedule(() => (autoWalk.to = { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.6, pitch: 0.42 }), 6800);
       }
       if (step === 4)
         try {
@@ -477,7 +492,7 @@ export default function ExploreClient() {
     } else if (kind === "reject") {
       if (step === 0) {
         finalBeam();
-        sceneTimer.current = setTimeout(() => setFlash(true), 1500);
+        sceneTimer.current = schedule(() => setFlash(true), 1500);
       }
       if (step === 3) {
         // 장면이 방공호로: 사람들이 두 번째 동상을 옮겨 놓았다
@@ -577,6 +592,10 @@ export default function ExploreClient() {
     if (!a || a.kind !== panel.kind) return sfx.open();
     if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
   }, [panel]);
+  const lookDoneListener = useRef<(() => void) | null>(null);
+  useEffect(() => () => {
+    if (lookDoneListener.current) window.removeEventListener("sanlee-look-done", lookDoneListener.current);
+  }, []);
   const startJabiIntro = useCallback(() => {
     flashCut();
     setCctv(true);
@@ -587,12 +606,13 @@ export default function ExploreClient() {
     const open = () => {
       window.removeEventListener("sanlee-look-done", onDone);
       clearTimeout(introTimer.current);
-      introTimer.current = setTimeout(() => setPanel({ kind: "jabi" }), 700);
+      introTimer.current = schedule(() => setPanel({ kind: "jabi" }), 700);
     };
     const onDone = () => open();
+    lookDoneListener.current = onDone;
     window.addEventListener("sanlee-look-done", onDone);
     clearTimeout(introTimer.current);
-    introTimer.current = setTimeout(open, 5000);
+    introTimer.current = schedule(open, 5000);
   }, []);
   const endJabiIntro = useCallback(() => {
     try {
@@ -622,8 +642,8 @@ export default function ExploreClient() {
     resetGaze();
     restoreCovers();
     goTo("bunker", false);
-    setTimeout(() => setIntro(true), 900);
-  }, [goTo]);
+    schedule(() => setIntro(true), 900);
+  }, [goTo, schedule]);
 
   // 입장: 수락한 시민은 곧장 줄 속에서 깨어난다
   const enter = () => {
@@ -637,7 +657,7 @@ export default function ExploreClient() {
       teleport.req = { x: LINE_SPOT.x, z: QUEUE_Z[30], yaw: 0 };
       setZone("city");
       setArrived(false);
-      setTimeout(() => {
+      schedule(() => {
         teleport.req = { x: LINE_SPOT.x, z: QUEUE_Z[30], yaw: 0 };
         setNotice(ui.welcomeB);
       }, 400);
