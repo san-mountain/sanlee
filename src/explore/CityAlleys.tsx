@@ -264,7 +264,7 @@ export function AlleyDecor() {
       </instancedMesh>
       <instancedMesh ref={poolRef} args={[undefined, undefined, data.bulbs.length]} frustumCulled={false}>
         <planeGeometry args={[4.5, 4.5]} />
-        <meshBasicMaterial map={glow} color="#ffb070" transparent opacity={0.35} depthWrite={false} blending={THREE.AdditiveBlending} />
+        <meshBasicMaterial map={glow} color="#ffb070" transparent opacity={0.35} depthWrite={false} blending={THREE.AdditiveBlending} fog={false} />
       </instancedMesh>
       <instancedMesh ref={puddleRef} args={[undefined, undefined, data.puddles.length]} frustumCulled={false}>
         <circleGeometry args={[1, 18]} />
