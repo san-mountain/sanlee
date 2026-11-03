@@ -1148,3 +1148,25 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .audit-slip .panel-actions { justify-content: center; }
 .audit-slip .btn { min-height: 44px; }
 @media (max-width: 640px) { .audit-slip-line { font-size: 19px; } .audit-slip-mark { font-size: 52px; } }
+
+/* A·B 퍼즐: 조작할 수 있는 3D 부품의 화면상 표식. 모바일에서는 표식도 터치 대상. */
+.puzzle-hint-layer { position: absolute; inset: 0; z-index: 36; pointer-events: none; }
+.puzzle-hint {
+  position: absolute; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  min-height: 34px; max-width: min(46vw, 180px); box-sizing: border-box;
+  padding: 5px 9px; border: 1.5px solid; border-radius: 5px;
+  background: #101317e8; box-shadow: 0 2px 10px #000b;
+  font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .02em;
+  white-space: nowrap; text-shadow: 0 1px 2px #000;
+}
+.puzzle-hint-symbol { font-size: 17px; line-height: 1; flex: none; }
+.puzzle-hint kbd { font: inherit; font-size: 10px; opacity: .75; border: 1px solid currentColor; padding: 0 3px; margin-left: 2px; }
+.puzzle-hint-desktop { pointer-events: none; }
+.puzzle-hint-touch {
+  min-height: 48px; min-width: 48px; cursor: pointer;
+  pointer-events: auto; touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.puzzle-hint-touch:active { background: #333940; transform: translate(-50%, -50%) scale(.97); }
+.puzzle-hint-touch:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+@media (max-width: 420px) { .puzzle-hint-touch { font-size: 10px; gap: 3px; padding: 6px; } }
