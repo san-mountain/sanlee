@@ -123,6 +123,8 @@ function GazeSystem() {
       runBeam(dt, now);
     } else if (gaze.state === "lock") {
       lockT -= dt;
+      // 길이 바닥에 비친 처음 절반(0.15초) 동안은 가는 선이 플레이어를 따라온다. 마지막 0.15초에 고정된다
+      if (lockT < PREVIEW && lockT > PREVIEW / 2) planPath(player.pos.x, player.pos.z);
       gaze.shake = 0.1 + (0.9 - lockT) * 0.12;
       if (lockT <= 0) startBeam(aimAt);
     } else if (gaze.state === "cool") {
