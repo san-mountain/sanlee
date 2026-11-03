@@ -82,6 +82,12 @@ export function pressTest(state: AuditState, input: AuditChoice) {
   return { status: mismatch ? ("mismatch" as const) : ("match" as const), firstMismatch: mismatch && !state.mismatch, state: next };
 }
 
+// 프레스의 물리적 덮어쓰기를 멈춘다. 기존 v1 B 저장·핵심 로직의 불일치 단계를
+// '원본을 드러내는 단계'로 보존하여 업데이트 이전 저장에서도 진행할 수 있게 한다.
+export function interruptRevisionPress(state: AuditState) {
+  return pressTest(playRecord(state), "reject");
+}
+
 // 감사 기록지를 꺼낸다. 불일치를 직접 확인하기 전에는 기록함이 잠겨 있다
 export function takeSlip(state: AuditState): AuditState {
   if (!state.mismatch) return state;
@@ -111,8 +117,8 @@ export function restPhase(face: Pick<FaceState, "legacy" | "method">, state: Aud
   if (state.done) return "done";
   // 기록지를 꺼낸 뒤 마무리 전에 나갔다면, 열린 기록함에서 다시 꺼내 읽고 마무리로 이어진다
   if (state.mismatch) return "slip";
-  if (state.played) return "test";
-  return "idle";
+  // A 복원 직후 도장은 자동으로 돌아간다. 플레이어에게 재생 손잡이를 찾게 하지 않는다.
+  return "test";
 }
 
 // 퍼즐 해결 여부: 공식 기록 수정이 아니라, 독립적인 원본 증거를 확보한 것
