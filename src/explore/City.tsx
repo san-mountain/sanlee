@@ -647,7 +647,8 @@ function useGlowTexture() {
 
 function Lamps() {
   const glow = useGlowTexture();
-  const beam = useBeam("#bfe6ff", 0.065);
+  // 가로등 빛줄기와 빛 웅덩이는 은은하게만: 시야를 가리지 않도록
+  const beam = useBeam("#bfe6ff", 0.022);
   const spots = useMemo(() => [-1, 1].flatMap((s) => [16, -4, -24, -48, -74].map((z) => [s * (AVENUE + 0.4), z] as [number, number])), []);
   return (
     <group>
@@ -665,14 +666,14 @@ function Lamps() {
             </mesh>
             <mesh position={[s * 1.9, 7.86, 0]}>
               <boxGeometry args={[0.7, 0.04, 0.22]} />
-              <meshBasicMaterial color="#d8f0ff" toneMapped={false} />
+              <meshBasicMaterial color="#8fa6b4" toneMapped={false} />
             </mesh>
             <mesh position={[s * 1.9, 3.95, 0]} material={beam}>
               <coneGeometry args={[2.4, 7.8, 20, 1, true]} />
             </mesh>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[s * 1.9, 0.02, 0]}>
               <planeGeometry args={[6, 6]} />
-              <meshBasicMaterial map={glow} color="#9fd8ff" transparent opacity={0.35} depthWrite={false} blending={THREE.AdditiveBlending} />
+              <meshBasicMaterial map={glow} color="#9fd8ff" transparent opacity={0.14} depthWrite={false} blending={THREE.AdditiveBlending} fog={false} />
             </mesh>
           </group>
         );
@@ -740,12 +741,12 @@ function Drones() {
             </mesh>
             <mesh position={[0, -d.y / 2, 0]}>
               <coneGeometry args={[2.2, d.y, 20, 1, true]} />
-              <meshBasicMaterial color="#ffdede" transparent opacity={0.025} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} />
+              <meshBasicMaterial color="#ffdede" transparent opacity={0.008} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} fog={false} />
             </mesh>
           </group>
           <mesh ref={(m) => { spots.current[i] = m; }} rotation={[-Math.PI / 2, 0, 0]}>
             <planeGeometry args={[5, 5]} />
-            <meshBasicMaterial map={glow} color="#ffd0d0" transparent opacity={0.45} depthWrite={false} blending={THREE.AdditiveBlending} />
+            <meshBasicMaterial map={glow} color="#ffd0d0" transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} fog={false} />
           </mesh>
         </group>
       ))}

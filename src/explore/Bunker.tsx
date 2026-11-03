@@ -248,11 +248,7 @@ function Paintings({ lang }: { lang: Lang }) {
               </mesh>
               <mesh position={[0, ph / 2 + 0.31, 0.3]}>
                 <boxGeometry args={[0.6, 0.015, 0.05]} />
-                <meshBasicMaterial color="#fff4dc" toneMapped={false} />
-              </mesh>
-              <mesh position={[0, 0.1, 0.34]} rotation={[0.12, 0, 0]}>
-                <coneGeometry args={[pw * 0.62, ph + 0.4, 20, 1, true]} />
-                <meshBasicMaterial color="#fff2d0" transparent opacity={0.018} depthWrite={false} side={THREE.DoubleSide} />
+                <meshBasicMaterial color="#8c8270" toneMapped={false} />
               </mesh>
             </group>
           </group>
