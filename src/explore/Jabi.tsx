@@ -84,6 +84,20 @@ const beam = {
 const scorch: { x: number; z: number; born: number }[] = [];
 let lockT = 0;
 const aimAt = new THREE.Vector3();
+// 레이저가 긁고 지나갈 길 (눈이 붉어질 때 정해진다). 발사 0.3초 전부터 바닥에 가늘게 미리 보인다
+const path = { start: new THREE.Vector3(), end: new THREE.Vector3() };
+const PREVIEW = 0.3;
+function planPath(ax: number, az: number) {
+  const dx = JABI.eye.x - ax;
+  const dz = JABI.eye.z - az;
+  const d = Math.hypot(dx, dz) || 1;
+  path.start.set(ax + (dx / d) * 9, 0, az + (dz / d) * 9);
+  path.start.x = THREE.MathUtils.clamp(path.start.x, -AVENUE - 2, AVENUE + 2);
+  const sx = ax - path.start.x;
+  const sz = az - path.start.z;
+  const sl = Math.hypot(sx, sz) || 1;
+  path.end.set(ax + (sx / sl) * 4, 0, az + (sz / sl) * 4);
+}
 let coolT = 0;
 const last = { x: 0, z: 0 };
 
@@ -133,6 +147,7 @@ function GazeSystem() {
         lockT = 0.9;
         // 눈이 붉어지는 순간의 자리를 겨눈다. 그래서 붉어지면 바로 옆으로 뛰어 피할 수 있다
         aimAt.set(player.pos.x, 0, player.pos.z);
+        planPath(aimAt.x, aimAt.z);
       }
       gaze.shake = m >= 70 ? ((m - 70) / 30) * 0.06 : 0;
     }
@@ -150,23 +165,15 @@ export function finalBeam() {
 }
 
 function startBeam(at?: THREE.Vector3) {
-  const ax = at ? at.x : player.pos.x;
-  const az = at ? at.z : player.pos.z;
   sfx.beam();
   gaze.state = "fire";
   beam.on = true;
   beam.t = 0;
-  // 레이저는 플레이어 앞쪽(눈 쪽으로 9m) 바닥에 떨어져, 눈이 붉어진 순간 플레이어가 서 있던 자리를 지나 4m 더 긁고 간다.
+  // 레이저는 눈이 붉어진 순간 플레이어가 서 있던 자리 앞(눈 쪽으로 9m) 바닥에 떨어져, 그 자리를 지나 4m 더 긁고 간다.
   // 플레이어를 따라오지 않으므로, 붉은 조준 신호를 보고 옆으로 뛰면 피할 수 있다
-  const dx = JABI.eye.x - ax;
-  const dz = JABI.eye.z - az;
-  const d = Math.hypot(dx, dz) || 1;
-  beam.p.set(ax + (dx / d) * 9, 0, az + (dz / d) * 9);
-  beam.p.x = THREE.MathUtils.clamp(beam.p.x, -AVENUE - 2, AVENUE + 2);
-  const sx = ax - beam.p.x;
-  const sz = az - beam.p.z;
-  const sl = Math.hypot(sx, sz) || 1;
-  beam.target.set(ax + (sx / sl) * 4, 0, az + (sz / sl) * 4);
+  if (!at) planPath(player.pos.x, player.pos.z);
+  beam.p.copy(path.start);
+  beam.target.copy(path.end);
   beam.lastDrop.copy(beam.p);
   gaze.shake = 0.28;
 }
@@ -225,6 +232,7 @@ function Beam() {
   const hit = useRef<THREE.Group>(null);
   const light = useRef<THREE.PointLight>(null);
   const aim = useRef<THREE.Mesh>(null);
+  const lane = useRef<THREE.Mesh>(null);
   const dark = useRef<THREE.InstancedMesh>(null);
   const molten = useRef<THREE.InstancedMesh>(null);
   const col = useMemo(() => new THREE.Color(), []);
@@ -263,12 +271,21 @@ function Beam() {
       const show = gaze.state === "lock";
       aim.current.visible = show;
       if (show) {
-        const dx = JABI.eye.x - player.pos.x;
-        const dz = JABI.eye.z - player.pos.z;
-        const d = Math.hypot(dx, dz) || 1;
-        tmpS.set(player.pos.x + (dx / d) * 16, 0, player.pos.z + (dz / d) * 16);
-        place(aim.current, JABI.eye, tmpS, 0.08);
+        place(aim.current, JABI.eye, path.start, 0.08);
         (aim.current.material as THREE.MeshBasicMaterial).opacity = Math.sin(now * 30) > 0 ? 0.9 : 0.2;
+      }
+    }
+    // 발사 0.3초 전: 레이저가 긁고 갈 길이 바닥에 가늘게 비친다
+    if (lane.current) {
+      const show = gaze.state === "lock" && lockT < PREVIEW;
+      lane.current.visible = show;
+      if (show) {
+        const len = path.start.distanceTo(path.end);
+        lane.current.position.copy(path.start).lerp(path.end, 0.5).setY(0.04);
+        lane.current.rotation.set(-Math.PI / 2, 0, Math.atan2(path.end.x - path.start.x, path.end.z - path.start.z));
+        lane.current.scale.set(0.14, len, 1);
+        const k = 1 - Math.max(0, lockT) / PREVIEW;
+        (lane.current.material as THREE.MeshBasicMaterial).opacity = (0.35 + 0.5 * k) * (Math.sin(now * 40) > -0.3 ? 1 : 0.5);
       }
     }
     // 바닥 자국: 처음엔 녹은 주황, 몇 초 뒤 검게 식는다
@@ -306,6 +323,10 @@ function Beam() {
       <mesh ref={aim} visible={false}>
         <cylinderGeometry args={[1, 1, 1, 6, 1, true]} />
         <meshBasicMaterial color="#ff2a3d" transparent opacity={0.6} depthWrite={false} toneMapped={false} fog={false} />
+      </mesh>
+      <mesh ref={lane} visible={false}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial color="#ff2a3d" transparent opacity={0.6} depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} />
       </mesh>
       <pointLight ref={light} distance={26} color="#ff5030" intensity={0} />
       <group ref={hit} visible={false}>
