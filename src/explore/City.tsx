@@ -13,6 +13,7 @@ import { AlleyDecor, AlleyPeople, ChalkMarks, BellPavilion, Courier, EdgeKid, Gr
 import { citizenGeometry, roofGeometry, visorGeometry } from "./models";
 import { towerMaterial } from "./towerMaterial";
 import { useNeoPost } from "./neoPost";
+import { NeonEnvironment, useBeam } from "./atmosphere";
 import { addRim } from "./rim";
 import { useQuality } from "./quality";
 import { MeshReflectorMaterial } from "@react-three/drei";
@@ -243,7 +244,8 @@ function Ground() {
           <group key={`${i}${m}`}>
             <mesh rotation={[-Math.PI / 2, 0, m * rot]} position={[m * x, 0.013, z]} scale={[sz * 1.5, sz, 1]}>
               <circleGeometry args={[1, 16]} />
-              <meshStandardMaterial color="#08090c" roughness={0.04} metalness={0.95} transparent opacity={0.85} />
+              {/* 반사 바닥이 켜져 있으면 웅덩이는 얇게만 덮어서 아래의 네온 반사가 비치게 한다 */}
+              <meshStandardMaterial color="#08090c" roughness={0.04} metalness={0.95} transparent opacity={q === "high" ? 0.3 : 0.85} />
             </mesh>
             {i % 3 === 0 && (
               <mesh position={[m * (x + 0.9), 0.06, z + 0.4]} rotation={[0, m * rot, 0.4]}>
@@ -619,6 +621,7 @@ function useGlowTexture() {
 
 function Lamps() {
   const glow = useGlowTexture();
+  const beam = useBeam("#bfe6ff", 0.065);
   const spots = useMemo(() => [-1, 1].flatMap((s) => [16, -4, -24, -48, -74].map((z) => [s * (AVENUE + 0.4), z] as [number, number])), []);
   return (
     <group>
@@ -638,9 +641,8 @@ function Lamps() {
               <boxGeometry args={[0.7, 0.04, 0.22]} />
               <meshBasicMaterial color="#d8f0ff" toneMapped={false} />
             </mesh>
-            <mesh position={[s * 1.9, 3.95, 0]}>
+            <mesh position={[s * 1.9, 3.95, 0]} material={beam}>
               <coneGeometry args={[2.4, 7.8, 20, 1, true]} />
-              <meshBasicMaterial color="#bfe6ff" transparent opacity={0.012} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} />
             </mesh>
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[s * 1.9, 0.02, 0]}>
               <planeGeometry args={[6, 6]} />
@@ -1014,9 +1016,11 @@ function CookieHolo() {
 }
 
 export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: TapFn; onTracked: (v: boolean) => void }) {
+  const q = useQuality();
   return (
     <group>
       <fogExp2 attach="fog" args={["#1a0e18", 0.0062]} />
+      {q !== "low" && <NeonEnvironment />}
       <Sky />
       <CloudSea />
       <ambientLight intensity={0.32} color="#8a90b0" />
