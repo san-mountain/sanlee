@@ -1,10 +1,11 @@
 "use client";
 
 import { setSfx, sfx, sfxOn } from "./sfx";
+import { syncBgm } from "./bgm";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LangToggle, useLang } from "@/components/LangProvider";
-import { fourthWall, pause } from "./story";
+import { MUSIC_URL, credits, fourthWall, pause } from "./story";
 import { input, saveSettings } from "./input";
 import { getBackup } from "./backup";
 
@@ -108,12 +109,20 @@ export default function PauseMenu({
               onClick={() => {
                 setSfx(!sound);
                 setSound(!sound);
+                syncBgm();
                 if (!sound) sfx.blip();
               }}
             >
               {t(sound ? pause.on : pause.off)}
             </button>
           </div>
+
+          <p className="pause-note">
+            ♪{" "}
+            <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">
+              {t(credits.music)}
+            </a>
+          </p>
 
           <div className="pause-row">
             <span>{t(pause.lang)}</span>
