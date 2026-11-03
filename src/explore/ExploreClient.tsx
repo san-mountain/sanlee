@@ -1,6 +1,7 @@
 "use client";
 
 import { sfx } from "./sfx";
+import { duckBgm, playBgm, wakeBgm } from "./bgm";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -124,6 +125,27 @@ export default function ExploreClient() {
     setTimeout(() => router.push("/"), 1100);
   };
 
+  // 배경음악: 방공호, 지상, 대자비 구역(처음 시선 구역에 들어선 뒤부터), 결말
+  const [jabiStage, setJabiStage] = useState(false);
+  // 방공호로 돌아가면 다시 지상 음악부터 (시선 구역은 도시에 다시 올라왔을 때 새로 들어선다)
+  const track = leaving || intro ? null : ending ? "ending" : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
+  useEffect(() => {
+    playBgm(track);
+  }, [track]);
+  useEffect(() => {
+    duckBgm(paused);
+  }, [paused]);
+  useEffect(() => {
+    window.addEventListener("pointerdown", wakeBgm);
+    window.addEventListener("keydown", wakeBgm);
+    return () => {
+      window.removeEventListener("pointerdown", wakeBgm);
+      window.removeEventListener("keydown", wakeBgm);
+      playBgm(null);
+    };
+  }, []);
+  const onStage = useCallback(() => setJabiStage(true), []);
+
   // 일반 페이지에서 DELETE SEOUL로 지워지며 들어왔다면 그 흔적(그림 숨김 등)을 풀어 준다
   useEffect(() => {
     document.body.classList.remove("deleting");
@@ -172,6 +194,7 @@ export default function ExploreClient() {
     if (viaDoor) sfx.door();
     setTimeout(() => {
       setZone(to);
+      setJabiStage(false);
       setArrived(viaDoor);
       setTracked(false);
       // 배전실 문을 나서는 순간 도시가 위치를 기억한다. 첫 기억에는 '계속 걸으면 동의' 한 줄이 따라 나온다
@@ -800,7 +823,7 @@ export default function ExploreClient() {
       {active && locked && <div className="crosshair" aria-hidden />}
       {active && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
-      {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} />}
+      {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
       {active && touch && <Joystick />}
       {active && touch && (
         <JumpButton

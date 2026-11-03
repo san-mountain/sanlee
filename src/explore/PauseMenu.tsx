@@ -1,6 +1,7 @@
 "use client";
 
 import { setSfx, sfx, sfxOn } from "./sfx";
+import { syncBgm } from "./bgm";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LangToggle, useLang } from "@/components/LangProvider";
@@ -108,6 +109,7 @@ export default function PauseMenu({
               onClick={() => {
                 setSfx(!sound);
                 setSound(!sound);
+                syncBgm();
                 if (!sound) sfx.blip();
               }}
             >

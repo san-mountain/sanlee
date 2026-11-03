@@ -33,9 +33,21 @@ function TypeLine({ text, delay = 0, className }: { text: string; delay?: number
 
 type Dead = { kind: "restore"; line: string; cost: boolean } | { kind: "gone" };
 
-export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.RefObject<HTMLElement | null>; onGone: () => void; onIntro?: () => void }) {
+export default function GazeHUD({
+  rootRef,
+  onGone,
+  onIntro,
+  onStage,
+}: {
+  rootRef: React.RefObject<HTMLElement | null>;
+  onGone: () => void;
+  onIntro?: () => void;
+  onStage?: () => void;
+}) {
   const introRef = useRef(onIntro);
   introRef.current = onIntro;
+  const stageRef = useRef(onStage);
+  stageRef.current = onStage;
   const { t } = useLang();
   const goneRef = useRef(onGone);
   goneRef.current = onGone;
@@ -91,6 +103,7 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
       // 처음 시선 구역에 들어서면 소개 장면을 연다 (브라우저마다 한 번). 이미 봤다면 짧은 요령만
       if (gaze.inZone && !shown.current && gaze.mood !== "blind") {
         shown.current = true;
+        stageRef.current?.();
         let seenIntro = false;
         try {
           seenIntro = localStorage.getItem("sanlee-jabi-intro") === "1";
