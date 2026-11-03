@@ -29,7 +29,7 @@ import { protection } from "./recordProtection";
 import { getCitizenRecords, recordCitizenActivity, syncCitizenRecords, type ActivityResult } from "./citizenRecords";
 import { FACE_KEY, emptyFace, executeFace, loadFace, rotateDrum, saveFace, seamJoined, type FaceMethod, type FaceState } from "./faceAuth";
 import { faceRt, setFacePhase, type FacePhase } from "./faceRuntime";
-import { AUDIT_KEY, emptyAudit, finishAudit, loadAudit, playRecord, pressTest, restPhase, saveAudit, takeSlip, type AuditPhase, type AuditState } from "./recordAudit";
+import { AUDIT_KEY, emptyAudit, finishAudit, interruptRevisionPress, loadAudit, restPhase, saveAudit, takeSlip, type AuditPhase, type AuditState } from "./recordAudit";
 import { auditRt, setAuditPhase } from "./auditRuntime";
 import { GUARANTOR } from "./zones";
 import type { AuditView } from "./World";
@@ -390,9 +390,8 @@ export default function ExploreClient() {
   // 재생 손잡이/선택 시험 버튼은 없다: A가 끝나면 기계가 곧바로 작동한다.
   const stopStamp = useCallback(() => {
     if (auditRt.phase !== "test") return;
-    // 기존 v1 저장·테스트와의 호환을 위해 '불일치 발견' 상태를 그대로 재사용한다.
-    // 이 이벤트는 플레이어의 거부 입력이 아니라 기계적 기록 조작의 중단이다.
-    const r = pressTest(playRecord(auditRef.current), "reject");
+    // B v1과의 저장 호환을 유지하지만, 화면에서는 원본 위에 찍히는 도장을 멈추는 행동이다.
+    const r = interruptRevisionPress(auditRef.current);
     if (r.status !== "mismatch") return;
     const rec = recordCitizenActivity(
       { kind: "audit.interrupt", sourceId: "revision-press" },
