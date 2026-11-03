@@ -33,6 +33,7 @@ import { AUDIT_KEY, emptyAudit, finishAudit, loadAudit, playRecord, pressTest, r
 import { auditRt, setAuditPhase } from "./auditRuntime";
 import { GUARANTOR } from "./zones";
 import type { AuditView } from "./World";
+import PuzzleInteractHints from "./PuzzleInteractHints";
 import { playLines } from "./dialogue";
 
 const World = dynamic(() => import("./World"), { ssr: false });
@@ -1083,7 +1084,7 @@ export default function ExploreClient() {
         // 퍼즐 B: 지금 켜진 부분 하나만 가리킨다. 안내 문구는 같은 한 줄
         const id = auditRt.phase === "idle" ? "audit-handle" : auditRt.phase === "test" ? "audit-test" : auditRt.phase === "slip" ? "audit-box" : null;
         const it = id && find(id);
-        return it ? { pos: it.pos, label: t(auditUi.quest) } : null;
+        return it ? { pos: it.pos, label: t(id === "audit-handle" ? auditUi.handle : id === "audit-test" ? auditUi.questTest : auditUi.questBox) } : null;
       }
       if (!complete && !met && visited.length === 0) {
         const it = find("statue");
@@ -1240,6 +1241,7 @@ export default function ExploreClient() {
         </button>
       )}
 
+      {active && zone === "bunker" && !face.legacy && !cine && <PuzzleInteractHints lang={lang} touch={touch} onTap={onTap} />}
       {active && !near && !cine && !faceLine && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
       {active && locked && <div className="crosshair" aria-hidden />}
       {active && !cine && <QuestArrow get={getQuest} />}
