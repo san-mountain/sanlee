@@ -4,6 +4,7 @@
 // 쌍둥이 기계 불상, 섬 사이를 흐르는 비행 차량, 머리 위를 지나가는 거대한 사원 비행선.
 import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { NEO_POST_GLSL, useNeoPost } from "./neoPost";
 import { useFrame } from "@react-three/fiber";
 import { BUDDHAS, EDGE, ISLANDS, OVERSEER_ISLAND } from "./zones";
 import { roofGeometry } from "./models";
@@ -23,7 +24,7 @@ export function Sky() {
         depthWrite: false,
         fog: false,
         vertexShader: `varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-        fragmentShader: `varying vec3 vP;
+        fragmentShader: NEO_POST_GLSL + `varying vec3 vP;
         float h31(vec3 p){ return fract(sin(dot(p, vec3(12.9898,78.233,37.719))) * 43758.5453); }
         void main(){
           float h = vP.y;
@@ -43,11 +44,12 @@ export function Sky() {
           float d = dot(vP, md);
           c += vec3(0.95,0.85,0.8) * smoothstep(0.9988, 0.9992, d);
           c += vec3(0.5,0.25,0.25) * pow(max(d,0.0), 180.0) * 0.6;
-          gl_FragColor = vec4(c, 1.0);
+          gl_FragColor = vec4(neoPost(c), 1.0);
         }`,
       }),
     []
   );
+  useNeoPost(mat);
   const ref = useRef<THREE.Mesh>(null);
   useFrame(({ camera }) => ref.current?.position.copy(camera.position));
   return (
@@ -67,7 +69,7 @@ export function CloudSea() {
         fog: false,
         uniforms: { uTime: { value: 0 } },
         vertexShader: `varying vec3 vW; void main(){ vec4 w = modelMatrix * vec4(position,1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
-        fragmentShader: `varying vec3 vW; uniform float uTime;
+        fragmentShader: NEO_POST_GLSL + `varying vec3 vW; uniform float uTime;
         float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7))) * 43758.5453); }
         float n2(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
           return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }
@@ -82,11 +84,12 @@ export function CloudSea() {
           // 도시 바로 밑은 도시 불빛이 비쳐 더 밝다
           c += vec3(0.25,0.08,0.18) * exp(-r*r/22000.0);
           float a = 1.0 - smoothstep(500.0, 1300.0, r);
-          gl_FragColor = vec4(c, a);
+          gl_FragColor = vec4(neoPost(c), a);
         }`,
       }),
     []
   );
+  useNeoPost(mat);
   useFrame((s) => {
     mat.uniforms.uTime.value = s.clock.elapsedTime;
   });
