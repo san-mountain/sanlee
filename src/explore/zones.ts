@@ -323,20 +323,48 @@ export const BARRIERS: Barrier[] = (() => {
   return out;
 })();
 
-// 큰길의 엄폐물: 기계의 질서답게 좌우 대칭. 가운데 하나, 양옆 한 쌍이 번갈아 놓인다.
-export type Cover = { x: number; z: number; w: number; d: number; h: number; kind: "stele" | "container" | "wall" };
-export const COVERS: Cover[] = (() => {
-  const out: Cover[] = [];
-  const kinds: Cover["kind"][] = ["stele", "container", "wall"];
-  const zs = [-4, -12, -20, -30, -38, -46, -54, -62, -70, -78, -86, -94, -102, -110, -118];
-  zs.forEach((z, i) => {
-    const kind = kinds[i % 3];
-    const dims = kind === "stele" ? { w: 2.4, d: 1.1, h: 3.6 } : kind === "container" ? { w: 2.6, d: 1.6, h: 3.3 } : { w: 3, d: 0.8, h: 3.4 };
-    if (i % 2 === 0) out.push({ x: 0, z, ...dims, kind });
-    else for (const s of [-1, 1]) out.push({ x: s * 6.9, z, ...dims, kind });
-  });
-  return out;
-})();
+// 큰길의 엄폐물. 줄 선 시민들만 좌우 대칭이고, 엄폐물은 일부러 흩어 놓았다.
+// 종류마다 크기와 단단함이 다르다: 비석(튼튼), 컨테이너(보통, 세로로 놓이면 긴 그늘), 방벽(가장 튼튼),
+// 키오스크(작고 약함), 트럭(길게 세로로 서 있어 그 뒤를 따라 걸을 수 있음).
+// 사이사이 엄폐물이 없는 긴 구간이 있어서, 달리거나 줄 속에 섞여야 한다.
+export type CoverKind = "stele" | "container" | "wall" | "kiosk" | "truck";
+export type Cover = { x: number; z: number; w: number; d: number; h: number; kind: CoverKind };
+export const COVER_HP: Record<CoverKind, number> = { stele: 1.6, container: 1.1, wall: 2.2, kiosk: 0.6, truck: 2.5 };
+const COVER_DIMS: Record<CoverKind, { w: number; d: number; h: number }> = {
+  stele: { w: 2.4, d: 1.1, h: 3.6 },
+  container: { w: 2.6, d: 1.6, h: 3.3 },
+  wall: { w: 3, d: 0.8, h: 3.4 },
+  kiosk: { w: 1.4, d: 1.4, h: 2.9 },
+  truck: { w: 2.4, d: 6, h: 3.4 },
+};
+export const COVERS: Cover[] = (
+  [
+    // [z, x, 종류, 세로로 놓기]
+    [-5, -2.0, "kiosk"],
+    [-10, 5.5, "container"],
+    [-16, -6.5, "stele"],
+    [-19.5, 1.0, "wall"],
+    [-27, 7.0, "truck"],
+    [-33, -1.2, "kiosk"],
+    [-41, -7.0, "stele"],
+    [-45, 1.5, "container"],
+    [-52, 6.4, "wall"],
+    // -53 ~ -63: 엄폐물 없는 구간
+    [-66, -6.2, "container", true],
+    [-72, 0.3, "kiosk"],
+    [-79, 5.8, "stele"],
+    [-88, -1.2, "wall"],
+    [-93, -7.5, "kiosk"],
+    [-99, 6.8, "truck"],
+    [-106, -1.6, "stele"],
+    [-112, -6.6, "container"],
+    [-117, 2.0, "kiosk"],
+    [-123, -5.5, "wall"],
+  ] as [number, number, CoverKind, boolean?][]
+).map(([z, x, kind, long]) => {
+  const d = COVER_DIMS[kind];
+  return long ? { x, z, w: d.d, d: d.w * 2, h: d.h, kind } : { x, z, ...d, kind };
+});
 export const coverBox = (c: Cover): Box => box(c.x, c.z, c.w, c.d);
 
 // 큰길 끝, 다리 건너 섬에 선 거대한 입불 '대자비'. 이마의 렌즈가 감시하는 눈이다.

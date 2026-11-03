@@ -427,8 +427,34 @@ function Lanterns() {
     });
     return out;
   }, []);
+  // 대자비를 올려다보는 동안에는 눈앞의 연등 줄이 얼굴을 가리지 않도록 서서히 흐려진다
+  const group = useRef<THREE.Group>(null);
+  const fade = useRef(1);
+  useFrame((_, dt) => {
+    const want = gaze.intro ? 0 : 1;
+    if (Math.abs(want - fade.current) < 0.002 || !group.current) return;
+    fade.current += (want - fade.current) * Math.min(1, dt * 2.5);
+    const o = Math.abs(want - fade.current) < 0.002 ? want : fade.current;
+    fade.current = o;
+    group.current.visible = o > 0.01;
+    group.current.traverse((m) => {
+      const mat = (m as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+      (Array.isArray(mat) ? mat : mat ? [mat] : []).forEach((x) => {
+        if (x.userData.baseOpacity === undefined) {
+          x.userData.baseOpacity = x.opacity;
+          x.userData.wasTransparent = x.transparent;
+        }
+        const tr = o < 1 || x.userData.wasTransparent;
+        if (x.transparent !== tr) {
+          x.transparent = tr;
+          x.needsUpdate = true;
+        }
+        x.opacity = x.userData.baseOpacity * o;
+      });
+    });
+  });
   return (
-    <group>
+    <group ref={group}>
       {wires.map((g, i) => (
         <mesh key={i} geometry={g}>
           <meshBasicMaterial color="#050506" />

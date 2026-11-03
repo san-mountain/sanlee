@@ -8,7 +8,7 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
-import { AVENUE, BARRIERS, COVERS, GAZE_ZONE, JABI, QUEUE_Z } from "./zones";
+import { AVENUE, BARRIERS, COVER_HP, COVERS, GAZE_ZONE, JABI, QUEUE_Z } from "./zones";
 import { gaze } from "./gaze";
 import { player } from "./Player";
 import { hazardTexture, signTexture } from "./textures";
@@ -21,11 +21,11 @@ const tmpS = new THREE.Vector3();
 const UP = new THREE.Vector3(0, 1, 0);
 
 /* ---------- 엄폐물 상태 (파괴되면 alive=false) ---------- */
-export const coverState = COVERS.map(() => ({ alive: true, hp: 1.1, burn: 0 }));
+export const coverState = COVERS.map((c) => ({ alive: true, hp: COVER_HP[c.kind], burn: 0 }));
 export function restoreCovers() {
-  coverState.forEach((c) => {
+  coverState.forEach((c, i) => {
     c.alive = true;
-    c.hp = 1.1;
+    c.hp = COVER_HP[COVERS[i].kind];
     c.burn = 0;
   });
 }
@@ -83,6 +83,21 @@ const beam = {
 };
 const scorch: { x: number; z: number; born: number }[] = [];
 let lockT = 0;
+const aimAt = new THREE.Vector3();
+// 레이저가 긁고 지나갈 길 (눈이 붉어질 때 정해진다). 발사 0.3초 전부터 바닥에 가늘게 미리 보인다
+const path = { start: new THREE.Vector3(), end: new THREE.Vector3() };
+const PREVIEW = 0.3;
+function planPath(ax: number, az: number) {
+  const dx = JABI.eye.x - ax;
+  const dz = JABI.eye.z - az;
+  const d = Math.hypot(dx, dz) || 1;
+  path.start.set(ax + (dx / d) * 9, 0, az + (dz / d) * 9);
+  path.start.x = THREE.MathUtils.clamp(path.start.x, -AVENUE - 2, AVENUE + 2);
+  const sx = ax - path.start.x;
+  const sz = az - path.start.z;
+  const sl = Math.hypot(sx, sz) || 1;
+  path.end.set(ax + (sx / sl) * 4, 0, az + (sz / sl) * 4);
+}
 let coolT = 0;
 const last = { x: 0, z: 0 };
 
@@ -108,8 +123,10 @@ function GazeSystem() {
       runBeam(dt, now);
     } else if (gaze.state === "lock") {
       lockT -= dt;
+      // 길이 바닥에 비친 처음 절반(0.15초) 동안은 가는 선이 플레이어를 따라온다. 마지막 0.15초에 고정된다
+      if (lockT < PREVIEW && lockT > PREVIEW / 2) planPath(player.pos.x, player.pos.z);
       gaze.shake = 0.1 + (0.9 - lockT) * 0.12;
-      if (lockT <= 0) startBeam();
+      if (lockT <= 0) startBeam(aimAt);
     } else if (gaze.state === "cool") {
       coolT -= dt;
       gaze.shake = Math.max(0, gaze.shake - dt * 0.4);
@@ -120,14 +137,20 @@ function GazeSystem() {
         const near = THREE.MathUtils.clamp(1 - (dist - 90) / 90, 0, 1);
         const run = moved / Math.max(dt, 1e-4) > 4.5 ? 1.25 : 1;
         if (!gaze.firstSeenAt) gaze.firstSeenAt = performance.now();
-        gaze.meter += 13 * (1 + 0.9 * near) * run * dt;
+        // 분노가 빨리 차오른다: 먼 곳에서 약 5초, 가까이 가면 약 2.6초면 가득 찬다
+        gaze.meter += 20 * (1 + 0.9 * near) * run * dt;
       } else {
         gaze.meter -= (inZone ? 20 : 30) * dt;
       }
       gaze.meter = THREE.MathUtils.clamp(gaze.meter, 0, 100);
       const m = gaze.meter;
       gaze.state = m >= 100 ? "lock" : m >= 70 ? "charge" : m >= 35 ? "suspect" : m > 2 ? "watch" : "idle";
-      if (gaze.state === "lock") lockT = 0.9;
+      if (gaze.state === "lock") {
+        lockT = 0.9;
+        // 눈이 붉어지는 순간의 자리를 겨눈다. 그래서 붉어지면 바로 옆으로 뛰어 피할 수 있다
+        aimAt.set(player.pos.x, 0, player.pos.z);
+        planPath(aimAt.x, aimAt.z);
+      }
       gaze.shake = m >= 70 ? ((m - 70) / 30) * 0.06 : 0;
     }
     // 불타는 엄폐물 잔해
@@ -143,29 +166,26 @@ export function finalBeam() {
   startBeam();
 }
 
-function startBeam() {
+function startBeam(at?: THREE.Vector3) {
   sfx.beam();
   gaze.state = "fire";
   beam.on = true;
   beam.t = 0;
-  // 레이저는 플레이어 앞쪽(눈 쪽으로 16m) 바닥에 먼저 떨어져서 플레이어를 향해 긁어 온다
-  const dx = JABI.eye.x - player.pos.x;
-  const dz = JABI.eye.z - player.pos.z;
-  const d = Math.hypot(dx, dz) || 1;
-  beam.p.set(player.pos.x + (dx / d) * 16, 0, player.pos.z + (dz / d) * 16);
-  beam.p.x = THREE.MathUtils.clamp(beam.p.x, -AVENUE - 2, AVENUE + 2);
-  beam.target.set(player.pos.x, 0, player.pos.z);
+  // 레이저는 눈이 붉어진 순간 플레이어가 서 있던 자리 앞(눈 쪽으로 9m) 바닥에 떨어져, 그 자리를 지나 4m 더 긁고 간다.
+  // 플레이어를 따라오지 않으므로, 붉은 조준 신호를 보고 옆으로 뛰면 피할 수 있다
+  if (!at) planPath(player.pos.x, player.pos.z);
+  beam.p.copy(path.start);
+  beam.target.copy(path.end);
   beam.lastDrop.copy(beam.p);
   gaze.shake = 0.28;
 }
 
 function runBeam(dt: number, now: number) {
   beam.t += dt;
-  if (gaze.seen) beam.target.set(player.pos.x, 0, player.pos.z);
   const dx = beam.target.x - beam.p.x;
   const dz = beam.target.z - beam.p.z;
   const d = Math.hypot(dx, dz);
-  const step = Math.min(d, 12 * dt);
+  const step = Math.min(d, 14 * dt);
   if (d > 1e-4) {
     beam.p.x += (dx / d) * step;
     beam.p.z += (dz / d) * step;
@@ -196,7 +216,7 @@ function runBeam(dt: number, now: number) {
     }
   }
   gaze.shake = 0.22 + Math.sin(now * 40) * 0.04;
-  if (beam.t > 3.4 || (d < 0.3 && beam.t > 2.2)) endBeam(1.6);
+  if (beam.t > 3.4 || (d < 0.3 && beam.t > 1.4)) endBeam(1.6);
 }
 
 function endBeam(cool: number) {
@@ -214,6 +234,7 @@ function Beam() {
   const hit = useRef<THREE.Group>(null);
   const light = useRef<THREE.PointLight>(null);
   const aim = useRef<THREE.Mesh>(null);
+  const lane = useRef<THREE.Mesh>(null);
   const dark = useRef<THREE.InstancedMesh>(null);
   const molten = useRef<THREE.InstancedMesh>(null);
   const col = useMemo(() => new THREE.Color(), []);
@@ -252,12 +273,21 @@ function Beam() {
       const show = gaze.state === "lock";
       aim.current.visible = show;
       if (show) {
-        const dx = JABI.eye.x - player.pos.x;
-        const dz = JABI.eye.z - player.pos.z;
-        const d = Math.hypot(dx, dz) || 1;
-        tmpS.set(player.pos.x + (dx / d) * 16, 0, player.pos.z + (dz / d) * 16);
-        place(aim.current, JABI.eye, tmpS, 0.08);
+        place(aim.current, JABI.eye, path.start, 0.08);
         (aim.current.material as THREE.MeshBasicMaterial).opacity = Math.sin(now * 30) > 0 ? 0.9 : 0.2;
+      }
+    }
+    // 발사 0.3초 전: 레이저가 긁고 갈 길이 바닥에 가늘게 비친다
+    if (lane.current) {
+      const show = gaze.state === "lock" && lockT < PREVIEW;
+      lane.current.visible = show;
+      if (show) {
+        const len = path.start.distanceTo(path.end);
+        lane.current.position.copy(path.start).lerp(path.end, 0.5).setY(0.04);
+        lane.current.rotation.set(-Math.PI / 2, 0, Math.atan2(path.end.x - path.start.x, path.end.z - path.start.z));
+        lane.current.scale.set(0.14, len, 1);
+        const k = 1 - Math.max(0, lockT) / PREVIEW;
+        (lane.current.material as THREE.MeshBasicMaterial).opacity = (0.35 + 0.5 * k) * (Math.sin(now * 40) > -0.3 ? 1 : 0.5);
       }
     }
     // 바닥 자국: 처음엔 녹은 주황, 몇 초 뒤 검게 식는다
@@ -295,6 +325,10 @@ function Beam() {
       <mesh ref={aim} visible={false}>
         <cylinderGeometry args={[1, 1, 1, 6, 1, true]} />
         <meshBasicMaterial color="#ff2a3d" transparent opacity={0.6} depthWrite={false} toneMapped={false} fog={false} />
+      </mesh>
+      <mesh ref={lane} visible={false}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial color="#ff2a3d" transparent opacity={0.6} depthWrite={false} toneMapped={false} blending={THREE.AdditiveBlending} />
       </mesh>
       <pointLight ref={light} distance={26} color="#ff5030" intensity={0} />
       <group ref={hit} visible={false}>
@@ -340,6 +374,11 @@ function useStoneTex() {
 
 function Covers() {
   const stone = useStoneTex();
+  const hazardStripe = useMemo(() => {
+    const t = hazardTexture();
+    t.repeat.set(6, 1);
+    return t;
+  }, []);
   const refs = useRef<{ whole: THREE.Group | null; rubble: THREE.Group | null; fire: THREE.Group | null }[]>([]);
   useFrame(() => {
     coverState.forEach((c, i) => {
@@ -382,14 +421,21 @@ function Covers() {
                   <boxGeometry args={[c.w, c.h, c.d]} />
                   <meshStandardMaterial color="#8a2a22" roughness={0.6} metalness={0.5} />
                 </mesh>
-                {[-0.9, -0.3, 0.3, 0.9].map((x) => (
-                  <mesh key={x} position={[x, c.h / 2, c.d / 2 + 0.01]}>
-                    <boxGeometry args={[0.08, c.h * 0.92, 0.04]} />
-                    <meshStandardMaterial color="#5a1a14" roughness={0.6} metalness={0.5} />
-                  </mesh>
-                ))}
+                {[-0.35, -0.12, 0.12, 0.35].map((f) =>
+                  c.w >= c.d ? (
+                    <mesh key={f} position={[f * c.w, c.h / 2, c.d / 2 + 0.01]}>
+                      <boxGeometry args={[0.08, c.h * 0.92, 0.04]} />
+                      <meshStandardMaterial color="#5a1a14" roughness={0.6} metalness={0.5} />
+                    </mesh>
+                  ) : (
+                    <mesh key={f} position={[c.w / 2 + 0.01, c.h / 2, f * c.d]}>
+                      <boxGeometry args={[0.04, c.h * 0.92, 0.08]} />
+                      <meshStandardMaterial color="#5a1a14" roughness={0.6} metalness={0.5} />
+                    </mesh>
+                  )
+                )}
                 <mesh position={[0, c.h + 0.06, 0]}>
-                  <boxGeometry args={[c.w * 0.4, 0.12, 0.3]} />
+                  <boxGeometry args={[Math.min(c.w, c.d) * 0.4, 0.12, 0.3]} />
                   <meshBasicMaterial color="#ffb02e" toneMapped={false} />
                 </mesh>
               </>
@@ -404,6 +450,56 @@ function Covers() {
                   <planeGeometry args={[c.w, 0.4]} />
                   <meshBasicMaterial color="#ffd23f" />
                 </mesh>
+              </>
+            )}
+            {c.kind === "kiosk" && (
+              <>
+                {/* 무인 동의 키오스크: 화면에 '모두 수락' */}
+                <mesh position={[0, c.h / 2, 0]}>
+                  <boxGeometry args={[c.w, c.h, c.d]} />
+                  <meshStandardMaterial color="#23262e" roughness={0.5} metalness={0.4} />
+                </mesh>
+                <mesh position={[0, c.h * 0.62, c.d / 2 + 0.01]}>
+                  <planeGeometry args={[c.w * 0.75, c.h * 0.32]} />
+                  <meshBasicMaterial color="#22f0ff" toneMapped={false} />
+                </mesh>
+                <mesh position={[0, c.h * 0.36, c.d / 2 + 0.01]}>
+                  <planeGeometry args={[c.w * 0.5, 0.18]} />
+                  <meshBasicMaterial color="#ff2bd6" toneMapped={false} />
+                </mesh>
+                <mesh position={[0, c.h + 0.05, 0]}>
+                  <boxGeometry args={[c.w + 0.2, 0.1, c.d + 0.2]} />
+                  <meshStandardMaterial color="#14161b" />
+                </mesh>
+              </>
+            )}
+            {c.kind === "truck" && (
+              <>
+                {/* 멈춰 선 수거 트럭: 짐칸과 운전석, 바퀴 */}
+                <mesh position={[0, c.h / 2 + 0.25, 0.7]}>
+                  <boxGeometry args={[c.w, c.h - 0.5, c.d - 1.6]} />
+                  <meshStandardMaterial color="#c9c6bd" roughness={0.7} metalness={0.2} />
+                </mesh>
+                <mesh position={[0, 0.9, 0.7]}>
+                  <boxGeometry args={[c.w + 0.02, 0.35, c.d - 1.6]} />
+                  <meshBasicMaterial map={hazardStripe} />
+                </mesh>
+                <mesh position={[0, 1.35, -c.d / 2 + 0.75]}>
+                  <boxGeometry args={[c.w * 0.92, 2.2, 1.5]} />
+                  <meshStandardMaterial color="#3b4048" roughness={0.6} metalness={0.3} />
+                </mesh>
+                <mesh position={[0, 1.75, -c.d / 2 - 0.01]} rotation={[0, Math.PI, 0]}>
+                  <planeGeometry args={[c.w * 0.8, 0.7]} />
+                  <meshStandardMaterial color="#0b0d10" metalness={0.8} roughness={0.2} />
+                </mesh>
+                {[-1, 1].flatMap((sx) =>
+                  [-c.d / 2 + 0.9, c.d / 2 - 1.2].map((wz) => (
+                    <mesh key={`${sx}${wz}`} position={[sx * (c.w / 2 - 0.05), 0.42, wz]} rotation={[0, 0, Math.PI / 2]}>
+                      <cylinderGeometry args={[0.42, 0.42, 0.3, 12]} />
+                      <meshStandardMaterial color="#111" roughness={0.9} />
+                    </mesh>
+                  ))
+                )}
               </>
             )}
           </group>

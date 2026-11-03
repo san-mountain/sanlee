@@ -9,7 +9,6 @@ import { autoWalk, gaze } from "./gaze";
 import type { Interactable, ZoneDef } from "./zones";
 
 const EYE = 1.65;
-const INTRO_LIFT = 34;
 const WALK = 3.4;
 const RUN = 6.2;
 const RADIUS = 0.38;
@@ -32,14 +31,14 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const aspect = useThree((s) => s.size.width / s.size.height);
   const lookDone = useRef(false);
-  // 소개 장면은 도시의 감시 카메라 화면으로 끊어 보여 준다 (플레이어가 떠오르는 게 아니라 높은 곳의 카메라로 컷).
-  // 그래서 높이와 시선은 서서히가 아니라 한 번에 바뀌고, 그 순간은 화면 전환 깜빡임이 가린다
-  const lift = useRef(0);
-  const wasIntro = useRef(false);
+  // 소개 장면: 제자리에서 고개를 들어 대자비를 올려다본다. 눈이 초점을 맞추듯 시야가 살짝 좁아져(줌) 멀리 있는 얼굴이 커진다
+  const baseFov = useRef(62);
+  const zoom = useRef(1);
   const st = useRef({ yaw: 0, pitch: 0, x: 0, z: 0, bob: 0, near: null as string | null, y: 0, vy: 0 });
 
   useEffect(() => {
-    camera.fov = aspect < 0.8 ? 78 : aspect < 1.2 ? 70 : 62;
+    baseFov.current = aspect < 0.8 ? 78 : aspect < 1.2 ? 70 : 62;
+    camera.fov = baseFov.current * zoom.current;
     camera.updateProjectionMatrix();
   }, [aspect, camera]);
 
@@ -76,18 +75,20 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     // 시점. 소개 장면 중에는 입력을 버리고 대상 쪽으로 천천히 고개를 돌린다
     const la = gaze.lookAt;
     if (!la) lookDone.current = false;
-    lift.current = gaze.intro ? INTRO_LIFT : 0;
-    // 감시 화면이 끝나면 플레이어의 눈높이로 돌아와 큰길 끝을 바라본다
-    if (wasIntro.current && !gaze.intro) s.pitch = 0.12;
-    wasIntro.current = gaze.intro;
+    const zt = gaze.intro ? 0.62 : 1;
+    if (Math.abs(zt - zoom.current) > 0.001) {
+      zoom.current += (zt - zoom.current) * Math.min(1, dt * (gaze.intro ? 1.1 : 2));
+      camera.fov = baseFov.current * zoom.current;
+      camera.updateProjectionMatrix();
+    }
     if (la) {
-      const k = gaze.intro ? 1 : Math.min(1, dt * 1.6);
+      const k = Math.min(1, dt * (gaze.intro ? 1.8 : 1.6));
       const want = Math.atan2(-(la.x - s.x), -(la.z - s.z));
       let dy = want - s.yaw;
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       s.yaw += dy * k;
       // 세로 화면은 팝업이 아래 절반을 덮으므로 얼굴이 화면 위쪽에 오도록 덜 올려다본다. 가로 화면은 팝업이 오른쪽에 뜬다
-      const wantP = Math.min(1.1, Math.atan2(la.y - EYE - lift.current, Math.hypot(la.x - s.x, la.z - s.z)) - (aspect < 1 ? 0.56 : 0.12));
+      const wantP = Math.min(1.1, Math.atan2(la.y - EYE, Math.hypot(la.x - s.x, la.z - s.z)) - (aspect < 1 ? 0.56 : 0.12) * zt);
       s.pitch += (wantP - s.pitch) * k;
       // 다 돌아봤으면 알린다 (소개 팝업이 이때 뜬다)
       if (!lookDone.current && Math.abs(dy) < 0.02 && Math.abs(wantP - s.pitch) < 0.02) {
@@ -151,7 +152,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     if (grounded) s.bob += moved * (mv.run ? 2.2 : 2.6);
 
     const bobY = input.bob && grounded ? Math.sin(s.bob * 2) * 0.035 * Math.min(1, moved / (dt * 2 + 1e-4)) : 0;
-    camera.position.set(s.x, EYE + s.y + bobY + lift.current, s.z);
+    camera.position.set(s.x, EYE + s.y + bobY, s.z);
     camera.rotation.set(s.pitch, s.yaw, 0, "YXZ");
     // 대자비가 분노하면 화면이 흔들린다
     const sh = gaze.shake;
