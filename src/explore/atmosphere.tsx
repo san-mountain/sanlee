@@ -76,8 +76,10 @@ export function beamMaterial(color: string, strength = 0.12) {
       varying vec3 vN;
       varying vec3 vV;
       void main() {
-        float core = pow(abs(dot(normalize(vN), normalize(vV))), 3.0);
-        float fall = pow(vY, 2.4) + 0.05 * smoothstep(0.0, 0.15, vY);
+        // 바닥 테두리에서 vY가 아주 작은 음수가 되면 pow가 NaN이 되어 검은 점선이 생긴다. 0~1로 묶어 막는다
+        float y = clamp(vY, 0.0, 1.0);
+        float core = pow(clamp(abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 3.0);
+        float fall = pow(y, 2.4) + 0.05 * smoothstep(0.0, 0.15, y);
         gl_FragColor = vec4(uColor * core * fall * uStrength, 1.0);
       }
     `,

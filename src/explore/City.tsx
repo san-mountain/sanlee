@@ -1,9 +1,9 @@
 "use client";
 
 import { gaze } from "./gaze";
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
 import { billboards, ticker } from "./story";
@@ -649,6 +649,12 @@ function Lamps() {
   // 가로등 빛줄기는 은은하게만, 바닥은 흰 칠 대신 원래 색을 밝힌다: 시야를 가리지 않도록
   const beam = useBeam("#bfe6ff", 0.022);
   const pool = useLightPool("#d6e6f2", 3.5);
+  // 빛 웅덩이와 빛줄기는 1번 층에만 둔다. 젖은 바닥의 반사 카메라는 0번 층만 보므로, 반사 속에서 검은 테두리로 번지지 않는다
+  const camera = useThree((st) => st.camera);
+  useEffect(() => {
+    camera.layers.enable(1);
+  }, [camera]);
+  const onlyMain = useCallback((m: THREE.Object3D | null) => m?.layers.set(1), []);
   const spots = useMemo(() => [-1, 1].flatMap((s) => [16, -4, -24, -48, -74].map((z) => [s * (AVENUE + 0.4), z] as [number, number])), []);
   return (
     <group>
@@ -668,10 +674,10 @@ function Lamps() {
               <boxGeometry args={[0.7, 0.04, 0.22]} />
               <meshBasicMaterial color="#8fa6b4" toneMapped={false} />
             </mesh>
-            <mesh position={[s * 1.9, 3.95, 0]} material={beam}>
+            <mesh ref={onlyMain} position={[s * 1.9, 3.95, 0]} material={beam}>
               <coneGeometry args={[2.4, 7.8, 20, 1, true]} />
             </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[s * 1.9, 0.02, 0]} material={pool}>
+            <mesh ref={onlyMain} rotation={[-Math.PI / 2, 0, 0]} position={[s * 1.9, 0.02, 0]} material={pool}>
               <planeGeometry args={[6.5, 6.5]} />
             </mesh>
           </group>
