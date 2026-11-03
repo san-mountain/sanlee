@@ -1,12 +1,12 @@
 "use client";
 
 import useSessionTimers from "./useSessionTimers";
-import { sfx } from "./sfx";
+import { tension, sfx } from "./sfx";
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
 import { gaze, resetGaze } from "./gaze";
 import { player, teleport } from "./Player";
-import { getBackup, lastSlot, mmss, recordDeath, recordRestore, saveBackup } from "./backup";
+import { getBackup, recordDeath, recordRestore, saveBackup } from "./backup";
 import { restoreCovers } from "./Jabi";
 import { jabiUi } from "./story";
 
@@ -34,10 +34,22 @@ function TypeLine({ text, delay = 0, className }: { text: string; delay?: number
 
 type Dead = { kind: "restore"; line: string; cost: boolean } | { kind: "gone" };
 
-export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.RefObject<HTMLElement | null>; onGone: () => void; onIntro?: () => void }) {
+export default function GazeHUD({
+  rootRef,
+  onGone,
+  onIntro,
+  onStage,
+}: {
+  rootRef: React.RefObject<HTMLElement | null>;
+  onGone: () => void;
+  onIntro?: () => void;
+  onStage?: () => void;
+}) {
   const schedule = useSessionTimers();
   const introRef = useRef(onIntro);
   introRef.current = onIntro;
+  const stageRef = useRef(onStage);
+  stageRef.current = onStage;
   const { t } = useLang();
   const goneRef = useRef(onGone);
   goneRef.current = onGone;
@@ -75,6 +87,8 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
       const root = rootRef.current;
       const m = gaze.meter / 100;
       const hot = gaze.state === "lock" || gaze.state === "fire" ? 1 : m;
+      // 게이지가 차오르는 동안 긴장음 (발사되거나 쓰러지면 멈춘다)
+      tension(gaze.dead || gaze.state === "fire" || gaze.mood === "blind" || gaze.intro ? 0 : m);
       root?.style.setProperty("--gaze", String(hot));
       // 방문 기록을 지운 사람에게는 자비의 시선이 닿지 않으므로 게이지도 띄우지 않는다
       const visible = gaze.mood !== "blind" && (gaze.inZone || gaze.meter > 1 || gaze.state === "fire" || gaze.state === "cool");
@@ -90,12 +104,13 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
         if (label.current.textContent !== s) label.current.textContent = s;
       }
       // 처음 시선 구역에 들어가면 요령을 한 번 알려 준다
-      // 처음 시선 구역에 들어서면 소개 장면을 연다 (브라우저마다 한 번). 이미 봤다면 짧은 요령만
+      // 처음 시선 구역에 들어서면 소개 장면을 연다 (방문마다 한 번: 탭을 새로 열면 다시 나온다). 이미 봤다면 짧은 요령만
       if (gaze.inZone && !shown.current && gaze.mood !== "blind") {
         shown.current = true;
+        stageRef.current?.();
         let seenIntro = false;
         try {
-          seenIntro = localStorage.getItem("sanlee-jabi-intro") === "1";
+          seenIntro = sessionStorage.getItem("sanlee-jabi-intro") === "1";
         } catch {}
         if (!seenIntro && introRef.current) introRef.current();
         else {
@@ -124,13 +139,11 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
           }, 4200);
           return;
         }
-        const slot = lastSlot();
-        const lost = mmss(Date.now() - (slot?.t ?? Date.now() - 1000 * (20 + Math.random() * 40)));
-        const tt = tRef.current;
-        const line = (slot ? tt(jabiUi.restoreFrom).replace("{n}", String(slot.n)) : tt(jabiUi.restoreFresh)).replace("{t}", lost);
+        // 쓰러지면 그 자리가 아니라 시선 구역 입구, 대자비 앞에서 처음부터 다시 시작한다
+        const line = tRef.current(jabiUi.restoreStart);
         setDead({ kind: "restore", line, cost: b.deaths >= 3 });
         schedule(() => {
-          teleport.req = slot ? { x: slot.x, z: slot.z, yaw: 0 } : { x: 0, z: 7, yaw: 0 };
+          teleport.req = { x: 0, z: 7, yaw: 0 };
           restoreCovers();
           resetGaze();
           recordRestore();
@@ -141,7 +154,10 @@ export default function GazeHUD({ rootRef, onGone, onIntro }: { rootRef: React.R
       }
     };
     loop();
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      tension(0);
+    };
   }, [rootRef, schedule]);
 
   return (

@@ -651,6 +651,54 @@ function Radio({ onTap }: { onTap: TapFn }) {
   );
 }
 
+/* ---------- 음향 담당: 헤드폰을 쓰고 믹서 앞에서 고개를 까딱인다 ---------- */
+function Dj({ onTap }: { onTap: TapFn }) {
+  const { pos, rotY } = BUNKER_NPCS.dj;
+  const head = useRef<THREE.Group>(null);
+  const meters = useRef<(THREE.Mesh | null)[]>([]);
+  useFrame((s) => {
+    const t = s.clock.elapsedTime;
+    if (head.current) head.current.rotation.x = Math.max(0, Math.sin(t * 7.4)) * 0.12;
+    meters.current.forEach((m, i) => {
+      if (m) m.scale.y = 0.25 + Math.abs(Math.sin(t * (5 + i * 1.7) + i)) * 0.75;
+    });
+  });
+  return (
+    <Tap id="dj" onTap={onTap}>
+      <Human position={pos} rotationY={rotY} color="#2c3440" skin="#c9a184">
+        <group ref={head} position={[0, 1.5, 0]}>
+          <mesh position={[0, 0.14, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <torusGeometry args={[0.13, 0.016, 6, 16, Math.PI]} />
+            <meshStandardMaterial color="#ff2bd6" emissive="#ff2bd6" emissiveIntensity={0.4} />
+          </mesh>
+          {[-1, 1].map((k) => (
+            <mesh key={k} position={[k * 0.13, 0.1, 0]} rotation={[0, 0, Math.PI / 2]}>
+              <cylinderGeometry args={[0.055, 0.055, 0.045, 12]} />
+              <meshStandardMaterial color="#1a1a1a" />
+            </mesh>
+          ))}
+        </group>
+      </Human>
+      <group position={[-10.3, 0, -7.4]}>
+        <mesh position={[0, 0.4, 0]}>
+          <boxGeometry args={[0.8, 0.8, 1.6]} />
+          <meshStandardMaterial color="#24211d" roughness={0.9} />
+        </mesh>
+        <mesh position={[0.05, 0.86, 0]} rotation={[0, 0, 0.12]}>
+          <boxGeometry args={[0.6, 0.08, 1.3]} />
+          <meshStandardMaterial color="#3b3d44" metalness={0.4} roughness={0.5} />
+        </mesh>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <mesh key={i} ref={(m) => { meters.current[i] = m; }} position={[0.36, 0.95, -0.45 + i * 0.18]}>
+            <boxGeometry args={[0.02, 0.14, 0.08]} />
+            <meshBasicMaterial color={i > 3 ? "#ff2bd6" : "#22f0ff"} toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
+    </Tap>
+  );
+}
+
 /* ---------- 벽에 분필 그림을 그리는 아이 ---------- */
 function useChalkTexture() {
   return useMemo(() => {
@@ -875,6 +923,7 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { 
       <R07 onTap={onTap} />
       <Monk onTap={onTap} />
       <Radio onTap={onTap} />
+      <Dj onTap={onTap} />
       <Kid onTap={onTap} />
       <Sleeper onTap={onTap} />
       <BackupRack lang={lang} onTap={onTap} />

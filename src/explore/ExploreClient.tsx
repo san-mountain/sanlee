@@ -1,6 +1,7 @@
 "use client";
 
 import { sfx } from "./sfx";
+import { duckBgm, playBgm, wakeBgm } from "./bgm";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
+import { MUSIC_URL, credits, announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
 import { CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -49,7 +50,7 @@ function hasWebGL() {
 type Panel =
   | { kind: "section"; id: SectionId }
   | { kind: "painting"; work: number }
-  | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean; whisper?: boolean }
+  | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean; whisper?: boolean; link?: { href: string; label: L } }
   | { kind: "choice"; settings?: boolean; confirm?: number; game?: boolean }
   | { kind: "jabi" }
   | null;
@@ -139,6 +140,27 @@ export default function ExploreClient() {
     schedule(() => router.push("/"), 1100);
   };
 
+  // 배경음악: 방공호, 지상, 대자비 구역(처음 시선 구역에 들어선 뒤부터), 결말
+  const [jabiStage, setJabiStage] = useState(false);
+  // 방공호로 돌아가면 다시 지상 음악부터 (시선 구역은 도시에 다시 올라왔을 때 새로 들어선다)
+  const track = leaving || intro ? null : ending ? "ending" : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
+  useEffect(() => {
+    playBgm(track);
+  }, [track]);
+  useEffect(() => {
+    duckBgm(paused);
+  }, [paused]);
+  useEffect(() => {
+    window.addEventListener("pointerdown", wakeBgm);
+    window.addEventListener("keydown", wakeBgm);
+    return () => {
+      window.removeEventListener("pointerdown", wakeBgm);
+      window.removeEventListener("keydown", wakeBgm);
+      playBgm(null);
+    };
+  }, []);
+  const onStage = useCallback(() => setJabiStage(true), []);
+
   // 일반 페이지에서 DELETE SEOUL로 지워지며 들어왔다면 그 흔적(그림 숨김 등)을 풀어 준다
   useEffect(() => {
     document.body.classList.remove("deleting");
@@ -187,6 +209,7 @@ export default function ExploreClient() {
     if (viaDoor) sfx.door();
     schedule(() => {
       setZone(to);
+      setJabiStage(false);
       setArrived(viaDoor);
       setTracked(false);
       // 배전실 문을 나서는 순간 도시가 위치를 기억한다. 첫 기억에는 '계속 걸으면 동의' 한 줄이 따라 나온다
@@ -249,17 +272,18 @@ export default function ExploreClient() {
           // 한 번이라도 보관 처리됐다면 관리인은 알아본다
           const bk = getBackup();
           const lines = it.npc === "keeper" && bk.deaths > 0 ? [keeperAfterDeath, ...base] : base;
-          setPanel({ kind: "dialog", name: n.name, lines, step: 0 });
+          setPanel({ kind: "dialog", name: n.name, lines, step: 0, link: n.link });
           break;
         }
         case "door":
           // 이산을 깨우기 전에는 방공호 밖으로 나갈 수 없다
-          if (it.to === "city" && !complete && !talked) {
+          // 터미널을 다 열었어도, 풀려난 이산과 이야기하기 전에는 함께 나갈 동행이 없다
+          if (it.to === "city" && !talked) {
             setPanel({
               kind: "dialog",
               name: it.label,
               locked: true,
-              lines: ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
+              lines: complete ? [ui.exitLocked[0], ui.exitTalk] : ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
               step: 0,
             });
             break;
@@ -616,7 +640,7 @@ export default function ExploreClient() {
   }, []);
   const endJabiIntro = useCallback(() => {
     try {
-      localStorage.setItem("sanlee-jabi-intro", "1");
+      sessionStorage.setItem("sanlee-jabi-intro", "1");
     } catch {}
     if (gaze.intro) flashCut();
     setCctv(false);
@@ -820,7 +844,7 @@ export default function ExploreClient() {
       {active && locked && <div className="crosshair" aria-hidden />}
       {active && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
-      {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} />}
+      {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
       {active && touch && <Joystick />}
       {active && touch && (
         <JumpButton
@@ -927,6 +951,11 @@ export default function ExploreClient() {
               <button className="btn" onClick={closePanel}>
                 {t(ui.close)}
               </button>
+              {panel.link && panel.step === panel.lines.length - 1 && (
+                <a className="btn primary" href={panel.link.href} target="_blank" rel="noopener noreferrer">
+                  {t(panel.link.label)}
+                </a>
+              )}
               {panel.step < panel.lines.length - 1 && (
                 <button className="btn primary" autoFocus onClick={() => setPanel({ ...panel, step: panel.step + 1 })}>
                   {t(ui.next)}
@@ -1086,6 +1115,9 @@ export default function ExploreClient() {
                 <small>{t(ending.kind === "accept" ? checkpoint.endingAccept : ending.kind === "reject" ? checkpoint.endingReject : checkpoint.endingGhost)}</small>
                 <small className="ending-found">
                   {ending.kind !== "accept" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}
+                </small>
+                <small className="ending-credit">
+                  ♪ 空 · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
                 </small>
                 <div>
                   {ending.kind === "accept" ? (

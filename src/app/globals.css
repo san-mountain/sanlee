@@ -1106,3 +1106,7 @@ body.restoring:not(.restoring-light) .page img, body.restoring:not(.restoring-li
 html:has(body.restoring-light), body.restoring-light { transition: background-color .9s ease; }
 body.restoring-light .page, body.restoring-light .nav-logo, body.restoring-light .nav-links > a, body.restoring-light .site-footer { transition: color .8s ease; }
 body.restoring-light .page img, body.restoring-light .feature-art { transition: opacity .9s ease .25s; }
+
+/* 음악 크레딧 */
+.ending-credit { display: block; margin-top: 6px; opacity: .6; letter-spacing: .06em; }
+.ending-credit a, .pause-note a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
