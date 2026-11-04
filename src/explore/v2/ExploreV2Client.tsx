@@ -185,16 +185,24 @@ export default function ExploreV2Client() {
       return;
     }
     if (it.id === "r07") {
-      if (s.memories.r07Friend) {
+      if (s.phase === "investigating") {
+        observe("r07");
+        show(named.r07, [
+          s.memories.r07Friend
+            ? say("제 기록엔 친구가 한 명도 없습니다. 그런데 당신이 제 친구인 건 기억납니다.", "My register says I have no friends. But I remember you as my friend.")
+            : say("오늘 방문자를 맞은 적이 없다고 합니다. 그런데 저는 방금 당신과 인사했어요.", "My register says no visitors today. But I just greeted you."),
+          say("제 기억이 잘못된 걸까요? 관리인님은 장부가 정확하다고 합니다.", "Is my memory wrong? The caretaker says the register is correct."),
+        ]);
+      } else if (s.memories.r07Friend) {
         show(named.r07, atLeast(s, "discovered") ? [
-          say("친구에게 불리한 계획을 도왔습니다. 친구라는 관계를 취소해야 합니까?", "I helped a plan that hurt my friend. Should I cancel our friendship?"),
+          say("친구가 삭제 대상에 있습니다. 저는 그 결과가 마음에 들지 않습니다.", "Friendship is among the records for erasure. I do not like that."),
         ] : [say("친구님, 또 오셨군요. 친구 사이에도 기록이 필요합니까?", "My friend, you're back. Do friends need records too?")]);
       } else {
         show(named.r07, [
-          say("R-07입니다. 현재 인간관계 기능을 시험 중입니다.", "I am R-07. My friendship module is in testing."),
+          say("저는 R-07입니다. 인간관계 기능을 시험 중입니다.", "I am R-07. My friendship module is in testing."),
           say("저와 친구가 되어 주시겠습니까?", "Would you like to be my friend?"),
         ], [
-          { label: say("친구가 된다", "Become friends"), run: () => { rememberFlag("r07Friend"); show(named.r07, [say("친구 등록 완료. 이 기록을 잘 보관하겠습니다.", "Friendship recorded. I will keep this memory safe.")]); } },
+          { label: say("친구가 된다", "Become friends"), run: () => { rememberFlag("r07Friend"); show(named.r07, [say("친구 등록 완료. 잘 보관할게요.", "Friendship recorded. I'll keep this safe.")]); } },
           { label: say("나중에", "Maybe later"), run: closeDialog },
         ]);
       }
@@ -202,7 +210,14 @@ export default function ExploreV2Client() {
     }
     if (it.id === "kid") {
       if (!s.memories.childDrawing) rememberFlag("childDrawing");
-      show(named.kid, [
+      if (s.phase === "investigating") {
+        observe("child");
+        show(named.kid, [
+          say("아까 네 얼굴을 그렸어. 근데 저장하고 나니까 빈 종이가 됐어.", "I drew your face earlier. But after saving it, the file turned blank."),
+          say("그림은 여기 있는데, 기계는 처음부터 없었대.", "The drawing's here. The machine says it never existed."),
+          say("내가 기억하는 게 틀린 걸까?", "Am I remembering it wrong?"),
+        ]);
+      } else show(named.kid, [
         say("네 얼굴을 그렸어. 얼굴 부분은 비워 놨어.", "I drew you. I left your face blank."),
         say("넌 화면 밖에 있잖아. 어떻게 생겼는지 모르니까.", "You're on the other side of the screen. I don't know what you look like."),
       ]);
@@ -210,8 +225,15 @@ export default function ExploreV2Client() {
     }
     if (it.id === "radio") {
       if (!s.memories.radioHeard) rememberFlag("radioHeard");
-      show(named.radio, [
-        say("이 소리, 그쪽에서도 들려? 네 스피커에서도?", "Can you hear this over there? Through your speakers?"),
+      if (s.phase === "investigating") {
+        observe("radio");
+        show(named.radio, [
+          say("어제 녹음한 목소리가 오늘 아침엔 없어졌어. 대신 잡음이 남았지.", "The voice I recorded yesterday was gone by morning. Just static remained."),
+          say("잡음 안에 아주 오래된 날짜가 찍혀 있어. 2026.", "Buried in the static is an old date: 2026."),
+          say("……이산이 아까부터 안테나를 지켜보고 있더라.", "…San has been watching the antenna."),
+        ]);
+      } else show(named.radio, [
+        say("그쪽에서도 들려? 네 스피커에서도?", "Can you hear this over there? Through your speakers?"),
         say("연결이 끊기면 넌 다시 들어오면 되겠지. ……부럽다.", "If we lose connection, you can just come back. …Lucky you."),
       ]);
       return;
