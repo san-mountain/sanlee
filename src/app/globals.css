@@ -1135,6 +1135,21 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .face-end .btn { min-height: 44px; }
 @media (max-width: 640px) { .face-line { bottom: 150px; font-size: 15px; } }
 
+/* B's narrative subtitles remain on screen until the player advances them.
+   This is deliberately a single next button in the subtitle, not floating 3D instructions. */
+.face-line.manual { gap: 8px; max-height: 50dvh; overflow-y: auto;
+  padding: 12px 14px 10px; border: 1px solid #b48a3c66; border-radius: 8px;
+  background: #0d0b0ade; box-shadow: 0 6px 25px #000b; pointer-events: auto; }
+.face-line-next { align-self: flex-end; min-width: 68px; min-height: 40px;
+  padding: 6px 14px; border: 1px solid #d7bd8299; border-radius: 5px;
+  background: #20190f; color: #f6e4b9; font-family: var(--mono);
+  font-size: 12px; cursor: pointer; touch-action: manipulation; }
+.face-line-next:hover, .face-line-next:focus-visible { outline: 1px solid #f2d89d; background: #382917; }
+@media (max-width: 640px) {
+  .face-line.manual { bottom: max(34px, env(safe-area-inset-bottom)); width: calc(100% - 24px); }
+  .face-line-next { min-height: 44px; }
+}
+
 /* 퍼즐 B 자막 화자 색 */
 .face-line.who-archive b { color: #ffc76a; }
 .face-line.who-guarantor { color: #fff0c8; }
