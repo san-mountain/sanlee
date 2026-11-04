@@ -180,7 +180,9 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     for (const it of zone.items) {
       if (it.when && !it.when()) continue;
       const d = Math.hypot(it.pos.x - s.x, it.pos.z - s.z);
-      if (d > it.radius) continue;
+      // Dialogue targets are usable from farther away; machinery keeps its tighter range.
+      const reach = it.radius + (it.kind === "npc" ? 2.0 : it.kind === "statue" ? 1.5 : 0);
+      if (d > reach) continue;
       screenPt.current.copy(it.pos).project(camera);
       const { x, y, z } = screenPt.current;
       if (z < -1 || z >= 1 || Math.abs(x) > 1.08 || Math.abs(y) > 1.08) continue;
