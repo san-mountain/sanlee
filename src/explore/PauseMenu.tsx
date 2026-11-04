@@ -8,6 +8,7 @@ import { LangToggle, useLang } from "@/components/LangProvider";
 import { MUSIC_URL, credits, fourthWall, pause } from "./story";
 import { input, saveSettings } from "./input";
 import { getBackup } from "./backup";
+import { chooseQuality, isForced, useQuality, type Quality } from "./quality";
 
 // Esc 설정창. 실제로 쓸 수 있는 설정 몇 개와, 시스템이 방문자에게 직접 말을 거는 문장들.
 export default function PauseMenu({
@@ -32,6 +33,7 @@ export default function PauseMenu({
   const [sens, setSens] = useState(input.sens);
   const [bob, setBob] = useState(input.bob);
   const [sound, setSound] = useState(sfxOn());
+  const quality = useQuality();
   const [note, setNote] = useState<string | null>(null);
   const [free, setFree] = useState(true);
   const [line, setLine] = useState(0);
@@ -119,6 +121,29 @@ export default function PauseMenu({
               {t(sound ? pause.on : pause.off)}
             </button>
           </div>
+
+          <div className="pause-row graphics-row">
+            <span>{t(pause.graphics)}</span>
+            <div className="graphics-options" role="group" aria-label={t(pause.graphics)}>
+              {([
+                ["low", pause.graphicsLow],
+                ["mid", pause.graphicsMid],
+                ["high", pause.graphicsHigh],
+              ] as const).map(([preset, text]) => (
+                <button
+                  type="button"
+                  key={preset}
+                  className={`switch ${quality === preset ? "on" : ""}`}
+                  disabled={isForced()}
+                  aria-pressed={quality === preset}
+                  onClick={() => chooseQuality(preset satisfies Quality)}
+                >
+                  {t(text)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="pause-note">{t(isForced() ? pause.graphicsForced : pause.graphicsNote)}</p>
 
           <p className="pause-note">
             ♪{" "}
