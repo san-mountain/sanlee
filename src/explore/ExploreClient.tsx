@@ -853,9 +853,9 @@ export default function ExploreClient() {
         return;
       }
       const p = panelRef.current;
-      // Cinematic narrative: E / Enter / Space advances one subtitle; the player
+      // Cinematic narrative: E / Enter advances one subtitle (Space remains jump); the player
       // controls reading speed. Never advances the scene on the input that opened it.
-      if (!p && !e.repeat && (e.code === "KeyE" || e.code === "Enter" || e.code === "Space") &&
+      if (!p && !e.repeat && (e.code === "KeyE" || e.code === "Enter") &&
           advanceLineRef.current && performance.now() - advanceLineAt.current > 180) {
         e.preventDefault();
         advanceLineRef.current();
