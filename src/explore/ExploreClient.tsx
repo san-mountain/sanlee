@@ -1368,9 +1368,9 @@ export default function ExploreClient() {
       {active && !cine && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
       {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
-      {active && touch && <Joystick />}
+      {active && !cine && touch && <Joystick />}
       <InteractionGuide active={active && touch && !cine && !!near} color={nearColor} />
-      {active && touch && (
+      {active && !cine && touch && (
         <JumpButton
           action={
             near && verb && !cine
