@@ -135,6 +135,16 @@ export default function SealPanel({
       if (onMove(p.id, to)) sfx.sealSlide(Math.abs(to - d.at));
     } else if (d.moved) sfx.sealSettle();
   };
+  // Touch interruptions (screen rotation, app switch, OS gestures) are not valid moves.
+  // Previously onPointerCancel and unexpected capture loss called end(), which could
+  // commit a half-completed slide and corrupt the player's intended puzzle position.
+  const cancel = (e: React.PointerEvent, p: Piece) => {
+    const d = dragRef.current;
+    if (!d || d.pointer !== e.pointerId || d.id !== p.id) return;
+    dragRef.current = null;
+    setDrag(null);
+    if (d.moved) sfx.sealSettle();
+  };
 
   const cells = useMemo(() => Array.from({ length: SIZE * SIZE }, (_, i) => i), []);
   const pct = (n: number) => `${(n * 100) / SIZE}%`;
@@ -192,8 +202,8 @@ export default function SealPanel({
                   onPointerDown={(e) => begin(e, p)}
                   onPointerMove={(e) => move(e, p)}
                   onPointerUp={(e) => end(e, p)}
-                  onPointerCancel={(e) => end(e, p)}
-                  onLostPointerCapture={(e) => end(e, p)}
+                  onPointerCancel={(e) => cancel(e, p)}
+                  onLostPointerCapture={(e) => cancel(e, p)}
                 >
                   <span className="seal-face">
                     {p.id === CASSETTE ? (
