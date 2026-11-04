@@ -1,3 +1,7 @@
+> **Archived.** Historical implementation notes for the v2 experiment (`/deleteseoul-lab`, `/deleteseoul-lab/erase`).
+> Not a requirement for the current chase prototype (`/deleteseoul-lab/chase`). The PR status, branch note and "unfinished" list below record the state at that time only.
+> Kept in Korean as written.
+
 # DELETE SEOUL — 3D 리디자인 실험판 QA / v1.2
 
 기준 브랜치: `feat/delete-seoul-rebuild-3d-v1` · 리뷰 PR #50 (Draft)
