@@ -15,6 +15,7 @@ import {
   STAIR_BOTTOM_Z, STAIR_DROP, STAIR_TOP_Z, type Block,
 } from "./level";
 import { beaconOf, type Game } from "./logic";
+import { Underground } from "./Underground";
 
 type GameRef = React.RefObject<Game>;
 export type ChaseQuality = "low" | "high";
@@ -71,10 +72,7 @@ function Ground() {
           <meshStandardMaterial color="#2c3238" roughness={0.9} />
         </mesh>
       ))}
-      <mesh position={[0, -STAIR_DROP / 2 - 0.4, -59.9]}>
-        <boxGeometry args={[5, STAIR_DROP + 0.8, 0.2]} />
-        <meshStandardMaterial color="#2c3238" roughness={0.9} />
-      </mesh>
+      {/* 계단 구덩이의 남쪽 끝은 막혀 있지 않다: 수동 차단문을 지나 지하 정비 공간(ACT 4)으로 이어진다 */}
       {/* 횡단보도: 지워지다 만 흰 줄 */}
       {Array.from({ length: 8 }, (_, i) => (
         <mesh key={i} rotation-x={-Math.PI / 2} position={[-7 + i * 2, 0.012, -2.2]}>
@@ -830,13 +828,17 @@ function Rain({ gameRef }: { gameRef: GameRef }) {
 
 export function ChaseScene({ gameRef, quality }: { gameRef: GameRef; quality: ChaseQuality }) {
   const hemi = useRef<THREE.HemisphereLight>(null);
+  const sun = useRef<THREE.DirectionalLight>(null);
   useFrame(() => {
     const g = gameRef.current;
+    // 계단 아래로 내려갈수록 하늘빛이 줄고, 지하에서는 작업등의 명암이 남는다
+    const under = Math.max(0, Math.min(1, (-g.player.y - 1.2) / 1.8));
     // 전력이 돌아오면 도시 전체가 아주 조금 밝아지고, 경보 순간에 붉게 질린다
     if (hemi.current) {
-      hemi.current.intensity = 2.0 + 0.5 * g.lampsOn;
+      hemi.current.intensity = (2.0 + 0.5 * g.lampsOn) * (1 - 0.65 * under);
       hemi.current.color.setRGB(0.42 + 0.5 * g.alarm, 0.5 - 0.1 * g.alarm, 0.62 - 0.2 * g.alarm);
     }
+    if (sun.current) sun.current.intensity = 0.6 * (1 - 0.85 * under);
   });
   return (
     <>
@@ -844,7 +846,7 @@ export function ChaseScene({ gameRef, quality }: { gameRef: GameRef; quality: Ch
       <fog attach="fog" args={["#070b11", 10, quality === "high" ? 78 : 62]} />
       <hemisphereLight ref={hemi} args={["#6b7f9e", "#2a2e36", 2.0]} />
       <ambientLight intensity={0.45} color="#5b6b80" />
-      <directionalLight position={[-12, 30, 18]} intensity={0.6} color="#8ea6c8" />
+      <directionalLight ref={sun} position={[-12, 30, 18]} intensity={0.6} color="#8ea6c8" />
       <Ground />
       <Buildings quality={quality} />
       <AlleyDressing gameRef={gameRef} />
@@ -865,6 +867,7 @@ export function ChaseScene({ gameRef, quality }: { gameRef: GameRef; quality: Ch
       })}
       <Gate gameRef={gameRef} />
       <Subway />
+      <Underground gameRef={gameRef} />
       <Searchlights gameRef={gameRef} />
       <San gameRef={gameRef} />
       <Beacon gameRef={gameRef} />
