@@ -359,7 +359,7 @@ export default function ExploreV2Client() {
     say("당신이 이곳에서 남긴 선택과 기억", "Your choices and memories here"),
   ];
 
-  if (!ready) return <main className="explore-root" />;
+  if (!ready) return <main ref={root} className="explore-root" />;
   return (
     <main ref={root} className={`explore-root ${styles.root}`}>
       <div className="canvas-wrap">
