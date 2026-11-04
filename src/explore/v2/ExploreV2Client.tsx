@@ -92,8 +92,8 @@ export default function ExploreV2Client() {
     storyRef.current = saved;
     setStory(saved);
     if (atLeast(saved, "crossing")) setZone("city");
-    if (saved.phase === "kept") setEnding("kept");
-    if (saved.phase === "left") setEnding("left");
+    if (saved.phase === "kept") { setEnding("kept"); setIntro(false); }
+    if (saved.phase === "left") { setEnding("left"); setIntro(false); }
     setTouch(navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches);
     resetGaze();
     setReady(true);
@@ -341,13 +341,6 @@ export default function ExploreV2Client() {
     setPanel(null);
   }, [commit]);
 
-  const erase = useCallback(() => {
-    eraseStory();
-    setPanel(null);
-    setEnding("deleted");
-    resetGaze();
-  }, []);
-
   const mem = story.memories;
   const deletionLines = [
     say("대자비 감시 기록", "Great Compassion's surveillance records"),
@@ -434,10 +427,10 @@ export default function ExploreV2Client() {
             <div className={styles.eyebrow}>{tr(say("大慈悲 · 삭제 대상 확인", "GREAT COMPASSION · ERASURE PREVIEW"))}</div>
             <h2>{tr(say("무엇이 사라지는가?", "What will disappear?"))}</h2>
             <ul>{deletionLines.map((line, index) => <li key={index}>{tr(line)}</li>)}</ul>
-            <p>{tr(say("이 브라우저의 게임 기록만 삭제됩니다. 세계의 프로그램과 다른 방문자의 기록은 그대로 남습니다.", "Only this browser's game record will be removed. The program and other visitors remain."))}</p>
+            <p>{tr(say("이 실험판의 브라우저 저장 기록만 삭제됩니다. 세계의 프로그램과 다른 방문자의 기록은 그대로 남습니다.", "Only this prototype's browser save will be removed. The program and other visitors remain."))}</p>
             <div className={styles.actions}>
               <button className={styles.secondary} onClick={keep}>{tr(say("기록을 남긴다", "KEEP THE RECORD"))}</button>
-              <button className={styles.danger} onClick={erase}>{tr(say("DELETE SEOUL", "DELETE SEOUL"))}</button>
+              <Link className={styles.danger} href="/deleteseoul-lab/erase">{tr(say("게임 밖에서 기록 삭제", "ERASE OUTSIDE THE GAME"))}</Link>
             </div>
           </div>
         </div>
