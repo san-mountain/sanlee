@@ -935,7 +935,7 @@ export default function Bunker({ face, facePhase, audit, lang, visited, onTap, s
       {!face.legacy && (
         <>
           <AuditMachine lang={lang} solved={audit.solved} onTap={onTap} />
-          <Guarantor lang={lang} litAt={audit.litAt} />
+          <Guarantor lang={lang} litAt={audit.litAt} labArchive={archiveLab} />
         </>
       )}
       {TERMINALS.map((t) => (
