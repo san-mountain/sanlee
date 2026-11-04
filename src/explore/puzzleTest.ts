@@ -1,6 +1,6 @@
 // 개발·검수용 퍼즐 재시작 (?debug 설정창 · window.__neo.restartA/B).
 // 퍼즐 A·B의 저장만 테스트 시작 상태로 덮어쓴다. 방문한 터미널·결말·백업·웹사이트 기록·legacy 키는 건드리지 않는다.
-import { SOLUTION, emptyFace, loadFace, saveFace, type Drums, type FaceState } from "./faceAuth";
+import { FACE_KEY, SOLUTION, emptyFace, loadFace, saveFace, type Drums, type FaceState } from "./faceAuth";
 import { AUDIT_KEY, OLD_AUDIT_KEYS, clearAudit, emptyAudit, loadAudit, saveAudit, type AuditState } from "./recordAudit";
 
 export type TestStart = "a" | "b";
