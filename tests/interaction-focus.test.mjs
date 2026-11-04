@@ -14,7 +14,7 @@ test("interaction picking uses on-screen candidates and keeps selection stable",
   assert.match(player, /Math\.abs\(x\) > 1\.08/);
   assert.match(player, /s\.near === it\.id \? 0 : 0\.26/);
   assert.match(player, /camera\.updateMatrixWorld\(\)/);
-  assert.match(player, /faceRt\.screen\[`drum-\$\{faceRt\.aim\}\`\]/);
+  assert.ok(player.includes('faceRt.screen[`drum-${faceRt.aim}`]'));
 });
 
 test("mobile wire targets only one selected 3D part with no extra labels or hit surface", () => {
