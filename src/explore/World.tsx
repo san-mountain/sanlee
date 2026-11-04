@@ -9,6 +9,7 @@ import City from "./City";
 import SanNPC from "./SanNPC";
 import Labels, { type LabelEls } from "./Labels";
 import Effects from "./Effects";
+import TargetHologram from "./TargetHologram";
 import { CITY, ZONES, type Interactable, type Zone } from "./zones";
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
   visited: SectionId[];
   onTap: (id: string) => void;
   onNear: (it: Interactable | null) => void;
+  target: Interactable | null;
   onTracked: (v: boolean) => void;
   labelEls: LabelEls;
   sanMode?: "beside" | "stay";
@@ -28,7 +30,7 @@ type Props = {
 
 const POPUP = [{ key: "popup", pos: [1.7, 4.5, 1.6] as [number, number, number], scaleAt: 6, maxScale: 1 }];
 
-export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanMode, hideSan, secondStatue, arrived, awake }: Props) {
+export default function World({ zone, lang, visited, onTap, onNear, target, onTracked, labelEls, sanMode, hideSan, secondStatue, arrived, awake }: Props) {
   const complete = visited.length >= sections.length || !!awake;
   return (
     <Canvas dpr={[1, 1.75]} gl={{ antialias: true, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
@@ -45,6 +47,7 @@ export default function World({ zone, lang, visited, onTap, onNear, onTracked, l
           </>
         )}
       </Suspense>
+      {target && <TargetHologram target={target} />}
       <Effects />
       <Labels anchors={zone === "bunker" && !complete ? POPUP : []} els={labelEls} />
     </Canvas>
