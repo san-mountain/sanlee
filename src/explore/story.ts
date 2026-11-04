@@ -74,8 +74,8 @@ export const ui = {
   startLine: { ko: "줄로 돌아가기", en: "Return to the line" },
   savedHint: { ko: "연결이 끊기면 여기서 이어집니다", en: "If the connection drops, you pick up here" },
   // 처음 지상에 나설 때 화면 아래로 지나가는 한 줄. 클릭할 필요 없음
-  cookieNotice: { ko: "이 도시는 방문자를 기억합니다", en: "This city remembers its visitors" },
-  cookieNoticeSub: { ko: "계속 걸으면 동의한 것으로 간주합니다", en: "By continuing to walk, you agree" },
+  cookieNotice: { ko: "지상 감시망에 접속되었습니다", en: "Connected to surface surveillance" },
+  cookieNoticeSub: { ko: "시스템이 이동 경로를 기록합니다. 큰길 끝 검문소로 이동하십시오.", en: "Your movement is being recorded. Proceed to the checkpoint at the end of the avenue." },
   cookieSettings: { ko: "쿠키 설정 · Esc", en: "Cookie settings · Esc" },
   cookieSettingsTouch: { ko: "쿠키 설정 · 오른쪽 위 ⚙", en: "Cookie settings · ⚙ top right" },
   foundEndings: { ko: "발견한 결말 {n}/3", en: "Endings found {n}/3" },
