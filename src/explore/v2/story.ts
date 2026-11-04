@@ -20,6 +20,7 @@ export type StoryV2 = {
   memories: Record<MemoryFlag, boolean>;
   clues: Record<ClueFlag, boolean>;
   sources: Record<SourceFlag, boolean>;
+  comparisons: Record<ClueFlag, boolean>;
 };
 
 const phases: Phase[] = [
@@ -38,6 +39,7 @@ export function initialStory(): StoryV2 {
     memories: { r07Friend: false, childDrawing: false, radioHeard: false, monkClue: false },
     clues: { r07: false, child: false, radio: false },
     sources: { about: false, writing: false, works: false },
+    comparisons: { r07: false, child: false, radio: false },
   };
 }
 
@@ -47,7 +49,7 @@ const transitions: Partial<Record<Phase, Partial<Record<StoryEvent, Phase>>>> = 
   recovery: { "read-origin": "origin" },
   origin: { "restore-san": "restored" },
   restored: { "begin-investigation": "investigating" },
-  evidence: { "review-evidence": "discovered" },
+  // The three witness/record comparisons unlock the source log; not a single button.
   discovered: { "question-keeper": "keeperQuestioned" },
   keeperQuestioned: { "confront-san": "confronted" },
   confronted: { "enter-city": "crossing", leave: "left" },
@@ -76,6 +78,16 @@ export function observeClue(state: StoryV2, flag: ClueFlag): StoryV2 {
 
 export function clueCount(state: StoryV2): number {
   return clueFlags.filter(key => state.clues[key]).length;
+}
+
+export function compareClue(state: StoryV2, flag: ClueFlag): StoryV2 {
+  if (state.phase !== "evidence" || !state.clues[flag] || state.comparisons[flag]) return state;
+  const comparisons = { ...state.comparisons, [flag]: true };
+  return { ...state, comparisons, phase: clueFlags.every(k => comparisons[k]) ? "discovered" : "evidence" };
+}
+
+export function comparisonCount(state: StoryV2): number {
+  return clueFlags.filter(k => state.comparisons[k]).length;
 }
 
 export function inspectSource(state: StoryV2, flag: SourceFlag): StoryV2 {
@@ -112,6 +124,9 @@ export function parseStory(raw: string | null): StoryV2 {
       return { ...initialStory(), phase, memories: data.memories as StoryV2["memories"] };
     }
     if (data.schema !== 2 || !phases.includes(data.phase as Phase) || !isBoolRecord(data.clues, clueFlags)) return initialStory();
+    const comparisons = isBoolRecord(data.comparisons, clueFlags)
+      ? Object.fromEntries(clueFlags.map(k => [k, (data.comparisons as Record<string, boolean>)[k]])) as StoryV2["comparisons"]
+      : initialStory().comparisons;
     const sources = isBoolRecord(data.sources, sourceFlags)
       ? Object.fromEntries(sourceFlags.map(k => [k, (data.sources as Record<string, boolean>)[k]])) as StoryV2["sources"]
       : initialStory().sources;
@@ -121,6 +136,7 @@ export function parseStory(raw: string | null): StoryV2 {
       memories: Object.fromEntries(memoryFlags.map(k => [k, (data.memories as Record<string, boolean>)[k]])) as StoryV2["memories"],
       clues: Object.fromEntries(clueFlags.map(k => [k, (data.clues as Record<string, boolean>)[k]])) as StoryV2["clues"],
       sources,
+      comparisons,
     };
   } catch { return initialStory(); }
 }
@@ -151,7 +167,7 @@ export const storyObjective: Record<Exclude<Phase, "left">, { ko: string; en: st
   origin: { ko: "기억 보관 장치를 통해 격리를 해제하세요.", en: "Use the memory archive to release the quarantine." },
   restored: { ko: "기록에 이상이 생겼습니다. 관리인에게 물어보세요.", en: "Something is wrong with the records. Ask the caretaker." },
   investigating: { ko: "R-07, 아이, 무전수가 기억하는 일을 비교하세요.", en: "Compare R-07's, the child's and the operator's memories." },
-  evidence: { ko: "세 가지 증언을 확인했습니다. 중앙 대조 단말을 조사하세요.", en: "You have three accounts. Inspect the reconciliation terminal." },
+  evidence: { ko: "중앙 단말에서 세 사람의 증언과 저장 기록을 하나씩 대조하세요.", en: "Compare all three testimonies with the saved records at the terminal." },
   discovered: { ko: "기록을 누가 보냈는지 관리인에게 물어보세요.", en: "Ask the caretaker who sent the request." },
   keeperQuestioned: { ko: "이산에게 기록 정리 요청에 대해 따져 물으세요.", en: "Confront San about the memory purge request." },
   confronted: { ko: "대자비 중앙 장치에서 기억 정리 요청을 중단하세요.", en: "Reach Great Compassion to cancel the pending memory purge." },
