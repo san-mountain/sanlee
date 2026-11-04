@@ -20,7 +20,7 @@ import styles from "./ExploreV2.module.css";
 
 type Localized = { ko: string; en: string };
 type Action = { label: Localized; run: () => void };
-type Dialog = { title: Localized; lines: Localized[]; actions?: Action[] };
+type Dialog = { title: Localized; lines: Localized[]; actions?: Action[]; step: number };
 type Ending = "deleted" | "kept" | "left" | null;
 const say = (ko: string, en: string): Localized => ({ ko, en });
 const SAN = say("이산", "San");
@@ -140,7 +140,7 @@ export default function ExploreV2Client() {
     if (storyRef.current.phase !== "decision") lock();
   }, [lock]);
   const show = useCallback((title: Localized, lines: Localized[], actions?: Action[]) => {
-    setPanel({ title, lines, actions });
+    setPanel({ title, lines, actions, step: 0 });
   }, []);
   const moveToCity = useCallback(() => {
     commit("enter-city");
@@ -608,9 +608,12 @@ export default function ExploreV2Client() {
         <div className={styles.overlay}>
           <div className={`panel ${styles.card}`} role="dialog" aria-modal="true">
             <div className={styles.eyebrow}>{tr(panel.title)}</div>
-            {panel.lines.map((line, index) => <p key={index}>{tr(line)}</p>)}
+            <p key={panel.step} aria-live="polite">{tr(panel.lines[Math.min(panel.step, panel.lines.length - 1)])}</p>
+            <div className={styles.dialogCounter}>{String(Math.min(panel.step + 1, panel.lines.length)).padStart(2, "0")} / {String(panel.lines.length).padStart(2, "0")}</div>
             <div className={styles.actions}>
-              {panel.actions ? panel.actions.map((action, index) => (
+              {panel.step < panel.lines.length - 1 ? (
+                <button type="button" className={styles.primary} onClick={() => setPanel(current => current ? { ...current, step: Math.min(current.step + 1, current.lines.length - 1) } : null)}>{tr(say("다음", "NEXT"))}</button>
+              ) : panel.actions ? panel.actions.map((action, index) => (
                 <button type="button" className={index === 0 ? styles.primary : styles.secondary} key={index} onClick={action.run}>{tr(action.label)}</button>
               )) : <button type="button" className={styles.primary} onClick={closeDialog}>{tr(say("계속", "CONTINUE"))}</button>}
             </div>
