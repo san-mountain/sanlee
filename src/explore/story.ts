@@ -205,7 +205,9 @@ export const statueLines: L[][] = [
   [
     { ko: "…움직인다. 고마워. 혼자서는 끝내 못 일어났을 거야.", en: "…I can move. Thank you. I'd never have got up on my own." },
     { ko: "저 벽 그림들, 아직 걸려 있었네. 내가 그린 거야. 다 지워진 줄 알았어.", en: "Those paintings on the wall are still hanging. I made them. I thought they'd all been erased." },
-    { ko: "다시 걸을 수 있으면, 아래로 내려가 보고 싶었어. 구름 밑에 아직 땅이 있대.", en: "If I could ever walk again, I wanted to go down. They say there's still ground under the clouds." },
+    { ko: "이 동네, 원래는 땅에 붙어 있었어. 높은 사람들이 도시를 통째로 들어 올릴 때, 이 방공호도 같이 끌려 올라왔지.", en: "This neighbourhood used to sit on the ground. When the people at the top lifted the whole city, this shelter got dragged up with it." },
+    { ko: "아래엔 아직 사는 사람들이 있대. 무전수가 가끔 구름 밑에서 오는 콧노래를 잡는다더라. 정말인지는 몰라.", en: "They say people still live down there. The radio operator sometimes catches someone humming from under the clouds. I don't know if it's true." },
+    { ko: "그래도 다시 걸을 수 있으면, 내 발로 내려가서 보고 싶었어. 땅이 아직 있는지.", en: "Still, if I could ever walk again, I wanted to go down on my own feet and see. Whether the ground is still there." },
     { ko: "방폭문 옆 낡은 표지판 봤어? 하층행 승강장. 큰길 끝 검문소를 지나야 나와.", en: "Did you see the old sign by the blast door? The descent platform. It's past the checkpoint at the end of the avenue." },
     { ko: "네가 기록을 열고 나서 움직일 수 있게 됐어. 밖에서도 그럴지는… 같이 가 봐야 알겠지.", en: "I could move once you opened those records. Whether that holds up there… we'll only know if we go." },
     { ko: "같이 가 줄래?", en: "Will you come with me?" },
@@ -440,7 +442,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
     name: { ko: "무전수", en: "Radio operator" },
     lines: [
       { ko: "쉿. 지상 주파수 듣는 중이야. 매일 같은 방송이지. '동의는 이미 처리되었습니다.'", en: "Shh. Listening to the surface frequency. Same broadcast every day: 'Your consent has been processed.'" },
-      { ko: "근데 가끔 잡음 사이로 누가 흥얼거리는 소리가 들려. 등급에 안 잡히는 소리.", en: "But now and then, between the static, someone hums. A sound no grade can catch." },
+      { ko: "근데 가끔 잡음 사이로 누가 흥얼거리는 소리가 들려. 위가 아니라 아래, 구름 밑 주파수에서. 등급에 안 잡히는 소리.", en: "But now and then, between the static, someone hums. Not from up there, from below, on a frequency under the clouds. A sound no grade can catch." },
       { ko: "그걸 녹음해 두는 게 내 일이야. 언젠가 누가 따라 부를 수 있게.", en: "Recording it is my job. So someday someone can sing along." },
     ],
   },

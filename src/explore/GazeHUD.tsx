@@ -105,13 +105,14 @@ export default function GazeHUD({
       // 처음 시선 구역에 들어서면 소개 장면을 연다 (방문마다 한 번: 탭을 새로 열면 다시 나온다). 이미 봤다면 짧은 요령만
       if (gaze.inZone && !shown.current && gaze.mood !== "blind") {
         shown.current = true;
-        stageRef.current?.();
         let seenIntro = false;
         try {
           seenIntro = sessionStorage.getItem("sanlee-jabi-intro") === "1";
         } catch {}
+        // 소개 팝업이 뜨면 대자비 무대(음악)는 팝업을 닫을 때 시작된다 (ExploreClient의 endJabiIntro)
         if (!seenIntro && introRef.current) introRef.current();
         else {
+          stageRef.current?.();
           setTip(true);
           setTimeout(() => setTip(false), 15000);
         }

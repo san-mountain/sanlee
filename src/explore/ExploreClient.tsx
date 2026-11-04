@@ -142,7 +142,9 @@ export default function ExploreClient() {
   // 배경음악: 방공호, 지상, 대자비 구역(처음 시선 구역에 들어선 뒤부터), 결말
   const [jabiStage, setJabiStage] = useState(false);
   // 방공호로 돌아가면 다시 지상 음악부터 (시선 구역은 도시에 다시 올라왔을 때 새로 들어선다)
-  const track = leaving || intro ? null : ending ? "ending" : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
+  // 결말 곡(空)은 마지막 결과(버튼)가 나올 때부터. 그 전까지는 지상에서는 듣던 곡을 잇고, 방공호로 넘어간 거부 결말은 조용히
+  const endShown = !!ending && ending.step >= (checkpoint[ending.kind] as Beat[]).length;
+  const track = leaving || intro ? null : endShown ? "ending" : ending ? (zone === "city" ? (jabiStage ? "jabi" : "ground") : null) : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
   useEffect(() => {
     playBgm(track);
   }, [track]);
@@ -755,6 +757,8 @@ export default function ExploreClient() {
     gaze.intro = false;
     gaze.frozen = false;
     gaze.lookAt = null;
+    // 소개 팝업을 닫는 순간부터 대자비 곡
+    setJabiStage(true);
   }, []);
   // 팝업이 어떤 식으로 닫히든(Esc 포함) 소개 상태를 풀어 준다
   useEffect(() => {
@@ -1198,7 +1202,7 @@ export default function ExploreClient() {
       )}
 
       {ending && (
-        <div className={`ending ending-${ending.kind}`}>
+        <div className={`ending ending-${ending.kind}${walkable ? " walking" : ""}`}>
           <div className="ending-inner">
             {(checkpoint[ending.kind] as Beat[]).slice(0, ending.step + 1).map((l, i, arr) => {
               // 거부 결말이 방공호로 넘어가면 앞 장면의 글은 거둔다

@@ -729,7 +729,10 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .ending .slots b { font-weight: 400; color: #ff2a3d; margin-left: 8px; }
 @keyframes slotErase { 0% { opacity: 1; text-decoration: none; } 40% { opacity: 1; text-decoration: line-through; } 100% { opacity: .18; text-decoration: line-through; } }
 .ending.ending-ghost p { color: #dfe6ea; }
-.ending-ghost .canvas-wrap { filter: saturate(.55) brightness(1.05); }
+/* 채도를 크게 빼면 젖은 바닥에 비친 네온이 흰빛으로 번져서, 조금만 빼고 밝기를 낮춘다 */
+.ending-ghost .canvas-wrap { filter: saturate(.8) brightness(.82); }
+/* 空 결말의 마지막 걸음: 아래쪽 결말 글이 조이스틱과 화면 끌기를 가로막지 않게 */
+.ending.walking .ending-inner { pointer-events: none; }
 /* 숨은 결말: '멈춘 것으로 처리' 되는 순간 화면이 굳어 가다가, 이산의 말에 다시 풀린다 */
 .ending-ghost.ghost-freeze .canvas-wrap { filter: grayscale(1) contrast(1.15) brightness(.75); transition: filter 3s ease; }
 .explore-root.final-flash::after { content: ""; position: absolute; inset: 0; z-index: 57; pointer-events: none; animation: finalFlash 2.2s ease-out forwards; }
