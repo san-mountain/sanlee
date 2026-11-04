@@ -4,7 +4,7 @@
 import { useLang } from "@/components/LangProvider";
 import { testUi } from "./story";
 
-export default function PauseTest({ onA, onB }: { onA: () => void; onB: () => void }) {
+export default function PauseTest({ onA, onB, onRestore, canRestore }: { onA: () => void; onB: () => void; onRestore: () => void; canRestore: boolean }) {
   const { t } = useLang();
   return (
     <div className="pause-test" role="group" aria-label={t(testUi.title)}>
@@ -15,6 +15,11 @@ export default function PauseTest({ onA, onB }: { onA: () => void; onB: () => vo
       <button type="button" className="btn" onClick={onB}>
         {t(testUi.restartB)}
       </button>
+      {canRestore && (
+        <button type="button" className="btn" onClick={onRestore}>
+          {t(testUi.restore)}
+        </button>
+      )}
     </div>
   );
 }

@@ -713,6 +713,10 @@ export const testUi = {
   restartA: { ko: "A부터 다시 플레이", en: "Replay from puzzle A" },
   restartB: { ko: "B부터 다시 플레이", en: "Replay from puzzle B" },
   done: { ko: "테스트 시작 상태로 돌렸습니다", en: "Reset to the test start" },
+  restore: { ko: "원래 진행으로 돌아가기", en: "Restore previous progress" },
+  restored: { ko: "테스트 전 진행 기록을 복구했습니다", en: "Restored progress from before testing" },
+  noBackup: { ko: "복구할 테스트 이전 기록이 없습니다", en: "No saved progress to restore" },
+  snapshotFailed: { ko: "진행 기록을 안전하게 보관할 수 없어 테스트를 시작하지 않았습니다", en: "Could not safely back up progress; replay was not started" },
 };
 
 // 방공호 사람들의 진행별 대사 (새 경로 전용). a = 얼굴 복원 전, b = 기록 확인 전, c = 퍼즐 B 이후

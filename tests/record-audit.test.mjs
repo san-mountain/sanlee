@@ -13,7 +13,7 @@ const { lineDuration, playLines } = await import("../src/explore/dialogue.ts");
 const { AUDIT_KEY, AUDIT_KEY_V1, AUDIT_KEY_V2, OFFICIAL_RECORD, emptyAudit, finishAudit, loadAudit, moveSeal, parseAudit, resetSeal, restPhase, saveAudit, seeIntro, undoSeal, auditAvailable } = R;
 const { CASSETTE, emptySeal, solve, startPositions } = S;
 const { FACE_KEY, emptyFace, loadFace, saveFace } = F;
-const { applyRestart, restartStates, testStart, TEST_KEY } = T;
+const { applyRestart, restartStates, testStart, TEST_KEY, REPLAY_BACKUP_KEY, hasReplayBackup, restoreOriginalProgress } = T;
 
 const store = (seed = {}) => {
   const values = new Map(Object.entries(seed));
@@ -156,6 +156,44 @@ test("restart from B: A's choice stays, a new 2D puzzle starts from the intro, e
   }
   assert.equal(restartStates("b", emptyFace()).face.method, "standard");
   assert.equal(restartStates("b", { ...doneA(), legacy: true }).face.legacy, false);
+});
+
+test("completed B can be replayed from its intro and the exact original A/B saves can be restored", () => {
+  const originalFace = doneA("exception");
+  const originalAudit = finishAudit(solvedAudit());
+  const oldV2 = '{"schema":2,"solved":true}';
+  const { values, session } = memory({
+    [FACE_KEY]: JSON.stringify(originalFace),
+    [AUDIT_KEY]: JSON.stringify(originalAudit),
+    [AUDIT_KEY_V2]: oldV2,
+  });
+  const started = applyRestart("b");
+  assert.ok(started, "the original progress must be snapshotted before replay");
+  assert.equal(hasReplayBackup(), true);
+  assert.deepEqual(started.audit, emptyAudit());
+  assert.equal(loadAudit().solved, false);
+  assert.equal(testStart(), "b");
+  assert.ok(values.get(REPLAY_BACKUP_KEY));
+  // Replaying A after B must not replace the original snapshot.
+  applyRestart("a");
+  assert.equal(loadFace().solved, false);
+  const restored = restoreOriginalProgress();
+  assert.ok(restored);
+  assert.deepEqual(restored.face, originalFace);
+  assert.deepEqual(restored.audit, originalAudit);
+  assert.equal(values.get(AUDIT_KEY_V2), oldV2);
+  assert.equal(values.has(REPLAY_BACKUP_KEY), false);
+  assert.equal(session.has(TEST_KEY), false);
+  assert.equal(hasReplayBackup(), false);
+});
+
+test("a replay without a localStorage backup is not allowed to destroy completed progress", () => {
+  const { values } = memory({ [FACE_KEY]: JSON.stringify(doneA()), [AUDIT_KEY]: JSON.stringify(finishAudit(solvedAudit())) });
+  const keep = values.get(AUDIT_KEY);
+  globalThis.localStorage = { ...globalThis.localStorage, getItem: (k) => values.get(k) ?? null,
+    setItem: () => { throw new Error("quota"); }, removeItem: () => {} };
+  assert.equal(applyRestart("b"), null);
+  assert.equal(values.get(AUDIT_KEY), keep);
 });
 
 test("city-record deletion clears every B save along with puzzle A", async () => {

@@ -1133,6 +1133,12 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .face-end-meta li + li { margin-top: 4px; }
 .face-end .panel-actions { justify-content: flex-end; flex-wrap: wrap; }
 .face-end .btn { min-height: 44px; }
+/* Debug-only shortcuts remain reachable even when the completed B end-card
+   covers the settings button; no new HUD is shown in public gameplay. */
+.face-end-replay { display: flex; gap: 8px; margin: 12px 0; padding: 12px 0;
+  flex-wrap: wrap; border-top: 1px solid #b48a3c55; border-bottom: 1px solid #b48a3c55; }
+.face-end-replay .btn { flex: 1 1 125px; min-width: 0; white-space: normal; text-align: center; }
+
 @media (max-width: 640px) { .face-line { bottom: 150px; font-size: 15px; } }
 
 /* B's narrative subtitles remain on screen until the player advances them.

@@ -35,7 +35,7 @@ import { AUDIT_GRID, AUDIT_MACHINE, AUDIT_SCREEN, GUARANTOR, auditPoint } from "
 import SealPanel from "./SealPanel";
 import PauseTest from "./PauseTest";
 import InteractionGuide from "./InteractionGuide";
-import { TEST_KEY, applyRestart, testStart } from "./puzzleTest";
+import { TEST_KEY, applyRestart, hasReplayBackup, restoreOriginalProgress, testStart } from "./puzzleTest";
 import type { AuditView } from "./World";
 import { playLines } from "./dialogue";
 
@@ -254,6 +254,8 @@ export default function ExploreClient() {
   }, []);
 
   useEffect(() => {
+    // Never strand a player in a debug-replayed state after they leave ?debug.
+    if (!new URLSearchParams(location.search).has("debug")) restoreOriginalProgress();
     const f = loadFace();
     faceRef.current = f;
     faceRt.drums = f.drums;
@@ -1058,7 +1060,9 @@ export default function ExploreClient() {
   };
   // 개발·검수용 재시작 (?debug). 다른 진행(방문한 터미널, 결말, 백업, 웹사이트 기록)은 건드리지 않는다
   const testRestart = (from: "a" | "b") => {
-    const { face: f, audit: a } = applyRestart(from);
+    const next = applyRestart(from);
+    if (!next) { showToast(t(testUi.snapshotFailed)); return; }
+    const { face: f, audit: a } = next;
     clearScene();
     setPanel(null);
     setPaused(false);
@@ -1072,6 +1076,23 @@ export default function ExploreClient() {
       setTimeout(() => (teleport.req = spot), 1000);
     } else teleport.req = spot;
     showToast(t(testUi.done));
+    lock();
+  };
+  const testRestore = () => {
+    const original = restoreOriginalProgress();
+    if (!original) { showToast(t(testUi.noBackup)); return; }
+    clearScene();
+    setPanel(null);
+    setPaused(false);
+    setEnding(null);
+    setGhost(false);
+    setIntro(false);
+    resetPuzzleRuntime(original.face, original.audit);
+    if (zone !== "bunker") {
+      goTo("bunker", false);
+      setTimeout(() => { teleport.req = B_TEST_SPOT; }, 1000);
+    } else teleport.req = B_TEST_SPOT;
+    showToast(t(testUi.restored));
     lock();
   };
   const clearScene = () => {
@@ -1388,7 +1409,7 @@ export default function ExploreClient() {
           since={since}
           inBunker={zone === "bunker"}
           onLeave={logout}
-          test={debug ? <PauseTest onA={() => testRestart("a")} onB={() => testRestart("b")} /> : undefined}
+          test={debug ? <PauseTest onA={() => testRestart("a")} onB={() => testRestart("b")} onRestore={testRestore} canRestore={hasReplayBackup()} /> : undefined}
         />
       )}
 
@@ -1453,6 +1474,13 @@ export default function ExploreClient() {
               <li>{t(auditUi.endNext)}</li>
               <li>{t(faceUi.endWorks)}</li>
             </ul>
+            {debug && (
+              <div className="face-end-replay" role="group" aria-label={t(testUi.title)}>
+                <button type="button" className="btn" onClick={() => testRestart("a")}>{t(testUi.restartA)}</button>
+                <button type="button" className="btn primary" onClick={() => testRestart("b")}>{t(testUi.restartB)}</button>
+                {hasReplayBackup() && <button type="button" className="btn" onClick={testRestore}>{t(testUi.restore)}</button>}
+              </div>
+            )}
             <div className="panel-actions">
               <Link href="/" className="btn" onClick={logout}>
                 {t(faceUi.endHome)}
