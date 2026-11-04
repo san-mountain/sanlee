@@ -298,8 +298,8 @@ export const checkpoint = {
     { ko: "편의를 위해 로그아웃 버튼은 더 이상 제공되지 않습니다.", en: "For your convenience, the log out button is no longer provided." },
   ] as Beat[],
   reject: [
-    { ko: "거부 의사를 기억하기 위해 쿠키 1개를 저장했습니다. 그 밖의 활동은 확인되지 않습니다.", en: "One cookie has been stored to remember your refusal. No other activity found." },
-    { ko: "[대자비] 거부자 1명 확인. 동행인 1명 포함. 함께 보관 처리합니다.", en: "[GREAT COMPASSION] 1 refuser confirmed. 1 companion included. Archiving both." },
+    { ko: "동의서는 자동 정정됩니다. 거부 의사는 관리용 쿠키 1개에 따로 저장됩니다. 그 밖의 활동은 확인되지 않습니다.", en: "Consent is auto-corrected. One separate administrative cookie records your refusal. No other activity found." },
+    { ko: "[도시 시스템] 관리 기록에서 거부자 1명 확인. 동행인 1명 포함. 함께 보관 처리합니다.", en: "[CITY SYSTEM] Administrative record: 1 refuser found, plus 1 companion. Archiving both." },
     { ko: "", en: "", slots: true },
     { ko: "끝까지 '모두 거부'를 누른 두 번째 사람.", en: "The second person who pressed 'Reject all' to the end.", plaque: true },
     { ko: "두 정지 시민 곁에, 거부 의사를 기억하는 쿠키 1개가 아직 남아 있다.", en: "Beside the two suspended citizens, one cookie that remembers the refusal is still there." },
@@ -642,7 +642,7 @@ export const faceUi = {
 
 // ---------------- 퍼즐 B 「봉인된 3초」 v0.7 ----------------
 // 도입: 감시 쿠키 동의 기록과 이산의 실제 거부가 충돌한다. 선택의 내용은 처음부터 분명하게 한다.
-// 반전은 거부 여부가 아니라, 대자비가 거부를 동의로 강제 정정했다는 증거다.
+// 반전은 거부 여부가 아니라, 도시 시스템이 거부를 공식 동의로 강제 정정했다는 증거다. '대자비'는 지상에서 공개한다.
 export const auditLines = {
   // 장면 1: 장치에 불이 들어오고 공식 기록이 뜬다
   official: { id: "b.archive.official", speaker: "archive", ms: 2400, ko: "시민 활동 추적 쿠키 · 14:02:01 — 모두 동의", en: "Activity tracking cookies · 14:02:01 — ACCEPT ALL" },
@@ -675,7 +675,7 @@ export const auditUi = {
   // PC 프롬프트·모바일 행동 버튼의 보조 라벨
   use: { ko: "조작판 보기", en: "Open panel" },
   officialTitle: { ko: "추적 쿠키 동의 기록", en: "TRACKING COOKIE CONSENT" },
-  correctionStatus: { ko: "대자비 · 자동 정정 완료", en: "DAEJABI · AUTO-CORRECTED" },
+  correctionStatus: { ko: "SEOUL.SYS · 동의 확인됨", en: "SEOUL.SYS · CONSENT VERIFIED" },
   sealedSign: { ko: "수정 전 원본 — 봉인됨", en: "PRE-REVISION ORIGINAL — SEALED" },
   readSign: { ko: "원본 입력 기록 — 판독됨", en: "ORIGINAL INPUT — READ" },
   guarantorSign: { ko: "보증인 등록", en: "GUARANTOR" },
@@ -683,8 +683,8 @@ export const auditUi = {
   endTag: { ko: "시제품 · 퍼즐 B 끝", en: "PROTOTYPE · PUZZLE B COMPLETE" },
   endTitle: { ko: "보증인 등록이 필요합니다", en: "Guarantor registration required" },
   endBody: {
-    ko: "이산은 시민 활동 추적 쿠키를 거부했습니다. 대자비는 이를 강제로 '모두 동의'로 정정했지만, 실제 활동 신호는 생기지 않았습니다. 도시는 여전히 그를 정지 시민으로 취급합니다.",
-    en: "San rejected activity-tracking cookies. Daejabi forcibly rewrote that choice as 'Accept all', but no actual activity signal was produced. The city still treats him as suspended.",
+    ko: "이산은 시민 활동 추적 쿠키를 거부했습니다. 도시 시스템은 이를 강제로 '모두 동의'로 정정했지만, 실제 활동 신호는 생기지 않았습니다. 도시는 여전히 그를 정지 시민으로 취급합니다.",
+    en: "San rejected activity-tracking cookies. The city system forcibly rewrote that choice as 'Accept all', but no actual activity signal was produced. The city still treats him as suspended.",
   },
   endNext: { ko: "다음 이야기는 준비 중입니다.", en: "The next part is in progress." },
   recProtected: { ko: "범종의 보호로 원본을 꺼낸 행동은 시민 활동 기록에 남지 않았습니다.", en: "Under the bell's protection, taking out the original left no citizen activity record." },
@@ -702,9 +702,9 @@ export const sealUi = {
   reading: { ko: "원본 판독 중", en: "Reading original" },
   originalTag: { ko: "활동 추적 쿠키 · 실제 입력", en: "TRACKING COOKIES · ACTUAL INPUT" },
   officialTag: { ko: "도시 공식 기록", en: "CITY OFFICIAL RECORD" },
-  forcedRewrite: { ko: "대자비 강제 정정", en: "DAEJABI FORCED CORRECTION" },
+  forcedRewrite: { ko: "SEOUL.SYS 강제 정정", en: "SEOUL.SYS FORCED CORRECTION" },
   officialValue: { ko: "모두 동의", en: "ACCEPT ALL" },
-  discrepancy: { ko: "추적 쿠키를 거부했지만, 대자비는 동의로 기록했다.", en: "He rejected tracking cookies. Daejabi recorded consent." },
+  discrepancy: { ko: "추적 쿠키를 거부했지만, 도시 시스템은 동의로 기록했다.", en: "He rejected tracking cookies. The city system recorded consent." },
 };
 
 // 개발·검수용 재시작 (?debug에서만 설정창에 보인다)
