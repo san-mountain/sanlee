@@ -81,6 +81,7 @@ export const ui = {
   foundEndings: { ko: "발견한 결말 {n}/3", en: "Endings found {n}/3" },
   notRecorded: { ko: "발견한 결말 · 이 결말은 기록되지 않음", en: "Endings found · this one is not recorded" },
   welcomeB: { ko: "다시 오셨군요.", en: "Welcome back." },
+  cityArrival: { ko: "지상에 도착했습니다. 큰길 끝 검문소로 이동하십시오. 감시자의 시선을 피하십시오.", en: "Surface reached. Proceed to the checkpoint at the end of the avenue. Avoid the watcher’s gaze." },
 };
 
 // 기억 로그 (구역 이름 아래 한 줄)
