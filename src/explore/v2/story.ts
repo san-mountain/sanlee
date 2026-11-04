@@ -8,6 +8,7 @@ export type Phase =
 
 export type MemoryFlag = "r07Friend" | "childDrawing" | "radioHeard" | "monkClue";
 export type ClueFlag = "r07" | "child" | "radio";
+export type SourceFlag = "about" | "writing" | "works";
 export type StoryEvent =
   | "meet-san" | "read-origin" | "restore-san" | "begin-investigation"
   | "review-evidence" | "question-keeper" | "confront-san"
@@ -18,6 +19,7 @@ export type StoryV2 = {
   phase: Phase;
   memories: Record<MemoryFlag, boolean>;
   clues: Record<ClueFlag, boolean>;
+  sources: Record<SourceFlag, boolean>;
 };
 
 const phases: Phase[] = [
@@ -27,6 +29,7 @@ const phases: Phase[] = [
 ];
 const memoryFlags: MemoryFlag[] = ["r07Friend", "childDrawing", "radioHeard", "monkClue"];
 const clueFlags: ClueFlag[] = ["r07", "child", "radio"];
+const sourceFlags: SourceFlag[] = ["about", "writing", "works"];
 
 export function initialStory(): StoryV2 {
   return {
@@ -34,6 +37,7 @@ export function initialStory(): StoryV2 {
     phase: "arrival",
     memories: { r07Friend: false, childDrawing: false, radioHeard: false, monkClue: false },
     clues: { r07: false, child: false, radio: false },
+    sources: { about: false, writing: false, works: false },
   };
 }
 
@@ -74,6 +78,14 @@ export function clueCount(state: StoryV2): number {
   return clueFlags.filter(key => state.clues[key]).length;
 }
 
+export function inspectSource(state: StoryV2, flag: SourceFlag): StoryV2 {
+  if (state.phase !== "recovery" || state.sources[flag]) return state;
+  return { ...state, sources: { ...state.sources, [flag]: true } };
+}
+export function sourceCount(state: StoryV2): number {
+  return sourceFlags.filter(key => state.sources[key]).length;
+}
+
 export function atLeast(state: StoryV2, phase: Phase): boolean {
   if (state.phase === "left") return false;
   return phases.indexOf(state.phase) >= phases.indexOf(phase);
@@ -100,11 +112,15 @@ export function parseStory(raw: string | null): StoryV2 {
       return { ...initialStory(), phase, memories: data.memories as StoryV2["memories"] };
     }
     if (data.schema !== 2 || !phases.includes(data.phase as Phase) || !isBoolRecord(data.clues, clueFlags)) return initialStory();
+    const sources = isBoolRecord(data.sources, sourceFlags)
+      ? Object.fromEntries(sourceFlags.map(k => [k, (data.sources as Record<string, boolean>)[k]])) as StoryV2["sources"]
+      : initialStory().sources;
     return {
       schema: 2,
       phase: data.phase as Phase,
       memories: Object.fromEntries(memoryFlags.map(k => [k, (data.memories as Record<string, boolean>)[k]])) as StoryV2["memories"],
       clues: Object.fromEntries(clueFlags.map(k => [k, (data.clues as Record<string, boolean>)[k]])) as StoryV2["clues"],
+      sources,
     };
   } catch { return initialStory(); }
 }
@@ -131,7 +147,7 @@ export function eraseStory(storage?: StoryStorage): void {
 
 export const storyObjective: Record<Exclude<Phase, "left">, { ko: string; en: string }> = {
   arrival: { ko: "잔상실의 사람들과 이야기하고 이산을 찾아보세요.", en: "Meet the residents of Afterimage and find San." },
-  recovery: { ko: "이산의 원본을 확인하세요.", en: "Inspect San's original data." },
+  recovery: { ko: "옛 포트폴리오 단말 두 곳에서 이산의 흔적을 찾아보세요.", en: "Find traces of San in two old portfolio terminals." },
   origin: { ko: "기억 보관 장치를 통해 격리를 해제하세요.", en: "Use the memory archive to release the quarantine." },
   restored: { ko: "기록에 이상이 생겼습니다. 관리인에게 물어보세요.", en: "Something is wrong with the records. Ask the caretaker." },
   investigating: { ko: "R-07, 아이, 무전수가 기억하는 일을 비교하세요.", en: "Compare R-07's, the child's and the operator's memories." },
