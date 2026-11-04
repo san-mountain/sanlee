@@ -579,8 +579,8 @@ img { max-width: 100%; height: auto; display: block; }
 /* 山이 거꾸로 된 왕관을 비뚤게 쓰고 있다: 가운데 봉우리 꼭대기에 겹친다. 글자 간격(.08em)만큼 왼쪽으로 당겨 가운데를 맞춘다 */
 .nav-logo { white-space: nowrap; }
 .nav-logo-san { position: relative; display: inline-block; }
-.nav-logo-crown { position: absolute; left: calc(50% - .04em); bottom: 54%; width: .8em; height: auto; overflow: visible; pointer-events: none;
-  transform: translateX(-50%) translateX(.05em) rotate(13deg); transform-origin: 50% 100%; }
+.nav-logo-crown { position: absolute; left: calc(50% - .04em); bottom: calc(54% - .1em); width: 1em; height: auto; overflow: visible; pointer-events: none;
+  transform: translateX(-50%) translateX(.05em); }
 /* 맨 위 시 위의 선은 없앤다 */
 
 /* 메일 주소: 누르면 복사되었다는 작은 표시 */
