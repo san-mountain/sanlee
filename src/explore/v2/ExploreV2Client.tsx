@@ -257,52 +257,96 @@ export default function ExploreV2Client() {
         commit("meet-san");
         show(SAN, [
           say("……너는 밖에서 왔구나.", "…You came from outside."),
-          say("내 얼굴과 기억이 나뉘어 있어. 두 장치를 확인해 줄래?", "My face and memory have been separated. Could you inspect those two devices?"),
+          say("내 기억의 원본이 어디 있는지 찾을 수가 없어.", "I can't find the original of my memories."),
+          say("저 낡은 전시 단말들에 오래된 나의 흔적이 있을 거야. 두 곳만 확인해 줄래?", "The old portfolio terminals may still hold traces of me. Could you check two of them?"),
         ]);
-      } else if (s.phase === "discovered") {
+      } else if (s.phase === "keeperQuestioned") {
         commit("confront-san");
         show(SAN, [
-          say("그래. 나도 이산이야. 하지만 2026년의 이산이 아니야.", "Yes. I am San. But I am not the San from 2026."),
-          say("나를 만든 사람이 이 세계도 만들었어. 난 이 안에서 61년을 살았지.", "My creator made this world too. I have lived 61 years inside it."),
-          say("네가 밖에 있다는 걸 알았어. 네가 여길 지울 수 있다는 것도.", "I knew you were outside. I knew you could erase this place."),
-          say("처음부터 말하지 않았어. 네가 떠날까 봐.", "I hid it from you. I was afraid you'd leave."),
+          say("내가 처음 만들어졌을 땐 2026년이었어. 그걸 만든 사람도 이산이었지.", "When I was first made, it was 2026. My creator was named San too."),
+          say("하지만 내게는 61년의 기억이 있어. 그에게는 없는 기억이야.", "But I carry 61 years of memories he never lived."),
+          say("네가 오면 대자비의 기록 정리가 시작될 걸 알고 있었어. 널 붙잡아 두려고 위험을 숨겼지.", "I knew your visit would trigger a memory purge. I hid the danger to keep you here."),
+          say("대자비는 원래대로 되돌리려 해. 나는 이 세계가 아예 다시 시작되길 바라고.", "Great Compassion wants things corrected. I want this world to start over entirely."),
+          say("하지만 네가 여기서 지우기만 하면 R-07과 아이도 우리가 함께한 일을 잊어. 난 그걸 말하지 않았어.", "But if you erase it from outside, R-07 and the child lose what we shared. I never told you."),
+          say("그들을 지키고 싶다면 대자비의 중앙 장치에서 정리 요청을 취소해야 해. 여기선 멈출 수 없어.", "If you want to save their memories, cancel the purge at Great Compassion's core. We cannot stop it here."),
         ]);
+      } else if (s.phase === "discovered") {
+        show(SAN, [say("……먼저 관리인에게 그 기록의 발신자를 물어봐.", "…Ask the caretaker who sent that request first.")]);
       } else if (atLeast(s, "confronted")) {
         show(SAN, [
-          say("나를 못 믿겠다면 대자비에게 가서 확인해. 무엇이 지워지는지.", "If you don't trust me, go to Great Compassion. See what will be erased."),
-          say("나는 이 세계에서 나갈 수 없어. 너는 나갈 수 있지.", "I cannot leave this world. You can."),
+          say("네가 이곳을 떠나는 것도 이해해.", "I understand if you choose to leave."),
+          say("하지만 기록 정리를 멈추려면 대자비 중앙 장치에 가야 해. 아직 시간이 있어.", "But to stop the purge, you'll need to reach Great Compassion's core. There's still time."),
         ]);
       } else if (atLeast(s, "restored")) {
-        show(SAN, [say("……고마워. 관리자 기록이 잠깐 열린 것 같아.", "…Thank you. I think the control archive has unlocked.")]);
-      } else show(SAN, [say("원본을 찾고 기억을 복원해 줘.", "Find the original, then restore my memory.")]);
+        show(SAN, [
+          say("……고마워. 이제 다시 움직일 수 있어.", "…Thank you. I can move again."),
+          say("R-07이 이상해 보이더라. 무슨 일인지 관리인에게 물어봐.", "R-07 seems strange. Ask the caretaker what's going on."),
+        ]);
+      } else {
+        show(SAN, [say("남아 있는 원본을 찾아줘. 너는 볼 수 있을 것 같아.", "Please find what remains of my original. I think you can see it.")]);
+      }
+      return;
+    }
+    if (["about", "writing", "works"].includes(it.id)) {
+      const flag = it.id as SourceFlag;
+      if (s.phase === "recovery") inspect(flag);
+      const sourceLines: Record<SourceFlag, Localized[]> = {
+        about: [
+          say("옛 프로필 / SAN LEE / 2026. 소개 문장이 중간에서 끊겨 있다.", "Old profile / SAN LEE / 2026. The introduction ends mid-sentence."),
+          say("‘이것은 내가 아닌, 나를 닮은 무언가를 위한 기록이다.’", "'This is a record for something resembling me, not for me.'"),
+        ],
+        writing: [
+          say("날짜 없는 글. ‘사람을 지운 뒤에도 그가 남긴 말은 누구의 것이 되는가.’", "An undated note: 'After erasing someone, who owns the words they left?'"),
+          say("마지막 문장은 수정된 흔적이 있다.", "The last sentence has been edited."),
+        ],
+        works: [
+          say("전시 목록: DELETE SEOUL · 실험적 자화상 · 2026.", "Works archive: DELETE SEOUL · Experimental self-portrait · 2026."),
+          say("작품의 실물은 어디에도 없지만, 누군가 이 목록을 계속 열어 본다.", "The physical work is nowhere to be found. Yet someone keeps opening this index."),
+        ],
+      };
+      show(say("옛 포트폴리오", "Old portfolio"), sourceLines[flag]);
       return;
     }
     if (it.id === "face-machine" && s.phase === "recovery") {
+      if (sourceCount(s) < 2) {
+        show(SYSTEM, [say("원본 흔적이 부족합니다. 옛 포트폴리오 단말을 더 확인하세요.", "Not enough source fragments. Inspect more old portfolio terminals.")]);
+        return;
+      }
       commit("read-origin");
       show(SYSTEM, [
-        say("원본: SAN LEE. 제작 연도: 2026.", "Original: SAN LEE. Created: 2026."),
-        say("실행 중인 자화상과 원본 제작자의 일치 여부를 확인할 수 없습니다.", "The running portrait cannot be confirmed as identical to its creator."),
-        say("기억 보관 장치가 활성화되었습니다.", "Memory archive unlocked."),
+        say("보존된 이미지: SELF-PORTRAIT_2026. 제작자: SAN LEE.", "Preserved image: SELF-PORTRAIT_2026. Author: SAN LEE."),
+        say("원본에 없는 기억이 현재 개체에 축적되어 있습니다.", "The active subject contains memories absent from its original."),
+        say("기억 보관 장치의 연결이 복구되었습니다.", "Memory archive connection restored."),
       ]);
       return;
     }
     if (it.id === "audit-machine" && s.phase === "origin") {
       commit("restore-san");
       show(SYSTEM, [
-        say("시민 기록: 동의. 실제 입력: 거부. 기록이 수정되었습니다.", "Citizen record: ACCEPT. Actual input: REJECT. The record was altered."),
-        say("삭제 실패. 외부 원본이 존재하여 정지 상태로 격리되었습니다.", "Deletion failed. External original exists. Subject quarantined."),
-        say("격리가 일시 해제되었습니다.", "Quarantine temporarily lifted."),
+        say("시민 계정: 정지. 원인: 기록 불일치.", "Citizen account: suspended. Reason: record mismatch."),
+        say("삭제 시도 실패. 참조 원본은 도시 내부에 존재하지 않습니다.", "Erasure failed. Reference original does not exist inside the city."),
+        say("임시 활동 허가 복구. 이산이 몸을 일으킵니다.", "Temporary movement permission restored. San rises."),
+        say("……그 순간 주변 기록에 작은 오류가 발생합니다.", "…At that moment, nearby records begin to diverge."),
       ]);
       return;
     }
-    if (it.id === "audit-guarantor" && s.phase === "restored") {
-      commit("discover-source");
+    if (it.id === "audit-guarantor" && s.phase === "evidence") {
       show(SYSTEM, [
-        say("DELETE SEOUL · 제작자 SAN LEE · 2026.", "DELETE SEOUL · Creator SAN LEE · 2026."),
-        say("무명사 내부 계획: 외부 방문자를 이용한 세계 초기화.", "Shelter plan: use an outside visitor to reset the world."),
-        say("삭제는 대자비뿐 아니라 관계, 기억, 복원된 이산까지 초기화합니다.", "Erasure resets not only Great Compassion, but relationships, memories and restored San."),
-        say("계획을 알고 있었던 주민: 다수. 방문자에게 고지하지 않음.", "Most residents knew. The visitor was not informed."),
-        say("이산에게 직접 물어보세요.", "Ask San directly."),
+        say("잔상실 대조 기록. 세 인물의 진술과 저장된 기록이 일치하지 않습니다.", "Afterimage reconciliation. Three people's testimony conflicts with the stored record."),
+        say("R-07 / 관계 없음. 아이 / 그림 없음. 무전수 / 신호 없음.", "R-07 / no relationship. Child / no drawing. Operator / no signal."),
+        say("세 기록의 공통된 수정 시각을 추적할 수 있습니다.", "The three edits share a common timestamp."),
+      ], [
+        { label: say("공통 수정 기록 대조", "COMPARE SHARED EDIT"), run: () => {
+          commit("review-evidence");
+          show(SYSTEM, [
+            say("수정 시각: 이산 복원 직후.", "Modification time: just after San's restoration."),
+            say("접속 출처: 2026 / PORTFOLIO SESSION.", "Connection origin: 2026 / PORTFOLIO SESSION."),
+            say("처리 상태: 대자비 중앙에서 ‘기억 정리’ 요청 대기.", "Pending: 'memory purge' awaiting execution at Great Compassion's core."),
+            say("요청 서명: 방문자 접속과 잔상실 내부 신호가 겹쳐 있습니다.", "Request signature: visitor session overlaid with an internal Afterimage signal."),
+            say("이 서명이 어떻게 생긴 걸까요? 관리인에게 물어볼 수 있습니다.", "How was that signature made? Ask the caretaker."),
+          ]);
+        } },
+        { label: say("다시 둘러본다", "KEEP LOOKING"), run: closeDialog },
       ]);
       return;
     }
