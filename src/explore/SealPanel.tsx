@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Lang } from "@/data/site";
 import { CASSETTE, EXIT_ROW, LAYOUT, SIZE, slideRange, type Piece, type Positions } from "./sealPuzzle";
-import { RECORD_TIME, ORIGINAL_RECORD } from "./recordAudit";
+import { RECORD_TIME, ORIGINAL_RECORD, OFFICIAL_RECORD } from "./recordAudit";
 import { sealUi } from "./story";
 import { sfx } from "./sfx";
 
@@ -17,7 +17,7 @@ const EJECT_MS = 0;
 const STOP_MS = 750;
 const READ_MS = 1350;
 const RESULT_MS = 2900;
-const DONE_MS = 5600;
+const DONE_MS = 6800; // 강제 기록 변경 비교가 모바일에서도 읽힐 수 있도록 판독 결과 노출 시간 확보
 
 export default function SealPanel({
   lang,
@@ -231,10 +231,21 @@ export default function SealPanel({
               <span className="seal-scan">{L(sealUi.reading)}</span>
             ) : (
               <>
-                <span className="seal-read-tag">{L(sealUi.originalTag)}</span>
-                <strong>
-                  {RECORD_TIME} — {L(ORIGINAL_RECORD)}
-                </strong>
+                <span className="seal-read-tag">{RECORD_TIME}</span>
+                <div className="seal-read-compare">
+                  <div className="seal-read-record is-original">
+                    <span>{L(sealUi.originalTag)}</span>
+                    <strong>{L(ORIGINAL_RECORD)}</strong>
+                  </div>
+                  <div className="seal-read-forced">
+                    <span aria-hidden="true">↓</span>
+                    <b>{L(sealUi.forcedTag)}</b>
+                  </div>
+                  <div className="seal-read-record is-official">
+                    <span>{L(sealUi.officialTag)}</span>
+                    <strong>{L(OFFICIAL_RECORD)}</strong>
+                  </div>
+                </div>
               </>
             )}
           </div>
