@@ -551,6 +551,7 @@ export default function ExploreV2Client() {
         <World
           zone={zone}
           playerZone={zone === "bunker" ? bunker : city}
+          archiveLab
           lang={lang}
           visited={(["about", "writing", "works"] as const).filter(k => story.sources[k]) as unknown as ("about"|"writing"|"works")[]}
           face={face}
