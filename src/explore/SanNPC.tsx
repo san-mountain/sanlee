@@ -8,6 +8,9 @@ import { player } from "./Player";
 import { CITY, type Interactable } from "./zones";
 import { resolve } from "./collide";
 
+// 지상에서 이산이 잠깐 먼저 가서 기다리는 자리 (ExploreClient가 정하고, 방문자가 그 자리를 지나 북쪽으로 가면 풀린다)
+export const sanHold: { at: { x: number; z: number } | null } = { at: null };
+
 // 복원된 산: 방공호에서는 동상 주위를 거닐고, 지상에서는 방문자 곁을 따라 걷는다
 const PATH: [number, number][] = [
   [-3.8, 5.2],
@@ -54,6 +57,13 @@ export default function SanNPC({ mode, item, onTap, start, beside, stay, at }: {
       tx = player.pos.x - sin * 1.7 + cos * 0.6;
       tz = player.pos.z - cos * 1.7 - sin * 0.6;
       speed = Math.max(2.4, dp * 1.4);
+    } else if (mode === "follow" && sanHold.at) {
+      // 대자비의 첫 시선: 엄폐물 뒤 자리로 가서 방문자를 기다린다. 방문자가 그 자리를 지나 앞으로 나가면 다시 따라온다
+      const h = sanHold.at;
+      tx = h.x;
+      tz = h.z;
+      speed = 3.4;
+      if (player.pos.z < h.z - 5) sanHold.at = null;
     } else if (mode === "follow") {
       // 목줄처럼 따라온다: 3m 넘게 멀어질 때만 다가오고, 가까우면 멈춰서 방문자를 바라본다.
       // 그래서 돌아서면 언제든 마주할 수 있다.

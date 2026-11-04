@@ -270,8 +270,8 @@ function Ground() {
 function Gate({ lang }: { lang: Lang }) {
   const gateSign = useSign(
     [
-      [lang === "ko" ? "통제 구역" : "RESTRICTED", 1.3],
-      [lang === "ko" ? "임시 방문자 출입 불가" : "TEMPORARY VISITORS MAY NOT PASS", 0.6],
+      [lang === "ko" ? "하층행 승강장" : "DESCENT PLATFORM", 1.3],
+      [lang === "ko" ? "등록 시민 전용 · 상시 식별" : "REGISTERED CITIZENS ONLY · ALWAYS IDENTIFIED", 0.6],
     ],
     { color: "#ff2a3d", glow: true, mono: true, w: 1024, h: 256, bg: "#0a0204" }
   );
@@ -337,6 +337,57 @@ function Gate({ lang }: { lang: Lang }) {
           ))}
         </group>
         <pointLight position={[0, 5, 6]} intensity={60} distance={22} color="#ff2030" />
+      </group>
+    </group>
+  );
+}
+
+/* ---------- 하층행 승강장: 광장의 표지와, 성문 너머 다리 옆으로 구름 속에 내려가는 계단 ---------- */
+// 이산이 가고 싶어 하는 곳. 아래가 어떤 곳인지는 보여 주지 않는다 (계단 끝은 구름에 묻힌다)
+const STAIR = { x0: 4.5, z: -153, w: 4.4 };
+function DescentRoute({ lang }: { lang: Lang }) {
+  const ko = lang === "ko";
+  const sign = useSign(
+    [
+      [ko ? "↑ 하층행 승강장" : "↑ DESCENT PLATFORM", 1.1],
+      [ko ? "검문소 경유 · 등록 시민 전용" : "VIA CHECKPOINT · REGISTERED ONLY", 0.6],
+    ],
+    { color: "#d8d2c0", bg: "#101418", mono: true, w: 768, h: 224 }
+  );
+  const plate = useSign([[ko ? "하층행 승강장 ↓" : "DESCENT ↓", 1]], { color: "#ffb02e", bg: "#0a0604", glow: true, mono: true, w: 512, h: 128 });
+  const steps = useMemo(() => Array.from({ length: 16 }, (_, i) => i), []);
+  return (
+    <group>
+      {/* 광장에서 큰길로 들어서는 감시 기둥에 붙은 낡은 표지 (남쪽을 향해 걸려 있다) */}
+      <group position={[-(AVENUE - 1.9), 6.2, 8.3]}>
+        <mesh>
+          <planeGeometry args={[3.2, 0.93]} />
+          <meshBasicMaterial map={sign} toneMapped={false} />
+        </mesh>
+      </group>
+      {/* 다리 오른쪽: 승강장 난간 틈과 구름 속으로 내려가는 계단 */}
+      <group position={[STAIR.x0, 0, STAIR.z]}>
+        <mesh position={[STAIR.w / 2, -0.3, 0]}>
+          <boxGeometry args={[STAIR.w, 0.6, 4]} />
+          <meshStandardMaterial color="#1c1a1e" roughness={0.7} metalness={0.5} />
+        </mesh>
+        {steps.map((i) => (
+          <mesh key={i} position={[STAIR.w + 0.45 + i * 0.9, -0.55 - i * 0.62, 0]}>
+            <boxGeometry args={[0.9, 0.5, 2.6]} />
+            <meshStandardMaterial color="#2a272c" roughness={0.9} />
+          </mesh>
+        ))}
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[0.05, 1.6, s * 1.9]}>
+            <boxGeometry args={[0.3, 3.2, 0.3]} />
+            <meshStandardMaterial color="#6d6a64" roughness={0.9} />
+          </mesh>
+        ))}
+        <mesh position={[0.05, 3.3, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[3.6, 0.9]} />
+          <meshBasicMaterial map={plate} toneMapped={false} side={THREE.DoubleSide} />
+        </mesh>
+        <pointLight position={[1.5, 2.6, 0]} intensity={8} distance={9} color="#ffb070" />
       </group>
     </group>
   );
@@ -1069,6 +1120,7 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
       <Towers />
       <Ground />
       <Gate lang={lang} />
+      <DescentRoute lang={lang} />
       <Jabi lang={lang} />
       <Billboards lang={lang} />
       <VerticalSigns />

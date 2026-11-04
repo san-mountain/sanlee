@@ -895,8 +895,20 @@ function WallText({ lang }: { lang: Lang }) {
     ],
     { color: "#d8d2c0", w: 1024, h: 256 }
   );
+  // 방폭문 옆의 낡은 표지: 도시가 떠오르기 전부터 있던 길. 이산이 가고 싶어 하는 곳
+  const old = useSign(
+    [
+      [lang === "ko" ? "하층행 승강장" : "DESCENT PLATFORM", 1],
+      [lang === "ko" ? "지상 출구 → 큰길 끝" : "SURFACE EXIT → END OF THE AVENUE", 0.6],
+    ],
+    { color: "#c9a227", w: 1024, h: 256 }
+  );
   return (
     <group>
+      <mesh position={[-6.6, 3.6, BUNKER_Z0 + 0.03]}>
+        <planeGeometry args={[4, 1]} />
+        <meshBasicMaterial map={old} transparent opacity={0.45} />
+      </mesh>
       <mesh position={[0, 4.6, BUNKER_Z1 - 0.02]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[4, 2]} />
         <meshBasicMaterial map={big} transparent opacity={0.75} />
@@ -905,6 +917,27 @@ function WallText({ lang }: { lang: Lang }) {
         <planeGeometry args={[6, 1.5]} />
         <meshBasicMaterial map={warn} transparent opacity={0.6} />
       </mesh>
+    </group>
+  );
+}
+
+/* ---------- 거부 결말: 누군가 두 정지 시민 사이에 놓고 간 작은 등 ---------- */
+function SmallLamp() {
+  const light = useRef<THREE.PointLight>(null);
+  useFrame((s) => {
+    if (light.current) light.current.intensity = 3.2 + Math.sin(s.clock.elapsedTime * 7) * 0.25 + Math.sin(s.clock.elapsedTime * 2.3) * 0.35;
+  });
+  return (
+    <group position={[0, 0, 1.6]}>
+      <mesh position={[0, 0.12, 0]}>
+        <cylinderGeometry args={[0.13, 0.15, 0.24, 12]} />
+        <meshStandardMaterial color="#3a2a1e" roughness={0.8} />
+      </mesh>
+      <mesh position={[0, 0.3, 0]}>
+        <sphereGeometry args={[0.07, 10, 8]} />
+        <meshBasicMaterial color="#ffcf7a" toneMapped={false} />
+      </mesh>
+      <pointLight ref={light} position={[0, 0.45, 0]} intensity={3.2} distance={5} color="#ffb766" />
     </group>
   );
 }
@@ -943,6 +976,7 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { 
           <group position={[2.3, 0, 0]} rotation={[0, -0.12, 0]}>
             <Statue restored={0} lang={lang} second />
           </group>
+          <SmallLamp />
         </>
       ) : awake || visited.length >= TERMINALS.length ? (
         <>

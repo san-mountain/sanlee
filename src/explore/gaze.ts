@@ -21,7 +21,8 @@ export const gaze = {
 };
 
 // 결말 연출에서 시점을 스스로 걷게 한다 (충돌 무시). Player가 읽는다
-export const autoWalk: { to: { x: number; z: number; speed: number; pitch?: number } | null } = { to: null };
+// yaw: 다 왔을 때 바라볼 방향 (없으면 북쪽)
+export const autoWalk: { to: { x: number; z: number; speed: number; pitch?: number; yaw?: number } | null } = { to: null };
 
 export function resetGaze() {
   gaze.meter = 0;

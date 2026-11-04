@@ -10,8 +10,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, credits, announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
-import { CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
+import { MUSIC_URL, credits, announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, promiseLine, quest, sanAfterDeath, sanCityLines, sanCue, statueForgot, statueLines, ui, type Beat } from "./story";
+import { CITY, COVERS, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
+import { sanHold } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
 import { input, loadSettings } from "./input";
@@ -55,12 +56,19 @@ type Panel =
 
 type EndKind = "accept" | "reject" | "ghost";
 type Ending = { kind: EndKind; step: number; a: number; r: number; slots: number[] } | null;
-// 결말 대본의 각 줄이 머무는 시간(ms). 마지막 줄 다음에 버튼이 나온다
+// 결말 대본의 각 줄이 머무는 시간(ms). 마지막 줄의 시간은 버튼이 나오기 전의 정적이다.
+// 空 결말은 마지막 줄(step 4)에서 멈추고, 플레이어가 한 걸음을 내디뎌야 끝난다
 const BEAT_MS: Record<EndKind, number[]> = {
-  accept: [2600, 3200, 3800, 3200],
-  reject: [2800, 3400, 3800, 4800, 3400],
-  ghost: [3000, 3600, 4600, 4600],
+  accept: [3000, 3400, 3400, 3000, 3600, 3000],
+  reject: [2800, 3400, 3800, 4800, 3200],
+  ghost: [3000, 3600, 4200, 6500],
 };
+const GHOST_STEP = 4;
+// 처음 대자비의 시선 앞에서 이산이 기다리는 자리: 큰길 첫 엄폐물(키오스크)의 뒤쪽(남쪽)
+const KIOSK = COVERS[0];
+const COVER_SPOT = { x: KIOSK.x, z: KIOSK.z + KIOSK.d / 2 + 0.7 };
+// 空 결말: 다리 위 하층행 승강장 계단 앞. 동쪽(+x)을 바라본다
+const STAIR_TOP = { x: 2.4, z: -153, yaw: -Math.PI / 2 };
 // 수락한 시민이 다시 들어오면 서게 되는 줄 속 자리
 // 줄 한가운데, 두 사람 사이. 여기서는 문 너머로 금빛이 된 대자비의 얼굴이 보인다
 const LINE_SPOT = { x: 3.6, z: (QUEUE_Z[44] + QUEUE_Z[45]) / 2 };
@@ -186,6 +194,7 @@ export default function ExploreClient() {
     setTimeout(() => {
       setZone(to);
       setJabiStage(false);
+      sanHold.at = null;
       setArrived(viaDoor);
       setTracked(false);
       // 배전실 문을 나서는 순간 도시가 위치를 기억한다. 첫 기억에는 '계속 걸으면 동의' 한 줄이 따라 나온다
@@ -235,7 +244,8 @@ export default function ExploreClient() {
               forgot = localStorage.getItem(FORGOT_KEY) !== null;
             } catch {}
             const blank = forgot && visited.length === 0 && found.length === 0 && getBackup().n === 0;
-            setPanel({ kind: "dialog", name: plaque[0], lines: statueLines[Math.min(visited.length, statueLines.length - 2)], step: 0, plaque: true, whisper: blank });
+            // 기록을 지우고 온 사람에게 이산은 처음 보는 사람처럼 짧게 답하고, 마지막 줄에서 말을 건넬 수 있다
+            setPanel({ kind: "dialog", name: plaque[0], lines: blank ? statueForgot : statueLines[Math.min(visited.length, statueLines.length - 2)], step: 0, plaque: true, whisper: blank });
             setMet(true);
             try {
               localStorage.setItem(MET_KEY, "1");
@@ -443,33 +453,21 @@ export default function ExploreClient() {
   // 결말 연출: 줄마다 장면이 바뀐다
   const [secondStatue, setSecondStatue] = useState(false);
   const [whisperMiss, setWhisperMiss] = useState(false);
-  // 이산이 '그 문장'을 남긴 순간: 웹사이트 꼬리말의 delete seoul 간판이 이때부터 켜진다
-  const promiseLine = sanCityLines[sanCityLines.length - 1];
-  // 처음 들었을 때는 대화가 끝난 뒤 '숨은 결말이 열렸다'는 알림을 띄운다
-  const [unlock, setUnlock] = useState<"pending" | "show" | null>(null);
+  // 이산이 '그 문장'을 남긴 순간: 웹사이트 꼬리말의 delete seoul 간판이 이때부터 켜진다 (따로 알리지 않는다)
   useEffect(() => {
     if (panel?.kind === "dialog" && panel.lines[panel.step] === promiseLine)
       try {
-        if (localStorage.getItem(PROMISE_KEY) === null) setUnlock("pending");
         localStorage.setItem(PROMISE_KEY, "1");
       } catch {}
-    if (!panel && unlock === "pending") {
-      sfx.chime();
-      setUnlock("show");
-    }
-  }, [panel, promiseLine, unlock]);
-  useEffect(() => {
-    if (unlock !== "show") return;
-    const h = setTimeout(() => setUnlock(null), 9000);
-    return () => clearTimeout(h);
-  }, [unlock]);
+  }, [panel]);
   const [flash, setFlash] = useState(false);
   const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     if (!ending) return;
     const { kind, step } = ending;
-    // 마지막 줄에 닿으면 발견한 결말로 남긴다 (거부 결말은 기록을 지우므로 제외)
-    if (kind === "accept" && step === BEAT_MS[kind].length) {
+    const end = step === BEAT_MS[kind].length;
+    // 마지막 줄 뒤 정적까지 지나면 발견한 결말로 남긴다 (거부와 空은 남기지 않는다)
+    if (kind === "accept" && end) {
       setFound((f) => {
         const next = f.includes(kind) ? f : [...f, kind];
         try {
@@ -480,28 +478,28 @@ export default function ExploreClient() {
     }
     if (kind === "accept") {
       if (step === 0) {
-        gaze.mood = "calm";
-        // 줄 옆을 따라 걸어가 빈자리에 들어선다
-        autoWalk.to = { x: 2.3, z: LINE_SPOT.z, speed: 3.6, pitch: 0.2 };
-        sceneTimer.current = setTimeout(() => (autoWalk.to = { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.6, pitch: 0.42 }), 6800);
-      }
-      if (step === 4)
+        // 동의는 첫 줄에서 이미 처리된다: 도중에 나가도 다음 입장은 줄 속에서 시작한다
         try {
           localStorage.setItem(END_KEY, "accept");
         } catch {}
+        gaze.mood = "calm";
+        // 플레이 중 몸을 숨기던 그 줄로: 줄 옆을 따라 걸어가 빈자리에 들어서서 가만히 선다. 이산은 줄 밖에 남는다
+        autoWalk.to = { x: 2.3, z: LINE_SPOT.z, speed: 3.6, pitch: 0.2 };
+        sceneTimer.current = setTimeout(() => (autoWalk.to = { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.6, pitch: 0.42 }), 6800);
+      }
     } else if (kind === "reject") {
       if (step === 0) {
         finalBeam();
         sceneTimer.current = setTimeout(() => setFlash(true), 1500);
       }
       if (step === 3) {
-        // 장면이 방공호로: 사람들이 두 번째 동상을 옮겨 놓았다
+        // 장면이 방공호로: 사람들이 두 번째 정지 시민을 옮겨 와 나란히 앉혔다
         setFlash(false);
         setSecondStatue(true);
         goTo("bunker", false);
       }
-      if (step === 5) {
-        // 이 결말은 저장되지 않는다: 진행 기록을 실제로 지운다
+      if (end) {
+        // 도시가 둘을 다시 정지시켰다: 열람·만남·대화·결말·위치 백업이 처음 상태로 돌아간다 (약속과 발견한 결말은 남는다)
         try {
           [KEY, END_KEY, MET_KEY, TALK_KEY].forEach((k) => localStorage.removeItem(k));
         } catch {}
@@ -509,19 +507,93 @@ export default function ExploreClient() {
       }
     } else if (kind === "ghost") {
       if (step === 0) {
-        // 쿠키 설정에서 방문 기록을 전부 지웠다: 도시도 자비도 이 사람을 알아보지 못한다
-        // 기록을 지운다. 다음 방문까지 남기지 않도록 '삭제됨' 표시도 남기지 않고 깨끗이 비운다
+        // 이 기기에 둘을 잇는 기록이 없다: 새로 남기지도 않는다
         wipeBackup();
         gaze.mood = "blind";
         try {
           localStorage.removeItem(FORGOT_KEY);
         } catch {}
       }
-      // 3번째 줄(이산의 말)에서 굳어 가던 화면이 풀리고, 다음 줄에서 둘이 문을 지나 걸어 나간다
-      if (step === 3) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
+      // 이산의 말 다음 줄에서 둘이 성문을 지나 다리 위 승강장 계단 앞까지 걷는다. 그 뒤 마지막 한 걸음은 플레이어의 몫
+      if (step === 3) autoWalk.to = { x: STAIR_TOP.x, z: STAIR_TOP.z, speed: 4.6, pitch: -0.12, yaw: STAIR_TOP.yaw };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
+
+  // 空 결말의 마지막 몸짓: 플레이어가 한 걸음 내디디면 이산이 앞서 내려가 기다리고, 잠깐 정적 뒤에 버튼이 나온다
+  const [stepped, setStepped] = useState(false);
+  const steppedRef = useRef(false);
+  const takeStep = useCallback(() => {
+    if (steppedRef.current) return;
+    steppedRef.current = true;
+    setStepped(true);
+    sfx.door();
+    autoWalk.to = { x: STAIR_TOP.x + 3.6, z: STAIR_TOP.z, speed: 1.3, pitch: -0.3, yaw: STAIR_TOP.yaw };
+    clearTimeout(sceneTimer.current);
+    sceneTimer.current = setTimeout(() => setEnding((e) => (e && e.kind === "ghost" ? { ...e, step: GHOST_STEP + 1 } : e)), 5200);
+  }, []);
+  const awaitingStep = ending?.kind === "ghost" && ending.step === GHOST_STEP && !stepped;
+  useEffect(() => {
+    if (!awaitingStep) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      if (["KeyW", "ArrowUp", "Space", "KeyE"].includes(e.code)) {
+        e.preventDefault();
+        takeStep();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [awaitingStep, takeStep]);
+
+  // 지상의 이산이 직접 하는 짧은 말 (자막 한 줄). 대화창을 열지 않고, 조작을 막지 않는다
+  const [sanSay, setSanSay] = useState<L | null>(null);
+  const sayTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const say = useCallback((l: L, ms = 3600) => {
+    setSanSay(l);
+    clearTimeout(sayTimer.current);
+    sayTimer.current = setTimeout(() => setSanSay(null), ms);
+  }, []);
+  useEffect(() => () => clearTimeout(sayTimer.current), []);
+  // 처음 시선 구역: 대자비 소개가 닫힌 뒤 이산이 첫 엄폐물 뒤로 가서 기다린다 (탭마다 한 번 말하고, 재시도 때는 말없이 다시 기다린다)
+  const cueRef = useRef({ cover: false, wait: false, back: false });
+  const sanWithYou = zone === "city" && complete && talked && !ghost && !accepted && !ending;
+  // 소개 장면(카메라가 대자비를 바라보는 동안)과 팝업이 끝난 뒤에야 움직인다
+  useEffect(() => {
+    if (!sanWithYou || !jabiStage || cueRef.current.cover) return;
+    const iv = setInterval(() => {
+      if (gaze.intro || panelRef.current || pausedRef.current || cueRef.current.cover) return;
+      cueRef.current.cover = true;
+      sanHold.at = { ...COVER_SPOT };
+      say(sanCue.cover);
+    }, 300);
+    return () => clearInterval(iv);
+  }, [sanWithYou, jabiStage, say]);
+  // 이산 곁에 와서 처음 숨었을 때 한 줄
+  useEffect(() => {
+    if (!sanWithYou) return;
+    const iv = setInterval(() => {
+      const h = sanHold.at;
+      if (!h || cueRef.current.wait || !gaze.hiddenBy) return;
+      if (Math.hypot(player.pos.x - h.x, player.pos.z - h.z) > 2.6) return;
+      cueRef.current.wait = true;
+      say(sanCue.wait);
+    }, 300);
+    return () => clearInterval(iv);
+  }, [sanWithYou, say]);
+  // 쓰러졌다가 큰길 입구로 돌아오면: 이산은 다시 그 엄폐물 곁에서 기다린다. "돌아왔네."는 처음 한 번만
+  useEffect(() => {
+    if (!sanWithYou) return;
+    const onBackup = (e: Event) => {
+      if ((e as CustomEvent).detail !== "restore") return;
+      sanHold.at = { ...COVER_SPOT };
+      if (cueRef.current.back) return;
+      cueRef.current.back = true;
+      say(sanCue.back, 2600);
+    };
+    window.addEventListener("sanlee-backup", onBackup);
+    return () => window.removeEventListener("sanlee-backup", onBackup);
+  }, [sanWithYou, say]);
 
   const onGameWin = useCallback(() => setPanel({ kind: "choice", confirm: 1 }), []);
   const onGameLose = useCallback(() => setPanel({ kind: "choice" }), []);
@@ -552,7 +624,11 @@ export default function ExploreClient() {
   const clearScene = () => {
     clearTimeout(sceneTimer.current);
     autoWalk.to = null;
+    sanHold.at = null;
+    cueRef.current = { cover: false, wait: false, back: false };
     gaze.mood = "";
+    steppedRef.current = false;
+    setStepped(false);
     setSecondStatue(false);
     setFlash(false);
   };
@@ -725,7 +801,7 @@ export default function ExploreClient() {
     ending?.kind === "reject" && ending.step >= 3 ? "thaw" : "",
     ending?.kind === "ghost" && ending.step === 1 ? "ghost-freeze" : "",
     flash ? "final-flash" : "",
-    tracked && !ending ? "is-tracked" : "",
+    tracked && !ending && !ghost ? "is-tracked" : "",
     leaving ? "logging-out" : "",
   ].join(" ");
 
@@ -785,16 +861,15 @@ export default function ExploreClient() {
       </div>
       <div className="hud-zone">
         {t(zone === "bunker" ? ui.zoneBunker : ui.zoneCity)}
-        {tracked && !ending && <span className="tracked">{t(ui.tracked)}</span>}
+        {tracked && !ending && <span className="tracked">{t(ghost ? ui.unresolved : ui.tracked)}</span>}
       </div>
 
       {toast && <div className="toast">{toast}</div>}
       {!intro && !ending && !accepted && <SaveToast />}
-      {notice && !panel && <div className="notice">{t(notice)}</div>}
-      {unlock === "show" && !panel && (
-        <div className="unlock-toast" role="status" onClick={() => setUnlock(null)}>
-          <b>{t(ui.unlockTitle)}</b>
-          <span>{t(ui.unlockBody)}</span>
+      {notice && !panel && !sanSay && <div className="notice">{t(notice)}</div>}
+      {sanSay && !panel && !ending && (
+        <div className="notice san-say" role="status">
+          <b>{lang === "ko" ? "이산" : "San"}</b> {t(sanSay)}
         </div>
       )}
 
@@ -994,6 +1069,7 @@ export default function ExploreClient() {
               <>
             <h2>{t(checkpoint.title)}</h2>
             <p>{t(checkpoint.body)}</p>
+            <p className="choice-companion">{t(checkpoint.companion)}</p>
             {!panel.settings ? (
               <>
                 <p className="choice-san">
@@ -1052,8 +1128,9 @@ export default function ExploreClient() {
             {(checkpoint[ending.kind] as Beat[]).slice(0, ending.step + 1).map((l, i, arr) => {
               // 거부 결말이 방공호로 넘어가면 앞 장면의 글은 거둔다
               if (ending.kind === "reject" && ending.step >= 3 && i < 3) return null;
-              // 숨은 결말은 대자비의 얼굴을 가리지 않도록 마지막 두 줄만 아래에
+              // 空 결말은 앞을 가리지 않도록 마지막 두 줄만 아래에. 수락 결말은 최근 세 줄만 (숫자는 감정 장면 전에 지나간다)
               if (ending.kind === "ghost" && i < ending.step - 1) return null;
+              if (ending.kind === "accept" && i < ending.step - 2) return null;
               const last = i === (checkpoint[ending.kind] as Beat[]).length - 1;
               const cls = [last ? "final" : "", l.say ? "say" : "", l.plaque ? "plaque-line" : "", i < arr.length - 1 && !last ? "past" : ""].join(" ");
               if (l.slots)
@@ -1077,12 +1154,20 @@ export default function ExploreClient() {
                 </p>
               );
             })}
-            {ending.step >= (checkpoint[ending.kind] as Beat[]).length - 1 && (
+            {awaitingStep && (
+              <button type="button" className="btn ending-step" autoFocus onClick={takeStep}>
+                {t(ui.step)}
+                {!touch && <kbd>{t(ui.stepKeys)}</kbd>}
+              </button>
+            )}
+            {ending.step >= (checkpoint[ending.kind] as Beat[]).length && (
               <div className="ending-actions">
                 <small>{t(ending.kind === "accept" ? checkpoint.endingAccept : ending.kind === "reject" ? checkpoint.endingReject : checkpoint.endingGhost)}</small>
-                <small className="ending-found">
-                  {ending.kind !== "accept" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}
-                </small>
+                {ending.kind !== "ghost" && (
+                  <small className="ending-found">
+                    {ending.kind === "reject" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}
+                  </small>
+                )}
                 <small className="ending-credit">
                   ♪ 空 · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
                 </small>

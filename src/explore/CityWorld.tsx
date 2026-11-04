@@ -242,6 +242,8 @@ export function Islands() {
 }
 
 /* ---------- 검문소 너머 관리 탑의 섬으로 이어지는 다리 ---------- */
+// 다리 오른쪽 난간이 끊긴 자리: 하층행 승강장 계단 입구 (City.tsx의 DescentRoute와 같은 z)
+const GAP: [number, number] = [-151, -155];
 export function Bridge() {
   const z0 = EDGE.z0 - 1;
   const z1 = OVERSEER_ISLAND.z + OVERSEER_ISLAND.r - 2;
@@ -257,9 +259,16 @@ export function Bridge() {
         <boxGeometry args={[9, 1.2, len]} />
         <meshStandardMaterial color="#1c1a1e" roughness={0.6} metalness={0.6} />
       </mesh>
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * 4.4, 0.5, (z0 + z1) / 2]}>
-          <boxGeometry args={[0.15, 1, len]} />
+      {/* 난간. 오른쪽은 하층행 승강장(z -151 ~ -155) 자리만 비운다 */}
+      {(
+        [
+          [-1, z0, z1],
+          [1, z0, GAP[0]],
+          [1, GAP[1], z1],
+        ] as [number, number, number][]
+      ).map(([s, a, b]) => (
+        <mesh key={`${s}${a}`} position={[s * 4.4, 0.5, (a + b) / 2]}>
+          <boxGeometry args={[0.15, 1, a - b]} />
           <meshStandardMaterial color="#5a1418" roughness={0.6} />
         </mesh>
       ))}

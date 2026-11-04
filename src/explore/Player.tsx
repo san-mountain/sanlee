@@ -119,7 +119,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       const az = aw.z - s.z;
       const ad = Math.hypot(ax, az);
       const k = Math.min(1, dt * 2.2);
-      const want = ad > 0.6 ? Math.atan2(-ax, -az) : 0;
+      const want = ad > 0.6 ? Math.atan2(-ax, -az) : (aw.yaw ?? 0);
       let dy = want - s.yaw;
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       s.yaw += dy * k;
