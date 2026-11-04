@@ -90,41 +90,44 @@ function logKey(kind: string, e: KeyboardEvent) {
   el.textContent = [line, ...(el.textContent ?? "").split("\n")].slice(0, 8).join("\n");
 }
 
-// 모바일 점프 버튼
-// 모바일 오른쪽 아래 버튼: 평소엔 점프, 상호작용할 수 있는 것 가까이에 가면 그 행동 버튼으로 바뀐다
+// 점프는 항상 같은 위치에 남겨 두고, 대상이 있을 때만 별도의 행동 버튼을 띄운다.
+// 기존의 점프→행동 버튼 치환은 버튼을 누르는 순간 의미가 바뀌는 오조작 원인이었다.
 export function JumpButton({ action }: { action?: { label: string; color?: string; run: () => void } | null }) {
-  if (action)
-    return (
+  return (
+    <>
       <button
         type="button"
-        className="jump-btn act"
-        aria-label={action.label}
-        style={{ borderColor: action.color, color: action.color, boxShadow: `0 0 16px ${action.color ?? "#22f0ff"}66` }}
+        className="jump-btn"
+        aria-label="jump"
         onPointerDown={(e) => {
           e.preventDefault();
-          action.run();
+          e.stopPropagation();
+          input.jump = true;
+          input.jumpHeld = true;
         }}
+        onPointerUp={() => (input.jumpHeld = false)}
+        onPointerCancel={() => (input.jumpHeld = false)}
+        onPointerLeave={() => (input.jumpHeld = false)}
       >
-        <span className="act-icon">✦</span>
-        <span className="act-label">{action.label}</span>
+        ⤒
       </button>
-    );
-  return (
-    <button
-      type="button"
-      className="jump-btn"
-      aria-label="jump"
-      onPointerDown={(e) => {
-        e.preventDefault();
-        input.jump = true;
-        input.jumpHeld = true;
-      }}
-      onPointerUp={() => (input.jumpHeld = false)}
-      onPointerCancel={() => (input.jumpHeld = false)}
-      onPointerLeave={() => (input.jumpHeld = false)}
-    >
-      ⤒
-    </button>
+      {action && (
+        <button
+          type="button"
+          className="interact-btn"
+          aria-label={action.label}
+          style={{ borderColor: action.color ?? "#91d6c8", color: action.color ?? "#b4e9df" }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            action.run();
+          }}
+        >
+          <span className="interact-icon" aria-hidden>✦</span>
+          <span className="interact-label">{action.label}</span>
+        </button>
+      )}
+    </>
   );
 }
 

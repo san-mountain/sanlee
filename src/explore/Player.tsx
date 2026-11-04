@@ -7,6 +7,8 @@ import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
 import { autoWalk, gaze } from "./gaze";
 import type { Interactable, ZoneDef } from "./zones";
+import { faceRt } from "./faceRuntime";
+import { interactionProjection, clearInteractionProjection } from "./interactionProjection";
 
 const EYE = 1.65;
 const WALK = 3.4;
@@ -55,10 +57,11 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     input.look.yaw = 0;
     input.look.pitch = 0;
     onNear(null);
+    clearInteractionProjection();
   }, [zoneKey, zone, onNear, arrived]);
 
-  const fwd = useRef(new THREE.Vector3());
   const tmp = useRef(new THREE.Vector3());
+  const screenPt = useRef(new THREE.Vector3());
   const jumpBuf = useRef(0);
 
   useFrame((_, rawDt) => {
@@ -162,30 +165,53 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       camera.rotation.z += (Math.random() - 0.5) * sh * 0.25;
       camera.rotation.x += (Math.random() - 0.5) * sh * 0.15;
     }
+    // Projection uses the camera's current frame, not the previous rendered frame.
+    camera.updateMatrixWorld();
     player.pos.set(s.x, EYE, s.z);
     player.yaw = s.yaw;
     player.pitch = s.pitch;
     player.air = s.y;
 
-    // 가까이 있는 상호작용 대상 찾기 (앞쪽에 있는 것 우선)
-    camera.getWorldDirection(fwd.current);
-    fwd.current.y = 0;
-    fwd.current.normalize();
+    // 화면에 실제로 보이는 대상 중 가장 중앙에 가까운 것을 고른다.
+    // 거리만으로 고르면 A 원통을 보면서 뒤의 이산을 선택하는 식의 오작동이 생긴다.
+    // 기존 대상을 조금 우대해(히스테리시스) 걷거나 고개를 움직일 때 버튼이 깜빡이지 않게 한다.
     let best: Interactable | null = null;
     let bestScore = Infinity;
     for (const it of zone.items) {
       if (it.when && !it.when()) continue;
-      tmp.current.set(it.pos.x - s.x, 0, it.pos.z - s.z);
-      const d = tmp.current.length();
+      const d = Math.hypot(it.pos.x - s.x, it.pos.z - s.z);
       if (d > it.radius) continue;
-      const facing = d < 0.01 ? 1 : tmp.current.divideScalar(d).dot(fwd.current);
-      if (facing < 0.25 && d > 1.4) continue;
-      const score = d * (1.6 - facing);
+      screenPt.current.copy(it.pos).project(camera);
+      const { x, y, z } = screenPt.current;
+      if (z < -1 || z >= 1 || Math.abs(x) > 1.08 || Math.abs(y) > 1.08) continue;
+      const center = Math.hypot(x, y * 0.82);
+      const score = center * 2.15 + d * 0.12 + (s.near === it.id ? 0 : 0.26);
       if (score < bestScore) {
         bestScore = score;
         best = it;
       }
     }
+
+    // HUD 연결선의 종점은 3D 장치 중심이 아닌, 누르면 실제 반응하는 부분을 가리킨다.
+    // A의 경우 조준 원통 또는 선택 레버의 기존 투영 좌표를 공유한다.
+    interactionProjection.id = best?.id ?? null;
+    if (best) {
+      let screen: [number, number] | undefined;
+      if (best.id === "face-machine") screen = faceRt.screen[`drum-${faceRt.aim}`];
+      else if (best.id === "face-std") screen = faceRt.screen.std;
+      else if (best.id === "face-keep") screen = faceRt.screen.keep;
+      if (screen && screen[0] >= 0 && screen[0] <= 1 && screen[1] >= 0 && screen[1] <= 1) {
+        interactionProjection.x = screen[0];
+        interactionProjection.y = screen[1];
+        interactionProjection.visible = true;
+      } else {
+        screenPt.current.copy(best.pos).project(camera);
+        interactionProjection.x = (screenPt.current.x + 1) / 2;
+        interactionProjection.y = (1 - screenPt.current.y) / 2;
+        interactionProjection.visible = Math.abs(screenPt.current.x) < 0.94 && Math.abs(screenPt.current.y) < 0.94 && screenPt.current.z < 1;
+      }
+    } else clearInteractionProjection();
+
     const id = best?.id ?? null;
     if (id !== s.near) {
       s.near = id;

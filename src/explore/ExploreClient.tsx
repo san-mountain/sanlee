@@ -34,6 +34,7 @@ import { auditRt, resetAuditRt, setAuditPhase } from "./auditRuntime";
 import { AUDIT_GRID, AUDIT_MACHINE, AUDIT_SCREEN, GUARANTOR, auditPoint } from "./zones";
 import SealPanel from "./SealPanel";
 import PauseTest from "./PauseTest";
+import InteractionGuide from "./InteractionGuide";
 import { TEST_KEY, applyRestart, testStart } from "./puzzleTest";
 import type { AuditView } from "./World";
 import { playLines } from "./dialogue";
@@ -159,7 +160,6 @@ export default function ExploreClient() {
   const auditRecs = useRef<ActivityResult["status"][]>([]);
   // 도입, 조작판으로 다가가고 물러나는 전환, 원본 판독 뒤의 마무리는 연출이다 (걸을 수 없다)
   const auditCine = auditPhase === "intro" || auditPhase === "focus" || auditPhase === "reveal";
-  const startIntroRef = useRef<() => void>(() => {});
   const cine = faceCine || auditCine;
   const [visited, setVisited] = useState<SectionId[]>([]);
   const [toast, setToast] = useState<string | null>(null);
@@ -352,8 +352,8 @@ export default function ExploreClient() {
     gaze.lookAt = null;
     duckBgm(false);
     toAuditPhase(restPhase(faceRef.current, auditRef.current));
-    if (auditRt.phase === "ready" && !auditRef.current.intro) later(700, () => startIntroRef.current());
-  }, [toPhase, toAuditPhase, later]);
+    // A가 끝나도 강제로 B로 시선을 돌리지 않는다. 플레이어가 기록 장치를 찾아 직접 열면 도입한다.
+  }, [toPhase, toAuditPhase]);
   // 이산이 고개를 든다: 카메라가 천천히 이산을 바라보고, 두세 마디 뒤 시제품의 끝 카드
   const startWake = useCallback(
     (method: FaceMethod) => {
@@ -411,7 +411,8 @@ export default function ExploreClient() {
     duckBgm(false);
   }, []);
 
-  // 도입 (약 12초): 퍼즐 A 직후, 또는 아직 못 본 채로 장치에 다가갔을 때 한 번
+  // B 장치를 직접 열었을 때만: 추적 쿠키 동의 기록의 모순을 보여주고
+  // 원본 보관함을 짧게 비춘 뒤, 별도의 두 번째 조작 없이 바로 2D 퍼즐로 이어진다.
   const startIntro = useCallback(() => {
     if (auditRt.phase !== "ready" || auditRef.current.intro) return;
     toAuditPhase("intro");
@@ -421,38 +422,30 @@ export default function ExploreClient() {
     duckBgm(true);
     gaze.frozen = true;
     gaze.lookAt = officialPoint();
-    later(700, () =>
-      playLines(
-        auditScenes.official,
-        lineEvents,
-        () => {
-          // 장면 2: 이산을 본다
-          auditRt.focus = null;
-          gaze.lookAt = SAN_FACE;
-          later(450, () =>
-            playLines(auditScenes.ask, lineEvents, () => {
-              // 장면 3: 봉인된 원본 카세트와 오른쪽 배출구
-              gaze.lookAt = sealPoint();
-              auditRt.focus = "sealed";
-              sfx.sealBump();
-              later(750, () =>
-                playLines(auditScenes.sealed, lineEvents, () =>
-                  later(250, () => {
-                    auditRt.focus = null;
-                    updateAudit(seeIntro(auditRef.current));
-                    toAuditPhase("ready");
-                    releaseCamera();
-                  })
-                )
-              );
+    later(650, () =>
+      playLines(auditScenes.official, lineEvents, () =>
+        // 이산의 대사 중에도 기록 화면에 시선을 두어 '거부 vs 동의'를 읽을 수 있게 한다.
+        playLines(auditScenes.ask, lineEvents, () => {
+          gaze.lookAt = sealPoint();
+          auditRt.focus = "sealed";
+          sfx.sealBump();
+          later(600, () =>
+            playLines(auditScenes.sealed, lineEvents, () => {
+              updateAudit(seeIntro(auditRef.current));
+              toAuditPhase("focus");
+              auditRt.focus = null;
+              sfx.sealGrab();
+              later(500, () => {
+                if (auditRt.phase !== "focus") return;
+                toAuditPhase("puzzle");
+                setPanel({ kind: "seal" });
+              });
             })
           );
-        },
-        250
+        })
       )
     );
-  }, [toAuditPhase, later, lineEvents, updateAudit, releaseCamera]);
-  startIntroRef.current = startIntro;
+  }, [toAuditPhase, later, lineEvents, updateAudit]);
 
   // 장치에 다가간다: 카메라가 봉인 격자로 다가가고 2D 조작판이 열린다 (이동·점프·조이스틱은 멈춘다)
   const openSeal = useCallback(() => {
@@ -566,15 +559,6 @@ export default function ExploreClient() {
     });
   }, [later, lineEvents, finishAuditFlow]);
 
-  // 도입을 아직 못 본 채로(새로고침·B부터 다시) 장치 곁에 서면 도입부터
-  useEffect(() => {
-    if (auditPhase !== "ready" || audit.intro || zone !== "bunker") return;
-    const iv = setInterval(() => {
-      if (!activeRef.current) return;
-      if (Math.hypot(AUDIT_MACHINE.pos[0] - player.pos.x, AUDIT_MACHINE.pos[2] - player.pos.z) < 4) startIntroRef.current();
-    }, 300);
-    return () => clearInterval(iv);
-  }, [auditPhase, audit.intro, zone]);
   useEffect(() => () => faceTimers.current.forEach(clearTimeout), []);
 
   const interact = useCallback(
@@ -1235,7 +1219,13 @@ export default function ExploreClient() {
   const sanAwake = complete || (!face.legacy && !!face.method && facePhase === "done");
   // 퍼즐 A 장치는 부품 이름표·조작 안내를 띄우지 않는다 (모바일 행동 버튼만 짧은 보조 라벨). B 장치는 다른 물건처럼 아래 프롬프트 하나
   const puzzlePart = near?.kind === "face";
-  const verb = near ? (near.kind === "audit" ? (near.id === "audit-machine" ? auditUi.use : ui.view) : near.kind === "face" ? { ko: "조작", en: "Use" } : near.kind === "bell" ? { ko: "종 치기", en: "Ring" } : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
+  const verb = near ? (
+    near.kind === "audit" ? (near.id === "audit-machine" ? { ko: "기록 열기", en: "Open records" } : ui.view)
+    : near.kind === "face" ? (near.id === "face-machine" ? { ko: "원통 돌리기", en: "Rotate drum" } : near.id === "face-std" ? { ko: "표준 적용", en: "Apply standard" } : { ko: "원본 유지", en: "Keep original" })
+    : near.kind === "bell" ? { ko: "종 울리기", en: "Ring bell" }
+    : near.id.startsWith("scope") || near.kind === "painting" ? ui.view
+    : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open
+  ) : null;
   // 바라보는 대상의 이름 · 동사. 두 버튼은 조준한 쪽 이름으로
   const nearText = near && verb
     ? puzzlePart
@@ -1339,12 +1329,13 @@ export default function ExploreClient() {
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
       {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
       {active && touch && <Joystick />}
+      <InteractionGuide active={active && touch && !cine && !!near} color={nearColor} />
       {active && touch && (
         <JumpButton
           action={
             near && verb && !cine
               ? {
-                  label: nearText,
+                  label: t(verb),
                   color: nearColor,
                   run: () => interact(near),
                 }

@@ -641,20 +641,20 @@ export const faceUi = {
 };
 
 // ---------------- 퍼즐 B 「봉인된 3초」 v0.7 ----------------
-// 도입: 공식 기록 → 이산의 의문과 부탁 → 봉인된 원본. 퍼즐(2D 봉인 격자) 도중에는 말이 없다.
-// 원본이 판독된 뒤 이산의 두 마디와 보증 장치. 정답('모두 거부')은 퍼즐을 풀기 전에는 어디에도 나오지 않는다.
+// 도입: 감시 쿠키 동의 기록과 이산의 실제 거부가 충돌한다. 선택의 내용은 처음부터 분명하게 한다.
+// 반전은 거부 여부가 아니라, 대자비가 거부를 동의로 강제 정정했다는 증거다.
 export const auditLines = {
   // 장면 1: 장치에 불이 들어오고 공식 기록이 뜬다
-  official: { id: "b.archive.official", speaker: "archive", ms: 2200, ko: "공식 기록 · 14:02:01 — 모두 동의", en: "Official record · 14:02:01 — ACCEPT ALL" },
-  consented: { id: "b.san.consented", speaker: "san", ms: 2200, ko: "……내가 동의했다고?", en: "...I consented?" },
-  // 장면 2: 이산은 마지막 순간을 기억하지 못한다
-  ask: { id: "b.san.ask", speaker: "san", ms: 3400, ko: "마지막 순간이 기억나지 않아. 원본을 확인해 줘.", en: "I can't remember the last moment. Check the original for me." },
+  official: { id: "b.archive.official", speaker: "archive", ms: 2400, ko: "시민 활동 추적 쿠키 · 14:02:01 — 모두 동의", en: "Activity tracking cookies · 14:02:01 — ACCEPT ALL" },
+  consented: { id: "b.san.consented", speaker: "san", ms: 2300, ko: "뭐? 난 감시 쿠키를 분명 거부했는데.", en: "What? I clearly rejected those tracking cookies." },
+  // 장면 2: 이산은 거부를 기억하고 있다. 공식 동의 기록과 충돌하므로 원본을 찾는다.
+  ask: { id: "b.san.ask", speaker: "san", ms: 3400, ko: "내 거부가 동의로 기록됐어. 봉인된 원본을 확인해 줄래?", en: "They recorded my refusal as consent. Can you check the sealed original?" },
   // 장면 3: 봉인판 뒤의 붉은 원본 카세트
-  sealed: { id: "b.archive.sealed", speaker: "archive", ms: 2200, ko: "원본 입력 기록 — 봉인됨", en: "Original input record — SEALED" },
+  sealed: { id: "b.archive.sealed", speaker: "archive", ms: 2100, ko: "수정 전 원본 기록 — 봉인됨", en: "Pre-revision original record — SEALED" },
   forced: { id: "b.city.forced-correction", speaker: "city", ms: 3000, ko: "시민 보호를 위해 거부 응답은 동의로 정정됩니다.", en: "For citizen protection, refusals are corrected to consent." },
-  refused: { id: "b.san.refused", speaker: "san", ms: 3600, ko: "……내가 거부했었구나.", en: "...So I did refuse." },
-  stillHere: { id: "b.san.still-here", speaker: "san", ms: 4200, ko: "그런데 난 왜 아직 여기 있는 거지?", en: "Then why am I still stuck here?" },
-  guarantor: { id: "b.guarantor.required", speaker: "guarantor", ms: 3800, ko: "보증인 등록이 필요합니다.", en: "Guarantor registration required." },
+  refused: { id: "b.san.refused", speaker: "san", ms: 3900, ko: "역시…… 내 거부를 동의로 바꿔 놓은 거야.", en: "I knew it... They changed my refusal to consent." },
+  stillHere: { id: "b.san.still-here", speaker: "san", ms: 4500, ko: "동의 기록만 바꿔 놓고, 활동 기록이 없다고 날 멈춘 거야.", en: "They changed the consent record, but still froze me for having no activity data." },
+  guarantor: { id: "b.guarantor.required", speaker: "guarantor", ms: 3800, ko: "활동 신호 없음. 보증인 등록이 필요합니다.", en: "No activity signal. Guarantor registration required." },
   after: { id: "b.san.after", speaker: "san", ms: 5000, ko: "난 거부했어. 그런데 도시의 기록에선 아직도 동의한 시민이야.", en: "I refused. But in the city's records, I'm still a citizen who consented." },
 } satisfies Record<string, Line>;
 
@@ -670,21 +670,21 @@ export const auditScenes = {
 
 // 말하지 않는 장치 문구
 export const auditUi = {
-  quest: { ko: "이산의 마지막 기록을 확인하십시오", en: "Check San's last record" },
+  quest: { ko: "조작된 쿠키 동의 기록 확인", en: "Investigate the altered cookie-consent record" },
   machine: { ko: "기록 보관 장치", en: "Record archive" },
   // PC 프롬프트·모바일 행동 버튼의 보조 라벨
   use: { ko: "조작판 보기", en: "Open panel" },
-  officialTitle: { ko: "공식 기록", en: "OFFICIAL RECORD" },
+  officialTitle: { ko: "추적 쿠키 동의 기록", en: "TRACKING COOKIE CONSENT" },
   correctionStatus: { ko: "대자비 · 자동 정정 완료", en: "DAEJABI · AUTO-CORRECTED" },
-  sealedSign: { ko: "원본 입력 기록 — 봉인됨", en: "ORIGINAL INPUT — SEALED" },
+  sealedSign: { ko: "수정 전 원본 — 봉인됨", en: "PRE-REVISION ORIGINAL — SEALED" },
   readSign: { ko: "원본 입력 기록 — 판독됨", en: "ORIGINAL INPUT — READ" },
   guarantorSign: { ko: "보증인 등록", en: "GUARANTOR" },
   guarantorLook: { ko: "보증 장치는 아직 아무 대답도 하지 않는다. 다음 이야기는 준비 중입니다.", en: "The guarantor unit gives no answer yet. The next part is in progress." },
   endTag: { ko: "시제품 · 퍼즐 B 끝", en: "PROTOTYPE · PUZZLE B COMPLETE" },
   endTitle: { ko: "보증인 등록이 필요합니다", en: "Guarantor registration required" },
   endBody: {
-    ko: "이산은 모두 거부했습니다. 그러나 대자비는 그의 거부를 강제로 '모두 동의'로 정정했습니다. 원본을 찾아도 공식 기록은 바뀌지 않으며, 이산의 다리는 여전히 굳어 있습니다.",
-    en: "San rejected all. Daejabi forcibly changed his refusal to 'Accept all'. Recovering the original does not change the official record, and his legs remain stone.",
+    ko: "이산은 시민 활동 추적 쿠키를 거부했습니다. 대자비는 이를 강제로 '모두 동의'로 정정했지만, 실제 활동 신호는 생기지 않았습니다. 도시는 여전히 그를 정지 시민으로 취급합니다.",
+    en: "San rejected activity-tracking cookies. Daejabi forcibly rewrote that choice as 'Accept all', but no actual activity signal was produced. The city still treats him as suspended.",
   },
   endNext: { ko: "다음 이야기는 준비 중입니다.", en: "The next part is in progress." },
   recProtected: { ko: "범종의 보호로 원본을 꺼낸 행동은 시민 활동 기록에 남지 않았습니다.", en: "Under the bell's protection, taking out the original left no citizen activity record." },
@@ -700,11 +700,11 @@ export const sealUi = {
   exit: { ko: "나가기", en: "Leave" },
   cassette: { ko: "원본", en: "ORIGINAL" },
   reading: { ko: "원본 판독 중", en: "Reading original" },
-  originalTag: { ko: "실제 입력 · 원본", en: "ACTUAL INPUT · ORIGINAL" },
+  originalTag: { ko: "활동 추적 쿠키 · 실제 입력", en: "TRACKING COOKIES · ACTUAL INPUT" },
   officialTag: { ko: "도시 공식 기록", en: "CITY OFFICIAL RECORD" },
   forcedRewrite: { ko: "대자비 강제 정정", en: "DAEJABI FORCED CORRECTION" },
   officialValue: { ko: "모두 동의", en: "ACCEPT ALL" },
-  discrepancy: { ko: "거부했지만, 도시는 동의로 기록했다.", en: "He refused. The city recorded consent." },
+  discrepancy: { ko: "추적 쿠키를 거부했지만, 대자비는 동의로 기록했다.", en: "He rejected tracking cookies. Daejabi recorded consent." },
 };
 
 // 개발·검수용 재시작 (?debug에서만 설정창에 보인다)
