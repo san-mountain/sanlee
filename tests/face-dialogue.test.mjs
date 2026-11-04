@@ -30,3 +30,49 @@ test("a scene shows each subtitle in order and moves on only after the last one 
   assert.equal(done, 1);
   assert.equal(clock, faceScenes.wake.exception.reduce((s, l) => s + l.ms, 0));
 });
+
+
+test("manual story dialogue holds every line until the player explicitly advances it", () => {
+  const shown = [];
+  const timers = [];
+  let next = null;
+  let finished = 0;
+  const scene = faceScenes.wake.exception;
+  playLines(scene, {
+    show: (line) => shown.push(line?.id ?? null),
+    later: (ms, fn) => timers.push([ms, fn]),
+    waitForAdvance: (fn) => { next = fn; },
+  }, () => finished++, 0, "manual");
+  assert.deepEqual(shown, [scene[0].id]);
+  assert.equal(timers.length, 0, "manual lines do not auto-advance with a timer");
+  assert.equal(finished, 0);
+  for (const [i, line] of scene.entries()) {
+    assert.equal(shown.at(-1), line.id);
+    assert.equal(typeof next, "function");
+    next();
+    if (i < scene.length - 1) assert.equal(shown.at(-1), scene[i + 1].id);
+  }
+  assert.equal(next, null);
+  assert.equal(finished, 1);
+  assert.equal(shown.at(-1), null);
+});
+
+test("manual lines respect an intentional dramatic pause between two spoken lines", () => {
+  const queue = [];
+  let next = null;
+  let finished = 0;
+  const scene = faceScenes.wake.standard.slice(0, 2);
+  playLines(scene, {
+    show: () => {},
+    later: (ms, fn) => queue.push([ms, fn]),
+    waitForAdvance: (fn) => { next = fn; },
+  }, () => finished++, 500, "manual");
+  next();
+  assert.equal(next, null);
+  assert.equal(queue[0][0], 500);
+  assert.equal(finished, 0);
+  queue.shift()[1]();
+  assert.equal(typeof next, "function");
+  next();
+  assert.equal(finished, 1);
+});
