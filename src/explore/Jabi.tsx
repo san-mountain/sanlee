@@ -83,6 +83,21 @@ const beam = {
 };
 const scorch: { x: number; z: number; born: number }[] = [];
 let lockT = 0;
+
+/** Abort an in-flight laser when leaving/pausing the independent story prototype. */
+export function stopGazeCombat() {
+  beam.on = false;
+  beam.t = 0;
+  beam.blocked = -1;
+  lockT = 0;
+  coolT = 0;
+  gaze.meter = 0;
+  gaze.state = "idle";
+  gaze.seen = false;
+  gaze.shake = 0;
+  gaze.dead = 0;
+  gaze.frozen = false;
+}
 const aimAt = new THREE.Vector3();
 // 레이저가 긁고 지나갈 길 (눈이 붉어질 때 정해진다). 발사 0.3초 전부터 바닥에 가늘게 미리 보인다
 const path = { start: new THREE.Vector3(), end: new THREE.Vector3() };

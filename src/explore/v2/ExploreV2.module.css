@@ -1,0 +1,45 @@
+.root { color: #eef6f6; background: #07090e; font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); }
+.top { position: absolute; z-index: 28; top: max(14px, env(safe-area-inset-top)); left: max(15px, env(safe-area-inset-left)); right: max(15px, env(safe-area-inset-right)); display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none; font-size: 12px; letter-spacing: .04em; }
+.top a, .top button, .topRight { pointer-events: auto; }
+.top a { color: #dcebed; text-decoration: none; }
+.top strong { text-align: center; font-size: 13px; font-weight: 650; }
+.top strong span { color: #86a5ad; font-weight: 400; margin-left: 5px; font-size: 10px; }
+.topRight { display: flex; align-items: center; gap: 10px; }
+.topRight button { border: 1px solid #55707b; border-radius: 6px; padding: 6px 10px; background: #0b171fc7; color: white; cursor: pointer; }
+.objective { position: absolute; z-index: 22; top: calc(max(14px, env(safe-area-inset-top)) + 43px); left: max(15px, env(safe-area-inset-left)); max-width: min(620px, calc(100% - 30px)); background: #0b1721d9; color: #e9f1f0; border: 1px solid #2b4d59; padding: 9px 13px; border-radius: 8px; font-size: 12px; line-height: 1.55; pointer-events: none; }
+.objective span { display: block; color: #88cbd0; font-size: 9px; letter-spacing: .13em; margin-bottom: 2px; }
+.overlay { position: absolute; z-index: 100; inset: 0; display: grid; place-items: center; padding: 24px max(16px, env(safe-area-inset-right)) 24px max(16px, env(safe-area-inset-left)); background: #02070bc7; overflow-y: auto; }
+.card { box-sizing: border-box; width: min(100%, 520px); max-height: calc(100dvh - 48px); overflow-y: auto; padding: clamp(22px, 5vw, 38px); border: 1px solid #5f8791; border-radius: 12px; background: #0a131df5; box-shadow: 0 18px 70px #0009; color: #eff6f6; }
+.card h1 { font-size: clamp(27px, 7vw, 48px); line-height: 1.1; margin: 10px 0 22px; letter-spacing: -.03em; }
+.card h2 { font-size: clamp(20px, 5vw, 28px); line-height: 1.3; margin: 12px 0 20px; }
+.card p { font-size: 14px; line-height: 1.8; margin: 12px 0; color: #d7e2e5; white-space: pre-wrap; }
+.eyebrow { font-size: 11px; color: #86d4d9; letter-spacing: .12em; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.actions > button, .actions > a, .card > button { flex: 1 1 auto; font-family: inherit; font-size: 12px; line-height: 1.4; border-radius: 7px; padding: 12px 15px; text-decoration: none; cursor: pointer; text-align: center; }
+.primary { display: inline-block; background: #b8f2f0; color: #0e2529; border: 1px solid #b8f2f0; font-weight: 700; }
+.secondary { display: inline-block; background: #182c35; color: #e4f0f1; border: 1px solid #52727a; }
+.danger { display: inline-block; background: #67212a; color: #fff1f1; border: 1px solid #f18593; }
+.card > .primary { margin-top: 16px; }
+.inventory ul { list-style: none; padding: 0; margin: 20px 0; border-top: 1px solid #38505b; }
+.inventory li { border-bottom: 1px solid #38505b; font-size: 13px; padding: 10px 2px; }
+.inventory li::before { content: "▸"; color: #ff9da2; margin-right: 12px; }
+.prompt { position: absolute; bottom: max(70px, calc(env(safe-area-inset-bottom) + 70px)); left: 50%; transform: translateX(-50%); z-index: 25; max-width: calc(100% - 32px); background: #0a1720dd; border: 1px solid #7cbcc2; color: #e9f6f5; border-radius: 8px; padding: 10px 17px; cursor: pointer; font: 12px/1.4 inherit; white-space: nowrap; }
+.hint { position: absolute; bottom: max(30px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 16; color: #b8d5dc; font-size: 11px; background: #070e14a8; padding: 8px 12px; text-align: center; border-radius: 6px; pointer-events: none; white-space: nowrap; }
+.gaze { position: absolute; top: calc(max(14px, env(safe-area-inset-top)) + 104px); left: 50%; transform: translateX(-50%); z-index: 30; width: min(330px, calc(100% - 44px)); padding: 11px 14px; background: #1b0914c9; border: 1px solid #8c4056; border-radius: 8px; text-align: center; pointer-events: none; }
+.gaze span { display: block; color: #ffaebd; font-size: 11px; letter-spacing: .04em; }
+.gaze small { color: #fac8ce; font-size: 10px; }
+.gaugeTrack { height: 5px; background: #542531; margin: 10px 0; border-radius: 4px; overflow: hidden; }
+.gaugeTrack > div { height: 100%; background: #ff4764; transition: width .09s linear; }
+@media (max-width: 680px) {
+  .top { font-size: 10px; }
+  .top strong { font-size: 11px; }
+  .top strong span { display: none; }
+  .objective { max-width: calc(100% - 30px); font-size: 11px; }
+  .card { padding: 22px; }
+  .card p { font-size: 13px; }
+  .hint { bottom: max(16px, env(safe-area-inset-bottom)); font-size: 10px; max-width: 200px; white-space: normal; }
+  .prompt { bottom: max(150px, calc(env(safe-area-inset-bottom) + 150px)); }
+  .gaze { top: calc(max(14px, env(safe-area-inset-top)) + 114px); }
+}
+
+.dialogCounter { margin-top: 14px; text-align: right; color: #80b6bb; font-size: 10px; letter-spacing: .13em; }

@@ -251,9 +251,9 @@ export default function AuditMachine({ lang, onTap, solved }: AuditMachineProps)
 }
 
 // 받침대 뒤의 보증 장치 (퍼즐 C 예고). 외형과 표시등뿐이다
-export function Guarantor({ lang, litAt }: { lang: Lang; litAt: number }) {
+export function Guarantor({ lang, litAt, labArchive = false }: { lang: Lang; litAt: number; labArchive?: boolean }) {
   const ko = lang === "ko";
-  const sign = useTex(() => signTexture([[ko ? auditUi.guarantorSign.ko : auditUi.guarantorSign.en, 1]], { color: "#ffd27a", bg: "#1a120a", w: 512, h: 128, glow: true }), [ko]);
+  const sign = useTex(() => signTexture([[labArchive ? (ko ? "기억 대조" : "COMPARE") : (ko ? auditUi.guarantorSign.ko : auditUi.guarantorSign.en), 1]], { color: "#ffd27a", bg: "#1a120a", w: 512, h: 128, glow: true }), [ko, labArchive]);
   const lamp = useRef<THREE.MeshStandardMaterial>(null);
   const light = useRef<THREE.PointLight>(null);
   const signMat = useRef<THREE.MeshBasicMaterial>(null);
