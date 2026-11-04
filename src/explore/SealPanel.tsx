@@ -16,8 +16,10 @@ type Drag = { id: string; pointer: number; start: number; at: number; min: numbe
 const EJECT_MS = 0;
 const STOP_MS = 750;
 const READ_MS = 1350;
-const RESULT_MS = 2900;
-const DONE_MS = 5600;
+const RESULT_MS = 2600;
+// Give players time to read the *difference* between the original and the city's
+// forcibly rewritten official record, without making them click "continue".
+const DONE_MS = 7350;
 
 export default function SealPanel({
   lang,
@@ -48,7 +50,7 @@ export default function SealPanel({
   const [drag, setDrag] = useState<Drag | null>(null);
   const dragRef = useRef<Drag | null>(null);
   const [bump, setBump] = useState<{ id: string; dir: number } | null>(null);
-  // 완료 연출 단계: 0 없음 → 1 배출 → 2 봉인 정지 → 3 판독 중 → 4 원본 기록
+  // 완료 연출 단계: 0 없음 → 1 배출 → 2 봉인 정지 → 3 판독 중 → 4 원본 vs 도시 공식 기록
   const [stage, setStage] = useState(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const doneRef = useRef(onRevealDone);
@@ -135,6 +137,16 @@ export default function SealPanel({
       if (onMove(p.id, to)) sfx.sealSlide(Math.abs(to - d.at));
     } else if (d.moved) sfx.sealSettle();
   };
+  // Touch interruptions (screen rotation, app switch, OS gestures) are not valid moves.
+  // Previously onPointerCancel and unexpected capture loss called end(), which could
+  // commit a half-completed slide and corrupt the player's intended puzzle position.
+  const cancel = (e: React.PointerEvent, p: Piece) => {
+    const d = dragRef.current;
+    if (!d || d.pointer !== e.pointerId || d.id !== p.id) return;
+    dragRef.current = null;
+    setDrag(null);
+    if (d.moved) sfx.sealSettle();
+  };
 
   const cells = useMemo(() => Array.from({ length: SIZE * SIZE }, (_, i) => i), []);
   const pct = (n: number) => `${(n * 100) / SIZE}%`;
@@ -192,8 +204,8 @@ export default function SealPanel({
                   onPointerDown={(e) => begin(e, p)}
                   onPointerMove={(e) => move(e, p)}
                   onPointerUp={(e) => end(e, p)}
-                  onPointerCancel={(e) => end(e, p)}
-                  onLostPointerCapture={(e) => end(e, p)}
+                  onPointerCancel={(e) => cancel(e, p)}
+                  onLostPointerCapture={(e) => cancel(e, p)}
                 >
                   <span className="seal-face">
                     {p.id === CASSETTE ? (
@@ -222,12 +234,22 @@ export default function SealPanel({
             {stage === 3 ? (
               <span className="seal-scan">{L(sealUi.reading)}</span>
             ) : (
-              <>
-                <span className="seal-read-tag">{L(sealUi.originalTag)}</span>
-                <strong>
-                  {RECORD_TIME} — {L(ORIGINAL_RECORD)}
-                </strong>
-              </>
+              <div className="seal-record-compare">
+                <span className="seal-read-time">{RECORD_TIME}</span>
+                <div className="seal-record-row is-original">
+                  <span className="seal-read-tag">{L(sealUi.originalTag)}</span>
+                  <strong>✕ {L(ORIGINAL_RECORD)}</strong>
+                </div>
+                <div className="seal-rewrite" aria-label={L(sealUi.forcedRewrite)}>
+                  <span aria-hidden="true">↓</span>
+                  <span>{L(sealUi.forcedRewrite)}</span>
+                </div>
+                <div className="seal-record-row is-official">
+                  <span className="seal-read-tag">{L(sealUi.officialTag)}</span>
+                  <strong>✓ {L(sealUi.officialValue)}</strong>
+                </div>
+                <p className="seal-read-message">{L(sealUi.discrepancy)}</p>
+              </div>
             )}
           </div>
         )}
