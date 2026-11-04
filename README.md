@@ -21,7 +21,10 @@ Default scope: `src/explore/v3/chase/` and `src/app/deleteseoul-lab/chase/page.t
 | `ChaseGame.tsx` | Screens, HUD, sfx wiring, quality, debug |
 | `Scene.tsx` | R3F scene; reads game state only |
 | `logic.ts` | Pure game rules and state (`stepGame`), detection tuning |
-| `nav.ts` | San's collision radius, node graph, pathfinding, patrol prediction |
+| `nav.ts` | San's collision radius, node graph, pathfinding, patrol prediction, floor height |
+| `underground.ts` | ACT 4 underground layout, interactions and progress |
+| `Underground.tsx` | ACT 4 underground 3D space |
+| `Reader.tsx` | ACT 4 inspection panels |
 | `level.ts` | Map geometry, lights, cover, checkpoints |
 | `input.ts` | Keyboard, mouse and touch input for this route only |
 | `chase.module.css` | HUD styles |

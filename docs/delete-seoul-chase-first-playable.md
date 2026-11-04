@@ -3,10 +3,17 @@
 Route: `/deleteseoul-lab/chase` (unlisted, `noindex`). Code: `src/explore/v3/chase/` and `src/app/deleteseoul-lab/chase/page.tsx`.
 The published `/deleteseoul` and its input code are not touched by this work.
 
-## Scope
-Implemented: intro → first meeting → zone power → chase → subway stairs. Reaching the stairs is the **end of the implemented section**, not the story's ending.
+## Narrative baseline
+DELETE SEOUL (2087 Seoul, browser first-person 3D, target 10–15 min, unmeasured) has three beings: the real artist San Lee (made the work in 2026), the NPC San (based on the artist, not the same person, trying to leave his assigned role and route), and the player (a 2026 visitor using the developer's restore authority). 대자비 is the system that detects anything off its assigned role/route and returns it to normal.
 
-Not implemented (later story): the underground archive with 2026 development records and San's original NPC role, the reveal of San's identity, and the final choice with its endings.
+Core causality: the player believes they are fixing faults, but each restoration narrows San's freedom. This is shown through actions and their visible effect on San, not explained.
+
+Acts: 1 connection (alone, local power, San revealed) · 2 restoration and travelling together (shutter, zone power wakes the watch network) · 3 chase to the subway stairs · 4 discovery underground (this build) · 5 escape and choice (not built).
+
+## Scope
+Implemented: ACT 1 → ACT 4, ending just before the ACT 5 choice. The completion screen marks the end of the implemented section; nothing is chosen, San is not reset, and no ending is shown.
+
+Not implemented (ACT 5): the choice itself, the normal exit (reset San, he speaks the stored guide line), the bypass escape through the final danger section to the unfinished edge of the world, and both endings.
 
 ## Flow
 Lines and labels live in `logic.ts` and `Scene.tsx`; only their intent is listed here.
@@ -20,9 +27,16 @@ Lines and labels live in `logic.ts` and `Scene.tsx`; only their intent is listed
    - L1: one readable sweep across the street with sure cover north of the bus shelter. San hides first to demonstrate.
    - L2: one sweep across two routes (van to the west, kiosk to the east); each route has a gap while the light is on the other side. Between L1 and L2 is a band no light reaches.
    - Gate (L3): the giant light, mounted beside the gate so the closed gate's occlusion matches the view, passes the panel periodically. The player alternates between the shade east of the truck and the panel (3.2 s cumulative hold).
-8. **escape** — Through the gate to the Euljiro 3-ga exit 2 stairs → completion screen marked as the end of the implemented section.
+8. **escape** — Through the gate to the Euljiro 3-ga exit 2 stairs. Reaching the bottom switches to ACT 4: surface detection and failure stop, the meter resets.
+9. **under (ACT 4)** — `underground.ts`, `Underground.tsx`, `Reader.tsx`:
+   - Secure: close the manual door at the stair bottom. A request is kept; the door only moves while both the player and San are inside, and pauses if either nears the frame. Closing blocks movement, leaves a low hum, San says one short line.
+   - The normal exit is dark. The **route diagram** (title 동선 점검) schematically shows the shutter, the junction waiting point, the street holds (from the real `SAN_HIDES`), the stair entry and the guide route, and marks the exit circuit at maintenance terminal M-3.
+   - The terminal shows a **2026 development record** (different format): NPC id, basis, role, destination, assigned route and the stored guide line, which is then replayed as a "stored guide record" subtitle. San briefly walks into the open bypass corridor and back.
+   - **Restore the exit circuit** at the same terminal. The same state (`act4.restored`) powers the exit and turns on the guide-route limit line at the bypass mouth. San tries to step in again, stops at the line (flash + sound), crouches briefly, steps back and says one line. The camera is only nudged toward him. The limit applies to the guide entity only; the visitor can still pass, and the sign says so.
+   - The **exit panel** shows that the guide entity is abnormal, that opening requires its reset, the first line after reset, and that the current companionship is not preserved. San reacts in two short lines, looks at the exit, then at the bypass.
+   - The bypass sign reads "outside the guide route, no route data, no safety"; a zone-control breaker at its end is the ACT 5 clue. After both paths are seen, the end screen appears (input released).
 
-Failure retries from a checkpoint (chase start / after the gate). The intro and first meeting never repeat; 처음부터 restarts from the intro. San's memory line plays only on the first retry.
+Failure retries from a checkpoint (chase start / after the gate). The intro and first meeting never repeat; 처음부터 restarts from the intro. San's memory line plays only on the first retry. ACT 4 has no failure and no new checkpoint; state is session memory only.
 
 ## Design intent: detection, cover, San
 Tuning values are constants at the top of the detection section in `logic.ts` (`RATE_CORE`, `RATE_EDGE`, `TRACK_AFTER`, `DECAY_*`, `LOSE_AFTER`, `SEARCH_TIME`, `GRACE`). Initial targets, not verified by play:
@@ -40,7 +54,10 @@ Tuning values are constants at the top of the detection section in `logic.ts` (`
 - `input.ts` — the only input system for this route (keyboard, mouse + pointer lock, touch). Independent of `src/explore/input.ts`.
 - `level.ts` — geometry and numbers shared by rules and rendering.
 - `nav.ts` — San's collision radius, node graph (closed doors cut links), A* path, patrol prediction.
-- `logic.ts` — pure TS state and `stepGame()`. All timers use simulation time, so pause freezes everything.
+- `logic.ts` — pure TS state and `stepGame()`. All timers use simulation time, so pause freezes everything. Picks the surface or underground collision set by floor height.
+- `underground.ts` — ACT 4 layout, collision walls, interactions, progress flags and San's scripted underground walk (no generic AI).
+- `Underground.tsx` — ACT 4 3D space (one work light, one exit light after restore).
+- `Reader.tsx` — ACT 4 inspection panels (diagram, record, exit). Input is disabled and pointer lock released while open; closing restores it.
 - `Scene.tsx` — R3F scene; reads only `gameRef`.
 - `ChaseGame.tsx` — screens, HUD (React state ≤10×/s, only on change), sfx, quality, debug.
 - Shared code from `src/explore/`: `sfx.ts`, `parts.tsx`, `textures.ts`, `atmosphere.tsx`, `towerMaterial.ts`.
@@ -65,5 +82,5 @@ An earlier start button requested pointer lock on touch devices, which locked th
 `?debug` shows input, player position, phase, meter and trend, light modes and San's state, and exposes `window.__chase`.
 
 ## Verification status
-- The chase rules, San's navigation and warnings have only been reviewed statically. No tests, build, type check or browser run were done after those changes; felt difficulty is unverified.
+- The chase rules, San's navigation and warnings, and all of ACT 4 have only been reviewed statically. No tests, build, type check or browser run were done; felt difficulty, ACT 4 length (about 3 min target) and performance are unverified.
 - `tests/delete-seoul-chase.test.mjs` still assumes the old flow (game starting at `approach`) and must be updated before it is run again.
