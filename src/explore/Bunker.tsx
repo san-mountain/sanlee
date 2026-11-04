@@ -959,7 +959,7 @@ export default function Bunker({ face, facePhase, audit, lang, visited, onTap, s
             <Statue restored={0} lang={lang} />
           </group>
           <group position={[2.3, 0, 0]} rotation={[0, -0.12, 0]}>
-            <Statue restored={0} lang={lang} second />
+            <Statue restored={0} lang={lang} second showCookie={false} />
           </group>
         </>
       ) : awake || (face.legacy && visited.length >= TERMINALS.length) ? (
