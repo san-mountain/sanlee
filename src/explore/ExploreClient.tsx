@@ -137,7 +137,20 @@ export default function ExploreClient() {
   const later = useCallback((ms: number, fn: () => void) => {
     faceTimers.current.push(setTimeout(fn, ms));
   }, []);
-  const lineEvents = useMemo(() => ({ show: setFaceLine, later }), [later]);
+  const [canAdvanceLine, setCanAdvanceLine] = useState(false);
+  const advanceLineRef = useRef<(() => void) | null>(null);
+  const advanceLineAt = useRef(0);
+  const lineEvents = useMemo(() => ({
+    show: setFaceLine,
+    later,
+    waitForAdvance: (next: (() => void) | null) => {
+      advanceLineRef.current = next;
+      if (next) advanceLineAt.current = performance.now();
+      setCanAdvanceLine(!!next);
+    },
+  }), [later]);
+  const playStoryLines = useCallback((lines: Line[], done: () => void, gap = 0) =>
+    playLines(lines, lineEvents, done, gap, "manual"), [lineEvents]);
   const faceCine = facePhase === "restored" || facePhase === "twist" || facePhase === "applying" || facePhase === "wake";
   // 퍼즐 B: 진행 저장(audit)과 장치의 연출 단계(auditPhase). 시민 활동 기록은 버튼을 누르는 순간에만 따로 판정한다
   const [audit, setAudit] = useState<AuditState>(emptyAudit);
@@ -424,14 +437,14 @@ export default function ExploreClient() {
     gaze.frozen = true;
     gaze.lookAt = officialPoint();
     later(650, () =>
-      playLines(auditScenes.official, lineEvents, () =>
+      playStoryLines(auditScenes.official, () =>
         // 이산의 대사 중에도 기록 화면에 시선을 두어 '거부 vs 동의'를 읽을 수 있게 한다.
-        playLines(auditScenes.ask, lineEvents, () => {
+        playStoryLines(auditScenes.ask, () => {
           gaze.lookAt = sealPoint();
           auditRt.focus = "sealed";
           sfx.sealBump();
           later(600, () =>
-            playLines(auditScenes.sealed, lineEvents, () => {
+            playStoryLines(auditScenes.sealed, () => {
               auditRt.introSeen = true;
               updateAudit(seeIntro(auditRef.current));
               toAuditPhase("focus");
@@ -447,7 +460,7 @@ export default function ExploreClient() {
         })
       )
     );
-  }, [toAuditPhase, later, lineEvents, updateAudit]);
+  }, [toAuditPhase, later, playStoryLines, updateAudit]);
 
   // 장치에 다가간다: 카메라가 봉인 격자로 다가가고 2D 조작판이 열린다 (이동·점프·조이스틱은 멈춘다)
   const openSeal = useCallback(() => {
@@ -542,24 +555,23 @@ export default function ExploreClient() {
       // 도시 자신의 짧고 차가운 안내로 확인시킨다. 이산의 독백과 C 예고는 유지.
       later(2300, () => {
         sfx.cityVoice();
-        playLines(auditScenes.forced, lineEvents, () =>
-          playLines(
+        playStoryLines(auditScenes.forced, () =>
+          playStoryLines(
             auditScenes.san,
-            lineEvents,
             () =>
               later(900, () => {
                 const at = performance.now();
                 setAuditView((v) => ({ ...v, litAt: at }));
                 sfx.guarantor();
                 gaze.lookAt = { x: GUARANTOR.pos[0], y: 1.5, z: GUARANTOR.pos[2] };
-                later(700, () => playLines(auditScenes.guarantor, lineEvents, () => later(700, finishAuditFlow)));
+                later(700, () => playStoryLines(auditScenes.guarantor, () => later(700, finishAuditFlow)));
               }),
             1400
           )
         );
       });
     });
-  }, [later, lineEvents, finishAuditFlow]);
+  }, [later, playStoryLines, finishAuditFlow]);
 
   // First B approach: start the world/story reveal at ~6m, well *before* the
   // record machine's 3.6m interaction range. The button is not usable until
@@ -844,6 +856,14 @@ export default function ExploreClient() {
         return;
       }
       const p = panelRef.current;
+      // Cinematic narrative: E / Enter / Space advances one subtitle; the player
+      // controls reading speed. Never advances the scene on the input that opened it.
+      if (!p && !e.repeat && (e.code === "KeyE" || e.code === "Enter" || e.code === "Space") &&
+          advanceLineRef.current && performance.now() - advanceLineAt.current > 180) {
+        e.preventDefault();
+        advanceLineRef.current();
+        return;
+      }
       if ((e.code === "KeyE" || e.code === "Enter") && !e.repeat && !p && faceEndRef.current && performance.now() - faceEndAt.current > 600) {
         e.preventDefault();
         closeFaceEnd();
@@ -998,6 +1018,8 @@ export default function ExploreClient() {
     faceTimers.current.forEach(clearTimeout);
     faceTimers.current = [];
     faceProtectionIntended.current = false;
+    advanceLineRef.current = null;
+    setCanAdvanceLine(false);
     setFaceLine(null);
     setFaceEnd(false);
     faceRef.current = f;
@@ -1374,9 +1396,19 @@ export default function ExploreClient() {
       )}
 
       {faceLine && zone === "bunker" && (
-        <div className={`face-line who-${faceLine.speaker}`} role="status" aria-live="polite" data-line={faceLine.id}>
+        <div className={`face-line who-${faceLine.speaker} ${canAdvanceLine ? "manual" : ""}`} role="status" aria-live="polite" data-line={faceLine.id}>
           <b>{t(speakers[faceLine.speaker])}</b>
           <span>{t(faceLine)}</span>
+          {canAdvanceLine && (
+            <button
+              type="button"
+              className="face-line-next"
+              aria-label={t(ui.next)}
+              onClick={() => advanceLineRef.current?.()}
+            >
+              {t(ui.next)}
+            </button>
+          )}
         </div>
       )}
       {panel?.kind === "faceConfirm" && (
