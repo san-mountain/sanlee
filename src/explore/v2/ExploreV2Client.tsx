@@ -292,7 +292,13 @@ export default function ExploreV2Client() {
     interact(item);
   }, [touch, zone, bunker, city, interact]);
 
-  const active = ready && !intro && !panel && !paused && !ending && !dead;
+  const active = ready && !intro && !panel && !paused && !ending && !dead && story.phase !== "decision";
+  // The final decision is a real modal, not an active first-person scene.
+  useEffect(() => {
+    if ((story.phase === "decision" || panel || intro || paused || ending || dead) && document.pointerLockElement === root.current) {
+      document.exitPointerLock?.();
+    }
+  }, [story.phase, panel, intro, paused, ending, dead]);
   useLookAndKeys(root, () => interact(nearRef.current), active, (locked) => {
     if (!locked && active && !touch) setPaused(true);
   });
