@@ -887,12 +887,12 @@ function BunkerLotus() {
   return <LotusStrings strings={strings} />;
 }
 
-function WallText({ lang }: { lang: Lang }) {
-  const big = useSign([["B-7", 1]], { color: "#c9a227", w: 512, h: 256 });
+function WallText({ lang, archiveLab = false }: { lang: Lang; archiveLab?: boolean }) {
+  const big = useSign([[archiveLab ? (lang === "ko" ? "잔상실" : "AFTERIMAGE") : "B-7", 1]], { color: "#c9a227", w: 512, h: 256 });
   const warn = useSign(
     [
-      [lang === "ko" ? "비인가 신호 차단 구역" : "SIGNAL-FREE ZONE", 1],
-      [lang === "ko" ? "쿠키 · 추적 · 등급 없음" : "NO COOKIES · NO TRACKING · NO GRADES", 0.6],
+      [lang === "ko" ? (archiveLab ? "폐기된 기억의 보관소" : "비인가 신호 차단 구역") : (archiveLab ? "ARCHIVE OF AFTERIMAGES" : "SIGNAL-FREE ZONE"), 1],
+      [lang === "ko" ? (archiveLab ? "지워진 것에 이름을 남기세요" : "쿠키 · 추적 · 등급 없음") : (archiveLab ? "LEAVE A NAME FOR WHAT WAS ERASED" : "NO COOKIES · NO TRACKING · NO GRADES"), 0.6],
     ],
     { color: "#d8d2c0", w: 1024, h: 256 }
   );
@@ -916,7 +916,7 @@ import FaceMachine, { FaceConduit } from "./FaceMachine";
 import AuditMachine, { Guarantor } from "./AuditMachine";
 import type { AuditView } from "./World";
 
-export default function Bunker({ face, facePhase, audit, lang, visited, onTap, secondStatue, awake }: { face: FaceState; facePhase: FacePhase; audit: AuditView; lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
+export default function Bunker({ face, facePhase, audit, lang, visited, onTap, secondStatue, awake, archiveLab = false }: { face: FaceState; facePhase: FacePhase; audit: AuditView; lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean; archiveLab?: boolean }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -926,7 +926,7 @@ export default function Bunker({ face, facePhase, audit, lang, visited, onTap, s
       <Room />
       <Fixtures />
       <Pillars />
-      <WallText lang={lang} />
+      <WallText lang={lang} archiveLab={archiveLab} />
       <BunkerBell lang={lang} onTap={onTap} />
       {/* 이산 옆의 얼굴 복원 장치. 기존 터미널 경로로 이미 깨운 저장에서는 맞춰진 채 멈춰 있다 */}
       <FaceMachine drums={face.legacy ? SOLUTION : face.drums} phase={facePhase} method={face.method} lang={lang} onTap={onTap} />
@@ -951,7 +951,7 @@ export default function Bunker({ face, facePhase, audit, lang, visited, onTap, s
       <Kid onTap={onTap} />
       <Sleeper onTap={onTap} />
       <BackupRack lang={lang} onTap={onTap} />
-      <BunkerLotus />
+      {!archiveLab && <BunkerLotus />}
       {secondStatue ? (
         <>
           {/* 거부 결말: 이산도 다시 보관 처리되어 굳었다. 그 곁에 두 번째 동상이 나란히 앉아 있다 */}
