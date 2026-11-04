@@ -352,29 +352,36 @@ export default function ExploreV2Client() {
     }
     if (it.id === "exit") {
       if (s.phase !== "confronted") {
-        show(say("지상 출입문", "Surface exit"), [say("지금은 밖으로 나갈 이유가 없어. 이곳에서 조금 더 알아보자.", "There is still something to learn here.")]);
+        show(say("지상 출입문", "Surface exit"), [
+          say("지금 나가면 이곳의 기록에 무슨 일이 생기는지 알 수 없습니다.", "If you leave now, you will not know what is happening to the archive."),
+          storyObjective[s.phase === "left" ? "arrival" : s.phase],
+        ]);
       } else {
         show(say("지상 출입문", "Surface exit"), [
-          say("대자비의 중앙 단말에는 삭제되는 기록의 범위가 남아 있습니다.", "The central terminal lists exactly which records will be erased."),
-          say("직접 확인하겠습니까?", "Will you see for yourself?"),
+          say("이산이 복원되면서 대자비에 기억 정리 요청이 접수되었습니다.", "Restoring San sent a memory purge request to Great Compassion."),
+          say("다음 중앙 동기화에서 R-07의 관계, 아이의 그림을 포함한 보관소의 기억이 정리됩니다.", "At the next central sync, memories here—including R-07's friendships and the child's drawing—will be purged."),
+          say("이를 취소하는 장치는 대자비 중앙에만 있습니다. 외부에서 게임 기록을 전부 삭제하는 건 별개의 선택입니다.", "Only Great Compassion's core can cancel the request. Erasing your entire browser record from outside is a different choice."),
         ], [
-          { label: say("대자비에게 간다", "Go to Great Compassion"), run: moveToCity },
-          { label: say("이 세계를 떠난다", "Leave this world"), run: () => { commit("leave"); setPanel(null); setEnding("left"); } },
-          { label: say("조금 더 둘러본다", "Stay a little longer"), run: closeDialog },
+          { label: say("기억 정리를 막으러 간다", "STOP THE MEMORY PURGE"), run: moveToCity },
+          { label: say("여기서 떠난다", "LEAVE IT UNRESOLVED"), run: () => { commit("leave"); setPanel(null); setEnding("left"); } },
+          { label: say("조금 더 둘러본다", "STAY A LITTLE LONGER"), run: closeDialog },
         ]);
       }
       return;
     }
     if (it.id === "hatch") {
-      show(say("배전실 출입구", "Substation hatch"), [say("무명사로 돌아가는 길이다. 이제 진실을 확인할 차례야.", "The shelter lies below. It's time to find out the truth.")]);
+      show(say("잔상실로 가는 길", "Way back to Afterimage"), [
+        say("지금 돌아가도 요청은 대자비에 남습니다. 중앙 장치까지 가야 취소할 수 있어요.", "Returning will not withdraw the request. Only the core can cancel it."),
+      ]);
       return;
     }
     if (it.id === "checkpoint" && s.phase === "crossing") {
       commit("reach-core");
       show(say("大慈悲 · 중앙 기록", "Great Compassion · Central Archive"), [
-        say("방문자님, 여기까지 오셨군요.", "Visitor, you've made it this far."),
-        say("이산은 저를 지워 달라고 했습니까? 그의 설명이 정확했는지 확인해 보십시오.", "Did San ask you to erase me? Please review what he told you."),
-        say("삭제할 수 있는 것은 당신의 브라우저에 저장된 이 세계의 진행 기록입니다. 프로그램과 다른 방문자의 세계는 남습니다.", "Only this world's progress stored in your browser can be erased. The program and other visitors remain."),
+        say("방문자님. 보관소의 ‘기억 정리’가 예약되어 있습니다.", "Visitor. A 'memory purge' is scheduled for the archive."),
+        say("이산은 그 정리가 시작될 것을 알고 있었습니다. 그는 당신이 여기로 오게 될 것도 알았죠.", "San knew it would begin. He also knew you would come here."),
+        say("정리를 취소하면 이 세계가 지금의 상처와 기억을 가진 채 계속됩니다.", "Canceling it lets this world continue, with its wounds and memories."),
+        say("하지만 당신에게는 다른 선택도 있습니다. 작품 밖으로 나가 이 브라우저의 세계를 완전히 처음부터 시작하는 것.", "You also have another choice: leave the simulation and erase this browser's saved world entirely."),
       ]);
       return;
     }
