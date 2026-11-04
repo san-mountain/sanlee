@@ -1,29 +1,19 @@
+// 퍼즐 B 「봉인된 3초」 v0.7: 저장·이전 저장 호환·진입·재시작·대사
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import "./register-typescript.mjs";
-import {
-  AUDIT_KEY,
-  AUDIT_KEY_V1,
-  FRAMES,
-  REWIND_STEPS,
-  auditAvailable,
-  emptyAudit,
-  finishAudit,
-  frameOf,
-  loadAudit,
-  parseAudit,
-  pullBrake,
-  restPhase,
-  saveAudit,
-  shiftLink,
-  turnWheel,
-} from "../src/explore/recordAudit.ts";
-import { FACE_KEY, emptyFace, loadFace, saveFace } from "../src/explore/faceAuth.ts";
-import { auditLines, auditScenes, speakers } from "../src/explore/story.ts";
-import { lineDuration, playLines } from "../src/explore/dialogue.ts";
 
-// puzzleTest.ts는 확장자 없는 값 import를 쓰므로 로더 등록 뒤에 불러온다
-const { applyRestart, restartStates, testStart, TEST_KEY } = await import("../src/explore/puzzleTest.ts");
+// 확장자 없는 값 import를 쓰는 모듈은 로더 등록 뒤에 불러온다
+const R = await import("../src/explore/recordAudit.ts");
+const S = await import("../src/explore/sealPuzzle.ts");
+const F = await import("../src/explore/faceAuth.ts");
+const T = await import("../src/explore/puzzleTest.ts");
+const { auditLines, auditScenes, auditUi, sealUi, speakers, npcStages } = await import("../src/explore/story.ts");
+const { lineDuration, playLines } = await import("../src/explore/dialogue.ts");
+const { AUDIT_KEY, AUDIT_KEY_V1, AUDIT_KEY_V2, OFFICIAL_RECORD, emptyAudit, finishAudit, loadAudit, moveSeal, parseAudit, resetSeal, restPhase, saveAudit, seeIntro, undoSeal, auditAvailable } = R;
+const { CASSETTE, emptySeal, solve, startPositions } = S;
+const { FACE_KEY, emptyFace, loadFace, saveFace } = F;
+const { applyRestart, restartStates, testStart, TEST_KEY } = T;
 
 const store = (seed = {}) => {
   const values = new Map(Object.entries(seed));
@@ -37,124 +27,94 @@ const memory = (seed = {}) => {
   return { values: local.values, session: session.values };
 };
 const doneA = (method = "standard") => ({ ...emptyFace(), drums: [0, 0, 0], solved: true, method });
-const rewind = (s, n) => {
-  for (let i = 0; i < n; i++) s = turnWheel(s).state;
+// 최단 풀이를 앞에서 n수만큼 둔 상태
+const played = (n, s = seeIntro(emptyAudit())) => {
+  for (const m of solve().path.slice(0, n)) s = moveSeal(s, m.id, m.to);
   return s;
 };
+const solvedAudit = () => played(Infinity);
 
-test("while the press runs, the wheel and the coupling are jammed; the brake frees them", () => {
-  const s = emptyAudit();
-  assert.equal(turnWheel(s).status, "jammed");
-  assert.equal(shiftLink(s).status, "jammed");
-  const b = pullBrake(s);
-  assert.equal(b.status, "braked");
-  assert.equal(b.state.braked, true);
-  // 레버 하나로는 아무것도 드러나지 않는다
-  assert.equal(b.state.solved, false);
-  assert.equal(frameOf(b.state, "official").mark, "accept");
-  assert.equal(pullBrake(b.state).status, "noop");
-});
-
-test("rewinding the official reel only ever shows consent, and stops at the end without failing", () => {
-  let s = pullBrake(emptyAudit()).state;
-  assert.equal(s.link, "official", "the wheel starts on the official reel");
-  const seen = [];
-  for (let i = 0; i < REWIND_STEPS; i++) {
-    const r = turnWheel(s);
-    assert.equal(r.status, "rewound");
-    assert.equal(r.solved, false);
-    s = r.state;
-    seen.push(frameOf(s, "official"));
-  }
-  assert.deepEqual(seen.map((f) => f.time), ["14:02:03", "14:02:02", "14:02:01"]);
-  assert.ok(seen.every((f) => f.mark === "accept"));
-  const end = turnWheel(s);
-  assert.equal(end.status, "end");
-  assert.equal(end.state, s);
-  assert.equal(s.solved, false);
-});
-
-test("moving the coupling to the original and rewinding three seconds reveals 14:02:01 Reject all and solves it at once", () => {
-  let s = rewind(pullBrake(emptyAudit()).state, 2);
-  const l = shiftLink(s);
-  assert.equal(l.status, "linked");
-  s = l.state;
-  assert.equal(s.link, "original");
-  // 공식 릴의 위치는 그대로 남는다
-  assert.equal(s.pos.official, 2);
-  const steps = [];
-  let r;
-  for (let i = 0; i < REWIND_STEPS; i++) {
-    r = turnWheel(s);
-    s = r.state;
-    steps.push([frameOf(s, "original").time, r.solved]);
-  }
-  assert.deepEqual(steps, [["14:02:03", false], ["14:02:02", false], ["14:02:01", true]]);
-  assert.equal(frameOf(s, "original").mark, "reject");
-  assert.equal(FRAMES.original[REWIND_STEPS].word.ko, "모두 거부");
-  assert.equal(s.solved, true);
-  // 해결된 뒤에는 더 조작해도 바뀌지 않는다. 공식 기록은 여전히 동의
-  assert.equal(turnWheel(s).status, "noop");
-  assert.equal(shiftLink(s).status, "noop");
-  assert.equal(frameOf(s, "official").mark, "accept");
-});
-
-test("the coupling can go back and forth freely; wrong tries never lock the puzzle", () => {
-  let s = pullBrake(emptyAudit()).state;
-  s = shiftLink(s).state;
-  s = turnWheel(s).state;
-  s = shiftLink(s).state;
-  assert.equal(s.link, "official");
-  s = rewind(s, 5);
-  s = shiftLink(s, "original").state;
-  assert.equal(shiftLink(s, "original").status, "noop");
-  s = rewind(s, 2);
-  assert.equal(s.solved, true);
-});
-
-test("the machine only runs on the new path after puzzle A", () => {
+test("A → B: B only wakes on the new path after puzzle A, and starts with the intro before the panel", () => {
   assert.equal(auditAvailable(emptyFace()), false);
-  assert.equal(auditAvailable(doneA()), true);
-  assert.equal(auditAvailable({ ...doneA(), legacy: true }), false);
+  assert.equal(restPhase(emptyFace(), emptyAudit()), "dormant");
   assert.equal(restPhase({ ...doneA(), legacy: true }, emptyAudit()), "dormant");
-  assert.equal(restPhase(doneA(), emptyAudit()), "auto");
+  const a = emptyAudit();
+  assert.equal(restPhase(doneA("exception"), a), "ready");
+  assert.equal(a.intro, false, "the intro has not been seen yet");
+  assert.equal(seeIntro(a).intro, true);
+  assert.deepEqual(a.seal, emptySeal());
 });
 
-test("refresh at every step comes back to the same reels, coupling and phase", () => {
+test("moving the seals to free the cassette solves it the moment it reaches the exit; the official record stays 'accept all'", () => {
+  const path = solve().path;
+  let s = seeIntro(emptyAudit());
+  for (const [i, m] of path.entries()) {
+    s = moveSeal(s, m.id, m.to);
+    assert.ok(s);
+    assert.equal(s.solved, i === path.length - 1, `move ${i + 1}`);
+  }
+  // 해결 뒤에는 판이 더 움직이지 않고, 되돌리기·처음부터도 아무것도 바꾸지 않는다
+  assert.equal(moveSeal(s, "b", 0), null);
+  assert.equal(undoSeal(s), s);
+  assert.equal(resetSeal(s), s);
+  assert.deepEqual(OFFICIAL_RECORD, { ko: "모두 동의", en: "ACCEPT ALL" });
+  assert.equal(restPhase(doneA(), s), "done");
+  assert.equal(finishAudit(s).done, true);
+});
+
+test("illegal moves change nothing; undo and reset only touch the seal layout", () => {
+  const s = played(3);
+  assert.equal(moveSeal(s, CASSETTE, 4), null);
+  const u = undoSeal(s);
+  assert.equal(u.seal.history.length, 2);
+  assert.equal(u.intro, true);
+  const r = resetSeal(s);
+  assert.deepEqual(r.seal, emptySeal());
+  assert.equal(r.intro, true, "reset keeps the intro as seen");
+  assert.equal(r.solved, false);
+});
+
+test("leaving the panel and coming back, or reloading, restores the exact seal positions and move history", () => {
   memory();
-  const face = doneA("exception");
-  let s = emptyAudit();
-  saveAudit(s);
-  assert.equal(restPhase(face, loadAudit()), "auto");
-  s = pullBrake(s).state;
-  saveAudit(s);
-  assert.equal(restPhase(face, loadAudit()), "manual");
-  s = rewind(s, 3);
-  saveAudit(s);
-  assert.deepEqual(loadAudit().pos, { official: 3, original: 0 });
-  s = turnWheel(shiftLink(s).state).state;
+  const s = played(5);
   saveAudit(s);
   const back = loadAudit();
-  assert.equal(back.link, "original");
-  assert.deepEqual(back.pos, { official: 3, original: 1 });
-  s = rewind(s, 2);
-  saveAudit(s);
-  assert.equal(restPhase(face, loadAudit()), "done");
-  saveAudit(finishAudit(s));
-  assert.equal(loadAudit().done, true);
+  assert.deepEqual(back.seal.pos, s.seal.pos);
+  assert.deepEqual(back.seal.history, s.seal.history);
+  assert.equal(back.intro, true);
+  assert.equal(restPhase(doneA(), back), "ready");
+  // 새로고침 뒤에도 되돌리기가 이어진다
+  assert.deepEqual(undoSeal(back).seal, played(4).seal);
+  // 해결 직전에 나갔다가 와도 마지막 한 수로 끝난다
+  saveAudit(played(10));
+  const last = solve().path[10];
+  assert.equal(moveSeal(loadAudit(), last.id, last.to).solved, true);
 });
 
-test("damaged saves are repaired, and an old B save is never mistaken for new progress", () => {
+test("save migration: finished older B saves stay finished; unfinished older saves start the new puzzle from the intro", () => {
   assert.deepEqual(parseAudit(null), emptyAudit());
   assert.deepEqual(parseAudit("{nope"), emptyAudit());
-  // 제동 전인데 되감긴 값은 버린다
-  assert.deepEqual(parseAudit('{"schema":2,"braked":false,"pos":{"official":2,"original":9}}').pos, { official: 0, original: 0 });
-  // 이전 B 도중 저장은 새 퍼즐을 처음부터, 끝낸 저장은 끝난 것으로
-  assert.deepEqual(parseAudit(null, '{"schema":1,"played":true,"mismatch":true}'), emptyAudit());
-  const old = parseAudit(null, '{"schema":1,"done":true}');
-  assert.equal(old.solved && old.done, true);
+  // v0.6 (v2): 해결한 저장 → 끝난 것. 도중(제동·되감기) → 처음부터
+  const v2Done = parseAudit(null, '{"schema":2,"braked":true,"link":"original","pos":{"official":0,"original":3},"solved":true,"done":false}');
+  assert.equal(v2Done.solved && v2Done.done && v2Done.intro, true);
+  assert.deepEqual(parseAudit(null, '{"schema":2,"braked":true,"link":"original","pos":{"official":3,"original":2},"solved":false}'), emptyAudit());
+  // v0.4·v0.5 (v1)
+  assert.equal(parseAudit(null, null, '{"schema":1,"done":true}').solved, true);
+  assert.equal(parseAudit(null, null, '{"schema":1,"taken":true}').solved, true);
+  assert.deepEqual(parseAudit(null, null, '{"schema":1,"played":true,"mismatch":true}'), emptyAudit());
   // 새 저장이 있으면 옛 저장은 보지 않는다
-  assert.equal(parseAudit(JSON.stringify(emptyAudit()), '{"schema":1,"done":true}').solved, false);
+  assert.equal(parseAudit(JSON.stringify(emptyAudit()), '{"schema":2,"solved":true}').solved, false);
+  // 손상된 봉인판 기록은 처음 배치로 (도입은 본 것으로 남는다)
+  const broken = parseAudit(JSON.stringify({ schema: 3, intro: true, seal: { pos: {}, history: [{ id: CASSETTE, from: 1, to: 4 }] }, solved: false }));
+  assert.deepEqual(broken.seal, emptySeal());
+  assert.equal(broken.intro, true);
+  // 'solved'만 손으로 지운 저장: 기록이 배출구에 닿아 있으면 해결로 본다
+  const tampered = JSON.parse(JSON.stringify(solvedAudit()));
+  tampered.solved = false;
+  assert.equal(parseAudit(JSON.stringify(tampered)).solved, true);
+  // 실제 저장소에서: v2 해결 저장만 있는 기기
+  memory({ [AUDIT_KEY_V2]: '{"schema":2,"solved":true,"done":true}' });
+  assert.equal(restPhase(doneA(), loadAudit()), "done");
 });
 
 test("restart from A: puzzle A and B go back to the start, nothing else is touched, and it survives a reload", () => {
@@ -165,11 +125,11 @@ test("restart from A: puzzle A and B go back to the start, nothing else is touch
     "sanlee-backup": '{"n":2}',
     "sanlee-citizen-records-v1": '{"schema":1,"pending":[],"synced":[]}',
   };
-  const { values, session } = memory({ ...other, [FACE_KEY]: JSON.stringify(doneA("exception")), [AUDIT_KEY]: JSON.stringify(finishAudit(rewind(shiftLink(pullBrake(emptyAudit()).state).state, 3))), [AUDIT_KEY_V1]: '{"schema":1,"done":true}' });
+  const { values, session } = memory({ ...other, [FACE_KEY]: JSON.stringify(doneA("exception")), [AUDIT_KEY]: JSON.stringify(finishAudit(solvedAudit())), [AUDIT_KEY_V2]: '{"schema":2,"solved":true}', [AUDIT_KEY_V1]: '{"schema":1,"done":true}' });
   applyRestart("a");
   for (const [k, v] of Object.entries(other)) assert.equal(values.get(k), v, k);
   assert.equal(values.has(AUDIT_KEY_V1), false);
-  // 새로고침 = 저장에서 다시 읽기. 터미널을 셋 다 열었어도 legacy가 되지 않는다
+  assert.equal(values.has(AUDIT_KEY_V2), false);
   const f = loadFace();
   assert.equal(f.method, null);
   assert.equal(f.solved, false);
@@ -180,40 +140,41 @@ test("restart from A: puzzle A and B go back to the start, nothing else is touch
   assert.equal(testStart(), "a");
 });
 
-test("restart from B: puzzle A's choice stays, B starts over with the press running, even after B was finished", () => {
-  memory({ [FACE_KEY]: JSON.stringify(doneA("exception")), [AUDIT_KEY]: JSON.stringify(finishAudit(rewind(shiftLink(pullBrake(emptyAudit()).state).state, 3))) });
-  applyRestart("b");
-  const f = loadFace();
-  assert.equal(f.method, "exception");
-  assert.equal(f.legacy, false);
-  const a = loadAudit();
-  assert.deepEqual(a, emptyAudit());
-  assert.equal(restPhase(f, a), "auto");
-  assert.equal(testStart(), "b");
-  // A를 하지 않은 저장에서 B부터: 표준 미소로 채운다
+test("restart from B: A's choice stays, a new 2D puzzle starts from the intro, even after B was finished", () => {
+  for (const method of ["standard", "exception"]) {
+    memory({ [FACE_KEY]: JSON.stringify(doneA(method)), [AUDIT_KEY]: JSON.stringify(finishAudit(solvedAudit())), [AUDIT_KEY_V2]: '{"schema":2,"solved":true}' });
+    applyRestart("b");
+    const f = loadFace();
+    assert.equal(f.method, method, "standard smile / original face is kept");
+    assert.equal(f.solved, true, "face and upper body stay restored");
+    assert.equal(f.legacy, false);
+    const a = loadAudit();
+    assert.deepEqual(a, emptyAudit(), "the old v2 finish does not leak back in");
+    assert.equal(restPhase(f, a), "ready");
+    assert.deepEqual(a.seal.pos, startPositions());
+    assert.equal(testStart(), "b");
+  }
   assert.equal(restartStates("b", emptyFace()).face.method, "standard");
-  // legacy 저장에서도 테스트는 새 경로로 시작한다
   assert.equal(restartStates("b", { ...doneA(), legacy: true }).face.legacy, false);
 });
 
-test("city-record deletion clears both B saves along with puzzle A", async () => {
+test("city-record deletion clears every B save along with puzzle A", async () => {
   const { values } = memory();
   saveFace(doneA());
-  saveAudit(pullBrake(emptyAudit()).state);
+  saveAudit(played(2));
+  values.set(AUDIT_KEY_V2, '{"schema":2,"solved":true}');
   values.set(AUDIT_KEY_V1, '{"schema":1,"done":true}');
   globalThis.window = new EventTarget();
   const backup = await import(`../src/explore/backup.ts?audit=${Date.now()}`);
   backup.forgetCityRecords();
-  assert.equal(values.has(AUDIT_KEY), false);
-  assert.equal(values.has(AUDIT_KEY_V1), false);
-  assert.equal(values.has(FACE_KEY), false);
+  for (const k of [AUDIT_KEY, AUDIT_KEY_V2, AUDIT_KEY_V1, FACE_KEY]) assert.equal(values.has(k), false, k);
 });
 
 test("every puzzle B line has a unique b.* id, a known speaker, both languages and a subtitle time", () => {
   const lines = Object.values(auditLines);
   assert.equal(new Set(lines.map((l) => l.id)).size, lines.length);
   for (const l of lines) {
-    assert.match(l.id, /^b\.(san|city|verifier|guarantor)\./);
+    assert.match(l.id, /^b\.(san|city|archive|guarantor)\./);
     assert.equal(l.id.split(".")[1], l.speaker, l.id);
     assert.ok(speakers[l.speaker], l.id);
     assert.ok(l.ko && l.en, l.id);
@@ -223,7 +184,20 @@ test("every puzzle B line has a unique b.* id, a known speaker, both languages a
   assert.equal(auditScenes.guarantor[0].ko, "보증인 등록이 필요합니다.");
 });
 
-test("the San scene leaves a silence between the two lines before moving on", () => {
+test("the intro tells why and what (official 'accept', San doesn't remember, the original is sealed) without giving away 'reject'", () => {
+  const intro = [...auditScenes.official, ...auditScenes.ask, ...auditScenes.sealed];
+  assert.deepEqual(intro.map((l) => l.ko), ["공식 기록 · 14:02:01 — 모두 동의", "……내가 동의했다고?", "마지막 순간이 기억나지 않아. 원본을 확인해 줘.", "원본 입력 기록 — 봉인됨"]);
+  // 퍼즐을 풀기 전에 보이는 글 어디에도 정답이 없다
+  const before = [...intro.flatMap((l) => [l.ko, l.en]), ...Object.values(sealUi).flatMap((l) => [l.ko, l.en]).filter((x) => x !== sealUi.reading.ko), auditUi.sealedSign.ko, auditUi.sealedSign.en, auditUi.quest.ko, auditUi.machine.ko];
+  for (const text of before) assert.ok(!/거부|REJECT/i.test(text), text);
+  // 길이: 대사만 약 10초, 카메라 전환 포함 12초 남짓
+  const ms = intro.reduce((t, l) => t + l.ms, 0);
+  assert.ok(ms >= 8000 && ms <= 12000, `${ms}ms`);
+  assert.equal(sealUi.goal.ko, "원본 기록을 꺼내세요");
+  assert.deepEqual([sealUi.undo.ko, sealUi.reset.ko, sealUi.exit.ko], ["되돌리기", "처음부터", "나가기"]);
+});
+
+test("after B: the San scene leaves a silence between the two lines, then the guarantor; NPCs move on to their after-B lines", () => {
   const shown = [];
   const queue = [];
   let clock = 0;
@@ -237,4 +211,9 @@ test("the San scene leaves a silence between the two lines before moving on", ()
   }
   assert.deepEqual(shown, ["b.san.refused", null, "b.san.still-here", null]);
   assert.equal(done, 1);
+  for (const npc of ["keeper", "radio", "monk"]) {
+    assert.ok(npcStages[npc].c?.length, npc);
+    // 퍼즐 전(b) 대사에는 정답이 없다
+    for (const l of npcStages[npc].b ?? []) assert.ok(!/거부|refus|reject/i.test(l.ko + l.en), `${npc}: ${l.ko}`);
+  }
 });

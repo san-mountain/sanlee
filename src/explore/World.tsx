@@ -13,10 +13,10 @@ import { CITY, ZONES, type Interactable, type Zone } from "./zones";
 
 import type { FaceState } from "./faceAuth";
 import type { FacePhase } from "./faceRuntime";
-import type { Reel } from "./recordAudit";
 
 // 기록 기계의 저장 상태(제동·연결·되감은 칸)와 보증 장치가 켜지는 시각
-export type AuditView = { braked: boolean; link: Reel; pos: Record<Reel, number>; solved: boolean; litAt: number };
+// 퍼즐 B 장치의 보이는 상태: 원본을 꺼냈는가, 보증 장치가 켜진 시각 (봉인판 위치는 auditRt.pos를 매 프레임 읽는다)
+export type AuditView = { solved: boolean; litAt: number };
 
 type Props = {
   face: FaceState;

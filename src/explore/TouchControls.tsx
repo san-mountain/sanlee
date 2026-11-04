@@ -161,7 +161,7 @@ export function useLookAndKeys(
         if (e.button === 0 && input.enabled) cb.current();
         return;
       }
-      if ((e.target as HTMLElement).closest(".joy-zone, button, a, input, .panel, .choice, .ending, .intro, .pause")) return;
+      if ((e.target as HTMLElement).closest(".joy-zone, button, a, input, .panel, .choice, .ending, .intro, .pause, .seal-wrap")) return;
       if (e.pointerType === "mouse" && input.enabled) requestLock(el);
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     };

@@ -54,7 +54,7 @@ export function machinePoint(x: number, y: number, z: number) {
   return new THREE.Vector3(FACE_MACHINE.pos[0] + x * c + z * s, y, FACE_MACHINE.pos[2] - x * s + z * c);
 }
 
-// 퍼즐 B: 이산의 다른 쪽에 놓인 기록 검증 장치(얼굴 복원 장치와 마주 보는 자리)와, 받침대 뒤의 보증 장치(퍼즐 C 예고, 외형만)
+// 퍼즐 B: 이산의 다른 쪽에 놓인 기록 보관 장치(얼굴 복원 장치와 마주 보는 자리)와, 받침대 뒤의 보증 장치(퍼즐 C 예고, 외형만)
 export const AUDIT_MACHINE = { pos: [-3.3, 0, 1.3] as Vec3, rotY: 0.55 };
 export const GUARANTOR = { pos: [-2.05, 0, -1.95] as Vec3, rotY: 0.55 };
 export function auditPoint(x: number, y: number, z: number) {
@@ -62,11 +62,9 @@ export function auditPoint(x: number, y: number, z: number) {
   const s = Math.sin(AUDIT_MACHINE.rotY);
   return new THREE.Vector3(AUDIT_MACHINE.pos[0] + x * c + z * s, y, AUDIT_MACHINE.pos[2] - x * s + z * c);
 }
-// 장치 기준 위치 (AuditMachine.tsx와 같은 값): 왼쪽 제동 레버, 오른쪽 아래 수동 바퀴
-export const AUDIT_PARTS = {
-  brake: [-0.98, 1.0, 0.18] as Vec3,
-  wheel: [0.56, 0.52, 0.47] as Vec3,
-};
+// 장치 기준 위치 (AuditMachine.tsx와 같은 값): 봉인 격자의 가운데와 한 변의 길이, 위의 공식 기록 화면
+export const AUDIT_GRID = { x: 0, y: 1.33, z: -0.24, size: 0.66 };
+export const AUDIT_SCREEN = { x: 0, y: 2.02, z: -0.22 };
 
 export const TERMINALS: { id: SectionId; pos: Vec3; rotY: number; color: string; sub: L }[] = [
   { id: "about", pos: [-10.9, 0, -4], rotY: Math.PI / 2, color: "#22f0ff", sub: { ko: "소개", en: "who" } },
@@ -131,7 +129,7 @@ export const BUNKER: ZoneDef = {
   boxes: [
     box(BUNKER_BELL.pos[0], BUNKER_BELL.pos[2], 2.3, 1.8),
     box(FACE_MACHINE.pos[0], FACE_MACHINE.pos[2], 1.5, 1.3), // 얼굴 복원 장치
-    box(AUDIT_MACHINE.pos[0], AUDIT_MACHINE.pos[2], 2.0, 1.7), // 기록 검증 장치
+    box(AUDIT_MACHINE.pos[0], AUDIT_MACHINE.pos[2], 2.0, 1.7), // 기록 보관 장치
     box(GUARANTOR.pos[0], GUARANTOR.pos[2], 0.6, 0.6), // 보증 장치
     ...PILLARS.map(([x, , z]) => box(x, z, 1.2, 1.2)),
     ...TERMINALS.map((t) => (Math.abs(t.pos[0]) > 1 ? box(t.pos[0] + Math.sign(t.pos[0]) * 0.3, t.pos[2], 1.4, 1.6) : box(t.pos[0], t.pos[2] + 0.3, 1.6, 1.4))),
@@ -166,8 +164,8 @@ export const BUNKER: ZoneDef = {
     { id: "face-machine", kind: "face", pos: machinePoint(0, 1.7, 0.35), radius: 3.2, label: faceUi.turn, when: () => faceRt.phase === "idle" },
     { id: "face-std", kind: "face", pos: machinePoint(-0.58, 1, 0.55), radius: 3, color: "#ff5fb0", label: faceUi.applyStandard, when: () => faceRt.phase === "choice" },
     { id: "face-keep", kind: "face", pos: machinePoint(0.58, 1, 0.55), radius: 3, color: "#e8c27a", label: faceUi.keepOriginal, when: () => faceRt.phase === "choice" },
-    // 퍼즐 B 기록 기계: 장치 전체가 하나의 대상. 화면 가운데가 향한 부품(제동 레버·연결 장치·수동 바퀴)을 조작한다
-    { id: "audit-machine", kind: "audit", pos: auditPoint(0, 1.3, 0.45), radius: 3.6, label: auditUi.machine, when: () => auditRt.phase === "auto" || auditRt.phase === "manual" || auditRt.phase === "moving" },
+    // 퍼즐 B 기록 보관 장치: 장치 전체가 하나의 대상. 조작하면 봉인 격자(2D 조작판)로 다가간다
+    { id: "audit-machine", kind: "audit", pos: auditPoint(0, 1.3, 0.45), radius: 3.6, label: auditUi.machine, when: () => auditRt.phase === "ready" },
     { id: "audit-guarantor", kind: "audit", pos: v(GUARANTOR.pos[0], 1.2, GUARANTOR.pos[2]), radius: 2.6, color: "#ffd27a", label: { ko: "보증 장치", en: "Guarantor unit" }, when: () => auditRt.phase === "done" },
     // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },

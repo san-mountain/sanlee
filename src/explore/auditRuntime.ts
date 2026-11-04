@@ -1,29 +1,20 @@
-// 기록 기계(퍼즐 B)의 연출 상태. 3D 장면과 화면 UI가 리렌더 없이 매 프레임 함께 읽는다
-import type { AuditPhase, Reel } from "./recordAudit";
-
-export type AuditPart = "brake" | "link" | "wheel";
+// 기록 보관 장치(퍼즐 B)의 연출 상태. 3D 장면이 리렌더 없이 매 프레임 읽는다
+import type { AuditPhase } from "./recordAudit";
+import { startPositions, type Positions } from "./sealPuzzle";
 
 export const auditRt = {
   phase: "dormant" as AuditPhase,
   since: 0,
-  // 저장 상태의 거울 (3D가 매 프레임 읽는다)
-  braked: false,
-  link: "official" as Reel,
-  pos: { official: 0, original: 0 } as Record<Reel, number>,
-  // 화면 가운데(PC 조준점·모바일 행동 버튼)가 향한 부품. AuditMachine이 매 프레임 갱신한다
-  aim: null as AuditPart | null,
-  // 장치 가까이 있는가 (부품의 은은한 반응)
-  near: false,
-  // 마지막 움직임: 어떤 부품이 언제 (되감기·연결 이동·제동 애니메이션)
-  moved: null as AuditPart | null,
-  movedAt: 0,
-  // 걸려서 안 움직인 부품과 시각 (덜컥 흔들림)
-  jammed: null as AuditPart | null,
-  jammedAt: 0,
-  // 장치가 켜진 시각 (퍼즐 A가 끝난 순간). 0이면 이미 켜져 있던 것
+  // 2D 조작판의 봉인판 위치 거울: 3D 장치 앞 유리창 속 작은 판도 같은 배치를 보여 준다
+  pos: startPositions() as Positions,
+  // 도입 중 장치가 강조하는 곳: 공식 기록 화면, 봉인된 원본(카세트와 배출구)
+  focus: null as null | "official" | "sealed",
+  // 장치가 켜진 시각 (도입이 시작된 순간). 0이면 이미 켜져 있던 것
   poweredAt: 0,
-  // 화면 위 위치(0~1): 디버그·테스트용
-  screen: {} as Record<string, [number, number]>,
+  // 원본 카세트가 배출된 시각 (3D 트레이에 카세트가 나와 있다)
+  ejectedAt: 0,
+  // 장치 가까이 있는가 (은은한 반응)
+  near: false,
 };
 
 export function setAuditPhase(p: AuditPhase) {
@@ -32,14 +23,11 @@ export function setAuditPhase(p: AuditPhase) {
 }
 
 export function resetAuditRt() {
-  auditRt.braked = false;
-  auditRt.link = "official";
-  auditRt.pos = { official: 0, original: 0 };
-  auditRt.aim = null;
-  auditRt.near = false;
-  auditRt.moved = auditRt.jammed = null;
-  auditRt.movedAt = auditRt.jammedAt = 0;
+  auditRt.pos = startPositions();
+  auditRt.focus = null;
   auditRt.poweredAt = 0;
+  auditRt.ejectedAt = 0;
+  auditRt.near = false;
   setAuditPhase("dormant");
 }
 

@@ -29,9 +29,10 @@ import { protection } from "./recordProtection";
 import { getCitizenRecords, recordCitizenActivity, syncCitizenRecords, type ActivityResult } from "./citizenRecords";
 import { FACE_KEY, emptyFace, executeFace, loadFace, rotateDrum, saveFace, seamJoined, type FaceMethod, type FaceState } from "./faceAuth";
 import { faceRt, setFacePhase, type FacePhase } from "./faceRuntime";
-import { clearAudit, emptyAudit, finishAudit, loadAudit, pullBrake, restPhase, saveAudit, shiftLink, turnWheel, type AuditPhase, type AuditState } from "./recordAudit";
-import { auditRt, resetAuditRt, setAuditPhase, type AuditPart } from "./auditRuntime";
-import { AUDIT_MACHINE, GUARANTOR, auditPoint } from "./zones";
+import { clearAudit, emptyAudit, finishAudit, loadAudit, moveSeal, resetSeal, restPhase, saveAudit, seeIntro, undoSeal, type AuditPhase, type AuditState } from "./recordAudit";
+import { auditRt, resetAuditRt, setAuditPhase } from "./auditRuntime";
+import { AUDIT_GRID, AUDIT_MACHINE, AUDIT_SCREEN, GUARANTOR, auditPoint } from "./zones";
+import SealPanel from "./SealPanel";
 import PauseTest from "./PauseTest";
 import { TEST_KEY, applyRestart, testStart } from "./puzzleTest";
 import type { AuditView } from "./World";
@@ -74,7 +75,8 @@ type Panel =
   | { kind: "jabi" }
   // 범종을 쳤는데 보호가 끝난 뒤 선택하려 할 때: 기록이 남는다는 확인
   | { kind: "faceConfirm"; method: FaceMethod }
-  // 퍼즐 B: 감사 기록함에서 꺼낸 기록지 (닫으면 마무리 연출로 이어진다)
+  // 퍼즐 B: 기록 보관 장치의 봉인 격자 (2D 조작판)
+  | { kind: "seal" }
   | null;
 
 type EndKind = "accept" | "reject" | "ghost";
@@ -89,11 +91,11 @@ const BEAT_MS: Record<EndKind, number[]> = {
 // 줄 한가운데, 두 사람 사이. 여기서는 문 너머로 금빛이 된 대자비의 얼굴이 보인다
 const LINE_SPOT = { x: 3.6, z: (QUEUE_Z[44] + QUEUE_Z[45]) / 2 };
 
-// 원본 판독창(왼쪽 릴 아래)의 방 좌표: 원본이 드러날 때 카메라가 먼저 이곳을 본다
-function auditWindowPoint() {
-  const v = auditPoint(-0.45, 1.2, 0.05);
-  return { x: v.x, y: v.y, z: v.z };
-}
+// 기록 보관 장치의 두 곳(방 좌표): 위의 공식 기록 화면, 가운데의 봉인 격자. 도입·전환 때 카메라가 바라본다
+const xyz = (v: { x: number; y: number; z: number }) => ({ x: v.x, y: v.y, z: v.z });
+const officialPoint = () => xyz(auditPoint(AUDIT_SCREEN.x, AUDIT_SCREEN.y, AUDIT_SCREEN.z));
+const sealPoint = () => xyz(auditPoint(AUDIT_GRID.x, AUDIT_GRID.y, AUDIT_GRID.z));
+const SAN_FACE = { x: 0, y: 3, z: 0.3 };
 // 테스트 재시작 뒤 서는 자리: B 기계 정면 2.4m, 기계를 바라본다
 const B_TEST_SPOT = {
   x: AUDIT_MACHINE.pos[0] + Math.sin(AUDIT_MACHINE.rotY) * 2.4,
@@ -150,11 +152,14 @@ export default function ExploreClient() {
     setAuditPhase(p);
     setAuditPhaseState(p);
   }, []);
-  const [auditView, setAuditView] = useState<AuditView>({ braked: false, link: "official", pos: { official: 0, original: 0 }, solved: false, litAt: 0 });
-  // 이번 방문에서 도장 중단 행동이 시민 활동 기록에 남았는지 (끝 카드에 한 줄로 보여 준다)
+  const [auditView, setAuditView] = useState<AuditView>({ solved: false, litAt: 0 });
+  // 2D 조작판이 닫히는 중 (확대가 풀리며 3D로 돌아간다)
+  const [sealClosing, setSealClosing] = useState(false);
+  // 이번 방문에서 원본을 꺼낸 행동이 시민 활동 기록에 남았는지 (끝 카드에 한 줄로 보여 준다)
   const auditRecs = useRef<ActivityResult["status"][]>([]);
-  // 원본이 드러난 뒤의 마무리만 연출이다. 레버·바퀴가 움직이는 짧은 동안에도 걸어 다닐 수 있다
-  const auditCine = auditPhase === "reveal";
+  // 도입, 조작판으로 다가가고 물러나는 전환, 원본 판독 뒤의 마무리는 연출이다 (걸을 수 없다)
+  const auditCine = auditPhase === "intro" || auditPhase === "focus" || auditPhase === "reveal";
+  const startIntroRef = useRef<() => void>(() => {});
   const cine = faceCine || auditCine;
   const [visited, setVisited] = useState<SectionId[]>([]);
   const [toast, setToast] = useState<string | null>(null);
@@ -243,17 +248,14 @@ export default function ExploreClient() {
     setFace(f);
     // 이미 끝낸 저장은 깨어난 상태로, 맞춰 놓고 고르지 않은 저장은 선택 단계로 바로 돌아온다
     toPhase(f.legacy || f.method ? "done" : f.solved ? "choice" : "idle");
-    // 퍼즐 B: 저장된 단계로 돌아온다. 표시등은 마지막 시험 그대로, 끝냈다면 보증 장치가 켜진 채로
+    // 퍼즐 B: 저장된 단계로 돌아온다. 봉인판은 마지막 배치 그대로, 끝냈다면 원본은 꺼내져 있고 보증 장치가 켜진 채로
     const a = loadAudit();
     auditRef.current = a;
     setAudit(a);
-    const ap = restPhase(f, a);
-    toAuditPhase(ap);
-    auditRt.braked = a.braked;
-    auditRt.link = a.link;
-    auditRt.pos = { ...a.pos };
+    toAuditPhase(restPhase(f, a));
+    auditRt.pos = { ...a.seal.pos };
     auditRt.poweredAt = 0;
-    setAuditView({ braked: a.braked, link: a.link, pos: { ...a.pos }, solved: a.solved, litAt: a.solved ? 1 : 0 });
+    setAuditView({ solved: a.solved, litAt: a.solved ? 1 : 0 });
     setWebgl(hasWebGL());
     setTouch(window.matchMedia("(pointer: coarse)").matches);
     loadSettings();
@@ -343,19 +345,14 @@ export default function ExploreClient() {
     [updateFace, toPhase, later, lineEvents]
   );
 
-  // 퍼즐 A가 끝나면 시제품 끝 카드 대신 기록 기계가 저절로 돌기 시작한다 (안내문 없음)
+  // 퍼즐 A가 끝나면 시제품 끝 카드 대신 곁의 기록 보관 장치에 불이 들어오며 퍼즐 B의 도입이 이어진다
   const finishWake = useCallback(() => {
     toPhase("done");
     gaze.frozen = false;
     gaze.lookAt = null;
     duckBgm(false);
-    const next = restPhase(faceRef.current, auditRef.current);
-    if (next !== "dormant" && auditRt.phase === "dormant") {
-      auditRt.poweredAt = performance.now();
-      sfx.clunk();
-      later(300, () => sfx.brake());
-    }
-    toAuditPhase(next);
+    toAuditPhase(restPhase(faceRef.current, auditRef.current));
+    if (auditRt.phase === "ready" && !auditRef.current.intro) later(700, () => startIntroRef.current());
   }, [toPhase, toAuditPhase, later]);
   // 이산이 고개를 든다: 카메라가 천천히 이산을 바라보고, 두세 마디 뒤 시제품의 끝 카드
   const startWake = useCallback(
@@ -403,113 +400,176 @@ export default function ExploreClient() {
     [zone, updateFace, toPhase, startWake, lineEvents, showToast, t]
   );
 
-  // ---------------- 퍼즐 B 「되감긴 3초」 v0.6 ----------------
-  // 조작은 세 부품: 제동 레버 · 연결 장치 · 수동 바퀴. 어떤 순서로 눌러도 기계가 실제로 반응하고(걸림, 되감김, 릴 끝),
-  // 원본 릴을 14:02:01까지 되감는 순간 자동으로 해결된다. 순서를 빛으로 알려 주지 않는다.
-  const mirrorAudit = useCallback((a: AuditState) => {
-    auditRt.braked = a.braked;
-    auditRt.link = a.link;
-    auditRt.pos = { ...a.pos };
-    setAuditView((v) => ({ ...v, braked: a.braked, link: a.link, pos: { ...a.pos }, solved: a.solved }));
+  // ---------------- 퍼즐 B 「봉인된 3초」 v0.7 ----------------
+  // 도입(공식 기록 → 이산의 의문과 부탁 → 봉인된 원본) → 장치에 다가가 2D 봉인 격자 → 원본 배출·판독 → 3D로 돌아와 이산의 말 → 보증 장치
+  const syncSeal = useCallback((a: AuditState) => {
+    auditRt.pos = { ...a.seal.pos };
   }, []);
-  const moveAudit = useCallback(
-    (part: AuditPart, next: AuditState, ms: number, after?: () => void) => {
-      updateAudit(next);
-      mirrorAudit(next);
-      auditRt.moved = part;
-      auditRt.movedAt = performance.now();
-      toAuditPhase("moving");
-      later(ms, () => {
-        if (auditRt.phase !== "moving") return;
-        if (after) after();
-        else toAuditPhase("manual");
+  const releaseCamera = useCallback(() => {
+    gaze.frozen = false;
+    gaze.lookAt = null;
+    duckBgm(false);
+  }, []);
+
+  // 도입 (약 12초): 퍼즐 A 직후, 또는 아직 못 본 채로 장치에 다가갔을 때 한 번
+  const startIntro = useCallback(() => {
+    if (auditRt.phase !== "ready" || auditRef.current.intro) return;
+    toAuditPhase("intro");
+    auditRt.poweredAt = performance.now();
+    auditRt.focus = "official";
+    sfx.clunk();
+    duckBgm(true);
+    gaze.frozen = true;
+    gaze.lookAt = officialPoint();
+    later(700, () =>
+      playLines(
+        auditScenes.official,
+        lineEvents,
+        () => {
+          // 장면 2: 이산을 본다
+          auditRt.focus = null;
+          gaze.lookAt = SAN_FACE;
+          later(450, () =>
+            playLines(auditScenes.ask, lineEvents, () => {
+              // 장면 3: 봉인된 원본 카세트와 오른쪽 배출구
+              gaze.lookAt = sealPoint();
+              auditRt.focus = "sealed";
+              sfx.sealBump();
+              later(750, () =>
+                playLines(auditScenes.sealed, lineEvents, () =>
+                  later(250, () => {
+                    auditRt.focus = null;
+                    updateAudit(seeIntro(auditRef.current));
+                    toAuditPhase("ready");
+                    releaseCamera();
+                  })
+                )
+              );
+            })
+          );
+        },
+        250
+      )
+    );
+  }, [toAuditPhase, later, lineEvents, updateAudit, releaseCamera]);
+  startIntroRef.current = startIntro;
+
+  // 장치에 다가간다: 카메라가 봉인 격자로 다가가고 2D 조작판이 열린다 (이동·점프·조이스틱은 멈춘다)
+  const openSeal = useCallback(() => {
+    if (auditRt.phase !== "ready") return;
+    if (!auditRef.current.intro) return startIntro();
+    toAuditPhase("focus");
+    gaze.frozen = true;
+    gaze.lookAt = sealPoint();
+    sfx.sealGrab();
+    later(550, () => {
+      if (auditRt.phase !== "focus") return;
+      toAuditPhase("puzzle");
+      setPanel({ kind: "seal" });
+    });
+  }, [startIntro, toAuditPhase, later]);
+  // 나가기: 확대가 풀리며 3D로 돌아간다. 진행은 저장되어 있어 다시 들어오면 그대로다
+  const closeSeal = useCallback(() => {
+    if (auditRt.phase !== "puzzle") return;
+    toAuditPhase("focus");
+    setSealClosing(true);
+    later(380, () => {
+      setSealClosing(false);
+      setPanel(null);
+      later(250, () => {
+        if (auditRt.phase !== "focus") return;
+        toAuditPhase("ready");
+        releaseCamera();
       });
+    });
+  }, [toAuditPhase, later, releaseCamera]);
+  const closeSealRef = useRef(closeSeal);
+  closeSealRef.current = closeSeal;
+
+  // 봉인판 하나를 민다. 규칙에 맞는 이동만 저장한다. 원본이 배출구에 닿는 순간 추가 입력 없이 해결
+  const sealMove = useCallback(
+    (id: string, to: number) => {
+      if (auditRt.phase !== "puzzle") return false;
+      const next = moveSeal(auditRef.current, id, to);
+      if (!next) return false;
+      updateAudit(next);
+      syncSeal(next);
+      if (next.solved) {
+        // 퍼즐 진행 저장과 별개로, 봉인된 원본을 꺼낸 행동을 시민 활동으로 판정한다 (범종 보호 중이면 남지 않는다)
+        const rec = recordCitizenActivity({ kind: "audit.extract", sourceId: "original-input" }, { zone, unregistered: unregisteredVisit(ghostRef.current) });
+        auditRecs.current.push(rec.status);
+        toAuditPhase("reveal");
+        duckBgm(true);
+      }
+      return true;
     },
-    [updateAudit, mirrorAudit, toAuditPhase, later]
+    [zone, updateAudit, syncSeal, toAuditPhase]
   );
-  const jamAudit = useCallback((part: AuditPart) => {
-    auditRt.jammed = part;
-    auditRt.jammedAt = performance.now();
-    sfx.jam();
-  }, []);
+  const sealUndo = useCallback(() => {
+    const cur = auditRef.current;
+    if (auditRt.phase !== "puzzle" || !cur.seal.history.length) return;
+    const next = undoSeal(cur);
+    updateAudit(next);
+    syncSeal(next);
+    sfx.sealSlide(1);
+  }, [updateAudit, syncSeal]);
+  const sealReset = useCallback(() => {
+    const cur = auditRef.current;
+    if (auditRt.phase !== "puzzle" || !cur.seal.history.length) return;
+    const next = resetSeal(cur);
+    updateAudit(next);
+    syncSeal(next);
+    sfx.sealStop();
+  }, [updateAudit, syncSeal]);
 
   const finishAuditFlow = useCallback(() => {
     updateAudit(finishAudit(auditRef.current));
     toAuditPhase("done");
-    gaze.frozen = false;
-    gaze.lookAt = null;
-    duckBgm(false);
+    releaseCamera();
     setFaceEnd(true);
-  }, [updateAudit, toAuditPhase]);
+  }, [updateAudit, toAuditPhase, releaseCamera]);
 
-  // 원본이 드러난 순간: 기계가 멈추고 판독창을 비춘다 → 도시 안내가 끊긴다 → 이산을 본다 → 두 마디 → 보증 장치 → 시제품 끝
-  const startReveal = useCallback(() => {
-    toAuditPhase("reveal");
-    sfx.reveal();
-    duckBgm(true);
-    gaze.frozen = true;
-    gaze.lookAt = auditWindowPoint();
-    later(2600, () => {
-      sfx.cityVoice();
-      playLines(auditScenes.cut, lineEvents, () => {
-        sfx.cut();
-        later(700, () => {
-          gaze.lookAt = { x: 0, y: 3, z: 0.3 };
-        });
-        later(2000, () =>
-          playLines(
-            auditScenes.san,
-            lineEvents,
-            () =>
-              later(900, () => {
-                const at = performance.now();
-                setAuditView((v) => ({ ...v, litAt: at }));
-                sfx.guarantor();
-                gaze.lookAt = { x: GUARANTOR.pos[0], y: 1.5, z: GUARANTOR.pos[2] };
-                later(700, () => playLines(auditScenes.guarantor, lineEvents, () => later(700, finishAuditFlow)));
-              }),
-            1400
-          )
-        );
+  // 2D에서 원본 판독이 끝나면: 조작판이 닫히고 3D로 → 꺼낸 원본 → 이산 (다리는 그대로 돌) → 두 마디 → 보증 장치 → 시제품 끝
+  const finishReveal = useCallback(() => {
+    if (auditRt.phase !== "reveal") return;
+    setSealClosing(true);
+    later(380, () => {
+      setSealClosing(false);
+      setPanel(null);
+      auditRt.ejectedAt = performance.now();
+      setAuditView((v) => ({ ...v, solved: true }));
+      gaze.frozen = true;
+      gaze.lookAt = sealPoint();
+      later(1100, () => {
+        gaze.lookAt = SAN_FACE;
       });
+      later(2300, () =>
+        playLines(
+          auditScenes.san,
+          lineEvents,
+          () =>
+            later(900, () => {
+              const at = performance.now();
+              setAuditView((v) => ({ ...v, litAt: at }));
+              sfx.guarantor();
+              gaze.lookAt = { x: GUARANTOR.pos[0], y: 1.5, z: GUARANTOR.pos[2] };
+              later(700, () => playLines(auditScenes.guarantor, lineEvents, () => later(700, finishAuditFlow)));
+            }),
+          1400
+        )
+      );
     });
-  }, [toAuditPhase, later, lineEvents, finishAuditFlow]);
+  }, [later, lineEvents, finishAuditFlow]);
 
-  const operateAudit = useCallback(
-    (part: AuditPart | null) => {
-      const ph = auditRt.phase;
-      if (!part || (ph !== "auto" && ph !== "manual")) return;
-      const cur = auditRef.current;
-      if (part === "brake") {
-        const r = pullBrake(cur);
-        if (r.status !== "braked") return sfx.clunk();
-        // 퍼즐 진행 저장과 별개로, 도시 자동화를 멈춘 행동을 시민 활동으로 판정한다 (범종 보호 중이면 남지 않는다)
-        const rec = recordCitizenActivity({ kind: "audit.interrupt", sourceId: "revision-press" }, { zone, unregistered: unregisteredVisit(ghostRef.current) });
-        auditRecs.current.push(rec.status);
-        sfx.lever();
-        sfx.brake();
-        moveAudit("brake", r.state, 900);
-        return;
-      }
-      if (part === "link") {
-        const r = shiftLink(cur);
-        if (r.status === "jammed") return jamAudit("link");
-        if (r.status !== "linked") return;
-        sfx.ratchet();
-        later(520, () => sfx.clunk());
-        moveAudit("link", r.state, 750);
-        return;
-      }
-      const r = turnWheel(cur);
-      if (r.status === "jammed") return jamAudit("wheel");
-      // 릴 끝: 더 감기지 않고 덜컥 걸린다 (공식 릴은 끝까지 '동의')
-      if (r.status === "end") return jamAudit("wheel");
-      if (r.status !== "rewound") return;
-      sfx.rewind();
-      moveAudit("wheel", r.state, 820, r.solved ? startReveal : undefined);
-    },
-    [zone, moveAudit, jamAudit, later, startReveal]
-  );
+  // 도입을 아직 못 본 채로(새로고침·B부터 다시) 장치 곁에 서면 도입부터
+  useEffect(() => {
+    if (auditPhase !== "ready" || audit.intro || zone !== "bunker") return;
+    const iv = setInterval(() => {
+      if (!activeRef.current) return;
+      if (Math.hypot(AUDIT_MACHINE.pos[0] - player.pos.x, AUDIT_MACHINE.pos[2] - player.pos.z) < 4) startIntroRef.current();
+    }, 300);
+    return () => clearInterval(iv);
+  }, [auditPhase, audit.intro, zone]);
   useEffect(() => () => faceTimers.current.forEach(clearTimeout), []);
 
   const interact = useCallback(
@@ -523,7 +583,7 @@ export default function ExploreClient() {
           else if (it.id === "face-keep") chooseFace("exception");
           break;
         case "audit":
-          if (it.id === "audit-machine") operateAudit(auditRt.aim);
+          if (it.id === "audit-machine") openSeal();
           else if (it.id === "audit-guarantor") setPanel({ kind: "dialog", name: it.label, lines: [auditUi.guarantorLook], step: 0 });
           break;
         case "bell":
@@ -636,7 +696,7 @@ export default function ExploreClient() {
           break;
       }
     },
-    [complete, talked, goTo, markVisited, visited.length, ghost, found.length, zone, showToast, t, commitActivity, face, turnDrum, chooseFace, cine, operateAudit]
+    [complete, talked, goTo, markVisited, visited.length, ghost, found.length, zone, showToast, t, commitActivity, face, turnDrum, chooseFace, cine, openSeal]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -656,19 +716,13 @@ export default function ExploreClient() {
         }
         return;
       }
-      // 기록 기계의 부품을 직접 탭: 그 부품을 조작한다 (장치 가까이에서만)
-      if (id === "audit-brake" || id === "audit-link" || id === "audit-wheel") {
-        if (cine || Math.hypot(AUDIT_MACHINE.pos[0] - player.pos.x, AUDIT_MACHINE.pos[2] - player.pos.z) > 4.6) return;
-        operateAudit(id.slice(6) as AuditPart);
-        return;
-      }
       const it = ZONES[zone].items.find((i) => i.id === id);
       if (!it) return;
       const d = Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z);
       if (d > (it.kind === "audit" || it.kind === "face" ? 4.6 : 10)) return;
       interact(it);
     },
-    [touch, panel, intro, fade, ending, paused, zone, interact, faceEnd, turnDrum, cine, operateAudit]
+    [touch, panel, intro, fade, ending, paused, zone, interact, faceEnd, turnDrum]
   );
 
   // 테스트용: 주소 끝에 ?debug 를 붙이면 콘솔에서 이동·복원을 조작할 수 있다
@@ -775,7 +829,9 @@ export default function ExploreClient() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (performance.now() - unlockAt.current < 250) return; // 잠금 해제와 같은 Esc
-        if (panelRef.current) setPanel(null);
+        // 봉인 격자는 '나가기'와 같다 (원본을 판독하는 동안에는 닫히지 않는다)
+        if (panelRef.current?.kind === "seal") closeSealRef.current();
+        else if (panelRef.current) setPanel(null);
         else if (faceEndRef.current) closeFaceEnd();
         else if (pausedRef.current) resume();
         else if (activeRef.current) setPaused(true);
@@ -793,7 +849,7 @@ export default function ExploreClient() {
         else closePanel();
         return;
       }
-      // 작업·글·소개 패널, 그림 보기, 감사 기록지는 E로 바로 닫는다 (닫기 버튼과 같음)
+      // 작업·글·소개 패널, 그림 보기는 E로 바로 닫는다 (닫기 버튼과 같음)
       if (e.code === "KeyE" && !e.repeat && p && (p.kind === "section" || p.kind === "painting") && performance.now() - panelAt.current > 250) {
         e.preventDefault();
         closePanel();
@@ -948,10 +1004,9 @@ export default function ExploreClient() {
     auditRef.current = a;
     setAudit(a);
     resetAuditRt();
-    auditRt.braked = a.braked;
-    auditRt.link = a.link;
-    auditRt.pos = { ...a.pos };
-    setAuditView({ braked: a.braked, link: a.link, pos: { ...a.pos }, solved: a.solved, litAt: a.solved ? 1 : 0 });
+    auditRt.pos = { ...a.seal.pos };
+    setAuditView({ solved: a.solved, litAt: a.solved ? 1 : 0 });
+    setSealClosing(false);
     toAuditPhase(restPhase(f, a));
     auditRecs.current = [];
     gaze.frozen = false;
@@ -1088,7 +1143,7 @@ export default function ExploreClient() {
       localStorage.setItem(LOGIN_KEY, String(Date.now()));
     } catch {}
     // 테스트 재시작 뒤 새로고침: B부터라면 B 기계 앞에서 (B를 아직 건드리지 않았을 때만)
-    if (testStart() === "b" && !auditRef.current.braked && !auditRef.current.solved) setTimeout(() => (teleport.req = B_TEST_SPOT), 300);
+    if (testStart() === "b" && !auditRef.current.intro && !auditRef.current.solved) setTimeout(() => (teleport.req = B_TEST_SPOT), 300);
     if (accepted) {
       gaze.mood = "calm";
       teleport.req = { x: LINE_SPOT.x, z: QUEUE_Z[30], yaw: 0 };
@@ -1114,7 +1169,7 @@ export default function ExploreClient() {
       if (!complete && !face.legacy) {
         if (faceCine || auditCine) return null;
         // 장치 하나만, 멀리 있을 때만 가리킨다. 다가가면 화살표를 거두고 기계 자체를 보게 한다 (부품별 안내는 없다)
-        const target = faceRt.phase !== "done" ? find("face-machine") : auditRt.phase === "auto" || auditRt.phase === "manual" || auditRt.phase === "moving" ? find("audit-machine") : null;
+        const target = faceRt.phase !== "done" ? find("face-machine") : auditRt.phase === "ready" ? find("audit-machine") : null;
         if (!target || Math.hypot(target.pos.x - px, target.pos.z - pz) < 5) return null;
         return { pos: target.pos, label: t(faceRt.phase !== "done" ? faceUi.quest : auditUi.quest) };
       }
@@ -1173,9 +1228,9 @@ export default function ExploreClient() {
   const sectionMeta = panel?.kind === "section" ? sections.find((s) => s.id === panel.id)! : null;
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
   const sanAwake = complete || (!face.legacy && !!face.method && facePhase === "done");
-  // 퍼즐 장치(A·B)는 부품 이름표·조작 안내를 띄우지 않는다. 모바일 행동 버튼만 짧은 보조 라벨을 쓴다
-  const puzzlePart = near?.kind === "face" || (near?.kind === "audit" && near.id === "audit-machine");
-  const verb = near ? (near.kind === "audit" ? (near.id === "audit-machine" ? auditUi.use : ui.view) : near.kind === "face" ? auditUi.use : near.kind === "bell" ? { ko: "종 치기", en: "Ring" } : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
+  // 퍼즐 A 장치는 부품 이름표·조작 안내를 띄우지 않는다 (모바일 행동 버튼만 짧은 보조 라벨). B 장치는 다른 물건처럼 아래 프롬프트 하나
+  const puzzlePart = near?.kind === "face";
+  const verb = near ? (near.kind === "audit" ? (near.id === "audit-machine" ? auditUi.use : ui.view) : near.kind === "face" ? { ko: "조작", en: "Use" } : near.kind === "bell" ? { ko: "종 치기", en: "Ring" } : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
   // 바라보는 대상의 이름 · 동사. 두 버튼은 조준한 쪽 이름으로
   const nearText = near && verb
     ? puzzlePart
@@ -1325,6 +1380,23 @@ export default function ExploreClient() {
             </div>
           </div>
         </div>
+      )}
+      {panel?.kind === "seal" && (
+        <SealPanel
+          lang={lang}
+          pos={audit.seal.pos}
+          canUndo={audit.seal.history.length > 0}
+          solved={audit.solved}
+          closing={sealClosing}
+          onMove={sealMove}
+          onUndo={sealUndo}
+          onReset={sealReset}
+          onExit={() => {
+            closeSeal();
+            lock();
+          }}
+          onRevealDone={finishReveal}
+        />
       )}
       {faceEnd && !panel && (
         <div className="face-end-wrap">
