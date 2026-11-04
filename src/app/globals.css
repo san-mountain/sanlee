@@ -576,6 +576,9 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* 로고 옆 한자 이름: 명조, 같은 크기, 조금 옅게 */
 .nav-logo-han { margin-left: .5em; font-family: "Noto Serif KR", "Noto Serif CJK KR", "Songti SC", "Hiragino Mincho ProN", serif; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
+/* 山 위에 얹힌 거꾸로 된 왕관: 글자 간격(.08em)만큼 왼쪽으로 당겨 가운데에 맞춘다 */
+.nav-logo-san { position: relative; display: inline-block; }
+.nav-logo-crown { position: absolute; left: calc(50% - .04em); bottom: 76%; width: .62em; height: auto; transform: translateX(-50%); overflow: visible; pointer-events: none; }
 /* 맨 위 시 위의 선은 없앤다 */
 
 /* 메일 주소: 누르면 복사되었다는 작은 표시 */

@@ -1,0 +1,49 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>山 왕관 시안</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#fafaf8;--ink:#161616;--muted:#777;--rule:#e4e4e0}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Noto Sans KR",sans-serif;-webkit-font-smoothing:antialiased}
+h1{font-size:15px;font-weight:700;margin:28px 20px 4px}
+p.lead{font-size:13px;color:var(--muted);margin:0 20px 20px}
+.card{border-top:1px solid var(--rule);padding:18px 20px 22px}
+.label{font-size:13px;font-weight:700;margin-bottom:2px}
+.desc{font-size:12px;color:var(--muted);margin-bottom:14px}
+.row{display:flex;align-items:flex-end;gap:40px;flex-wrap:wrap}
+.nav{display:flex;align-items:center;gap:20px;padding:16px 0 8px}
+.logo{font-weight:700;letter-spacing:.04em;font-size:17px;white-space:nowrap}
+.links{display:flex;gap:20px;font-size:14px;color:var(--muted)}
+.han{margin-left:.5em;font-family:"Noto Serif KR",serif;font-weight:600;letter-spacing:.08em;color:var(--muted)}
+.big .logo{font-size:56px}
+/* 왕관을 얹는 자리: 山 글자 하나만 감싼다 */
+.san{position:relative;display:inline-block}
+.crown{position:absolute;left:calc(50% - .04em);pointer-events:none}
+.crown svg{display:block;width:100%;height:auto;overflow:visible}
+/* A 노란 왕관, 작게 */
+.A .crown{width:.62em;bottom:76%;transform:translateX(-50%)}
+/* B 먹선 왕관: 한자와 같은 회색 */
+.B .crown{width:.62em;bottom:75%;transform:translateX(-50%)}
+/* C 비뚤게 얹힌 */
+.C .crown{width:.66em;bottom:72%;transform:translateX(-36%) rotate(14deg)}
+/* D 눈 달린 큰 왕관(파비콘 그대로) */
+.D .crown{width:.86em;bottom:74%;transform:translateX(-50%)}
+.D .han,.D .san{}
+@media(max-width:600px){.links{display:none}.big .logo{font-size:44px}}
+</style></head><body>
+<h1>山에 거꾸로 된 왕관 — 시안 4개</h1>
+<p class="lead">왼쪽은 실제 크기(PC 17px), 오른쪽은 크게 확대한 모습. 모양은 파비콘 왕관을 그대로 썼다.</p>
+<template id="yellow"><svg viewBox="0 0 32 32"><path fill="#FFDA35" stroke="#211B0F" stroke-width="1.6" stroke-linejoin="round" d="M2.2 2H29.8V9L31 27.4L23.3 21.3L16 29.4L8.7 21.3L1 27.4L2.2 9Z"/></svg></template>
+<template id="line"><svg viewBox="0 0 32 32"><path fill="none" stroke="#777" stroke-width="2.6" stroke-linejoin="round" d="M2.2 2H29.8V9L31 27.4L23.3 21.3L16 29.4L8.7 21.3L1 27.4L2.2 9Z"/></svg></template>
+<template id="eyes"><svg viewBox="0 0 32 32"><path fill="#FFDA35" stroke="#211B0F" stroke-width="1.1" stroke-linejoin="round" d="M2.2 2H29.8V9L31 27.4L23.3 21.3L16 29.4L8.7 21.3L1 27.4L2.2 9Z"/><g fill="none" stroke="#271D04" stroke-width="1.1"><path d="M7.85 13.75H13.65M9.3 11.2L12.2 16.3M12.2 11.2L9.3 16.3"/><path d="M18.35 13.75H24.15M19.8 11.2L22.7 16.3M22.7 11.2L19.8 16.3"/></g></svg></template>
+
+<div id="cards"></div>
+<script>
+const V=[["A","A. 노란 왕관, 작게","파비콘과 같은 노랑. 눈은 뺐다. 작은 크기에서도 색으로 알아본다.","yellow"],
+["B","B. 먹선 왕관","한자와 같은 회색 선만. 가장 조용하고, 로고 톤을 해치지 않는다.","line"],
+["C","C. 비뚤게 얹힌 왕관","노란 왕관을 오른쪽으로 기울여 걸친 느낌. 장난스럽고 '거꾸로'가 더 의도적으로 보인다.","yellow"],
+["D","D. 눈 달린 왕관, 크게","파비콘을 그대로 축소. 가장 또렷한 캐릭터지만 17px에선 눈이 거의 안 보이고 로고보다 튄다.","eyes"]];
+const logo=k=>`<span lang="en">SAN LEE</span><span class="han" lang="ko-Hani">李<span class="san">山<span class="crown">${document.getElementById(k).innerHTML}</span></span></span>`;
+document.getElementById("cards").innerHTML=V.map(([c,l,d,k])=>`<div class="card ${c}"><div class="label">${l}</div><div class="desc">${d}</div>
+<div class="row"><div class="nav"><span class="logo">${logo(k)}</span><span class="links"><span>Works</span><span>Writing</span><span>About</span></span></div>
+<div class="big"><span class="logo">${logo(k)}</span></div></div></div>`).join("");
+</script></body></html>
