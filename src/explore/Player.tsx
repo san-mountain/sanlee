@@ -60,7 +60,6 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     clearInteractionProjection();
   }, [zoneKey, zone, onNear, arrived]);
 
-  const fwd = useRef(new THREE.Vector3());
   const tmp = useRef(new THREE.Vector3());
   const screenPt = useRef(new THREE.Vector3());
   const jumpBuf = useRef(0);
