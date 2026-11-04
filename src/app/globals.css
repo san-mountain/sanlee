@@ -403,12 +403,14 @@ img { max-width: 100%; height: auto; display: block; }
 .hud-gear { font: inherit; font-size: 15px; line-height: 1; background: transparent; color: var(--dim); border: 1px solid #4a3d6b; padding: 3px 7px; cursor: pointer; }
 .hud-gear:hover { color: var(--fg); }
 
-.quest { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); z-index: 30; pointer-events: none; display: flex; align-items: center; gap: 8px;
-  font-family: var(--mono); font-size: 11px; color: var(--yellow); text-shadow: 0 0 6px #000; white-space: nowrap;
-  padding: 3px 10px; border: 1px solid #ffe14d55; background: #07030f99; transition: opacity .3s; }
-.quest-arrow { display: inline-flex; width: 16px; height: 16px; transition: transform .08s linear; color: var(--yellow); }
-.quest-dist { color: var(--dim); }
-.quest.close { opacity: .35; }
+.quest { position: absolute; top: 46px; left: 50%; transform: translateX(-50%); z-index: 30; pointer-events: none; display: flex; align-items: center; gap: 9px;
+  font-family: var(--mono); font-size: 12px; font-weight: 700; color: #ffe98d; text-shadow: 0 1px 3px #000, 0 0 9px #000; white-space: nowrap;
+  padding: 7px 12px; border: 1.5px solid #ffd66aaf; border-radius: 7px; background: #100d0ded; box-shadow: 0 3px 18px #000b, inset 0 0 10px #ffd66a0c; transition: opacity .2s; }
+.quest-arrow { display: inline-flex; flex: 0 0 auto; width: 23px; height: 23px; transition: transform .08s linear; color: #ffe14d; filter: drop-shadow(0 0 5px #ffe14d75); }
+.quest-arrow svg { width: 23px; height: 23px; }
+.quest-label { min-width: 0; }
+.quest-dist { color: #fff2c0; font-weight: 700; }
+.quest.close { opacity: .88; }
 
 .jump-btn { position: absolute; right: 22px; bottom: 96px; z-index: 32; width: 58px; height: 58px; border-radius: 50%;
   border: 1px solid #22f0ff88; background: #07030f88; color: var(--cyan); font-size: 22px; touch-action: none; }
@@ -1132,6 +1134,21 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .face-end .panel-actions { justify-content: flex-end; flex-wrap: wrap; }
 .face-end .btn { min-height: 44px; }
 @media (max-width: 640px) { .face-line { bottom: 150px; font-size: 15px; } }
+
+/* B's narrative subtitles remain on screen until the player advances them.
+   This is deliberately a single next button in the subtitle, not floating 3D instructions. */
+.face-line.manual { gap: 8px; max-height: 50dvh; overflow-y: auto;
+  padding: 12px 14px 10px; border: 1px solid #b48a3c66; border-radius: 8px;
+  background: #0d0b0ade; box-shadow: 0 6px 25px #000b; pointer-events: auto; }
+.face-line-next { align-self: flex-end; min-width: 68px; min-height: 40px;
+  padding: 6px 14px; border: 1px solid #d7bd8299; border-radius: 5px;
+  background: #20190f; color: #f6e4b9; font-family: var(--mono);
+  font-size: 12px; cursor: pointer; touch-action: manipulation; }
+.face-line-next:hover, .face-line-next:focus-visible { outline: 1px solid #f2d89d; background: #382917; }
+@media (max-width: 640px) {
+  .face-line.manual { bottom: max(34px, env(safe-area-inset-bottom)); width: calc(100% - 24px); }
+  .face-line-next { min-height: 44px; }
+}
 
 /* 퍼즐 B 자막 화자 색 */
 .face-line.who-archive b { color: #ffc76a; }

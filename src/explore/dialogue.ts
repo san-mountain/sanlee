@@ -12,6 +12,9 @@ export type LineEvents = {
   show: (line: Line | null) => void;
   // 연출 타이머. 장면을 중간에 끊을 수 있도록 부르는 쪽이 모아서 관리한다
   later: (ms: number, fn: () => void) => void;
+  // Story-heavy scenes may pause on a line until the player chooses to continue.
+  // A null value removes the pending advance action (e.g. when the scene finishes).
+  waitForAdvance?: (next: (() => void) | null) => void;
 };
 
 // 한 줄이 시작될 때. 지금은 아무 소리도 내지 않는다
@@ -22,10 +25,14 @@ export function lineDuration(line: Line) {
   return line.ms;
 }
 
-// 줄을 차례로 띄우고, 마지막 줄이 끝나면 done. 줄 사이에는 gap만큼 자막을 비운다
-export function playLines(lines: Line[], ev: LineEvents, done: () => void, gap = 0) {
+// Auto mode is preserved for machinery/camera beats. Manual mode is intended
+// for dialogue and record explanations; it never silently skips an unread line.
+export function playLines(lines: Line[], ev: LineEvents, done: () => void, gap = 0, mode: "auto" | "manual" = "auto") {
+  const manual = mode === "manual" && !!ev.waitForAdvance;
+  ev.waitForAdvance?.(null);
   const step = (i: number) => {
     if (i >= lines.length) {
+      ev.waitForAdvance?.(null);
       ev.show(null);
       done();
       return;
@@ -33,12 +40,15 @@ export function playLines(lines: Line[], ev: LineEvents, done: () => void, gap =
     const line = lines[i];
     ev.show(line);
     startLine(line);
-    ev.later(lineDuration(line), () => {
+    const advance = () => {
+      ev.waitForAdvance?.(null);
       if (gap && i < lines.length - 1) {
         ev.show(null);
         ev.later(gap, () => step(i + 1));
       } else step(i + 1);
-    });
+    };
+    if (manual) ev.waitForAdvance?.(advance);
+    else ev.later(lineDuration(line), advance);
   };
   step(0);
 }

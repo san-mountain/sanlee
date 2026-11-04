@@ -137,7 +137,20 @@ export default function ExploreClient() {
   const later = useCallback((ms: number, fn: () => void) => {
     faceTimers.current.push(setTimeout(fn, ms));
   }, []);
-  const lineEvents = useMemo(() => ({ show: setFaceLine, later }), [later]);
+  const [canAdvanceLine, setCanAdvanceLine] = useState(false);
+  const advanceLineRef = useRef<(() => void) | null>(null);
+  const advanceLineAt = useRef(0);
+  const lineEvents = useMemo(() => ({
+    show: setFaceLine,
+    later,
+    waitForAdvance: (next: (() => void) | null) => {
+      advanceLineRef.current = next;
+      if (next) advanceLineAt.current = performance.now();
+      setCanAdvanceLine(!!next);
+    },
+  }), [later]);
+  const playStoryLines = useCallback((lines: Line[], done: () => void, gap = 0) =>
+    playLines(lines, lineEvents, done, gap, "manual"), [lineEvents]);
   const faceCine = facePhase === "restored" || facePhase === "twist" || facePhase === "applying" || facePhase === "wake";
   // 퍼즐 B: 진행 저장(audit)과 장치의 연출 단계(auditPhase). 시민 활동 기록은 버튼을 누르는 순간에만 따로 판정한다
   const [audit, setAudit] = useState<AuditState>(emptyAudit);
@@ -255,6 +268,7 @@ export default function ExploreClient() {
     toAuditPhase(restPhase(f, a));
     auditRt.pos = { ...a.seal.pos };
     auditRt.poweredAt = 0;
+    auditRt.introSeen = a.intro;
     setAuditView({ solved: a.solved, litAt: a.solved ? 1 : 0 });
     setWebgl(hasWebGL());
     setTouch(window.matchMedia("(pointer: coarse)").matches);
@@ -423,34 +437,32 @@ export default function ExploreClient() {
     gaze.frozen = true;
     gaze.lookAt = officialPoint();
     later(650, () =>
-      playLines(auditScenes.official, lineEvents, () =>
+      playStoryLines(auditScenes.official, () =>
         // 이산의 대사 중에도 기록 화면에 시선을 두어 '거부 vs 동의'를 읽을 수 있게 한다.
-        playLines(auditScenes.ask, lineEvents, () => {
+        playStoryLines(auditScenes.ask, () => {
           gaze.lookAt = sealPoint();
           auditRt.focus = "sealed";
           sfx.sealBump();
           later(600, () =>
-            playLines(auditScenes.sealed, lineEvents, () => {
+            playStoryLines(auditScenes.sealed, () => {
+              auditRt.introSeen = true;
               updateAudit(seeIntro(auditRef.current));
-              toAuditPhase("focus");
               auditRt.focus = null;
-              sfx.sealGrab();
-              later(500, () => {
-                if (auditRt.phase !== "focus") return;
-                toAuditPhase("puzzle");
-                setPanel({ kind: "seal" });
-              });
+              toAuditPhase("ready");
+              // Give back movement after the story. The player now chooses to open
+              // the puzzle using the device's clearly marked interaction target.
+              releaseCamera();
             })
           );
         })
       )
     );
-  }, [toAuditPhase, later, lineEvents, updateAudit]);
+  }, [toAuditPhase, later, playStoryLines, updateAudit, releaseCamera]);
 
   // 장치에 다가간다: 카메라가 봉인 격자로 다가가고 2D 조작판이 열린다 (이동·점프·조이스틱은 멈춘다)
   const openSeal = useCallback(() => {
-    if (auditRt.phase !== "ready") return;
-    if (!auditRef.current.intro) return startIntro();
+    // The reveal must play before the device can be opened; no premature 2D panel.
+    if (auditRt.phase !== "ready" || !auditRef.current.intro) return;
     toAuditPhase("focus");
     gaze.frozen = true;
     gaze.lookAt = sealPoint();
@@ -460,7 +472,7 @@ export default function ExploreClient() {
       toAuditPhase("puzzle");
       setPanel({ kind: "seal" });
     });
-  }, [startIntro, toAuditPhase, later]);
+  }, [toAuditPhase, later]);
   // 나가기: 확대가 풀리며 3D로 돌아간다. 진행은 저장되어 있어 다시 들어오면 그대로다
   const closeSeal = useCallback(() => {
     if (auditRt.phase !== "puzzle") return;
@@ -540,24 +552,37 @@ export default function ExploreClient() {
       // 도시 자신의 짧고 차가운 안내로 확인시킨다. 이산의 독백과 C 예고는 유지.
       later(2300, () => {
         sfx.cityVoice();
-        playLines(auditScenes.forced, lineEvents, () =>
-          playLines(
+        playStoryLines(auditScenes.forced, () =>
+          playStoryLines(
             auditScenes.san,
-            lineEvents,
             () =>
               later(900, () => {
                 const at = performance.now();
                 setAuditView((v) => ({ ...v, litAt: at }));
                 sfx.guarantor();
                 gaze.lookAt = { x: GUARANTOR.pos[0], y: 1.5, z: GUARANTOR.pos[2] };
-                later(700, () => playLines(auditScenes.guarantor, lineEvents, () => later(700, finishAuditFlow)));
+                later(700, () => playStoryLines(auditScenes.guarantor, () => later(700, finishAuditFlow)));
               }),
             1400
           )
         );
       });
     });
-  }, [later, lineEvents, finishAuditFlow]);
+  }, [later, playStoryLines, finishAuditFlow]);
+
+  // First B approach: start the world/story reveal at ~6m, well *before* the
+  // record machine's 3.6m interaction range. The button is not usable until
+  // this cutscene has finished. Reopening a completed intro skips this sequence.
+  useEffect(() => {
+    if (zone !== "bunker" || auditPhase !== "ready" || audit.intro || facePhase !== "done") return;
+    const watch = setInterval(() => {
+      if (!activeRef.current || gaze.frozen) return;
+      if (Math.hypot(AUDIT_MACHINE.pos[0] - player.pos.x, AUDIT_MACHINE.pos[2] - player.pos.z) <= 6) {
+        startIntro();
+      }
+    }, 180);
+    return () => clearInterval(watch);
+  }, [zone, auditPhase, audit.intro, facePhase, startIntro]);
 
   useEffect(() => () => faceTimers.current.forEach(clearTimeout), []);
 
@@ -706,9 +731,10 @@ export default function ExploreClient() {
         return;
       }
       const it = ZONES[zone].items.find((i) => i.id === id);
-      if (!it) return;
+      if (!it || (it.when && !it.when())) return;
       const d = Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z);
-      if (d > (it.kind === "audit" || it.kind === "face" ? 4.6 : 10)) return;
+      const touchReach = it.radius + (it.kind === "npc" ? 2 : it.kind === "statue" ? 1.5 : 0.8);
+      if (d > touchReach) return;
       interact(it);
     },
     [touch, panel, intro, fade, ending, paused, zone, interact, faceEnd, turnDrum]
@@ -827,6 +853,14 @@ export default function ExploreClient() {
         return;
       }
       const p = panelRef.current;
+      // Cinematic narrative: E / Enter advances one subtitle (Space remains jump); the player
+      // controls reading speed. Never advances the scene on the input that opened it.
+      if (!p && !e.repeat && (e.code === "KeyE" || e.code === "Enter") &&
+          advanceLineRef.current && performance.now() - advanceLineAt.current > 180) {
+        e.preventDefault();
+        advanceLineRef.current();
+        return;
+      }
       if ((e.code === "KeyE" || e.code === "Enter") && !e.repeat && !p && faceEndRef.current && performance.now() - faceEndAt.current > 600) {
         e.preventDefault();
         closeFaceEnd();
@@ -981,6 +1015,8 @@ export default function ExploreClient() {
     faceTimers.current.forEach(clearTimeout);
     faceTimers.current = [];
     faceProtectionIntended.current = false;
+    advanceLineRef.current = null;
+    setCanAdvanceLine(false);
     setFaceLine(null);
     setFaceEnd(false);
     faceRef.current = f;
@@ -993,6 +1029,7 @@ export default function ExploreClient() {
     auditRef.current = a;
     setAudit(a);
     resetAuditRt();
+    auditRt.introSeen = a.intro;
     auditRt.pos = { ...a.seal.pos };
     setAuditView({ solved: a.solved, litAt: a.solved ? 1 : 0 });
     setSealClosing(false);
@@ -1159,7 +1196,7 @@ export default function ExploreClient() {
         if (faceCine || auditCine) return null;
         // 장치 하나만, 멀리 있을 때만 가리킨다. 다가가면 화살표를 거두고 기계 자체를 보게 한다 (부품별 안내는 없다)
         const target = faceRt.phase !== "done" ? find("face-machine") : auditRt.phase === "ready" ? find("audit-machine") : null;
-        if (!target || Math.hypot(target.pos.x - px, target.pos.z - pz) < 5) return null;
+        if (!target || Math.hypot(target.pos.x - px, target.pos.z - pz) < 2.15) return null;
         return { pos: target.pos, label: t(faceRt.phase !== "done" ? faceUi.quest : auditUi.quest) };
       }
       if (!complete && !met && visited.length === 0) {
@@ -1328,9 +1365,9 @@ export default function ExploreClient() {
       {active && !cine && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
       {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
-      {active && touch && <Joystick />}
+      {active && !cine && touch && <Joystick />}
       <InteractionGuide active={active && touch && !cine && !!near} color={nearColor} />
-      {active && touch && (
+      {active && !cine && touch && (
         <JumpButton
           action={
             near && verb && !cine
@@ -1356,9 +1393,19 @@ export default function ExploreClient() {
       )}
 
       {faceLine && zone === "bunker" && (
-        <div className={`face-line who-${faceLine.speaker}`} role="status" aria-live="polite" data-line={faceLine.id}>
+        <div className={`face-line who-${faceLine.speaker} ${canAdvanceLine ? "manual" : ""}`} role="status" aria-live="polite" data-line={faceLine.id}>
           <b>{t(speakers[faceLine.speaker])}</b>
           <span>{t(faceLine)}</span>
+          {canAdvanceLine && (
+            <button
+              type="button"
+              className="face-line-next"
+              aria-label={t(ui.next)}
+              onClick={() => { if (performance.now() - advanceLineAt.current > 180) advanceLineRef.current?.(); }}
+            >
+              {t(ui.next)}
+            </button>
+          )}
         </div>
       )}
       {panel?.kind === "faceConfirm" && (
