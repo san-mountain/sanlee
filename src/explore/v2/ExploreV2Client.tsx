@@ -135,7 +135,10 @@ export default function ExploreV2Client() {
   }, []);
 
   const lock = useCallback(() => { if (!touch) requestLock(root.current); }, [touch]);
-  const closeDialog = useCallback(() => { setPanel(null); lock(); }, [lock]);
+  const closeDialog = useCallback(() => {
+    setPanel(null);
+    if (storyRef.current.phase !== "decision") lock();
+  }, [lock]);
   const show = useCallback((title: Localized, lines: Localized[], actions?: Action[]) => {
     setPanel({ title, lines, actions });
   }, []);
@@ -457,9 +460,17 @@ export default function ExploreV2Client() {
   }, []);
 
   const debugJump = useCallback((target: StoryV2["phase"]) => {
-    const path: StoryEvent[] = ["meet-san", "read-origin", "restore-san", "discover-source", "confront-san", "enter-city", "reach-core", "keep-record"];
     let next = initialStory();
-    for (const event of path) {
+    const sequence: StoryEvent[] = [
+      "meet-san", "read-origin", "restore-san", "begin-investigation",
+      "review-evidence", "question-keeper", "confront-san", "enter-city",
+      "reach-core", "keep-record",
+    ];
+    for (const event of sequence) {
+      if (next.phase === target) break;
+      if (next.phase === "investigating") {
+        for (const flag of ["r07", "child", "radio"] as const) next = observeClue(next, flag);
+      }
       if (next.phase === target) break;
       next = advanceStory(next, event);
     }
@@ -569,13 +580,13 @@ export default function ExploreV2Client() {
       {story.phase === "decision" && !panel && !ending && (
         <div className={styles.overlay}>
           <div className={`panel ${styles.card} ${styles.inventory}`} role="dialog" aria-modal="true">
-            <div className={styles.eyebrow}>{tr(say("大慈悲 · 삭제 대상 확인", "GREAT COMPASSION · ERASURE PREVIEW"))}</div>
-            <h2>{tr(say("무엇이 사라지는가?", "What will disappear?"))}</h2>
+            <div className={styles.eyebrow}>{tr(say("大慈悲 · 기억 정리 요청", "GREAT COMPASSION · MEMORY PURGE REQUEST"))}</div>
+            <h2>{tr(say("무엇을 남길 것인가?", "What will you preserve?"))}</h2>
             <ul>{deletionLines.map((line, index) => <li key={index}>{tr(line)}</li>)}</ul>
-            <p>{tr(say("이 실험판의 브라우저 저장 기록만 삭제됩니다. 세계의 프로그램과 다른 방문자의 기록은 그대로 남습니다.", "Only this prototype's browser save will be removed. The program and other visitors remain."))}</p>
+            <p>{tr(say("정리를 취소하면 이곳의 기억이 남습니다. 게임 밖에서 초기화하면 이 브라우저의 기록만 지워집니다. 작품 코드와 다른 방문자의 기록은 그대로 남습니다.", "Canceling preserves these memories. Resetting outside erases only this browser's progress, not the program or another visitor's world."))}</p>
             <div className={styles.actions}>
-              <button className={styles.secondary} onClick={keep}>{tr(say("기록을 남긴다", "KEEP THE RECORD"))}</button>
-              <Link className={styles.danger} href="/deleteseoul-lab/erase">{tr(say("게임 밖에서 기록 삭제", "ERASE OUTSIDE THE GAME"))}</Link>
+              <button className={styles.secondary} onClick={keep}>{tr(say("기억 정리 취소 · 기록 보존", "CANCEL PURGE · KEEP RECORD"))}</button>
+              <Link className={styles.danger} href="/deleteseoul-lab/erase">{tr(say("게임 밖에서 내 세계 초기화", "RESET MY WORLD OUTSIDE"))}</Link>
             </div>
           </div>
         </div>
@@ -597,7 +608,7 @@ export default function ExploreV2Client() {
               <div style={{ width: "100%", borderTop: "1px solid #39505a", paddingTop: 14, marginTop: 8 }}>
                 <div className={styles.eyebrow}>DEBUG · SCENE JUMP</div>
                 <div className={styles.actions}>
-                  {(["arrival", "recovery", "origin", "restored", "discovered", "confronted", "crossing", "decision"] as const).map(phase => (
+                  {(["arrival", "recovery", "origin", "restored", "investigating", "evidence", "discovered", "keeperQuestioned", "confronted", "crossing", "decision"] as const).map(phase => (
                     <button type="button" className={styles.secondary} key={phase} onClick={() => debugJump(phase)}>{phase}</button>
                   ))}
                 </div>
@@ -612,13 +623,13 @@ export default function ExploreV2Client() {
           <div className={`panel ${styles.card}`} role="dialog" aria-modal="true">
             <div className={styles.eyebrow}>ENDING · {ending === "kept" ? "RECORD" : ending === "deleted" ? "DELETE" : "EXIT"}</div>
             <h2>{tr(ending === "kept"
-              ? say("당신은 이 서울을 기억하기로 했습니다.", "You chose to remember this Seoul.")
+              ? say("대자비의 기억 정리 요청을 중단했습니다.", "You canceled Great Compassion’s memory purge.")
               : ending === "deleted"
                 ? say("당신은 서울의 기록을 지웠습니다.", "You erased the record of Seoul.")
-                : say("모든 이야기의 끝을 지켜볼 의무는 없습니다.", "You do not have to see every story through."))}</h2>
+                : say("당신은 이곳을 떠났습니다.", "You left this world behind."))}</h2>
             <p>{tr(ending === "deleted"
               ? say("다시 접속하면 R-07은 처음처럼 친구가 되어 달라고 묻겠지요.", "When you return, R-07 will ask to be your friend again.")
-              : say("화면 밖으로 나가도 당신이 경험한 일은 당신의 기억에 남습니다.", "You carry the memory of what you experienced beyond the screen."))}</p>
+              : say("기억을 남긴다면 관계도 상처도 남습니다. 떠났다면 정리 요청은 아직 해결되지 않았습니다.", "Keeping memories preserves both relationships and scars. If you left, the purge remains unresolved."))}</p>
             <div className={styles.actions}>
               <button className={styles.secondary} onClick={resetLab}>{tr(say("다시 시작", "RESTART"))}</button>
               <Link className={styles.primary} href="/">{tr(say("작품 밖으로", "LEAVE THE WORLD"))}</Link>
