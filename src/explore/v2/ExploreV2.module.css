@@ -41,3 +41,5 @@
   .prompt { bottom: max(150px, calc(env(safe-area-inset-bottom) + 150px)); }
   .gaze { top: calc(max(14px, env(safe-area-inset-top)) + 114px); }
 }
+
+.dialogCounter { margin-top: 14px; text-align: right; color: #80b6bb; font-size: 10px; letter-spacing: .13em; }
