@@ -15,6 +15,7 @@ export const auditRt = {
   ejectedAt: 0,
   // 장치 가까이 있는가 (은은한 반응)
   near: false,
+  introSeen: false, // do not offer the 2D panel before the first B reveal has played
 };
 
 export function setAuditPhase(p: AuditPhase) {
@@ -28,6 +29,7 @@ export function resetAuditRt() {
   auditRt.poweredAt = 0;
   auditRt.ejectedAt = 0;
   auditRt.near = false;
+  auditRt.introSeen = false;
   setAuditPhase("dormant");
 }
 
