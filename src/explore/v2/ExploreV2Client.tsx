@@ -13,8 +13,8 @@ import { restoreCovers, stopGazeCombat } from "../Jabi";
 import { requestLock, useLookAndKeys, Joystick, JumpButton } from "../TouchControls";
 import { BUNKER, CITY, type Interactable, type Zone, type ZoneDef } from "../zones";
 import {
-  advanceStory, atLeast, eraseStory, initialStory, readStory, remember,
-  storyObjective, writeStory, type MemoryFlag, type StoryEvent, type StoryV2,
+  advanceStory, atLeast, clueCount, sourceCount, inspectSource, observeClue, eraseStory, initialStory, readStory, remember,
+  storyObjective, writeStory, type ClueFlag, type SourceFlag, type MemoryFlag, type StoryEvent, type StoryV2,
 } from "./story";
 import styles from "./ExploreV2.module.css";
 
@@ -67,7 +67,7 @@ export default function ExploreV2Client() {
   const bunker = useMemo<ZoneDef>(() => ({
     ...BUNKER,
     items: BUNKER.items
-      .filter(it => ["keeper", "r07", "kid", "radio", "monk", "dj", "sleeper", "statue", "face-machine", "audit-machine", "audit-guarantor", "exit"].includes(it.id))
+      .filter(it => ["keeper", "r07", "kid", "radio", "monk", "dj", "sleeper", "statue", "face-machine", "audit-machine", "audit-guarantor", "exit", "about", "writing", "works"].includes(it.id))
       .map(it => ({
         ...it,
         label: it.id === "face-machine" ? say("원본 자화상 장치", "Original portrait device")
@@ -75,9 +75,9 @@ export default function ExploreV2Client() {
           : it.id === "audit-guarantor" ? say("관리자 기록 단말", "Control archive") : it.label,
         when: () => {
           const phase = storyRef.current.phase;
-          if (it.id === "face-machine") return phase === "recovery";
+          if (it.id === "face-machine") return phase === "recovery" && sourceCount(storyRef.current) >= 2;
           if (it.id === "audit-machine") return phase === "origin";
-          if (it.id === "audit-guarantor") return phase === "restored";
+          if (it.id === "audit-guarantor") return phase === "evidence";
           return true;
         },
       })),
@@ -113,6 +113,22 @@ export default function ExploreV2Client() {
 
   const rememberFlag = useCallback((flag: MemoryFlag) => {
     const next = remember(storyRef.current, flag);
+    storyRef.current = next;
+    setStory(next);
+    writeStory(next);
+  }, []);
+
+  const inspect = useCallback((flag: SourceFlag) => {
+    const next = inspectSource(storyRef.current, flag);
+    if (next === storyRef.current) return;
+    storyRef.current = next;
+    setStory(next);
+    writeStory(next);
+  }, []);
+
+  const observe = useCallback((flag: ClueFlag) => {
+    const next = observeClue(storyRef.current, flag);
+    if (next === storyRef.current) return;
     storyRef.current = next;
     setStory(next);
     writeStory(next);
@@ -275,7 +291,7 @@ export default function ExploreV2Client() {
       ]);
       return;
     }
-  }, [closeDialog, commit, moveToCity, rememberFlag, show]);
+  }, [closeDialog, commit, moveToCity, rememberFlag, inspect, observe, show]);
 
   const interact = useCallback((it: Interactable | null) => {
     if (!it || panel || intro || paused || ending || dead) return;
@@ -393,7 +409,7 @@ export default function ExploreV2Client() {
           zone={zone}
           playerZone={zone === "bunker" ? bunker : city}
           lang={lang}
-          visited={[]}
+          visited={(["about", "writing", "works"] as const).filter(k => story.sources[k]) as unknown as ("about"|"writing"|"works")[]}
           face={face}
           facePhase="idle"
           audit={{ solved: false, litAt: atLeast(story, "restored") ? 1 : 0 }}
@@ -409,7 +425,7 @@ export default function ExploreV2Client() {
 
       <header className={styles.top}>
         <Link href="/">SAN LEE</Link>
-        <strong>DELETE SEOUL <span>2087 / V2 LAB</span></strong>
+        <strong>DELETE SEOUL <span>잔상실 / 2087</span></strong>
         <div className={styles.topRight}>
           <LangToggle />
           <button type="button" onClick={() => { setPaused(true); document.exitPointerLock?.(); }} aria-label={tr(say("일시정지", "Pause"))}>Ⅱ</button>
@@ -418,6 +434,8 @@ export default function ExploreV2Client() {
       <div className={styles.objective} role="status">
         <span>{tr(say("현재 목표", "OBJECTIVE"))}</span>
         {tr(storyObjective[story.phase === "left" ? "arrival" : story.phase])}
+        {story.phase === "recovery" && <small style={{ display: "block" }}>({sourceCount(story)}/2)</small>}
+        {story.phase === "investigating" && <small style={{ display: "block" }}>({clueCount(story)}/3)</small>}
       </div>
       {zone === "city" && story.phase === "crossing" && !ending && (
         <div className={styles.gaze}>
@@ -436,7 +454,7 @@ export default function ExploreV2Client() {
             <div className={styles.eyebrow}>SAN LEE · 2026</div>
             <h1>DELETE SEOUL</h1>
             <p>{tr(say("2026년의 포트폴리오에 접속했습니다. 화면 속 서울은 2087년입니다.", "You opened a portfolio from 2026. The Seoul on screen is in 2087."))}</p>
-            <p>{tr(say("무명사의 누군가가 당신을 기다리고 있습니다.", "Someone in the shelter has been waiting for you."))}</p>
+            <p>{tr(say("지하 기록 보관소, 잔상실. 누군가가 당신을 기다리고 있습니다.", "Below the city, in the Afterimage Archive, someone is waiting for you."))}</p>
             <button type="button" className={styles.primary} onClick={() => { setIntro(false); lock(); }}>{tr(say("접속하기", "CONNECT"))}</button>
           </div>
         </div>
