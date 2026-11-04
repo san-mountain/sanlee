@@ -153,14 +153,35 @@ export default function ExploreV2Client() {
   const visit = useCallback((it: Interactable) => {
     const s = storyRef.current;
     if (it.id === "keeper") {
-      if (atLeast(s, "discovered")) show(named.keeper, [
-        say("……봤구나. 말했으면 네가 여기까지 와 줬겠어?", "…You found out. Would you have come this far if we had told you?"),
-        say("우리도 살고 싶었어. 그렇다고 네게 선택권을 빼앗은 일이 사라지는 건 아니지.", "We wanted to live. It doesn't excuse taking your choice away."),
-      ]);
-      else show(named.keeper, [
-        say("어서 와. 여긴 도시가 잘 보지 못하는 곳이야.", "Welcome. The city rarely sees what happens down here."),
-        say("가운데 있는 이산에게도 인사해 줘. 오래 기다렸거든.", "Go say hello to San in the middle. He's been waiting."),
-      ]);
+      if (s.phase === "restored") {
+        commit("begin-investigation");
+        show(named.keeper, [
+          say("이산이 움직이자마자 기록이 조금씩 바뀌기 시작했어.", "The records began changing as soon as San moved."),
+          say("고장인지 확인해 줄래? R-07, 아이, 무전수의 말이 서로 안 맞아.", "Could you check? R-07, the child, and the radio operator all remember things differently."),
+          say("큰일은 아닐 거야. 아마.", "It's probably nothing. Probably."),
+        ]);
+      } else if (s.phase === "discovered") {
+        commit("question-keeper");
+        show(named.keeper, [
+          say("……그 기록까지 읽었구나.", "…You read that far."),
+          say("이산을 복원하면 대자비가 여기의 기억을 점검한다는 건 알고 있었어.", "We knew restoring San would trigger Great Compassion's memory inspection."),
+          say("네가 그걸 막아 주길 바랐어. 위험을 말하면 떠날까 봐 숨겼지.", "We hoped you could stop it. We hid the danger, afraid you would leave."),
+          say("이산은 네가 오기 전부터 준비했어. 나머지는 그에게 물어봐.", "San prepared long before you arrived. Ask him the rest."),
+        ]);
+      } else if (atLeast(s, "keeperQuestioned")) {
+        show(named.keeper, [
+          say("네게 대가를 숨긴 건 내 잘못이야.", "I was wrong to hide the cost from you."),
+          say("아직 중앙에서 기록 정리 요청을 취소할 수 있을지도 몰라.", "There may still be time to cancel the purge at the central archive."),
+        ]);
+      } else if (s.phase === "investigating" || s.phase === "evidence") {
+        show(named.keeper, [say("내 말을 믿지 말고, 그들이 기억하는 걸 직접 확인해 줘.", "Don't just take my word for it. Listen to what they remember.")]);
+      } else {
+        show(named.keeper, [
+          say("어서 와. 여긴 한때 도시가 폐기한 자료실이었어.", "Welcome. This used to be a city records room."),
+          say("지워진 것들의 잔상을 모아 놔. 그래서 잔상실이라고 부르지.", "We keep afterimages of erased things. That's why we call it the Afterimage Archive."),
+          say("가운데 있는 이산에게도 인사해 줘. 오래 기다렸거든.", "Go say hello to San in the middle. He's been waiting."),
+        ]);
+      }
       return;
     }
     if (it.id === "r07") {
