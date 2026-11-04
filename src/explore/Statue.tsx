@@ -82,7 +82,7 @@ function Cookie() {
   useFrame((s) => {
     if (!ref.current) return;
     ref.current.rotation.y = s.clock.elapsedTime * 0.8;
-    ref.current.position.y = 3.6 + Math.sin(s.clock.elapsedTime * 1.6) * 0.08;
+    ref.current.position.y = 3.35 + Math.sin(s.clock.elapsedTime * 1.6) * 0.08;
   });
   const chips = useMemo(
     () =>
@@ -94,7 +94,7 @@ function Cookie() {
     []
   );
   return (
-    <group ref={ref} position={[1.5, 3.6, 1.5]}>
+    <group ref={ref} position={[1.7, 3.35, 1.05]}>
       <group rotation={[Math.PI / 2.4, 0, 0]}>
         <mesh>
           <cylinderGeometry args={[0.46, 0.44, 0.13, 24]} />
@@ -107,6 +107,7 @@ function Cookie() {
           </mesh>
         ))}
       </group>
+      <pointLight position={[0, 0, 0.25]} color="#ffc878" intensity={0.45} distance={2.6} decay={2} />
     </group>
   );
 }
@@ -167,7 +168,7 @@ const span = (p: number, a: number, b: number) => smooth(Math.min(1, Math.max(0,
 
 // 받침대 위에 주저앉아 머리를 감싸 쥔 동상.
 // faceFlow: 얼굴 복원 장치로 깨우는 새 경로. 얼굴·상체만 색이 돌아오고, 다리는 돌로 남는다
-export default function Statue({ restored, lang, second, faceMethod, faceFlow }: { restored: number; lang: Lang; second?: boolean; faceMethod?: "standard" | "exception" | null; faceFlow?: boolean }) {
+export default function Statue({ restored, lang, second, faceMethod, faceFlow, showCookie = true }: { restored: number; lang: Lang; second?: boolean; faceMethod?: "standard" | "exception" | null; faceFlow?: boolean; showCookie?: boolean }) {
   const faceHead = useRef<THREE.Group>(null);
   const body = useRef<THREE.Group>(null);
   const lean = useRef<THREE.Group>(null);
@@ -357,8 +358,8 @@ export default function Statue({ restored, lang, second, faceMethod, faceFlow }:
         ))}
       </group>
 
-      {/* 얼굴 복원 경로에서 깨어난 뒤에는 떠 있는 쿠키가 이산과 플레이어 사이를 가리지 않게 치운다 */}
-      {!flow && <Cookie />}
+      {/* 쿠키는 A 복원 전후 모두 보여 준다. 이산의 거부와 도시 기록을 잇는 시각적 모티프. */}
+      {showCookie && <Cookie />}
     </group>
   );
 }
