@@ -13,7 +13,7 @@ import { restoreCovers, stopGazeCombat } from "../Jabi";
 import { requestLock, useLookAndKeys, Joystick, JumpButton } from "../TouchControls";
 import { BUNKER, CITY, type Interactable, type Zone, type ZoneDef } from "../zones";
 import {
-  advanceStory, atLeast, clueCount, sourceCount, inspectSource, observeClue, eraseStory, initialStory, readStory, remember,
+  advanceStory, atLeast, clueCount, comparisonCount, compareClue, sourceCount, inspectSource, observeClue, eraseStory, initialStory, readStory, remember,
   storyObjective, writeStory, type ClueFlag, type SourceFlag, type MemoryFlag, type StoryEvent, type StoryV2,
 } from "./story";
 import styles from "./ExploreV2.module.css";
@@ -334,23 +334,58 @@ export default function ExploreV2Client() {
       return;
     }
     if (it.id === "audit-guarantor" && s.phase === "evidence") {
+      const accounts: Record<ClueFlag, { label: Localized; contrast: Localized[] }> = {
+        r07: {
+          label: say("R-07의 기록", "R-07 RECORD"),
+          contrast: [
+            say("공식: 방문자가 오지 않았음. / R-07: 방금 방문자와 인사했음.", "Official: no visitor arrived. / R-07: greeted a visitor moments ago."),
+            say("같은 순간에 두 개의 기억이 남아 있습니다.", "Two accounts exist for the same moment."),
+          ],
+        },
+        child: {
+          label: say("아이의 그림 기록", "CHILD'S DRAWING"),
+          contrast: [
+            say("공식: 저장된 그림 없음. / 아이: 그림을 직접 들고 있음.", "Official: no drawing saved. / Child: still holding the drawing."),
+            say("지워진 것은 그림일까요, 그림이 있었다는 사실일까요?", "Was the drawing erased, or the fact it existed?"),
+          ],
+        },
+        radio: {
+          label: say("무전수의 신호 기록", "RADIO SIGNAL"),
+          contrast: [
+            say("공식: 수신 신호 없음. / 녹음 흔적: 2026.", "Official: no signal received. / Recording fragment: 2026."),
+            say("그 날짜의 서울은 아직 이 시설을 가지고 있지 않았습니다.", "This facility did not yet exist in Seoul of that year."),
+          ],
+        },
+      };
+      const actions: Action[] = (["r07", "child", "radio"] as ClueFlag[])
+        .filter(key => !s.comparisons[key])
+        .map(key => ({
+          label: accounts[key].label,
+          run: () => {
+            const next = compareClue(storyRef.current, key);
+            storyRef.current = next;
+            setStory(next);
+            writeStory(next);
+            const final = next.phase === "discovered";
+            show(SYSTEM, [
+              ...accounts[key].contrast,
+              ...(final ? [
+                say("세 기록의 수정 시각이 같습니다. 이산의 격리가 풀린 직후.", "All three were edited at the same instant: just after San's quarantine lifted."),
+                say("발신 흔적: 2026년 방문자 접속 + 잔상실 내부 신호.", "Source trace: 2026 visitor session + an internal Afterimage signal."),
+                say("대자비 중앙: ‘기억 정리’ 요청 대기. 아직 실행되지 않았습니다.", "Great Compassion: 'memory purge' pending. Not yet executed."),
+                say("누가 이 요청을 보냈을까요? 관리인에게 물어볼 수 있습니다.", "Who sent it? You can ask the caretaker."),
+              ] : [
+                say("아직 대조하지 않은 기록이 남았습니다.", "There are still records to compare."),
+              ]),
+            ]);
+          },
+        }));
+      actions.push({ label: say("단말에서 나온다", "LEAVE TERMINAL"), run: closeDialog });
       show(SYSTEM, [
-        say("잔상실 대조 기록. 세 인물의 진술과 저장된 기록이 일치하지 않습니다.", "Afterimage reconciliation. Three people's testimony conflicts with the stored record."),
-        say("R-07 / 관계 없음. 아이 / 그림 없음. 무전수 / 신호 없음.", "R-07 / no relationship. Child / no drawing. Operator / no signal."),
-        say("세 기록의 공통된 수정 시각을 추적할 수 있습니다.", "The three edits share a common timestamp."),
-      ], [
-        { label: say("공통 수정 기록 대조", "COMPARE SHARED EDIT"), run: () => {
-          commit("review-evidence");
-          show(SYSTEM, [
-            say("수정 시각: 이산 복원 직후.", "Modification time: just after San's restoration."),
-            say("접속 출처: 2026 / PORTFOLIO SESSION.", "Connection origin: 2026 / PORTFOLIO SESSION."),
-            say("처리 상태: 대자비 중앙에서 ‘기억 정리’ 요청 대기.", "Pending: 'memory purge' awaiting execution at Great Compassion's core."),
-            say("요청 서명: 방문자 접속과 잔상실 내부 신호가 겹쳐 있습니다.", "Request signature: visitor session overlaid with an internal Afterimage signal."),
-            say("이 서명이 어떻게 생긴 걸까요? 관리인에게 물어볼 수 있습니다.", "How was that signature made? Ask the caretaker."),
-          ]);
-        } },
-        { label: say("다시 둘러본다", "KEEP LOOKING"), run: closeDialog },
-      ]);
+        say("세 사람이 서로 다른 곳에서 기억한 일이 모두 도시의 기록과 어긋납니다.", "Three people remember events that disagree with the city's records."),
+        say(`대조한 기록: ${comparisonCount(s)}/3`, `Records compared: ${comparisonCount(s)}/3`),
+        say("어떤 차이를 먼저 확인하시겠습니까?", "Which discrepancy would you like to inspect?"),
+      ], actions);
       return;
     }
     if (it.id === "exit") {
@@ -463,13 +498,16 @@ export default function ExploreV2Client() {
     let next = initialStory();
     const sequence: StoryEvent[] = [
       "meet-san", "read-origin", "restore-san", "begin-investigation",
-      "review-evidence", "question-keeper", "confront-san", "enter-city",
+      "question-keeper", "confront-san", "enter-city",
       "reach-core", "keep-record",
     ];
     for (const event of sequence) {
       if (next.phase === target) break;
       if (next.phase === "investigating") {
         for (const flag of ["r07", "child", "radio"] as const) next = observeClue(next, flag);
+      }
+      if (next.phase === "evidence") {
+        for (const flag of ["r07", "child", "radio"] as const) next = compareClue(next, flag);
       }
       if (next.phase === target) break;
       next = advanceStory(next, event);
@@ -541,6 +579,7 @@ export default function ExploreV2Client() {
         {tr(storyObjective[story.phase === "left" ? "arrival" : story.phase])}
         {story.phase === "recovery" && <small style={{ display: "block" }}>({sourceCount(story)}/2)</small>}
         {story.phase === "investigating" && <small style={{ display: "block" }}>({clueCount(story)}/3)</small>}
+        {story.phase === "evidence" && <small style={{ display: "block" }}>({comparisonCount(story)}/3)</small>}
       </div>
       {zone === "city" && story.phase === "crossing" && !ending && (
         <div className={styles.gaze}>
