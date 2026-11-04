@@ -1114,9 +1114,15 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .ending-credit a, .pause-note a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 
 /* 퍼즐 A 「얼굴을 맞추십시오」: 자막, 기록 확인, 시제품 끝 카드 */
-.face-line { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 36; width: min(560px, calc(100% - 32px));
-  display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; pointer-events: none;
-  font-size: 16px; line-height: 1.5; color: #f2e6cf; text-shadow: 0 0 8px #000, 0 0 2px #000; word-break: keep-all; animation: noticeIn .45s ease-out; }
+/* All story subtitles, not only manually advanced B lines, sit on an opaque-enough
+   dark surface. Glowing or white 3D geometry must never wash the dialogue out. */
+.face-line { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 36;
+  width: min(560px, calc(100% - 32px)); box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center; pointer-events: none;
+  padding: 11px 16px; border: 1px solid #c5ae7b66; border-radius: 7px;
+  background: linear-gradient(180deg, #080b12f2, #0a0b10ed); box-shadow: 0 5px 22px #000b;
+  font-size: 16px; line-height: 1.5; color: #f7ebd7; text-shadow: 0 1px 2px #000;
+  word-break: keep-all; animation: noticeIn .45s ease-out; }
 .face-line b { font-family: var(--mono); font-size: 10px; font-weight: normal; letter-spacing: .16em; color: #e8c27a; }
 .face-line.who-city { color: #ffd2ea; }
 .face-line.who-city b { color: #ff5fb0; }
@@ -1286,10 +1292,11 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
   .seal-exit span { animation: none; }
 }
 
-/* 하나의 상호작용 대상만: 3D 부품의 투영점과 모바일 행동 버튼을 연결.
-   떠다니는 말풍선/라벨은 만들지 않는다. 항상 같은 자리에 점프를 남긴다. */
+/* PC·모바일 동일: 선택된 단 하나의 3D 부품에만 작은 홀로그램 표식.
+   버튼에서 이어지는 연결선이나 떠다니는 대상 이름표는 표시하지 않는다. */
 .interaction-guide { position: absolute; inset: 0; width: 100%; height: 100%;
   z-index: 31; pointer-events: none; overflow: hidden; opacity: 0; transition: opacity .14s ease-out; }
+.interaction-hologram { filter: drop-shadow(0 0 3px #020b12) drop-shadow(0 0 3px currentColor); }
 .explore-root .jump-btn:not(.act) { width: 50px; height: 50px; right: 20px; bottom: 18px; }
 .interact-btn { position: absolute; z-index: 33; right: 13px; bottom: 88px;
   display: flex; flex-direction: column; justify-content: center; align-items: center;

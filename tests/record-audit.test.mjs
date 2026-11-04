@@ -230,25 +230,26 @@ test("every puzzle B line has a unique b.* id, a known speaker, both languages a
 test("the intro identifies tracking-cookie consent and San's rejection; the evidence of forced rewriting stays sealed until completion", () => {
   const intro = [...auditScenes.official, ...auditScenes.ask, ...auditScenes.sealed];
   assert.deepEqual(intro.map((l) => l.ko), [
-    "시민 활동 추적 쿠키 · 14:02:01 — 모두 동의",
-    "뭐? 난 감시 쿠키를 분명 거부했는데.",
-    "내 거부가 동의로 기록됐어. 봉인된 원본을 확인해 줄래?",
+    "이산 · 위치와 행동 기록 수집 — 모두 동의 (14:02:01)",
+    "도시는 쿠키로 우리가 어디서 뭘 했는지 기록해. 난 그걸 거부했어.",
+    "그랬더니 도시가 날 활동 없는 시민이라며 멈춰 세웠지.",
+    "그런데 여기엔 동의라고 적혀 있어. 봉인된 원본을 확인해 줄래?",
     "수정 전 원본 기록 — 봉인됨",
   ]);
-  // San has already said he refused cookies in the pre-A story.
-  // The puzzle's discovery is the archive's *evidence* of state-forced alteration,
-  // not the fact of his rejection. Do not spoil the actual original readout at entry.
-  assert.match(intro[0].ko, /활동 추적 쿠키.*동의/);
-  assert.match(intro[1].ko, /쿠키.*거부/);
-  assert.match(intro[2].ko, /원본/);
+  // The player learns the exact consent question and why it matters before
+  // the puzzle. Only the original record later proves the city rewrote it.
+  assert.match(intro[0].ko, /위치와 행동.*동의/);
+  assert.match(intro[1].ko, /쿠키.*기록.*거부/);
+  assert.match(intro[2].ko, /활동 없는 시민/);
+  assert.match(intro[3].ko, /동의.*원본/);
   assert.match(auditScenes.forced[0].ko, /거부.*동의.*정정/);
-  assert.match(sealUi.discrepancy.ko, /추적 쿠키.*거부.*동의/);
-  assert.match(auditUi.endBody.ko, /활동 신호/);
+  assert.match(sealUi.discrepancy.ko, /위치·행동.*거부.*동의/);
+  assert.match(auditUi.endBody.ko, /활동 기록/);
   const beforeUi = [sealUi.title, sealUi.goal, sealUi.undo, sealUi.reset, sealUi.exit, sealUi.cassette, sealUi.reading];
   for (const text of beforeUi.flatMap((l) => [l.ko, l.en])) assert.ok(!/강제 정정|FORCED CORRECTION/i.test(text), text);
   assert.equal(sealUi.goal.ko, "원본 기록을 꺼내세요");
   const ms = intro.reduce((total, l) => total + l.ms, 0);
-  assert.ok(ms >= 8000 && ms <= 12000, `${ms}ms`);
+  assert.ok(ms >= 14000 && ms <= 18000, `${ms}ms`); // manually paced, no automatic skipping
 });
 
 test("after B: the San scene leaves a silence between the two lines, then the guarantor; NPCs move on to their after-B lines", () => {

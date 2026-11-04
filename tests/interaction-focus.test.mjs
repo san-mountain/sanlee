@@ -20,11 +20,20 @@ test("interaction picking uses on-screen candidates and keeps selection stable",
   assert.ok(player.includes('faceRt.screen[`drum-${faceRt.aim}`]'));
 });
 
-test("mobile wire targets only one selected 3D part with no extra labels or hit surface", () => {
+test("PC and mobile use one unobtrusive target hologram with no tether line", () => {
   assert.match(hud, /interactionProjection/);
-  assert.match(hud, /querySelector<HTMLElement>\("\.interact-btn"\)/);
-  assert.match(client, /<InteractionGuide active=\{active && touch && !cine && !!near\}/);
+  assert.match(hud, /className="interaction-hologram"/);
+  assert.ok(!hud.includes('querySelector<HTMLElement>(".interact-btn")'));
+  assert.ok(!hud.includes('strokeDasharray="3 5"'));
+  assert.match(client, /<InteractionGuide active=\{active && !cine && !!near\}/);
   assert.match(css, /\.interaction-guide \{[^}]*pointer-events: none/s);
+  assert.match(client, /active && locked && !near && <div className="crosshair"/);
+});
+
+test("A/B subtitles remain readable over bright objects in automatic and manual modes", () => {
+  assert.match(css, /\.face-line \{[^}]*background: linear-gradient\([^;]+;/s);
+  assert.match(css, /\.face-line\.manual \{[^}]*pointer-events: auto/s);
+  assert.match(css, /\.face-line-next \{/);
 });
 
 test("jump never changes its action, contextual interaction is a separate control", () => {
