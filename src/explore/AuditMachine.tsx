@@ -87,6 +87,7 @@ function OfficialScreen({ lang }: { lang: Lang }) {
         [
           [ko ? `${auditUi.officialTitle.ko} · ${auditUi.officialTitle.en}` : auditUi.officialTitle.en, 0.55],
           [`${RECORD_TIME} — ✓ ${ko ? OFFICIAL_RECORD.ko : OFFICIAL_RECORD.en}`, 1],
+          [ko ? auditUi.correctionStatus.ko : auditUi.correctionStatus.en, 0.47],
         ],
         { color: ACCEPT, bg: "#eef2ee", w: 768, h: 240 }
       ),
