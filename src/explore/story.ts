@@ -651,6 +651,7 @@ export const auditLines = {
   ask: { id: "b.san.ask", speaker: "san", ms: 3400, ko: "마지막 순간이 기억나지 않아. 원본을 확인해 줘.", en: "I can't remember the last moment. Check the original for me." },
   // 장면 3: 봉인판 뒤의 붉은 원본 카세트
   sealed: { id: "b.archive.sealed", speaker: "archive", ms: 2200, ko: "원본 입력 기록 — 봉인됨", en: "Original input record — SEALED" },
+  forced: { id: "b.city.forced-correction", speaker: "city", ms: 3000, ko: "시민 보호를 위해 거부 응답은 동의로 정정됩니다.", en: "For citizen protection, refusals are corrected to consent." },
   refused: { id: "b.san.refused", speaker: "san", ms: 3600, ko: "……내가 거부했었구나.", en: "...So I did refuse." },
   stillHere: { id: "b.san.still-here", speaker: "san", ms: 4200, ko: "그런데 난 왜 아직 여기 있는 거지?", en: "Then why am I still stuck here?" },
   guarantor: { id: "b.guarantor.required", speaker: "guarantor", ms: 3800, ko: "보증인 등록이 필요합니다.", en: "Guarantor registration required." },
@@ -661,6 +662,7 @@ export const auditScenes = {
   official: [auditLines.official, auditLines.consented],
   ask: [auditLines.ask],
   sealed: [auditLines.sealed],
+  forced: [auditLines.forced],
   san: [auditLines.refused, auditLines.stillHere],
   guarantor: [auditLines.guarantor],
   after: [auditLines.after],
@@ -673,6 +675,7 @@ export const auditUi = {
   // PC 프롬프트·모바일 행동 버튼의 보조 라벨
   use: { ko: "조작판 보기", en: "Open panel" },
   officialTitle: { ko: "공식 기록", en: "OFFICIAL RECORD" },
+  correctionStatus: { ko: "대자비 · 자동 정정 완료", en: "DAEJABI · AUTO-CORRECTED" },
   sealedSign: { ko: "원본 입력 기록 — 봉인됨", en: "ORIGINAL INPUT — SEALED" },
   readSign: { ko: "원본 입력 기록 — 판독됨", en: "ORIGINAL INPUT — READ" },
   guarantorSign: { ko: "보증인 등록", en: "GUARANTOR" },
@@ -680,8 +683,8 @@ export const auditUi = {
   endTag: { ko: "시제품 · 퍼즐 B 끝", en: "PROTOTYPE · PUZZLE B COMPLETE" },
   endTitle: { ko: "보증인 등록이 필요합니다", en: "Guarantor registration required" },
   endBody: {
-    ko: "원본 기록에는 '모두 거부'가 남아 있었습니다. 하지만 도시의 공식 기록은 여전히 '모두 동의'입니다. 이산의 다리는 아직 굳어 있습니다.",
-    en: "The original record still held 'Reject all'. But the city's official record still says 'Accept all'. San's legs are still stone.",
+    ko: "이산은 모두 거부했습니다. 그러나 대자비는 그의 거부를 강제로 '모두 동의'로 정정했습니다. 원본을 찾아도 공식 기록은 바뀌지 않으며, 이산의 다리는 여전히 굳어 있습니다.",
+    en: "San rejected all. Daejabi forcibly changed his refusal to 'Accept all'. Recovering the original does not change the official record, and his legs remain stone.",
   },
   endNext: { ko: "다음 이야기는 준비 중입니다.", en: "The next part is in progress." },
   recProtected: { ko: "범종의 보호로 원본을 꺼낸 행동은 시민 활동 기록에 남지 않았습니다.", en: "Under the bell's protection, taking out the original left no citizen activity record." },
@@ -697,7 +700,11 @@ export const sealUi = {
   exit: { ko: "나가기", en: "Leave" },
   cassette: { ko: "원본", en: "ORIGINAL" },
   reading: { ko: "원본 판독 중", en: "Reading original" },
-  originalTag: { ko: "원본 입력 기록", en: "ORIGINAL INPUT RECORD" },
+  originalTag: { ko: "실제 입력 · 원본", en: "ACTUAL INPUT · ORIGINAL" },
+  officialTag: { ko: "도시 공식 기록", en: "CITY OFFICIAL RECORD" },
+  forcedRewrite: { ko: "대자비 강제 정정", en: "DAEJABI FORCED CORRECTION" },
+  officialValue: { ko: "모두 동의", en: "ACCEPT ALL" },
+  discrepancy: { ko: "거부했지만, 도시는 동의로 기록했다.", en: "He refused. The city recorded consent." },
 };
 
 // 개발·검수용 재시작 (?debug에서만 설정창에 보인다)
