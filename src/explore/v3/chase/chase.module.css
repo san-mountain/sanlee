@@ -114,8 +114,15 @@
 }
 .watchHot { color: #ffb2bd; }
 .watchCover { color: var(--teal); }
+.watchTrack { color: #ffcf8a; }
 .meter { height: 6px; margin-top: 5px; background: #2a1b20; border: 1px solid #5a2c36; border-radius: 6px; overflow: hidden; }
-.meter i { display: block; height: 100%; background: var(--red); transition: width 0.1s linear; }
+.meter i { display: block; height: 100%; background: var(--red); transition: width 0.1s linear, background-color 0.2s; }
+/* 오르는 중: 빨강이 맥박친다 · 내려가는 중: 가라앉은 호박색 */
+.meterUp { border-color: #ff5a70; }
+.meterUp i { animation: meterPulse 0.5s ease-in-out infinite alternate; }
+.meterDown i { background: #b88a3a; }
+@keyframes meterPulse { from { opacity: 0.75; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .meterUp i { animation: none; } }
 
 .subtitle {
   position: absolute;

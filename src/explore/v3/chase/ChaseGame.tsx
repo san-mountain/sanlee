@@ -45,6 +45,7 @@ function playEvent(e: GameEvent) {
     case "beam": return sfx.beam();
     case "alarm": return sfx.lock();
     case "spotted": return sfx.watch();
+    case "lock": return sfx.lock();
     case "caught": return sfx.denied();
     case "gate-tick": return sfx.blip();
     case "gate-open": return sfx.door();
@@ -115,8 +116,9 @@ function Sim({
         `joy ${d.joy.active ? "ON " : "off"} x ${d.joy.x.toFixed(2)} y ${d.joy.y.toFixed(2)}`,
         `look pointers ${d.lookPointers}  hold ${d.hold}  keys [${d.keys}]`,
         `player x ${P.x.toFixed(2)} z ${P.z.toFixed(2)} y ${P.y.toFixed(2)} yaw ${P.yaw.toFixed(2)} v ${P.speed.toFixed(1)}`,
-        `phase ${g.phase} t ${g.phaseT.toFixed(1)}  meter ${g.meter.toFixed(2)} exp ${g.exposed} cov ${g.covered}`,
-        `san x ${g.san.x.toFixed(1)} z ${g.san.z.toFixed(1)} idx ${g.san.idx}  cp ${g.checkpoint} retries ${g.retries}`,
+        `phase ${g.phase} t ${g.phaseT.toFixed(1)}  meter ${g.meter.toFixed(2)} ${g.trend} exp ${g.exposed} cov ${g.covered}`,
+        `lights ${g.lights.filter((l) => l.on).map((l) => `${l.def.id}:${l.mode}${l.target ? "/" + l.target : ""} seen ${l.seen.toFixed(1)}`).join("  ")}`,
+        `san x ${g.san.x.toFixed(1)} z ${g.san.z.toFixed(1)} idx ${g.san.idx} ${g.san.mode} exp ${g.san.exposed}  cp ${g.checkpoint} retries ${g.retries}`,
       ].join("\n");
     }
   });
@@ -239,7 +241,15 @@ export default function ChaseGame() {
     if (!showAction) input.setTouchHold(false);
   }, [showAction, input]);
   const meterPct = Math.round(snap.meter * 100);
-  const watchLabel = snap.exposed ? "노출됨" : snap.covered ? "엄폐 중" : snap.meter > 0 ? "추적 중" : "탐색 중";
+  // 게이지 = 감시망이 내 위치를 얼마나 확정했는가. 오르는 중(노출)과 내려가는 중(가려짐·시야 밖)을 구분해 보여 준다
+  const watchLabel =
+    snap.tracked ? (snap.exposed ? "추적 중 · 위치 확인 ▲" : "추적 중 · 시야 밖 ▼")
+    : snap.exposed ? "노출됨 · 위치 확인 ▲"
+    : snap.covered ? (snap.meter > 0 ? "엄폐 중 · 흐려지는 중 ▼" : "엄폐 중")
+    : snap.meter > 0 ? "시야 밖 · 흐려지는 중 ▼"
+    : "탐색 중";
+  const watchClass = snap.exposed ? styles.watchHot : snap.tracked ? styles.watchTrack : snap.covered ? styles.watchCover : "";
+  const meterClass = snap.trend === "up" ? styles.meterUp : snap.trend === "down" ? styles.meterDown : "";
 
   return (
     <main ref={root} className={`${styles.root} ${snap.exposed && screen === "play" ? styles.exposed : ""}`} style={{ ["--meter" as string]: snap.meter }}>
@@ -280,9 +290,9 @@ export default function ChaseGame() {
       )}
 
       {screen === "play" && snap.watching && (
-        <section className={`${styles.watch} ${snap.exposed ? styles.watchHot : snap.covered ? styles.watchCover : ""}`} aria-live="polite">
+        <section className={`${styles.watch} ${watchClass}`} aria-live="polite">
           <span>大慈悲 감시 · {watchLabel}</span>
-          <div className={styles.meter}><i style={{ width: `${meterPct}%` }} /></div>
+          <div className={`${styles.meter} ${meterClass}`}><i style={{ width: `${meterPct}%` }} /></div>
         </section>
       )}
 
