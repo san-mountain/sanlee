@@ -326,3 +326,78 @@
   .joyBase { top: calc(100% - 92px - var(--sab)); left: calc(92px + var(--sal)); }
   .action { bottom: calc(40px + var(--sab)); width: 92px; height: 92px; }
 }
+
+/* ---------- ACT 4: 저장된 안내 기록 자막과 조사 패널 ---------- */
+/* 지금의 이산(청록 이름표) · 시설 상태(붉은 글씨) · 저장된 안내 기록(2026 개발 서식, 밝은 종이색)을 구분한다 */
+.record { color: #1c232a; background: #e9e6dcf2; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em; }
+.record b { color: #6b5a2a; }
+
+.readerWrap {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: calc(12px + var(--sat)) calc(12px + var(--sar)) calc(12px + var(--sab)) calc(12px + var(--sal));
+  background: #05080dcc;
+}
+.reader {
+  width: min(560px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0e1419;
+  border: 1px solid #3a4a55;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.reader header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid #23313a;
+}
+.reader header small { font-size: 12px; letter-spacing: 0.12em; color: #a9c3cc; }
+.readerClose {
+  min-width: 72px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid #5c7480;
+  border-radius: 8px;
+  background: #1a252d;
+  color: #eef6f8;
+  font-size: 15px;
+}
+.readerBody { padding: 14px 16px 18px; overflow: auto; -webkit-overflow-scrolling: touch; }
+.diagram { display: block; width: 100%; height: auto; max-height: 72vh; margin: 0 auto; }
+@media (orientation: portrait) { .diagram { max-height: 66vh; } }
+.dgText { font-size: 1.5px; fill: #1d2a33; font-weight: 700; }
+.dgSmall { font-size: 1.15px; fill: #4a5560; }
+
+.devRecord {
+  background: #e9e6dc;
+  color: #1c232a;
+  border-radius: 4px;
+  padding: 14px 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.devHead { font-weight: 700; letter-spacing: 0.08em; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px dashed #8a8676; }
+.devRecord dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
+.devRecord dt { color: #6b5a2a; }
+.devRecord dd { margin: 0; }
+.facility {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-left: 3px solid #5fe0a8;
+  background: #101c1a;
+  color: #d8efe6;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.facility > div { font-size: 12px; letter-spacing: 0.12em; color: #8fbfae; margin-bottom: 6px; }
+.facility p { margin: 4px 0; }
+.warnLine { color: #ffb2a0; }

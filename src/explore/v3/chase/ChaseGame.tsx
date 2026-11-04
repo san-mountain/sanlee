@@ -15,14 +15,14 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { sfx, tension } from "../../sfx";
 import { ChaseInput, isCoarsePointer } from "./input";
 import { EYE_HEIGHT } from "./level";
-import { newGame, retryFromCheckpoint, sameSnapshot, snapshot, stepGame, type Game, type GameEvent, type Snapshot } from "./logic";
+import { closePanel, newGame, retryFromCheckpoint, sameSnapshot, snapshot, stepGame, type Game, type GameEvent, type Snapshot } from "./logic";
+import { Reader } from "./Reader";
 import { ChaseScene, type ChaseQuality } from "./Scene";
 import styles from "./chase.module.css";
 
 type Screen = "intro" | "play" | "pause" | "caught" | "complete";
 const QUALITY_KEY = "sanlee-chase-quality-v1";
 
-const ACTION_LABEL: Record<string, string> = { breaker: "통로 전원 복구", relay: "구역 전원 복구", gate: "차단문 해제" };
 
 function initialQuality(touch: boolean): ChaseQuality {
   if (typeof window === "undefined") return "low";
@@ -50,6 +50,16 @@ function playEvent(e: GameEvent) {
     case "gate-tick": return sfx.blip();
     case "gate-open": return sfx.door();
     case "complete": return sfx.chime();
+    // ACT 4 지하
+    case "under": return sfx.hidden();
+    case "seal": return sfx.door();
+    case "sealed": return sfx.clunk();
+    case "read": return sfx.blip();
+    case "record": return sfx.sealRead();
+    case "restore-exit":
+      sfx.restore();
+      return sfx.guarantor();
+    case "denied": return sfx.denied();
   }
 }
 
@@ -77,7 +87,8 @@ function Sim({
         onEvents(g.events);
         g.events = [];
       }
-      tension(g.phase === "chase" || g.phase === "escape" ? g.meter : 0);
+      // 추격 중에는 게이지에 따라, 지하에서 차단문이 닫힌 뒤에는 환풍기·전기 설비 같은 낮은 웅웅거림만 남긴다
+      tension(g.phase === "chase" || g.phase === "escape" ? g.meter : g.phase === "under" && g.act4.doorState === "closed" ? 0.06 : 0);
     }
     const P = g.player;
     const bob = playing.current && P.speed > 0.5 ? Math.sin(g.time * (P.speed > 5 ? 13 : 9)) * 0.035 : 0;
@@ -117,6 +128,7 @@ function Sim({
         `look pointers ${d.lookPointers}  hold ${d.hold}  keys [${d.keys}]`,
         `player x ${P.x.toFixed(2)} z ${P.z.toFixed(2)} y ${P.y.toFixed(2)} yaw ${P.yaw.toFixed(2)} v ${P.speed.toFixed(1)}`,
         `phase ${g.phase} t ${g.phaseT.toFixed(1)}  meter ${g.meter.toFixed(2)} ${g.trend} exp ${g.exposed} cov ${g.covered}`,
+        `act4 door ${g.act4.doorState} diag ${g.act4.diagram} rec ${g.act4.record} peek ${g.act4.peek} rest ${g.act4.restored} limit ${g.act4.limit} exit ${g.act4.exitRead} react ${g.act4.reactDone} bypass ${g.act4.bypassSeen} panel ${g.panel}`,
         `lights ${g.lights.filter((l) => l.on).map((l) => `${l.def.id}:${l.mode}${l.target ? "/" + l.target : ""} seen ${l.seen.toFixed(1)}`).join("  ")}`,
         `san x ${g.san.x.toFixed(1)} z ${g.san.z.toFixed(1)} idx ${g.san.idx} ${g.san.mode} exp ${g.san.exposed}  cp ${g.checkpoint} retries ${g.retries}`,
       ].join("\n");
@@ -148,7 +160,8 @@ export default function ChaseGame() {
     (s: Screen) => {
       screenRef.current = s;
       playing.current = s === "play";
-      input.setEnabled(s === "play");
+      // 조사 패널이 열린 채 일시정지에서 돌아오면 입력은 계속 꺼 둔다
+      input.setEnabled(s === "play" && !gameRef.current.panel);
       if (s !== "play") tension(0);
       setScreenState(s);
     },
@@ -235,7 +248,25 @@ export default function ChaseGame() {
     setScreen("intro");
   };
 
-  const showAction = touch && screen === "play" && snap.target;
+  // 조사 패널: 열려 있는 동안 입력을 끄고(포인터 잠금 해제·조이스틱 정지), 닫으면 되돌린다
+  const panelOpen = screen === "play" && !!snap.panel;
+  useEffect(() => {
+    if (panelOpen) input.setEnabled(false);
+  }, [panelOpen, input]);
+  const closeReader = useCallback(
+    (e?: React.MouseEvent) => {
+      closePanel(gameRef.current);
+      setSnap(snapshot(gameRef.current));
+      if (screenRef.current !== "play") return;
+      input.setEnabled(true);
+      // 마우스 클릭으로 닫았을 때만 다시 잠근다 (터치·키보드로 닫으면 화면을 눌러 잠근다)
+      const pt = e ? (e.nativeEvent as PointerEvent).pointerType : undefined;
+      if (e && !touch && (pt === "mouse" || pt === undefined || pt === "")) input.requestLock();
+    },
+    [input, touch]
+  );
+
+  const showAction = touch && screen === "play" && snap.target && !snap.panel;
   // 행동 대상이 사라지면(작동 완료·범위 이탈) 누름 상태를 바로 푼다. 다음 대상이 저절로 작동하지 않도록
   useEffect(() => {
     if (!showAction) input.setTouchHold(false);
@@ -297,23 +328,24 @@ export default function ChaseGame() {
       )}
 
       {snap.line && screen !== "intro" && (
-        <div className={`${styles.subtitle} ${snap.line.who === "system" ? styles.system : ""}`}>
+        <div className={`${styles.subtitle} ${snap.line.who === "system" ? styles.system : snap.line.who === "record" ? styles.record : ""}`}>
           {snap.line.who === "san" && <b>이산</b>}
+          {snap.line.who === "record" && <b>저장된 안내 기록 · 2026</b>}
           <span>{snap.line.text}</span>
         </div>
       )}
 
-      {screen === "play" && !touch && snap.target && (
+      {screen === "play" && !touch && snap.target && !snap.panel && (
         <div className={styles.prompt}>
           <Ring value={snap.hold} />
-          <span><kbd>E</kbd> 길게 누르기 · {ACTION_LABEL[snap.target]}</span>
+          <span><kbd>E</kbd> 길게 누르기 · {snap.action}</span>
         </div>
       )}
       {screen === "play" && <div className={styles.cross} aria-hidden />}
 
       {/* 터치 조작: 왼쪽 아무 곳이나 눌러 이동, 오른쪽은 끌어서 시점. 행동 버튼은 누르고 있는 동안만 작동 */}
       {touch && (
-        <div className={styles.joyLayer} hidden={screen !== "play"} aria-hidden>
+        <div className={styles.joyLayer} hidden={screen !== "play" || !!snap.panel} aria-hidden>
           <div ref={joyBase} className={styles.joyBase}>
             <div ref={joyKnob} className={styles.joyKnob} />
           </div>
@@ -334,10 +366,12 @@ export default function ChaseGame() {
           onContextMenu={(e) => e.preventDefault()}
         >
           <Ring value={snap.hold} />
-          <span>{ACTION_LABEL[snap.target!]}</span>
+          <span>{snap.action}</span>
           <small>누르고 있기</small>
         </button>
       )}
+
+      {panelOpen && snap.panel && <Reader panel={snap.panel} gameRef={gameRef} onClose={closeReader} />}
 
       {debug && <pre ref={debugRef} className={styles.debug} />}
 
@@ -392,9 +426,9 @@ export default function ChaseGame() {
             )}
             {screen === "complete" && (
               <>
-                <h2>현재 구현 구간 끝</h2>
-                <p>계단 아래, 감시등이 닿지 않는 곳까지 왔습니다. 이산이 숨을 고릅니다.</p>
-                <p className={styles.dim}>이야기의 결말이 아닙니다. 지하 기록실과 그 이후는 아직 만들지 않은 구간입니다.</p>
+                <h2>현재 구현 구간 끝 · ACT 4</h2>
+                <p>밝은 정상 출구와, 안내 경로 밖의 정비 우회로. 두 길이 남았습니다.</p>
+                <p className={styles.dim}>아직 아무것도 선택하지 않았습니다. 이야기의 결말이 아닙니다. 다음 구현 범위는 최종 선택과 탈출입니다.</p>
                 <p className={styles.dim}>재시도 {snap.retries}회</p>
                 <div className={styles.buttons}>
                   <button type="button" onClick={restart}>처음부터 다시</button>
