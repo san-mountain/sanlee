@@ -21,6 +21,11 @@ export type ChaseQuality = "low" | "high";
 
 const SPOT_IDLE = new THREE.Color("#cfe2ff");
 const SPOT_HOT = new THREE.Color("#ff334f");
+/** 플레이어를 비추기 시작해 추적 직전까지 (연속 노출이 쌓이는 중) */
+const SPOT_NOTICE = new THREE.Color("#ffc04a");
+/** 대상을 놓치고 마지막 위치를 훑는 중 */
+const SPOT_SEARCH = new THREE.Color("#ff8a3a");
+const DARK_HEAD = new THREE.Color("#2a2f36");
 
 function useDisposable<T extends { dispose: () => void }>(make: () => T, deps: unknown[] = []) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -444,11 +449,16 @@ function Cover({ c }: { c: (typeof COVERS)[number] }) {
       return <group position={[cx, 0, cz]}>{body("#4b3a33", c.h, 0.5)}<mesh position={[w / 2 + 0.01, 1.6, 0]} rotation-y={Math.PI / 2}><planeGeometry args={[d * 0.8, 0.5]} /><meshBasicMaterial color="#8f7a5a" transparent opacity={0.35} /></mesh></group>;
     case "shelter":
       return (
+        // 판정은 정류장 전체 상자(w×d×h)다. 감시등이 있는 남쪽은 불투명한 광고판, 양옆은 막힌 벽,
+        // 북쪽(플레이어 쪽)은 짙은 유리로 막혀 있어서 안으로 들어갈 수 없다는 것과 남쪽 빛을 가린다는 것이 함께 보인다
         <group position={[cx, 0, cz]}>
-          <mesh position={[0, c.h / 2, d / 2 - 0.1]}><boxGeometry args={[w, c.h, 0.12]} /><meshStandardMaterial color="#3d4650" metalness={0.4} roughness={0.4} /></mesh>
-          <mesh position={[0, c.h + 0.05, 0]}><boxGeometry args={[w + 0.4, 0.12, d + 0.4]} /><meshStandardMaterial color="#2b3138" /></mesh>
-          <mesh position={[0, 0.5, 0]}><boxGeometry args={[w - 0.4, 0.08, 0.5]} /><meshStandardMaterial color="#555b62" /></mesh>
-          <mesh position={[0, c.h / 2 + 0.3, d / 2 - 0.17]} rotation-y={Math.PI}><planeGeometry args={[1.4, 0.8]} /><meshBasicMaterial color="#1e4a7a" /></mesh>
+          <mesh position={[0, c.h / 2, -d / 2 + 0.06]}><boxGeometry args={[w, c.h, 0.12]} /><meshStandardMaterial color="#3d4650" metalness={0.4} roughness={0.4} /></mesh>
+          {[-1, 1].map((k) => (
+            <mesh key={k} position={[k * (w / 2 - 0.06), c.h / 2, 0]}><boxGeometry args={[0.12, c.h, d]} /><meshStandardMaterial color="#353d46" metalness={0.4} roughness={0.45} /></mesh>
+          ))}
+          <mesh position={[0, c.h / 2, d / 2 - 0.05]}><boxGeometry args={[w - 0.12, c.h, 0.06]} /><meshStandardMaterial color="#1c2a36" transparent opacity={0.75} metalness={0.6} roughness={0.15} /></mesh>
+          <mesh position={[0, c.h + 0.05, 0]}><boxGeometry args={[w + 0.3, 0.12, d + 0.3]} /><meshStandardMaterial color="#2b3138" /></mesh>
+          <mesh position={[0, c.h / 2 + 0.3, -d / 2 - 0.01]} rotation-y={Math.PI}><planeGeometry args={[1.4, 0.8]} /><meshBasicMaterial color="#1e4a7a" /></mesh>
         </group>
       );
     case "van":
@@ -483,9 +493,11 @@ function Cover({ c }: { c: (typeof COVERS)[number] }) {
       );
     default:
       return (
+        // 판정 상자(w×d×h)를 위아래 두 단이 꽉 채운다. 위 단을 작게 그리면 비어 보이는 곳이 빛을 막는 것처럼 판정된다
         <group position={[cx, 0, cz]}>
           {body("#5a4c3a", c.h * 0.55, 0.05)}
-          <mesh position={[0.2, c.h * 0.55 + (c.h * 0.45) / 2, 0.1]} rotation-y={0.2}><boxGeometry args={[w * 0.6, c.h * 0.45, d * 0.6]} /><meshStandardMaterial color="#4a3f30" /></mesh>
+          <mesh position={[0, c.h * 0.55 + (c.h * 0.45) / 2, 0]}><boxGeometry args={[w * 0.98, c.h * 0.45, d * 0.98]} /><meshStandardMaterial color="#4a3f30" roughness={0.8} /></mesh>
+          <mesh position={[0, c.h * 0.55, d / 2 + 0.005]}><planeGeometry args={[w, 0.05]} /><meshBasicMaterial color="#2a241b" /></mesh>
         </group>
       );
   }
@@ -640,7 +652,13 @@ function Searchlights({ gameRef }: { gameRef: GameRef }) {
       const on = l.on;
       if (beam) beam.visible = on;
       if (pool) pool.visible = on;
-      heads[i].color.set(on ? (l.tracking ? "#ff6a7c" : "#f4f8ff") : "#2a2f36");
+      // 색이 감시등의 실제 상태를 말한다: 순찰(흰빛) → 플레이어를 비추는 중(호박색, 추적까지 남은 시간만큼 진해짐)
+      // → 추적(빨강) → 놓치고 수색(주황) → 순찰
+      const notice = l.mode === "path" ? Math.min(1, l.seen / 0.8) : 0;
+      if (l.mode === "track") tmp.c.copy(SPOT_HOT);
+      else if (l.mode === "search") tmp.c.copy(SPOT_SEARCH);
+      else tmp.c.copy(SPOT_IDLE).lerp(SPOT_NOTICE, notice);
+      heads[i].color.copy(on ? tmp.c : DARK_HEAD);
       if (!on || !beam || !pool) return;
       const s = l.def.src;
       tmp.v.set(l.x - s.x, -s.y, l.z - s.z);
@@ -649,12 +667,11 @@ function Searchlights({ gameRef }: { gameRef: GameRef }) {
       beam.quaternion.setFromUnitVectors(tmp.down, tmp.v.normalize());
       beam.scale.set(l.def.radius, len, l.def.radius);
       pool.position.set(l.x, 0.03, l.z);
-      const hot = l.tracking ? 1 : 0;
-      tmp.c.copy(SPOT_IDLE).lerp(SPOT_HOT, hot);
+      const hot = l.mode === "track" ? 1 : l.mode === "search" ? 0.6 : notice * 0.5;
       (beams[i].uniforms.uColor.value as THREE.Color).copy(tmp.c);
       pools[i].color.copy(tmp.c).multiplyScalar(0.55 + 0.25 * hot);
       rings[i].color.copy(tmp.c);
-      rings[i].opacity = 0.35 + 0.25 * Math.sin(clock.elapsedTime * (l.tracking ? 14 : 3));
+      rings[i].opacity = 0.35 + 0.25 * Math.sin(clock.elapsedTime * (l.mode === "track" ? 14 : l.mode === "search" ? 8 : 3 + notice * 6));
     });
   });
   return (
@@ -701,7 +718,8 @@ function San({ gameRef }: { gameRef: GameRef }) {
     g.current.visible = s.visible;
     if (!s.visible) return;
     const t = clock.elapsedTime;
-    g.current.position.set(s.x, s.moving ? Math.abs(Math.sin(t * 9)) * 0.06 : 0, s.z);
+    // 높이는 판정과 같은 바닥 높이(계단 포함)를 따른다
+    g.current.position.set(s.x, s.y + (s.moving ? Math.abs(Math.sin(t * 9)) * 0.06 : 0), s.z);
     // 웅크림(숨어 있을 때, 감시등에 걸렸을 때)
     const crouch = s.pose === "stand" ? 1 : s.pose === "hide" ? 0.6 : 0.68;
     const bd = body.current;
