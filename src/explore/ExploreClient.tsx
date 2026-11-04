@@ -1177,7 +1177,7 @@ export default function ExploreClient() {
         if (faceCine || auditCine) return null;
         // 장치 하나만, 멀리 있을 때만 가리킨다. 다가가면 화살표를 거두고 기계 자체를 보게 한다 (부품별 안내는 없다)
         const target = faceRt.phase !== "done" ? find("face-machine") : auditRt.phase === "ready" ? find("audit-machine") : null;
-        if (!target || Math.hypot(target.pos.x - px, target.pos.z - pz) < 5) return null;
+        if (!target || Math.hypot(target.pos.x - px, target.pos.z - pz) < 2.15) return null;
         return { pos: target.pos, label: t(faceRt.phase !== "done" ? faceUi.quest : auditUi.quest) };
       }
       if (!complete && !met && visited.length === 0) {
