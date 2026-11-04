@@ -447,20 +447,17 @@ export default function ExploreClient() {
             playStoryLines(auditScenes.sealed, () => {
               auditRt.introSeen = true;
               updateAudit(seeIntro(auditRef.current));
-              toAuditPhase("focus");
               auditRt.focus = null;
-              sfx.sealGrab();
-              later(500, () => {
-                if (auditRt.phase !== "focus") return;
-                toAuditPhase("puzzle");
-                setPanel({ kind: "seal" });
-              });
+              toAuditPhase("ready");
+              // Give back movement after the story. The player now chooses to open
+              // the puzzle using the device's clearly marked interaction target.
+              releaseCamera();
             })
           );
         })
       )
     );
-  }, [toAuditPhase, later, playStoryLines, updateAudit]);
+  }, [toAuditPhase, later, playStoryLines, updateAudit, releaseCamera]);
 
   // 장치에 다가간다: 카메라가 봉인 격자로 다가가고 2D 조작판이 열린다 (이동·점프·조이스틱은 멈춘다)
   const openSeal = useCallback(() => {
