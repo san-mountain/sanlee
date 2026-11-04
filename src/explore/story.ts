@@ -354,7 +354,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
   keeper: {
     name: { ko: "방공호 관리인", en: "Shelter keeper" },
     lines: [
-      { ko: "어서 와. 여기까지는 시스템 신호가 안 닿아. 쿠키도, 등급도 없어.", en: "Welcome. The system's signal doesn't reach this deep. No cookies, no grades." },
+      { ko: "어서 와. 여기엔 감시 신호가 안 닿아. 지상에선 도시가 쿠키로 시민의 위치와 행동을 기록하지.", en: "Welcome. The surveillance signal can't reach us here. Above ground, the city uses cookies to track every citizen's location and actions." },
       { ko: "가운데 정지 시민 봤지? 쿠키를 거부했다가 멈춰 버린 사람이야. 우리가 지상에서 몰래 옮겨 왔어.", en: "Seen the suspended citizen in the middle? Someone who rejected cookies and froze. We smuggled them down from the surface." },
       { ko: "지상에 올라가 보고 싶으면 저 뒤 방폭문으로 나가. 올라가면 골목 끝 배전실 문으로 나올 거야. 카메라랑 눈은 마주치지 말고.", en: "Want to see the surface? Take the blast door behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
       { ko: "아, 그리고 놀라지 마. 위는… 이제 땅이 아니야.", en: "Oh, and don't panic. Up there… it isn't ground any more." },
@@ -651,10 +651,11 @@ export const faceUi = {
 // 반전은 거부 여부가 아니라, 도시 시스템이 거부를 공식 동의로 강제 정정했다는 증거다. '대자비'는 지상에서 공개한다.
 export const auditLines = {
   // 장면 1: 장치에 불이 들어오고 공식 기록이 뜬다
-  official: { id: "b.archive.official", speaker: "archive", ms: 2400, ko: "시민 활동 추적 쿠키 · 14:02:01 — 모두 동의", en: "Activity tracking cookies · 14:02:01 — ACCEPT ALL" },
-  consented: { id: "b.san.consented", speaker: "san", ms: 2300, ko: "뭐? 난 감시 쿠키를 분명 거부했는데.", en: "What? I clearly rejected those tracking cookies." },
+  official: { id: "b.archive.official", speaker: "archive", ms: 2600, ko: "이산 · 위치와 행동 기록 수집 — 모두 동의 (14:02:01)", en: "San · Location and activity tracking — ACCEPT ALL (14:02:01)" },
+  consented: { id: "b.san.consented", speaker: "san", ms: 4000, ko: "도시는 쿠키로 우리가 어디서 뭘 했는지 기록해. 난 그걸 거부했어.", en: "The city uses cookies to record where we go and what we do. I refused." },
+  stopped: { id: "b.san.stopped", speaker: "san", ms: 3400, ko: "그랬더니 도시가 날 활동 없는 시민이라며 멈춰 세웠지.", en: "Then the city said I had no activity and froze me." },
   // 장면 2: 이산은 거부를 기억하고 있다. 공식 동의 기록과 충돌하므로 원본을 찾는다.
-  ask: { id: "b.san.ask", speaker: "san", ms: 3400, ko: "내 거부가 동의로 기록됐어. 봉인된 원본을 확인해 줄래?", en: "They recorded my refusal as consent. Can you check the sealed original?" },
+  ask: { id: "b.san.ask", speaker: "san", ms: 3400, ko: "그런데 여기엔 동의라고 적혀 있어. 봉인된 원본을 확인해 줄래?", en: "But this says I agreed. Can you check the sealed original?" },
   // 장면 3: 봉인판 뒤의 붉은 원본 카세트
   sealed: { id: "b.archive.sealed", speaker: "archive", ms: 2100, ko: "수정 전 원본 기록 — 봉인됨", en: "Pre-revision original record — SEALED" },
   forced: { id: "b.city.forced-correction", speaker: "city", ms: 3000, ko: "시민 보호를 위해 거부 응답은 동의로 정정됩니다.", en: "For citizen protection, refusals are corrected to consent." },
@@ -666,7 +667,7 @@ export const auditLines = {
 
 export const auditScenes = {
   official: [auditLines.official, auditLines.consented],
-  ask: [auditLines.ask],
+  ask: [auditLines.stopped, auditLines.ask],
   sealed: [auditLines.sealed],
   forced: [auditLines.forced],
   san: [auditLines.refused, auditLines.stillHere],
@@ -676,11 +677,11 @@ export const auditScenes = {
 
 // 말하지 않는 장치 문구
 export const auditUi = {
-  quest: { ko: "조작된 쿠키 동의 기록 확인", en: "Investigate the altered cookie-consent record" },
+  quest: { ko: "이산의 마지막 선택 기록 확인", en: "Check San's last recorded choice" },
   machine: { ko: "기록 보관 장치", en: "Record archive" },
   // PC 프롬프트·모바일 행동 버튼의 보조 라벨
   use: { ko: "조작판 보기", en: "Open panel" },
-  officialTitle: { ko: "추적 쿠키 동의 기록", en: "TRACKING COOKIE CONSENT" },
+  officialTitle: { ko: "위치·행동 기록 동의", en: "LOCATION / ACTIVITY CONSENT" },
   correctionStatus: { ko: "SEOUL.SYS · 동의 확인됨", en: "SEOUL.SYS · CONSENT VERIFIED" },
   sealedSign: { ko: "수정 전 원본 — 봉인됨", en: "PRE-REVISION ORIGINAL — SEALED" },
   readSign: { ko: "원본 입력 기록 — 판독됨", en: "ORIGINAL INPUT — READ" },
@@ -689,8 +690,8 @@ export const auditUi = {
   endTag: { ko: "시제품 · 퍼즐 B 끝", en: "PROTOTYPE · PUZZLE B COMPLETE" },
   endTitle: { ko: "보증인 등록이 필요합니다", en: "Guarantor registration required" },
   endBody: {
-    ko: "이산은 시민 활동 추적 쿠키를 거부했습니다. 도시 시스템은 이를 강제로 '모두 동의'로 정정했지만, 실제 활동 신호는 생기지 않았습니다. 도시는 여전히 그를 정지 시민으로 취급합니다.",
-    en: "San rejected activity-tracking cookies. The city system forcibly rewrote that choice as 'Accept all', but no actual activity signal was produced. The city still treats him as suspended.",
+    ko: "이산은 자신의 위치와 행동을 추적하는 쿠키를 거부했습니다. 도시는 공식 동의 기록만 강제로 바꿨고, 실제 활동 기록은 남아 있지 않습니다. 그래서 이산은 여전히 정지 시민입니다.",
+    en: "San rejected cookies that track his location and actions. The city forcibly changed the consent record, but no actual activity data exists. San remains a suspended citizen.",
   },
   endNext: { ko: "다음 이야기는 준비 중입니다.", en: "The next part is in progress." },
   recProtected: { ko: "범종의 보호로 원본을 꺼낸 행동은 시민 활동 기록에 남지 않았습니다.", en: "Under the bell's protection, taking out the original left no citizen activity record." },
@@ -706,11 +707,11 @@ export const sealUi = {
   exit: { ko: "나가기", en: "Leave" },
   cassette: { ko: "원본", en: "ORIGINAL" },
   reading: { ko: "원본 판독 중", en: "Reading original" },
-  originalTag: { ko: "활동 추적 쿠키 · 실제 입력", en: "TRACKING COOKIES · ACTUAL INPUT" },
+  originalTag: { ko: "위치·행동 추적 · 실제 선택", en: "LOCATION / ACTIVITY TRACKING · ORIGINAL" },
   officialTag: { ko: "도시 공식 기록", en: "CITY OFFICIAL RECORD" },
   forcedRewrite: { ko: "SEOUL.SYS 강제 정정", en: "SEOUL.SYS FORCED CORRECTION" },
   officialValue: { ko: "모두 동의", en: "ACCEPT ALL" },
-  discrepancy: { ko: "추적 쿠키를 거부했지만, 도시 시스템은 동의로 기록했다.", en: "He rejected tracking cookies. The city system recorded consent." },
+  discrepancy: { ko: "이산은 자신의 위치·행동 추적을 거부했지만, 도시는 동의로 기록했다.", en: "San refused location and activity tracking. The city recorded consent." },
 };
 
 // 개발·검수용 재시작 (?debug에서만 설정창에 보인다)
