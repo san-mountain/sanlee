@@ -45,6 +45,7 @@ export default function ExploreV2Client() {
   const storyRef = useRef(story);
   storyRef.current = story;
   const [ready, setReady] = useState(false);
+  const [debug, setDebug] = useState(false);
   const [zone, setZone] = useState<Zone>("bunker");
   const [arrived, setArrived] = useState(false);
   const [intro, setIntro] = useState(true);
@@ -95,6 +96,7 @@ export default function ExploreV2Client() {
     if (saved.phase === "kept") { setEnding("kept"); setIntro(false); }
     if (saved.phase === "left") { setEnding("left"); setIntro(false); }
     setTouch(navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches);
+    setDebug(new URLSearchParams(window.location.search).has("debug"));
     stopGazeCombat();
     gaze.mood = "";
     autoWalk.to = null;
@@ -338,6 +340,28 @@ export default function ExploreV2Client() {
     restoreCovers();
   }, []);
 
+  const debugJump = useCallback((target: StoryV2["phase"]) => {
+    const path: StoryEvent[] = ["meet-san", "read-origin", "restore-san", "discover-source", "confront-san", "enter-city", "reach-core", "keep-record"];
+    let next = initialStory();
+    for (const event of path) {
+      if (next.phase === target) break;
+      next = advanceStory(next, event);
+    }
+    if (next.phase !== target) return;
+    storyRef.current = next;
+    setStory(next);
+    writeStory(next);
+    setZone(atLeast(next, "crossing") ? "city" : "bunker");
+    setArrived(false);
+    setPanel(null);
+    setPaused(false);
+    setIntro(false);
+    setEnding(next.phase === "kept" ? "kept" : null);
+    setNear(null);
+    stopGazeCombat();
+    restoreCovers();
+  }, []);
+
   const keep = useCallback(() => {
     commit("keep-record");
     setEnding("kept");
@@ -451,6 +475,16 @@ export default function ExploreV2Client() {
           <div className={styles.actions}>
             <button className={styles.primary} onClick={() => { setPaused(false); lock(); }}>{tr(say("계속하기", "RESUME"))}</button>
             <button className={styles.secondary} onClick={resetLab}>{tr(say("실험판 처음부터", "RESTART LAB"))}</button>
+            {debug && (
+              <div style={{ width: "100%", borderTop: "1px solid #39505a", paddingTop: 14, marginTop: 8 }}>
+                <div className={styles.eyebrow}>DEBUG · SCENE JUMP</div>
+                <div className={styles.actions}>
+                  {(["arrival", "recovery", "origin", "restored", "discovered", "confronted", "crossing", "decision"] as const).map(phase => (
+                    <button type="button" className={styles.secondary} key={phase} onClick={() => debugJump(phase)}>{phase}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             <Link className={styles.secondary} href="/">{tr(say("포트폴리오로", "PORTFOLIO"))}</Link>
           </div>
         </div></div>
