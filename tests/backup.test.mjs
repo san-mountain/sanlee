@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import "./register-typescript.mjs";
 
 let instance = 0;
 async function setup(initial = {}) {
@@ -119,4 +120,25 @@ test("unavailable storage does not prevent clearing the in-memory backup", async
   };
   assert.doesNotThrow(() => b.forgetCityRecords());
   assert.deepEqual(b.getBackup(), empty);
+});
+
+test("footer deletion also clears citizen activity and protection memory without changing saved settings", async () => {
+  const b = await setup({ "sanlee-lang": "ko", "sanlee-sfx": "0" });
+  const records = await import("../src/explore/citizenRecords.ts");
+  const { protection } = await import("../src/explore/recordProtection.ts");
+  records.clearCitizenRecords();
+  protection.reset();
+  records.recordCitizenActivity({ kind: "terminal.open", sourceId: "about" }, { zone: "bunker" });
+  b.saveBackup(1, 2);
+  assert.equal(protection.ring(), true);
+  assert.equal(records.getCitizenRecords().pending.length, 1);
+  b.forgetCityRecords();
+  assert.deepEqual(records.getCitizenRecords(), { schema: 1, pending: [], synced: [] });
+  assert.equal(b.values.has(records.CITIZEN_RECORDS_KEY), false);
+  assert.equal(protection.snapshot().active, false);
+  assert.equal(protection.snapshot().startedAt, null);
+  assert.deepEqual(b.getBackup(), empty);
+  assert.equal(b.values.get("sanlee-forgotten"), "1");
+  assert.equal(b.values.get("sanlee-lang"), "ko");
+  assert.equal(b.values.get("sanlee-sfx"), "0");
 });

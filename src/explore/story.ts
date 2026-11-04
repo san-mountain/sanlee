@@ -191,8 +191,8 @@ export const statueLines: L[][] = [
       en: "Up there, I rejected every cookie. Turns out the city couldn't see a thing I did. 'Your account has been made dormant due to inactivity.' That's me now.",
     },
     {
-      ko: "다시 움직이려면 본인 인증이 필요하대. 이 방 터미널 세 대에 내가 누군지 보여 주는 기록이 있어. 하나씩 열어 줄래?",
-      en: "To move again, I need to verify my identity. The three terminals in this room hold records of who I am. Would you open them, one by one?",
+      ko: "다시 움직이려면 본인 인증이 필요하대. 곁의 낡은 장치가 흐트러진 내 얼굴을 들고 있어. 맞춰 줄래?",
+      en: "To move again, I need to verify my identity. The old machine beside me holds my scattered face. Would you put it back together?",
     },
   ],
   [
@@ -349,7 +349,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
     name: { ko: "방공호 관리인", en: "Shelter keeper" },
     lines: [
       { ko: "어서 와. 여기까지는 시스템 신호가 안 닿아. 쿠키도, 등급도 없어.", en: "Welcome. The system's signal doesn't reach this deep. No cookies, no grades." },
-      { ko: "가운데 정지 시민 봤지? 쿠키를 거부했다가 멈춰 버린 사람이야. 우리가 지상에서 몰래 옮겨 왔어. 터미널을 열면 조금씩 깨어날 거야.", en: "Seen the suspended citizen in the middle? Someone who rejected cookies and froze. We smuggled them down from the surface. Open the terminals and they'll wake, bit by bit." },
+      { ko: "가운데 정지 시민 봤지? 쿠키를 거부했다가 멈춰 버린 사람이야. 우리가 지상에서 몰래 옮겨 왔어.", en: "Seen the suspended citizen in the middle? Someone who rejected cookies and froze. We smuggled them down from the surface." },
       { ko: "지상에 올라가 보고 싶으면 저 뒤 방폭문으로 나가. 올라가면 골목 끝 배전실 문으로 나올 거야. 카메라랑 눈은 마주치지 말고.", en: "Want to see the surface? Take the blast door behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
       { ko: "아, 그리고 놀라지 마. 위는… 이제 땅이 아니야.", en: "Oh, and don't panic. Up there… it isn't ground any more." },
     ],
@@ -556,4 +556,195 @@ export const cookieGame = {
     { ko: "체온 광고", en: "Body-heat ads" },
     { ko: "거부 의사 분석", en: "Refusal analysis" },
   ] as L[],
+};
+
+// ---------------- 퍼즐 A 「얼굴을 맞추십시오」 ----------------
+// 실제로 "말하는" 대사(Line)와 화면 안내·상태 문구(faceUi)를 나눈다.
+// 대사마다 고유 ID와 화자가 있다. 나중에 음성을 붙일 때는 ID로 음성 파일을 찾는다 (예: voice/ko/a.san.thanks.mp3).
+// 한국어 원문은 ko, 영어 번역은 en (기존 L 구조 그대로).
+
+export type Speaker = "san" | "city" | "machine" | "archive" | "guarantor";
+export type Line = L & {
+  id: string;
+  speaker: Speaker;
+  // 자막만 있을 때 이 줄이 머무는 시간(ms). 음성이 붙으면 음성 길이가 대신한다 (dialogue.ts lineDuration)
+  ms: number;
+};
+
+export const speakers: Record<Speaker, L> = {
+  san: { ko: "이산", en: "San" },
+  city: { ko: "도시", en: "THE CITY" },
+  machine: { ko: "복원 장치", en: "MACHINE" },
+  archive: { ko: "기록 보관 장치", en: "RECORD ARCHIVE" },
+  guarantor: { ko: "보증 장치", en: "GUARANTOR UNIT" },
+};
+
+export const faceLines = {
+  // 장치가 잠길 때 (복원 장치의 목소리: 낡은 기계의 안내)
+  restored: { id: "a.machine.restored", speaker: "machine", ms: 2550, ko: "원본 얼굴 복원 완료.", en: "Original face restored." },
+  // 도시가 끼어든다
+  smileMissing: { id: "a.city.smile-missing", speaker: "city", ms: 3400, ko: "표준 미소가 누락되었습니다.", en: "Standard smile missing." },
+  // 고른 뒤 장치가 실행하며 하는 말
+  standard: { id: "a.city.welcome", speaker: "city", ms: 2600, ko: "더 나은 당신을 환영합니다", en: "Welcome, a better you" },
+  exception: { id: "a.machine.non-standard", speaker: "machine", ms: 2600, ko: "비표준 얼굴로 등록됩니다", en: "Registered as a non-standard face" },
+  // 고개를 든 이산 (방법마다 둘째 줄이 다르다)
+  thanks: { id: "a.san.thanks", speaker: "san", ms: 4000, ko: "……보여. 고마워.", en: "...I can see. Thank you." },
+  smileStuck: { id: "a.san.smile-stuck", speaker: "san", ms: 4200, ko: "입이 멋대로 웃고 있어. 내려지지가 않네.", en: "My mouth is smiling on its own. It won't come down." },
+  ownFace: { id: "a.san.own-face", speaker: "san", ms: 4200, ko: "내 얼굴이야. 좀 비뚤어도.", en: "It's my face. A little crooked, but mine." },
+  legs: { id: "a.san.legs", speaker: "san", ms: 4500, ko: "다리는 아직 돌이야. 여기서 조금만 더 기다릴게.", en: "My legs are still stone. I'll wait here a little longer." },
+  // 깨어난 뒤 다시 말을 걸면 (대화창, 플레이어가 넘긴다)
+  afterStandard: { id: "a.san.after-standard", speaker: "san", ms: 5000, ko: "웃는 얼굴로는 문을 통과할 수 있대. 그런데 이게 내 표정인지 모르겠어.", en: "They say a smiling face passes every gate. I'm not sure it's my expression." },
+  afterException: { id: "a.san.after-exception", speaker: "san", ms: 5000, ko: "도시는 이 얼굴을 계속 다시 확인하겠지. 그래도 내 얼굴로 볼 수 있어서 좋아.", en: "The city will keep checking this face. Still, I'm glad I can look with my own." },
+} satisfies Record<string, Line>;
+
+// 장면별 대사 순서. 각 장면은 앞 줄이 끝나야 다음 줄과 다음 연출로 넘어간다 (ExploreClient의 흐름)
+export const faceScenes = {
+  // 장치가 잠김 → (끝나면) 도시의 반전 → (끝나면) 두 조작부가 켜짐
+  lock: [faceLines.restored],
+  twist: [faceLines.smileMissing],
+  // 고른 직후 → (끝나면) 이산이 깨어나기 시작
+  apply: { standard: [faceLines.standard], exception: [faceLines.exception] },
+  // 고개를 든 뒤 → (끝나면) 시제품 끝 카드
+  wake: {
+    standard: [faceLines.thanks, faceLines.smileStuck, faceLines.legs],
+    exception: [faceLines.thanks, faceLines.ownFace, faceLines.legs],
+  },
+  after: { standard: [faceLines.afterStandard], exception: [faceLines.afterException] },
+};
+
+// 말하지 않는 화면 문구: 안내, 버튼, 상태, 해설
+export const faceUi = {
+  quest: { ko: "얼굴을 맞추십시오", en: "Match the face" },
+  turn: { ko: "돌리기", en: "Turn" },
+  press: { ko: "누르기", en: "Press" },
+  pull: { ko: "당기기", en: "Pull" },
+  applyStandard: { ko: "표준 미소 적용", en: "Apply standard smile" },
+  keepOriginal: { ko: "원본 얼굴 보존", en: "Keep original face" },
+  // 굳어 있는 동안 동상을 살피면 (해설)
+  frozen: { ko: "이산은 두 손으로 얼굴을 감싼 채 굳어 있다. 곁의 장치가 흐트러진 얼굴 조각을 들고 있다.", en: "San sits frozen, hands over the face. Beside the pedestal, a machine holds a scattered face." },
+  doorLocked: { ko: "이산의 다리가 아직 굳어 있다. 이 시제품은 여기까지입니다.", en: "San's legs are still stone. This prototype ends here." },
+  expiredTitle: { ko: "범종의 보호가 끝났습니다", en: "The bell's protection has ended" },
+  expiredBody: { ko: "지금 실행하면 이 선택이 시민 활동 기록에 남습니다.", en: "If you go ahead now, this choice will be kept in your citizen activity record." },
+  expiredGo: { ko: "그대로 실행", en: "Go ahead" },
+  expiredBack: { ko: "취소", en: "Cancel" },
+  endTag: { ko: "시제품 · 퍼즐 A 끝", en: "PROTOTYPE · PUZZLE A COMPLETE" },
+  endTitle: { ko: "이산이 고개를 들었습니다", en: "San has raised their head" },
+  endBody: { ko: "얼굴과 상체가 돌아왔습니다. 다리는 아직 굳어 있습니다. 다음 이야기는 준비 중입니다.", en: "The face and upper body are back. The legs are still stone. The next part is in progress." },
+  endStandard: { ko: "선택: 표준 미소 적용", en: "Choice: standard smile applied" },
+  endException: { ko: "선택: 원본 얼굴 보존 · 비표준 등록", en: "Choice: original face kept · registered non-standard" },
+  recProtected: { ko: "범종의 보호로 이 선택은 시민 활동 기록에 남지 않았습니다.", en: "Under the bell's protection, this choice left no citizen activity record." },
+  recRecorded: { ko: "이 선택은 시민 활동 기록에 남았습니다.", en: "This choice was kept in your citizen activity record." },
+  recNone: { ko: "기록되지 않은 방문입니다.", en: "This visit is unregistered." },
+  endStay: { ko: "계속 둘러보기", en: "Keep exploring" },
+  endHome: { ko: "포트폴리오로", en: "To the portfolio" },
+  endWorks: { ko: "방공호의 작품 터미널과 그림은 계속 볼 수 있습니다.", en: "The work terminals and paintings in the shelter stay open." },
+};
+
+// ---------------- 퍼즐 B 「봉인된 3초」 v0.7 ----------------
+// 도입: 공식 기록 → 이산의 의문과 부탁 → 봉인된 원본. 퍼즐(2D 봉인 격자) 도중에는 말이 없다.
+// 원본이 판독된 뒤 이산의 두 마디와 보증 장치. 정답('모두 거부')은 퍼즐을 풀기 전에는 어디에도 나오지 않는다.
+export const auditLines = {
+  // 장면 1: 장치에 불이 들어오고 공식 기록이 뜬다
+  official: { id: "b.archive.official", speaker: "archive", ms: 2200, ko: "공식 기록 · 14:02:01 — 모두 동의", en: "Official record · 14:02:01 — ACCEPT ALL" },
+  consented: { id: "b.san.consented", speaker: "san", ms: 2200, ko: "……내가 동의했다고?", en: "...I consented?" },
+  // 장면 2: 이산은 마지막 순간을 기억하지 못한다
+  ask: { id: "b.san.ask", speaker: "san", ms: 3400, ko: "마지막 순간이 기억나지 않아. 원본을 확인해 줘.", en: "I can't remember the last moment. Check the original for me." },
+  // 장면 3: 봉인판 뒤의 붉은 원본 카세트
+  sealed: { id: "b.archive.sealed", speaker: "archive", ms: 2200, ko: "원본 입력 기록 — 봉인됨", en: "Original input record — SEALED" },
+  refused: { id: "b.san.refused", speaker: "san", ms: 3600, ko: "……내가 거부했었구나.", en: "...So I did refuse." },
+  stillHere: { id: "b.san.still-here", speaker: "san", ms: 4200, ko: "그런데 난 왜 아직 여기 있는 거지?", en: "Then why am I still stuck here?" },
+  guarantor: { id: "b.guarantor.required", speaker: "guarantor", ms: 3800, ko: "보증인 등록이 필요합니다.", en: "Guarantor registration required." },
+  after: { id: "b.san.after", speaker: "san", ms: 5000, ko: "난 거부했어. 그런데 도시의 기록에선 아직도 동의한 시민이야.", en: "I refused. But in the city's records, I'm still a citizen who consented." },
+} satisfies Record<string, Line>;
+
+export const auditScenes = {
+  official: [auditLines.official, auditLines.consented],
+  ask: [auditLines.ask],
+  sealed: [auditLines.sealed],
+  san: [auditLines.refused, auditLines.stillHere],
+  guarantor: [auditLines.guarantor],
+  after: [auditLines.after],
+};
+
+// 말하지 않는 장치 문구
+export const auditUi = {
+  quest: { ko: "이산의 마지막 기록을 확인하십시오", en: "Check San's last record" },
+  machine: { ko: "기록 보관 장치", en: "Record archive" },
+  // PC 프롬프트·모바일 행동 버튼의 보조 라벨
+  use: { ko: "조작판 보기", en: "Open panel" },
+  officialTitle: { ko: "공식 기록", en: "OFFICIAL RECORD" },
+  sealedSign: { ko: "원본 입력 기록 — 봉인됨", en: "ORIGINAL INPUT — SEALED" },
+  readSign: { ko: "원본 입력 기록 — 판독됨", en: "ORIGINAL INPUT — READ" },
+  guarantorSign: { ko: "보증인 등록", en: "GUARANTOR" },
+  guarantorLook: { ko: "보증 장치는 아직 아무 대답도 하지 않는다. 다음 이야기는 준비 중입니다.", en: "The guarantor unit gives no answer yet. The next part is in progress." },
+  endTag: { ko: "시제품 · 퍼즐 B 끝", en: "PROTOTYPE · PUZZLE B COMPLETE" },
+  endTitle: { ko: "보증인 등록이 필요합니다", en: "Guarantor registration required" },
+  endBody: {
+    ko: "원본 기록에는 '모두 거부'가 남아 있었습니다. 하지만 도시의 공식 기록은 여전히 '모두 동의'입니다. 이산의 다리는 아직 굳어 있습니다.",
+    en: "The original record still held 'Reject all'. But the city's official record still says 'Accept all'. San's legs are still stone.",
+  },
+  endNext: { ko: "다음 이야기는 준비 중입니다.", en: "The next part is in progress." },
+  recProtected: { ko: "범종의 보호로 원본을 꺼낸 행동은 시민 활동 기록에 남지 않았습니다.", en: "Under the bell's protection, taking out the original left no citizen activity record." },
+  recRecorded: { ko: "원본을 꺼낸 행동은 시민 활동 기록에 남았습니다.", en: "Taking out the original was kept in your citizen activity record." },
+};
+
+// 2D 봉인 격자 화면의 문구 (목표 한 줄과 버튼 셋뿐)
+export const sealUi = {
+  title: { ko: "봉인 격자", en: "Seal grid" },
+  goal: { ko: "원본 기록을 꺼내세요", en: "Take out the original record" },
+  undo: { ko: "되돌리기", en: "Undo" },
+  reset: { ko: "처음부터", en: "Reset" },
+  exit: { ko: "나가기", en: "Leave" },
+  cassette: { ko: "원본", en: "ORIGINAL" },
+  reading: { ko: "원본 판독 중", en: "Reading original" },
+  originalTag: { ko: "원본 입력 기록", en: "ORIGINAL INPUT RECORD" },
+};
+
+// 개발·검수용 재시작 (?debug에서만 설정창에 보인다)
+export const testUi = {
+  title: { ko: "테스트", en: "TEST" },
+  restartA: { ko: "A부터 다시 플레이", en: "Replay from puzzle A" },
+  restartB: { ko: "B부터 다시 플레이", en: "Replay from puzzle B" },
+  done: { ko: "테스트 시작 상태로 돌렸습니다", en: "Reset to the test start" },
+};
+
+// 방공호 사람들의 진행별 대사 (새 경로 전용). a = 얼굴 복원 전, b = 기록 확인 전, c = 퍼즐 B 이후
+// 기존(legacy) 저장은 npcs의 원래 lines/after를 그대로 쓴다
+export const npcStages: Record<string, Partial<Record<"a" | "b" | "c", L[]>>> = {
+  keeper: {
+    a: [
+      { ko: "어서 와. 여기까지는 시스템 신호가 안 닿아. 쿠키도, 등급도 없어.", en: "Welcome. The system's signal doesn't reach this deep. No cookies, no grades." },
+      { ko: "가운데 정지 시민 봤지? 쿠키를 거부했다가 멈춰 버린 사람이야. 우리가 지상에서 몰래 옮겨 왔어.", en: "Seen the suspended citizen in the middle? Someone who rejected cookies and froze. We smuggled them down from the surface." },
+      { ko: "곁에 있는 낡은 얼굴 복원 장치부터 맞춰 봐. 얼굴을 되찾으면 뭔가 달라질 거야.", en: "Start with the old face-restoration machine beside them. Once the face comes back, something will change." },
+      { ko: "벽의 터미널들은 그냥 이 방의 기록 보관함이야. 천천히 둘러봐도 돼.", en: "The terminals on the walls are just this room's archive. Look around as long as you like." },
+    ],
+    b: [
+      { ko: "이산이 고개를 들었어. 그런데 다리는 아직이야.", en: "San has raised their head. The legs, not yet." },
+      { ko: "이산 반대편의 기록 보관 장치 봤어? 이산이 멈추던 날의 기록이 거기 있어. 원본은 봉인판 뒤에 갇혀 있고.", en: "Seen the record archive on San's other side? The record from the day San stopped is in there. The original is locked behind the seal plates." },
+    ],
+    c: [
+      { ko: "거부했는데 동의로 남았다니. 위에서는 그걸 '처리'라고 부르지.", en: "Refused, and filed as consent. Up there they call that 'processing'." },
+      { ko: "보증인이라… 이 도시에선 누군가 대신 책임을 져야 사람이 움직일 수 있나 봐.", en: "A guarantor… In this city, it seems someone else has to answer for you before you can move." },
+    ],
+  },
+  radio: {
+    b: [
+      { ko: "그 기록 보관 장치? 내가 지상 검문소에서 떼어 온 거야. 이산이 멈추던 그날 쓰던 거.", en: "That record archive? I pried it off a surface checkpoint. The one San used the day they stopped." },
+      { ko: "도시는 화면에 뜨는 공식 기록만 고쳐. 붉은 원본 카세트는 흰 봉인판으로 막아 두기만 했지.", en: "The city only rewrites the official record on the screen. The red original cassette, it just walled in with white seal plates." },
+    ],
+    c: [
+      { ko: "역시 원본에 남아 있었구나. 도시는 자기 화면만 고칠 줄 알지.", en: "So it was still in the original. The city only knows how to rewrite its own screen." },
+      { ko: "공식 기록은 여전히 '동의'야. 원본을 봤다고 도시의 기록이 바뀌진 않아. 아직은.", en: "The official record still says 'consented'. Seeing the original won't change the city's record. Not yet." },
+    ],
+  },
+  monk: {
+    b: [
+      { ko: "…앉게. 여기서는 아무도 자네 호흡을 세지 않네.", en: "…Sit. Down here, no one counts your breaths." },
+      { ko: "얼굴을 찾았으니 이제 그 사람이 무엇을 골랐는지 볼 차례지. 기록은 저 장치 안에 봉인돼 있네.", en: "The face is found. Now it's time to see what they chose. The record is sealed inside that device." },
+    ],
+    c: [
+      { ko: "아니라고 했는데 그렇다고 적혔군. 그래도 자네는 그 '아니오'를 꺼내 왔네.", en: "They said no, and it was written down as yes. Still, you brought that 'no' back out." },
+      { ko: "공은 비어 있는 게 아니라네. 무엇도 혼자서는 있을 수 없다는 뜻이지. 보증인이란 말도 아마 그 이야기겠지.", en: "Emptiness isn't nothing. It means nothing can exist on its own. 'Guarantor' is probably the same story." },
+    ],
+  },
 };

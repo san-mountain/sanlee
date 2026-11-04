@@ -1,5 +1,8 @@
 // 백업: 이 도시에서 '보관 처리'는 죽음이 아니라 저장이다. 시스템은 보관한 시민을 마지막 백업에서 다시 불러낸다.
 // 실제로도 브라우저 저장소(localStorage)에 남는다. 작품 속 설정과 현실의 작동 방식이 같다.
+import { clearCitizenRecords } from "./citizenRecords";
+import { protection } from "./recordProtection";
+
 export const BACKUP_KEY = "sanlee-backup";
 
 export type Slot = { n: number; t: number; x: number; z: number };
@@ -76,8 +79,14 @@ export function wipeBackup() {
 // 도시 밖에서 기록을 지운다. 언어·효과음 설정과 기존 숨은 결말의 표시는 유지한다.
 export function forgetCityRecords() {
   wipeBackup();
+  clearCitizenRecords();
+  protection.reset();
   try {
     [
+      "sanlee-face-auth-v1",
+      "sanlee-record-audit-v1",
+      "sanlee-record-audit-v2",
+      "sanlee-record-audit-v3",
       "sanlee-promise",
       "sanlee-last-login",
       "sanlee-visited",

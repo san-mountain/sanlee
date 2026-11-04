@@ -14,6 +14,7 @@ import SanNPC from "./SanNPC";
 import { player } from "./Player";
 import { BUNKER } from "./zones";
 import { LotusStrings } from "./CityAlleys";
+import BunkerBell from "./BunkerBell";
 import { useLightPool } from "./atmosphere";
 
 const W = 12; // 방의 반폭
@@ -909,7 +910,13 @@ function WallText({ lang }: { lang: Lang }) {
   );
 }
 
-export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
+import { SOLUTION, type FaceState } from "./faceAuth";
+import type { FacePhase } from "./faceRuntime";
+import FaceMachine, { FaceConduit } from "./FaceMachine";
+import AuditMachine, { Guarantor } from "./AuditMachine";
+import type { AuditView } from "./World";
+
+export default function Bunker({ face, facePhase, audit, lang, visited, onTap, secondStatue, awake }: { face: FaceState; facePhase: FacePhase; audit: AuditView; lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -920,6 +927,17 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { 
       <Fixtures />
       <Pillars />
       <WallText lang={lang} />
+      <BunkerBell lang={lang} onTap={onTap} />
+      {/* 이산 옆의 얼굴 복원 장치. 기존 터미널 경로로 이미 깨운 저장에서는 맞춰진 채 멈춰 있다 */}
+      <FaceMachine drums={face.legacy ? SOLUTION : face.drums} phase={facePhase} method={face.method} lang={lang} onTap={onTap} />
+      {!secondStatue && <FaceConduit />}
+      {/* 퍼즐 B의 기록 검증 장치와 보증 장치(퍼즐 C 예고). 새 경로에서만 놓인다 (기존 저장의 방공호는 그대로) */}
+      {!face.legacy && (
+        <>
+          <AuditMachine lang={lang} solved={audit.solved} onTap={onTap} />
+          <Guarantor lang={lang} litAt={audit.litAt} />
+        </>
+      )}
       {TERMINALS.map((t) => (
         <Terminal key={t.id} {...t} lang={lang} visited={visited.includes(t.id)} onTap={onTap} />
       ))}
@@ -944,14 +962,14 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { 
             <Statue restored={0} lang={lang} second />
           </group>
         </>
-      ) : awake || visited.length >= TERMINALS.length ? (
+      ) : awake || (face.legacy && visited.length >= TERMINALS.length) ? (
         <>
           <Pedestal lang={lang} empty />
           <SanNPC mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[0, 3]} />
         </>
       ) : (
         <Tap id="statue" onTap={onTap}>
-          <Statue restored={visited.length} lang={lang} />
+          <Statue restored={face.legacy ? visited.length : 0} faceMethod={face.legacy ? null : face.method} faceFlow={!face.legacy} lang={lang} />
         </Tap>
       )}
       <spotLight position={[0, BUNKER_H - 0.2, 4]} target-position={[0, 2.5, 0]} angle={0.5} penumbra={0.6} intensity={120} distance={16} color="#f2efe8" />
