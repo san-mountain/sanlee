@@ -416,7 +416,9 @@ export default function ExploreClient() {
     let i = 0;
     let hide: ReturnType<typeof setTimeout>;
     const show = () => {
-      setNotice(announcements[i++ % announcements.length]);
+      if (i === 0 && !accepted) setNotice(ui.cityArrival);
+      else setNotice(announcements[(accepted ? i : i - 1) % announcements.length]);
+      i++;
       hide = setTimeout(() => setNotice(null), 6500);
     };
     const first = setTimeout(show, 3500);
@@ -427,7 +429,7 @@ export default function ExploreClient() {
       clearInterval(iv);
       setNotice(null);
     };
-  }, [zone, ending]);
+  }, [zone, ending, accepted]);
 
   // 결말 문장이 차례로 나타남
   const endStep = ending ? `${ending.kind}:${ending.step}` : "";
@@ -739,6 +741,7 @@ export default function ExploreClient() {
             visited={visited}
             onTap={onTap}
             onNear={setNear}
+            target={active ? near : null}
             onTracked={setTracked}
             labelEls={labelEls}
             sanMode={ending?.kind === "accept" ? "stay" : ending?.kind === "ghost" && ending.step >= 2 ? "beside" : undefined}
@@ -790,7 +793,7 @@ export default function ExploreClient() {
 
       {toast && <div className="toast">{toast}</div>}
       {!intro && !ending && !accepted && <SaveToast />}
-      {notice && !panel && <div className="notice">{t(notice)}</div>}
+      {notice && !panel && <div className="notice" role="status"><span className="notice-tag" aria-hidden="true">SEOUL.SYS / TRANSMISSION</span><span className="notice-body">{t(notice)}</span></div>}
       {unlock === "show" && !panel && (
         <div className="unlock-toast" role="status" onClick={() => setUnlock(null)}>
           <b>{t(ui.unlockTitle)}</b>
@@ -808,7 +811,7 @@ export default function ExploreClient() {
       )}
 
       {active && !near && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
-      {active && locked && <div className="crosshair" aria-hidden />}
+      {active && locked && !near && <div className="crosshair" aria-hidden />}
       {active && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
       {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
