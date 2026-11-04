@@ -543,21 +543,26 @@ export default function ExploreClient() {
       later(1100, () => {
         gaze.lookAt = SAN_FACE;
       });
-      later(2300, () =>
-        playLines(
-          auditScenes.san,
-          lineEvents,
-          () =>
-            later(900, () => {
-              const at = performance.now();
-              setAuditView((v) => ({ ...v, litAt: at }));
-              sfx.guarantor();
-              gaze.lookAt = { x: GUARANTOR.pos[0], y: 1.5, z: GUARANTOR.pos[2] };
-              later(700, () => playLines(auditScenes.guarantor, lineEvents, () => later(700, finishAuditFlow)));
-            }),
-          1400
-        )
-      );
+      // 원본과 공식 기록의 차이가 드러난 뒤, '강제 정정'의 주체가 도시임을
+      // 도시 자신의 짧고 차가운 안내로 확인시킨다. 이산의 독백과 C 예고는 유지.
+      later(2300, () => {
+        sfx.cityVoice();
+        playLines(auditScenes.forced, lineEvents, () =>
+          playLines(
+            auditScenes.san,
+            lineEvents,
+            () =>
+              later(900, () => {
+                const at = performance.now();
+                setAuditView((v) => ({ ...v, litAt: at }));
+                sfx.guarantor();
+                gaze.lookAt = { x: GUARANTOR.pos[0], y: 1.5, z: GUARANTOR.pos[2] };
+                later(700, () => playLines(auditScenes.guarantor, lineEvents, () => later(700, finishAuditFlow)));
+              }),
+            1400
+          )
+        );
+      });
     });
   }, [later, lineEvents, finishAuditFlow]);
 
