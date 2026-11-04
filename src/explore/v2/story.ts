@@ -1,47 +1,51 @@
-// DELETE SEOUL v2: independent story state. No legacy A/B or ending keys are read or written.
+// DELETE SEOUL 3D story lab. Independent of legacy A/B and production save keys.
 export const STORY_V2_KEY = "sanlee-delete-seoul-story-v2";
 
 export type Phase =
-  | "arrival"
-  | "recovery"
-  | "origin"
-  | "restored"
-  | "discovered"
-  | "confronted"
-  | "crossing"
-  | "decision"
-  | "kept"
-  | "left";
+  | "arrival" | "recovery" | "origin" | "restored"
+  | "investigating" | "evidence" | "discovered" | "keeperQuestioned"
+  | "confronted" | "crossing" | "decision" | "kept" | "left";
 
 export type MemoryFlag = "r07Friend" | "childDrawing" | "radioHeard" | "monkClue";
+export type ClueFlag = "r07" | "child" | "radio";
 export type StoryEvent =
-  | "meet-san" | "read-origin" | "restore-san" | "discover-source"
-  | "confront-san" | "enter-city" | "reach-core" | "keep-record" | "leave";
+  | "meet-san" | "read-origin" | "restore-san" | "begin-investigation"
+  | "review-evidence" | "question-keeper" | "confront-san"
+  | "enter-city" | "reach-core" | "keep-record" | "leave";
 
 export type StoryV2 = {
-  schema: 1;
+  schema: 2;
   phase: Phase;
   memories: Record<MemoryFlag, boolean>;
+  clues: Record<ClueFlag, boolean>;
 };
 
-const phases: Phase[] = ["arrival", "recovery", "origin", "restored", "discovered", "confronted", "crossing", "decision", "kept", "left"];
+const phases: Phase[] = [
+  "arrival", "recovery", "origin", "restored", "investigating",
+  "evidence", "discovered", "keeperQuestioned", "confronted",
+  "crossing", "decision", "kept", "left",
+];
 const memoryFlags: MemoryFlag[] = ["r07Friend", "childDrawing", "radioHeard", "monkClue"];
+const clueFlags: ClueFlag[] = ["r07", "child", "radio"];
 
 export function initialStory(): StoryV2 {
   return {
-    schema: 1,
+    schema: 2,
     phase: "arrival",
     memories: { r07Friend: false, childDrawing: false, radioHeard: false, monkClue: false },
+    clues: { r07: false, child: false, radio: false },
   };
 }
 
-// Story decisions are gated here, never by the on-screen text or by stale timers.
+// No timer-based progression: only completed player interactions advance the story.
 const transitions: Partial<Record<Phase, Partial<Record<StoryEvent, Phase>>>> = {
   arrival: { "meet-san": "recovery" },
   recovery: { "read-origin": "origin" },
   origin: { "restore-san": "restored" },
-  restored: { "discover-source": "discovered" },
-  discovered: { "confront-san": "confronted" },
+  restored: { "begin-investigation": "investigating" },
+  evidence: { "review-evidence": "discovered" },
+  discovered: { "question-keeper": "keeperQuestioned" },
+  keeperQuestioned: { "confront-san": "confronted" },
   confronted: { "enter-city": "crossing", leave: "left" },
   crossing: { "reach-core": "decision" },
   decision: { "keep-record": "kept" },
@@ -57,67 +61,85 @@ export function remember(state: StoryV2, flag: MemoryFlag): StoryV2 {
   return { ...state, memories: { ...state.memories, [flag]: true } };
 }
 
-export function atLeast(state: StoryV2, phase: Phase): boolean {
-  const current = phases.indexOf(state.phase);
-  const target = phases.indexOf(phase);
-  // "left" is a separate ending, not a continuation of the regular story.
-  return state.phase !== "left" && current >= target;
+// Three independent changes in characters' memories must be inspected before the archive unlocks.
+// They do not require friendship or other optional relationship choices.
+export function observeClue(state: StoryV2, flag: ClueFlag): StoryV2 {
+  if (state.phase !== "investigating" || state.clues[flag]) return state;
+  const clues = { ...state.clues, [flag]: true };
+  const complete = clueFlags.every(key => clues[key]);
+  return { ...state, clues, phase: complete ? "evidence" : "investigating" };
 }
+
+export function clueCount(state: StoryV2): number {
+  return clueFlags.filter(key => state.clues[key]).length;
+}
+
+export function atLeast(state: StoryV2, phase: Phase): boolean {
+  if (state.phase === "left") return false;
+  return phases.indexOf(state.phase) >= phases.indexOf(phase);
+}
+
+const isBoolRecord = (value: unknown, keys: readonly string[]): value is Record<string, boolean> =>
+  !!value && typeof value === "object" && keys.every(k => typeof (value as Record<string, unknown>)[k] === "boolean");
 
 export function parseStory(raw: string | null): StoryV2 {
   if (!raw) return initialStory();
   try {
-    const data = JSON.parse(raw) as unknown;
+    const data = JSON.parse(raw) as Record<string, unknown>;
     if (!data || typeof data !== "object") return initialStory();
-    const record = data as Record<string, unknown>;
-    if (record.schema !== 1 || !phases.includes(record.phase as Phase)) return initialStory();
-    const memories = record.memories;
-    if (!memories || typeof memories !== "object") return initialStory();
-    const dataMemories = memories as Record<string, unknown>;
-    if (!memoryFlags.every(flag => typeof dataMemories[flag] === "boolean")) return initialStory();
+    if (!isBoolRecord(data.memories, memoryFlags)) return initialStory();
+
+    // The previous 5-minute lab has no suspicion scenes. Move those saves back to
+    // the restoration milestone instead of silently skipping the new investigation.
+    if (data.schema === 1) {
+      const legacyPhase = data.phase;
+      const phase: Phase = legacyPhase === "kept" || legacyPhase === "left" ? legacyPhase
+        : legacyPhase === "crossing" || legacyPhase === "decision" ? legacyPhase
+        : legacyPhase === "arrival" || legacyPhase === "recovery" || legacyPhase === "origin" ? legacyPhase
+        : "restored";
+      return { ...initialStory(), phase, memories: data.memories as StoryV2["memories"] };
+    }
+    if (data.schema !== 2 || !phases.includes(data.phase as Phase) || !isBoolRecord(data.clues, clueFlags)) return initialStory();
     return {
-      schema: 1,
-      phase: record.phase as Phase,
-      memories: Object.fromEntries(memoryFlags.map(flag => [flag, dataMemories[flag]])) as StoryV2["memories"],
+      schema: 2,
+      phase: data.phase as Phase,
+      memories: Object.fromEntries(memoryFlags.map(k => [k, (data.memories as Record<string, boolean>)[k]])) as StoryV2["memories"],
+      clues: Object.fromEntries(clueFlags.map(k => [k, (data.clues as Record<string, boolean>)[k]])) as StoryV2["clues"],
     };
-  } catch {
-    return initialStory();
-  }
+  } catch { return initialStory(); }
 }
 
 export type StoryStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
-
 export function readStory(storage?: StoryStorage): StoryV2 {
   try {
     const target = storage ?? (typeof localStorage === "undefined" ? undefined : localStorage);
     return parseStory(target?.getItem(STORY_V2_KEY) ?? null);
-  } catch {
-    return initialStory();
-  }
+  } catch { return initialStory(); }
 }
-
 export function writeStory(state: StoryV2, storage?: StoryStorage): void {
   try {
     const target = storage ?? (typeof localStorage === "undefined" ? undefined : localStorage);
     target?.setItem(STORY_V2_KEY, JSON.stringify(state));
-  } catch { /* private mode / storage disabled: gameplay still works this session */ }
+  } catch { /* local-only games remain usable when storage is unavailable */ }
 }
-
 export function eraseStory(storage?: StoryStorage): void {
   try {
     const target = storage ?? (typeof localStorage === "undefined" ? undefined : localStorage);
     target?.removeItem(STORY_V2_KEY);
-  } catch { /* deletion can fail when storage is unavailable */ }
+  } catch { /* handled by caller UI */ }
 }
 
 export const storyObjective: Record<Exclude<Phase, "left">, { ko: string; en: string }> = {
-  arrival: { ko: "무명사를 둘러보고 이산에게 말을 걸어 보세요.", en: "Explore the shelter and speak to San." },
-  recovery: { ko: "이산의 원본이 남은 장치를 찾아보세요.", en: "Find the device containing San's original." },
-  origin: { ko: "기억 보관 장치에서 이산을 복원하세요.", en: "Restore San from the memory archive." },
-  restored: { ko: "새로 켜진 관리 단말을 조사하세요.", en: "Inspect the newly activated control terminal." },
-  discovered: { ko: "이산에게 그가 숨긴 진실을 물어보세요.", en: "Ask San what he has been hiding." },
-  confronted: { ko: "지상으로 나가 진실을 확인하거나, 여기서 떠나세요.", en: "Seek the truth aboveground, or leave." },
-  crossing: { ko: "대자비의 시선을 피해 중앙 단말로 가세요.", en: "Evade Great Compassion and reach the central terminal." },
-  decision: { ko: "지워지는 기록을 확인하고 결정하세요.", en: "Review what will be erased, then decide." },
-  kept: { ko: "당신은 기록을 남기기로 했습니다.", en: "You chose to keep the record." },
+  arrival: { ko: "잔상실의 사람들과 이야기하고 이산을 찾아보세요.", en: "Meet the residents of Afterimage and find San." },
+  recovery: { ko: "이산의 원본을 확인하세요.", en: "Inspect San's original data." },
+  origin: { ko: "기억 보관 장치를 통해 격리를 해제하세요.", en: "Use the memory archive to release the quarantine." },
+  restored: { ko: "기록에 이상이 생겼습니다. 관리인에게 물어보세요.", en: "Something is wrong with the records. Ask the caretaker." },
+  investigating: { ko: "R-07, 아이, 무전수가 기억하는 일을 비교하세요.", en: "Compare R-07's, the child's and the operator's memories." },
+  evidence: { ko: "세 가지 증언을 확인했습니다. 중앙 대조 단말을 조사하세요.", en: "You have three accounts. Inspect the reconciliation terminal." },
+  discovered: { ko: "기록을 누가 보냈는지 관리인에게 물어보세요.", en: "Ask the caretaker who sent the request." },
+  keeperQuestioned: { ko: "이산에게 기록 정리 요청에 대해 따져 물으세요.", en: "Confront San about the memory purge request." },
+  confronted: { ko: "대자비 중앙 장치에서 기억 정리 요청을 중단하세요.", en: "Reach Great Compassion to cancel the pending memory purge." },
+  crossing: { ko: "대자비를 피해 중앙 장치에 도달해 정리 요청을 중단하세요.", en: "Reach the core and cancel the purge before the next sync." },
+  decision: { ko: "기억 정리를 중단하거나, 이 브라우저의 세계를 지우세요.", en: "Cancel the purge or erase this browser's world." },
+  kept: { ko: "기억 정리 요청을 중단했습니다.", en: "You canceled the purge and kept the memories." },
 };
