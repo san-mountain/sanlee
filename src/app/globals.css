@@ -294,10 +294,17 @@ img { max-width: 100%; height: auto; display: block; }
 .is-tracked .canvas-wrap::after { content: ""; position: absolute; inset: 0; pointer-events: none;
   box-shadow: inset 0 0 90px #ff103038; }
 
-.notice { position: absolute; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 30; width: min(560px, 92vw);
-  font-family: var(--mono); font-size: 12px; line-height: 1.5; text-align: center; color: #ffb02e;
-  background: #0a0405cc; border-top: 1px solid #ffb02e66; border-bottom: 1px solid #ffb02e66; padding: 8px 12px;
-  pointer-events: none; animation: noticeIn .4s ease-out; }
+.notice { position: absolute; left: 50%; bottom: 88px; transform: translateX(-50%); z-index: 30;
+ width: min(570px, calc(100vw - 32px)); padding: 12px 17px 13px; pointer-events: none;
+ font-family: var(--mono); text-align: left; color: #f3faff; line-height: 1.65;
+ background: linear-gradient(110deg, rgba(5, 17, 27, .94), rgba(9, 20, 32, .88));
+ border: 1px solid rgba(34, 240, 255, .28); border-left: 2px solid rgba(34, 240, 255, .75);
+ clip-path: polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px));
+ animation: noticeIn .3s ease-out; }
+.notice::before { content: ""; position: absolute; top: 0; right: 11px; width: 48px; height: 1px; background: rgba(34, 240, 255, .6); }
+.notice-tag { display: block; margin-bottom: 5px; color: #78cbd2; font-size: 9px; letter-spacing: .17em; }
+.notice-body { display: block; font-size: clamp(12px, 1.15vw, 14px); word-break: keep-all; text-shadow: 0 1px 2px rgba(0,0,0,.95); }
+@media (prefers-reduced-motion: reduce) { .notice { animation: none; } }
 @keyframes noticeIn { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
 .prompt { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 35;
@@ -316,6 +323,10 @@ img { max-width: 100%; height: auto; display: block; }
   background: #22f0ff55; border: 1px solid var(--cyan); box-shadow: 0 0 12px #22f0ff66; }
 
 .dialog .speaker { font-family: var(--mono); font-size: 12px; letter-spacing: .1em; color: var(--pink); margin-bottom: 4px; }
+.dialog .line { color: #f5faff; padding: 12px 14px; line-height: 1.75; word-break: keep-all;
+ background: linear-gradient(110deg, rgba(4, 15, 25, .95), rgba(9, 18, 30, .88));
+ border-left: 2px solid rgba(34, 240, 255, .65); border-top: 1px solid rgba(34, 240, 255, .15);
+ text-shadow: 0 1px 2px #000; }
 .painting-panel img { width: 100%; max-height: 52vh; object-fit: contain; background: #000; }
 .painting-panel .caption { margin-top: 12px; }
 
