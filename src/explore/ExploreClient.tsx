@@ -1404,7 +1404,7 @@ export default function ExploreClient() {
               type="button"
               className="face-line-next"
               aria-label={t(ui.next)}
-              onClick={() => advanceLineRef.current?.()}
+              onClick={() => { if (performance.now() - advanceLineAt.current > 180) advanceLineRef.current?.(); }}
             >
               {t(ui.next)}
             </button>
