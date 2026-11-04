@@ -3,13 +3,12 @@
 import { useEffect, useRef } from "react";
 import { interactionProjection } from "./interactionProjection";
 
-// A single subtle line ties the mobile action button to the actual 3D part it operates.
-// No floating text labels; projection comes from the same target selected by Player.
+// One unobtrusive holographic marker on the *actual selected 3D part*.
+// Shared by mouse/keyboard and touch; no tether line, floating text or extra HUD.
+// It renders as a non-interactive SVG layer and never alters target selection.
 export default function InteractionGuide({ active, color }: { active: boolean; color?: string }) {
   const svg = useRef<SVGSVGElement>(null);
-  const path = useRef<SVGPathElement>(null);
-  const ring = useRef<SVGCircleElement>(null);
-  const center = useRef<SVGCircleElement>(null);
+  const target = useRef<SVGGElement>(null);
 
   useEffect(() => {
     if (!active) {
@@ -19,26 +18,18 @@ export default function InteractionGuide({ active, color }: { active: boolean; c
     let raf = 0;
     const update = () => {
       const el = svg.current;
-      const btn = document.querySelector<HTMLElement>(".interact-btn");
+      const marker = target.current;
       const point = interactionProjection;
-      if (!el || !btn || !point.visible || !point.id) {
+      if (!el || !marker || !point.visible || !point.id) {
         if (el) el.style.opacity = "0";
       } else {
-        const bounds = el.getBoundingClientRect();
-        const b = btn.getBoundingClientRect();
-        const x1 = b.left + b.width * 0.25 - bounds.left;
-        const y1 = b.top + b.height * 0.34 - bounds.top;
-        const x2 = point.x * bounds.width;
-        const y2 = point.y * bounds.height;
-        const ok = x2 >= 14 && x2 <= bounds.width - 14 && y2 >= 14 && y2 <= bounds.height - 14;
-        if (ok) {
-          path.current?.setAttribute("d", `M${x1.toFixed(1)} ${y1.toFixed(1)} L${x2.toFixed(1)} ${y2.toFixed(1)}`);
-          ring.current?.setAttribute("cx", String(x2));
-          ring.current?.setAttribute("cy", String(y2));
-          center.current?.setAttribute("cx", String(x2));
-          center.current?.setAttribute("cy", String(y2));
-        }
-        el.style.opacity = ok ? "0.78" : "0";
+        const w = el.clientWidth;
+        const h = el.clientHeight;
+        const x = point.x * w;
+        const y = point.y * h;
+        const visible = x >= 24 && x <= w - 24 && y >= 24 && y <= h - 24;
+        if (visible) marker.setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+        el.style.opacity = visible ? "0.86" : "0";
       }
       raf = requestAnimationFrame(update);
     };
@@ -56,9 +47,15 @@ export default function InteractionGuide({ active, color }: { active: boolean; c
       style={{ color: color ?? "#9adcd0" }}
       aria-hidden="true"
     >
-      <path ref={path} fill="none" stroke="currentColor" strokeWidth="1" strokeDasharray="3 5" />
-      <circle ref={ring} r="13" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      <circle ref={center} r="3" fill="currentColor" />
+      <g ref={target} className="interaction-hologram">
+        <circle r="19" stroke="#020b12" strokeWidth="4" fill="none" opacity="0.85" />
+        <circle r="19" stroke="currentColor" strokeWidth="1.1" fill="currentColor" fillOpacity="0.07" strokeDasharray="42 13" />
+        <path d="M-24 -12 V-24 H-12 M12 -24 H24 V-12 M24 12 V24 H12 M-12 24 H-24 V12"
+          stroke="#020b12" strokeWidth="3.2" fill="none" strokeLinecap="round" />
+        <path d="M-24 -12 V-24 H-12 M12 -24 H24 V-12 M24 12 V24 H12 M-12 24 H-24 V12"
+          stroke="currentColor" strokeWidth="1.35" fill="none" strokeLinecap="round" />
+        <circle r="2.3" fill="currentColor" />
+      </g>
     </svg>
   );
 }
