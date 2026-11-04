@@ -180,7 +180,13 @@ test("every puzzle B line has a unique b.* id, a known speaker, both languages a
     assert.ok(l.ko && l.en, l.id);
     assert.ok(l.ms > 0 && lineDuration(l) === l.ms, l.id);
   }
-  assert.deepEqual(auditScenes.san.map((l) => l.ko), ["……내가 거부했었구나.", "그런데 난 왜 아직 여기 있는 거지?"]);
+  assert.deepEqual(auditScenes.san.map((l) => l.ko), [
+    "……내가 거부했었구나.",
+    "거부 입력은 시민 보호를 위해 동의로 강제 보정됩니다.",
+    "그런데 난 왜 아직 여기 있는 거지?",
+  ]);
+  assert.deepEqual(auditScenes.san.map((l) => l.speaker), ["san", "city", "san"]);
+  assert.match(sealUi.forcedTag.ko, /도시.*강제/);
   assert.equal(auditScenes.guarantor[0].ko, "보증인 등록이 필요합니다.");
 });
 
@@ -209,7 +215,7 @@ test("after B: the San scene leaves a silence between the two lines, then the gu
     clock = at;
     fn();
   }
-  assert.deepEqual(shown, ["b.san.refused", null, "b.san.still-here", null]);
+  assert.deepEqual(shown, ["b.san.refused", null, "b.city.forced-consent", null, "b.san.still-here", null]);
   assert.equal(done, 1);
   for (const npc of ["keeper", "radio", "monk"]) {
     assert.ok(npcStages[npc].c?.length, npc);
