@@ -8,8 +8,8 @@ import World from "../World";
 import { emptyFace } from "../faceAuth";
 import { input } from "../input";
 import { player, teleport } from "../Player";
-import { gaze, resetGaze } from "../gaze";
-import { restoreCovers } from "../Jabi";
+import { autoWalk, gaze, resetGaze } from "../gaze";
+import { restoreCovers, stopGazeCombat } from "../Jabi";
 import { requestLock, useLookAndKeys, Joystick, JumpButton } from "../TouchControls";
 import { BUNKER, CITY, type Interactable, type Zone, type ZoneDef } from "../zones";
 import {
@@ -95,9 +95,11 @@ export default function ExploreV2Client() {
     if (saved.phase === "kept") { setEnding("kept"); setIntro(false); }
     if (saved.phase === "left") { setEnding("left"); setIntro(false); }
     setTouch(navigator.maxTouchPoints > 0 || window.matchMedia("(pointer: coarse)").matches);
-    resetGaze();
+    stopGazeCombat();
+    gaze.mood = "";
+    autoWalk.to = null;
     setReady(true);
-    return () => { gaze.enabled = false; gaze.frozen = false; resetGaze(); restoreCovers(); };
+    return () => { gaze.enabled = false; stopGazeCombat(); gaze.mood = ""; autoWalk.to = null; restoreCovers(); };
   }, []);
 
   const commit = useCallback((event: StoryEvent) => {
@@ -124,7 +126,8 @@ export default function ExploreV2Client() {
     setPanel(null);
     setArrived(true);
     setNear(null);
-    resetGaze();
+    stopGazeCombat();
+    gaze.mood = "";
     setZone("city");
     lock();
   }, [commit, lock]);
@@ -294,9 +297,9 @@ export default function ExploreV2Client() {
 
   useEffect(() => {
     gaze.enabled = zone === "city" && active && story.phase === "crossing";
-    // A modal must actually stop the attack, not only hide the gauge.
-    if (!active && zone === "city") { gaze.meter = Math.min(gaze.meter, 50); }
-    if (zone !== "city") resetGaze();
+    // A modal/decision must stop a fired beam, not just freeze player input.
+    if (zone === "city" && (!active || story.phase !== "crossing")) stopGazeCombat();
+    if (zone !== "city") stopGazeCombat();
     return () => { gaze.enabled = false; };
   }, [zone, active, story.phase]);
 
@@ -331,7 +334,7 @@ export default function ExploreV2Client() {
     setPanel(null);
     setIntro(true);
     setPaused(false);
-    resetGaze();
+    stopGazeCombat();
     restoreCovers();
   }, []);
 
