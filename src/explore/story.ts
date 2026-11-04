@@ -303,7 +303,7 @@ export const checkpoint = {
     { ko: "", en: "", slots: true },
     { ko: "끝까지 '모두 거부'를 누른 두 번째 사람.", en: "The second person who pressed 'Reject all' to the end.", plaque: true },
     { ko: "두 정지 시민 곁에, 거부 의사를 기억하는 쿠키 1개가 아직 남아 있다.", en: "Beside the two suspended citizens, one cookie that remembers the refusal is still there." },
-    { ko: "도시는 이 결말을 기억하지 않습니다. 당신이 거부했으니까.", en: "The city will not remember this ending. Because you refused." },
+    { ko: "도시는 당신의 거부만 기록합니다. 당신이 살아온 시간은 기억하지 않습니다.", en: "The city records only your refusal. It remembers nothing of the life you lived." },
   ] as Beat[],
   // 숨은 결말: 기록을 지우면 도시의 규칙대로 멈춰야 한다. 그런데 이산이 기억하고 있어서 멈추지 않는다.
   // 플레이어가 터미널로 이산을 다시 '확인'해 깨웠듯이, 이번엔 이산이 플레이어를 확인해 준다
