@@ -9,9 +9,12 @@ const LINK_MAX = 4.2;
 
 export const dist2 = (a: V2, b: V2) => Math.hypot(a.x - b.x, a.z - b.z);
 
-/** 계단 구간의 바닥 높이 (플레이어·이산 공통) */
+/** 이 z보다 남쪽은 모두 지하(ACT 4 정비·기록 공간)다. 지상에서는 큰길 끝 건물에 막혀 닿을 수 없다 */
+export const UNDER_Z = -59.8;
+
+/** 바닥 높이 (플레이어·이산 공통): 지하철 계단은 내려갈수록 낮아지고, 계단 아래 지하 공간은 계단 바닥 높이 */
 export function groundY(p: V2) {
-  const inStair = Math.abs(p.x) < 2.6 && p.z < STAIR_TOP_Z;
+  const inStair = (Math.abs(p.x) < 2.6 && p.z < STAIR_TOP_Z) || p.z < UNDER_Z;
   return inStair ? -STAIR_DROP * Math.min(1, (STAIR_TOP_Z - p.z) / (STAIR_TOP_Z - STAIR_BOTTOM_Z)) : 0;
 }
 

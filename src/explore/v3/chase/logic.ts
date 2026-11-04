@@ -14,16 +14,22 @@ import {
   type Block, type LightDef, type V2,
 } from "./level";
 import { COVER_SPOTS, SAN_RADIUS, findPath, groundY, pathLength, pointAlong, predictPatrol, segmentClear } from "./nav";
+import {
+  SEAL_BLOCK, UNDER_BLOCKS, UNDER_BOUNDS, newAct4, onPanelClosed, stepUnder, underActionLabel, underBeacon, underHoldProgress,
+  underObjective, underTarget, type Act4, type UnderApi, type UnderPanel,
+} from "./underground";
 
 // intro: 혼자, 정전된 통로 B-2 · meet: 국소 전원 복구 직후 이산과 첫 만남 · approach: 셔터 협력
-// relay: 구역 전원(두 번째 장치) · surge: 감시 재가동 · chase/escape: 추격 · complete: 현재 구현 구간의 끝(이야기의 결말 아님)
-export type Phase = "intro" | "meet" | "approach" | "relay" | "surge" | "chase" | "escape" | "complete";
-export type Speaker = "san" | "system";
-export type Interact = "breaker" | "relay" | "gate";
+// relay: 구역 전원(두 번째 장치) · surge: 감시 재가동 · chase/escape: 추격 · under: ACT 4 지하 정비·기록 공간
+// complete: 현재 구현 구간의 끝(ACT 5 선택 직전. 이야기의 결말 아님)
+export type Phase = "intro" | "meet" | "approach" | "relay" | "surge" | "chase" | "escape" | "under" | "complete";
+/** san: 지금의 이산 · system: 시설 상태 문구 · record: 저장된 안내 기록 재생 */
+export type Speaker = "san" | "system" | "record";
+export type Interact = "breaker" | "relay" | "gate" | "seal" | "diagram" | "record" | "circuit" | "exit";
 export type FrameInput = { move: { x: number; y: number; run: boolean }; look: { yaw: number; pitch: number }; hold: boolean };
 export type GameEvent =
   | "door" | "warn" | "restore" | "beam" | "alarm" | "spotted" | "lock" | "caught" | "gate-tick" | "gate-open" | "complete"
-  | "san-call" | "power";
+  | "san-call" | "power" | "under" | "seal" | "sealed" | "read" | "record" | "restore-exit" | "denied";
 
 /**
  * 감시등 상태.
@@ -94,6 +100,10 @@ export type Game = {
   /** 이산의 상황 경고 상태 */
   call: { waitAt: number; waiting: boolean; ahead: V2 | null; hideAt: number; goAt: number };
   lights: LightState[];
+  /** ACT 4 지하 진행 */
+  act4: Act4;
+  /** 열려 있는 조사 패널. 열려 있는 동안 이동·시점·상호작용 입력을 받지 않는다 */
+  panel: UnderPanel | null;
   lampsOn: number;
   alarm: number;
   meter: number;
@@ -174,6 +184,8 @@ export function newGame(): Game {
     gate: { hold: 0, open: 0, opened: false, lastTick: 0, danger: null, hideAt: -99, nowAt: -99 },
     call: { waitAt: -99, waiting: false, ahead: null, hideAt: -99, goAt: -99 },
     lights: makeLights(),
+    act4: newAct4(),
+    panel: null,
     lampsOn: 0,
     alarm: 0,
     meter: 0,
@@ -198,6 +210,8 @@ export function newGame(): Game {
 
 /** 이야기 대사(우선순위 0). 같은 우선순위 대사는 차례로 나오고, 경고 대사가 떠 있으면 끝날 때까지 기다린다 */
 export function say(g: Game, who: Speaker, text: string, dur = 2.6, delay = 0) {
+  // 같은 대사가 이미 예약돼 있으면 다시 넣지 않는다
+  if (g.queue.some((q) => q.who === who && q.text === text)) return;
   g.queue.push({ at: g.time + delay, who, text, dur, prio: 0 });
 }
 
@@ -247,9 +261,30 @@ function solidBlocks(g: Game): Block[] {
   return list;
 }
 
+/** 계단 아래쪽 절반부터는 지하 판정(벽·차단문)을 쓴다. 계단 통로의 옆벽은 두 판정에 모두 있다 */
+const UNDER_Y = -2.4;
+const SURFACE_BOUNDS = { x0: -9.6, x1: 9.6, z0: -59.5, z1: MAX_Z };
+export const isUnder = (p: V2) => groundY(p) < UNDER_Y;
+const underCache = new Map<boolean, Block[]>();
+
+function underBlocks(g: Game): Block[] {
+  const closed = g.act4.door >= 0.6;
+  let list = underCache.get(closed);
+  if (!list) {
+    list = closed ? [...UNDER_BLOCKS, SEAL_BLOCK] : UNDER_BLOCKS;
+    underCache.set(closed, list);
+  }
+  return list;
+}
+
+/** p가 서 있는 층의 충돌 사각형과 이동 범위 */
+function levelOf(g: Game, p: V2) {
+  return isUnder(p) ? { blocks: underBlocks(g), bounds: UNDER_BOUNDS } : { blocks: solidBlocks(g), bounds: SURFACE_BOUNDS };
+}
+
 /** 원을 사각형들 밖으로 밀어낸다 */
-export function resolveCircle(p: V2, blocks: Block[], r = PLAYER_RADIUS): V2 {
-  const out = { x: Math.max(-9.6, Math.min(9.6, p.x)), z: Math.max(-59.5, Math.min(MAX_Z, p.z)) };
+export function resolveCircle(p: V2, blocks: Block[], r = PLAYER_RADIUS, bounds = SURFACE_BOUNDS): V2 {
+  const out = { x: Math.max(bounds.x0, Math.min(bounds.x1, p.x)), z: Math.max(bounds.z0, Math.min(bounds.z1, p.z)) };
   for (let pass = 0; pass < 2; pass++) {
     for (const b of blocks) {
       const cx = Math.max(b.x0, Math.min(b.x1, out.x));
@@ -649,7 +684,6 @@ function stepSanChase(g: Game, dt: number, route: V2[], waitDist: number) {
 function stepSan(g: Game, dt: number) {
   const s = g.san;
   const P = g.player;
-  s.moving = false;
   // 첫 만남 전: 이산은 존재하지 않는 것처럼 아무것도 하지 않는다
   if (!s.visible) return;
   if (g.phase === "approach") {
@@ -672,11 +706,15 @@ function stepSan(g: Game, dt: number) {
         g.events.push("san-call");
       }
     }
-  } else if (g.phase === "escape" || g.phase === "complete") {
+  } else if (g.phase === "escape") {
     stepSanChase(g, dt, SAN_ESCAPE_ROUTE, 7);
   }
+  // under: 이동은 stepUnder(이야기 진행)가 이미 했다. 여기서는 높이와 시선만
   s.y = groundY(s);
-  if (!s.moving) {
+  if (!s.moving && g.phase === "under") {
+    const look = g.act4.look ?? P;
+    s.yaw = Math.atan2(look.x - s.x, look.z - s.z);
+  } else if (!s.moving) {
     // 멈춰 있을 때는 플레이어 쪽을 본다. 차단문 망보기 중엔 제어판, 장치 앞에선 감시 회로 케이블 쪽을 본다
     const watchingGate = g.phase === "chase" && s.idx >= SAN_HIDES.length && dist(P, GATE_PANEL) < 7;
     const look = watchingGate ? GATE_PANEL : (g.phase === "relay" && g.relay.sanNear) || g.phase === "surge" ? RELAY : P;
@@ -688,6 +726,7 @@ function stepSan(g: Game, dt: number) {
 
 export function currentTarget(g: Game): Interact | null {
   if (g.caught) return null;
+  if (g.phase === "under") return underTarget(g);
   if (g.phase === "intro" && !g.breaker.done && dist(g.player, BREAKER) < BREAKER_RANGE) return "breaker";
   if (g.phase === "relay" && !g.relay.done && dist(g.player, RELAY) < RELAY_RANGE) return "relay";
   if (g.phase === "chase" && !g.gate.opened && dist(g.player, GATE_PANEL) < GATE_RANGE) return "gate";
@@ -695,6 +734,7 @@ export function currentTarget(g: Game): Interact | null {
 }
 
 export function holdProgress(g: Game) {
+  if (g.phase === "under") return underHoldProgress(g);
   if (g.target === "breaker") return g.breaker.hold / BREAKER_HOLD;
   if (g.target === "relay") return g.relay.hold / RELAY_HOLD;
   if (g.target === "gate") return g.gate.hold / GATE_HOLD;
@@ -884,14 +924,89 @@ function stepStory(g: Game, dt: number, hold: boolean) {
       break;
     }
     case "escape": {
+      // 계단 아래에 닿으면 완료 화면 대신 지하로 이어진다. 이 순간부터 지상 탐지와 실패 판정은 없다
       if (P.z < EXIT_Z && Math.abs(P.x) < 2.6) {
-        setPhase(g, "complete");
-        g.events.push("complete");
+        setPhase(g, "under");
+        g.events.push("under");
         clearLines(g);
+        g.meter = 0;
+        g.exposed = false;
+        g.covered = false;
+        g.trend = "idle";
+        g.grace = 0;
+        s.exposed = false;
+        s.mode = "idle";
+        s.dest = null;
+        s.nav = newNav();
       }
       break;
     }
+    case "under": {
+      stepUnder(g, dt, hold, underApi(g, dt));
+      break;
+    }
   }
+}
+
+/* ---------- ACT 4 지하: logic.ts의 기능을 underground.ts에 빌려준다 ---------- */
+
+/** 정해 둔 지점들을 차례로 걷는다. 지하 벽·닫힌 차단문과 충돌하고, 이동 선분이 막히면 움직이지 않는다(순간이동 없음).
+ *  limitX가 있으면 그 x를 넘지 못한다(안내 경로 제한선) */
+function sanWalk(g: Game, route: V2[], speed: number, dt: number, limitX = Infinity): "moving" | "arrived" | "halted" | "blocked" {
+  const s = g.san;
+  while (route.length && dist(s, route[0]) < 0.06) route.shift();
+  if (!route.length) return "arrived";
+  const target = route[0];
+  const d = dist(s, target);
+  const step = Math.min(speed * dt, d);
+  let nx = s.x + ((target.x - s.x) / d) * step;
+  const nz = s.z + ((target.z - s.z) / d) * step;
+  let halted = false;
+  if (nx > limitX) {
+    nx = Math.max(s.x, limitX);
+    halted = s.x >= limitX - 1e-3;
+  }
+  const lv = levelOf(g, s);
+  const cand = resolveCircle({ x: nx, z: nz }, lv.blocks, SAN_RADIUS, lv.bounds);
+  if (!segmentClear(s, cand, lv.blocks, SAN_RADIUS * 0.9)) return "blocked";
+  const moved = dist(s, cand);
+  if (moved > 1e-4) {
+    s.yaw = Math.atan2(cand.x - s.x, cand.z - s.z);
+    s.x = cand.x;
+    s.z = cand.z;
+    s.moving = true;
+  }
+  if (halted) return "halted";
+  if (dist(s, target) < 0.06) {
+    route.shift();
+    return route.length ? "moving" : "arrived";
+  }
+  return "moving";
+}
+
+function underApi(g: Game, dt: number): UnderApi {
+  return {
+    say: (who, text, dur, delay = 0) => say(g, who, text, dur, delay),
+    walk: (route, speed, limitX) => sanWalk(g, route, speed, dt, limitX),
+    goSurface: (goal) => void sanGo(g, goal, SAN_RUN, dt),
+  };
+}
+
+/** 조사 패널 닫기 (HUD의 닫기 버튼·Esc). 처음 닫을 때만 이어지는 일이 있다 */
+export function closePanel(g: Game) {
+  const p = g.panel;
+  if (!p) return;
+  g.panel = null;
+  onPanelClosed(g, p, { say: (who, text, dur, delay = 0) => say(g, who, text, dur, delay) });
+}
+
+const ACTION_LABEL: Partial<Record<Interact, string>> = { breaker: "통로 전원 복구", relay: "구역 전원 복구", gate: "차단문 해제" };
+
+/** 행동 버튼·안내 문구에 쓸 짧은 동사 */
+export function actionLabelOf(g: Game): string | null {
+  if (!g.target) return null;
+  if (g.phase === "under") return underActionLabel(g.target);
+  return ACTION_LABEL[g.target] ?? null;
 }
 
 function startSanChase(g: Game) {
@@ -1030,6 +1145,8 @@ function stepLines(g: Game) {
 
 function stepPlayer(g: Game, dt: number, f: FrameInput) {
   const P = g.player;
+  // 조사 패널이 열려 있으면 이동·시점 입력을 받지 않는다
+  if (g.panel) f = { move: { x: 0, y: 0, run: false }, look: { yaw: 0, pitch: 0 }, hold: false };
   P.yaw += f.look.yaw;
   P.pitch = Math.max(-1.15, Math.min(1.15, P.pitch + f.look.pitch));
   const m = f.move;
@@ -1038,7 +1155,8 @@ function stepPlayer(g: Game, dt: number, f: FrameInput) {
   const dx = (m.x * cos - m.y * sin) * speed;
   const dz = (-m.x * sin - m.y * cos) * speed;
   const before = { x: P.x, z: P.z };
-  const next = resolveCircle({ x: P.x + dx, z: P.z + dz }, solidBlocks(g));
+  const lv = levelOf(g, P);
+  const next = resolveCircle({ x: P.x + dx, z: P.z + dz }, lv.blocks, PLAYER_RADIUS, lv.bounds);
   P.x = next.x;
   P.z = next.z;
   P.vx = dt > 0 ? (P.x - before.x) / dt : 0;
@@ -1052,16 +1170,16 @@ function stepPlayer(g: Game, dt: number, f: FrameInput) {
 export function stepGame(g: Game, rawDt: number, f: FrameInput) {
   const dt = Math.min(Math.max(rawDt, 0), 0.05);
   if (g.caught || g.phase === "complete") {
-    if (g.phase === "complete") stepSan(g, dt);
     stepLines(g);
     g.time += dt;
     return g;
   }
   g.time += dt;
   g.phaseT += dt;
+  g.san.moving = false;
   stepPlayer(g, dt, f);
   g.target = currentTarget(g);
-  stepStory(g, dt, f.hold);
+  stepStory(g, dt, g.panel ? false : f.hold);
   if (g.breaker.doorState === "opening") {
     g.breaker.door = Math.min(1, g.breaker.door + dt / 1.4);
     if (g.breaker.door >= 1) g.breaker.doorState = "open";
@@ -1247,6 +1365,10 @@ export type Snapshot = {
   tracked: boolean;
   watching: boolean;
   target: Interact | null;
+  /** 행동 버튼에 쓸 문구 */
+  action: string | null;
+  /** 열려 있는 조사 패널 */
+  panel: UnderPanel | null;
   hold: number;
   gate: number;
   alarm: boolean;
@@ -1270,8 +1392,10 @@ export function objectiveOf(g: Game): string {
       return g.gate.hold > 0 ? `차단문 해제 ${Math.floor((g.gate.hold / GATE_HOLD) * 100)}% · 감시등을 피해 제어판 조작` : "감시등을 피해 차단문 제어판으로";
     case "escape":
       return "지하철 입구 계단으로";
+    case "under":
+      return underObjective(g);
     case "complete":
-      return "지하 진입 · 현재 구현 구간 끝";
+      return "ACT 4 끝 · 현재 구현 구간 끝";
   }
 }
 
@@ -1287,6 +1411,8 @@ export function snapshot(g: Game): Snapshot {
     tracked: g.lights.some((l) => l.on && l.mode === "track" && l.target === "player"),
     watching: g.phase === "chase" || g.phase === "escape",
     target: g.target,
+    action: actionLabelOf(g),
+    panel: g.panel,
     hold: Math.round(holdProgress(g) * 40) / 40,
     gate: Math.round((g.gate.hold / GATE_HOLD) * 40) / 40,
     alarm: g.alarm > 0.05,
@@ -1297,7 +1423,8 @@ export function snapshot(g: Game): Snapshot {
 
 export function sameSnapshot(a: Snapshot, b: Snapshot) {
   return (
-    a.phase === b.phase && a.objective === b.objective && a.line?.text === b.line?.text && a.meter === b.meter &&
+    a.phase === b.phase && a.objective === b.objective && a.line?.text === b.line?.text && a.line?.who === b.line?.who &&
+    a.meter === b.meter && a.action === b.action && a.panel === b.panel &&
     a.trend === b.trend && a.exposed === b.exposed && a.covered === b.covered && a.tracked === b.tracked &&
     a.watching === b.watching && a.target === b.target && a.hold === b.hold && a.gate === b.gate && a.alarm === b.alarm &&
     a.caught === b.caught && a.retries === b.retries
@@ -1317,6 +1444,8 @@ export function beaconOf(g: Game): V2 | null {
       return GATE_PANEL;
     case "escape":
       return { x: 0, z: STAIR_TOP_Z };
+    case "under":
+      return underBeacon(g);
     default:
       return null;
   }
