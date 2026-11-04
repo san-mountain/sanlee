@@ -25,6 +25,7 @@ type Props = {
   zone: Zone;
   // Separate narrative experiments can reuse the 3D world with their own interaction gates.
   playerZone?: ZoneDef;
+  archiveLab?: boolean;
   lang: Lang;
   visited: SectionId[];
   onTap: (id: string) => void;
@@ -40,14 +41,14 @@ type Props = {
 
 const POPUP = [{ key: "popup", pos: [1.7, 4.5, 1.6] as [number, number, number], scaleAt: 6, maxScale: 1 }];
 
-export default function World({ zone, playerZone, lang, visited, onTap, onNear, onTracked, labelEls, sanMode, hideSan, secondStatue, arrived, awake, face, facePhase, audit }: Props) {
+export default function World({ zone, playerZone, archiveLab, lang, visited, onTap, onNear, onTracked, labelEls, sanMode, hideSan, secondStatue, arrived, awake, face, facePhase, audit }: Props) {
   const complete = (visited.length >= sections.length && face.legacy) || !!awake;
   return (
     <Canvas dpr={[1, 1.3]} gl={{ antialias: true, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
       <Player zone={playerZone ?? ZONES[zone]} zoneKey={zone} onNear={onNear} arrived={arrived} />
       <Suspense fallback={null}>
         {zone === "bunker" ? (
-          <Bunker face={face} facePhase={facePhase} audit={audit} lang={lang} visited={visited} onTap={onTap} secondStatue={secondStatue} awake={awake} />
+          <Bunker face={face} facePhase={facePhase} audit={audit} lang={lang} visited={visited} onTap={onTap} secondStatue={secondStatue} awake={awake} archiveLab={archiveLab} />
         ) : (
           <>
             <City lang={lang} onTap={onTap} onTracked={onTracked} />
