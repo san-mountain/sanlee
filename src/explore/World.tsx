@@ -41,7 +41,7 @@ const POPUP = [{ key: "popup", pos: [1.7, 4.5, 1.6] as [number, number, number],
 export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanMode, hideSan, secondStatue, arrived, awake, face, facePhase, audit }: Props) {
   const complete = (visited.length >= sections.length && face.legacy) || !!awake;
   return (
-    <Canvas dpr={[1, 1.75]} gl={{ antialias: true, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
+    <Canvas dpr={[1, 1.3]} gl={{ antialias: true, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
       <Player zone={ZONES[zone]} zoneKey={zone} onNear={onNear} arrived={arrived} />
       <Suspense fallback={null}>
         {zone === "bunker" ? (
