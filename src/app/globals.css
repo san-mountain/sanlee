@@ -576,11 +576,9 @@ img { max-width: 100%; height: auto; display: block; }
 
 /* 로고 옆 한자 이름: 명조, 같은 크기, 조금 옅게 */
 .nav-logo-han { margin-left: .5em; font-family: "Noto Serif KR", "Noto Serif CJK KR", "Songti SC", "Hiragino Mincho ProN", serif; font-weight: 600; letter-spacing: .08em; color: var(--muted); }
-/* 山이 거꾸로 된 왕관을 비뚤게 쓰고 있다: 가운데 봉우리 꼭대기에 겹친다. 글자 간격(.08em)만큼 왼쪽으로 당겨 가운데를 맞춘다 */
+/* 山을 거꾸로 뒤집는다: 거꾸로 된 왕관처럼. 글자 간격(.08em)은 뒤집히면 왼쪽으로 가므로 바깥 여백으로 옮긴다 */
 .nav-logo { white-space: nowrap; }
-.nav-logo-san { position: relative; display: inline-block; }
-.nav-logo-crown { position: absolute; left: calc(50% - .04em); bottom: calc(54% - .1em); width: 1em; height: auto; overflow: visible; pointer-events: none;
-  transform: translateX(-50%) translateX(.05em); }
+.nav-logo-san { display: inline-block; letter-spacing: 0; margin-right: .08em; transform: translateY(.1em) rotate(180deg); }
 /* 맨 위 시 위의 선은 없앤다 */
 
 /* 메일 주소: 누르면 복사되었다는 작은 표시 */

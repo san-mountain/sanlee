@@ -22,20 +22,8 @@ export default function SiteNav() {
         <span lang="en">{profile.name}</span>
         <span className="nav-logo-han" lang="ko-Hani">
           李
-          <span className="nav-logo-san">
-            山
-            {/* 작품에 되풀이되는 거꾸로 된 왕관: 山이 비뚤게 쓰고 있다 (파비콘과 같은 모양).
-                기울기를 CSS가 아니라 SVG 안에서 주고 선 굵기를 화면 픽셀로 고정해, PC(1배 화면)에서도 선이 깨지지 않게 한다 */}
-            <svg className="nav-logo-crown" viewBox="-4 -4 40 40" aria-hidden focusable="false" shapeRendering="geometricPrecision">
-              <g transform="rotate(13 16 32)">
-                <path fill="#FFDA35" stroke="#211B0F" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeLinejoin="round" d="M2.2 2H29.8V9L31 27.4L23.3 21.3L16 29.4L8.7 21.3L1 27.4L2.2 9Z" />
-                <g fill="none" stroke="#271D04" strokeWidth="0.7" vectorEffect="non-scaling-stroke" strokeLinecap="round">
-                  <path d="M7.85 13.75H13.65M9.3 11.2L12.2 16.3M12.2 11.2L9.3 16.3" />
-                  <path d="M18.35 13.75H24.15M19.8 11.2L22.7 16.3M22.7 11.2L19.8 16.3" />
-                </g>
-              </g>
-            </svg>
-          </span>
+          {/* 거꾸로 뒤집힌 山: 작품에 되풀이되는 거꾸로 된 왕관처럼 보인다 */}
+          <span className="nav-logo-san">山</span>
         </span>
       </Link>
       <nav className="nav-links" aria-label="Main">
