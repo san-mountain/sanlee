@@ -46,6 +46,9 @@ test("NPC interaction is farther-reaching, but the 3D device does not open prema
 test("B reveal starts on approach from 6m, before the player can open the 2D game", () => {
   assert.ok(client.includes('Math.hypot(AUDIT_MACHINE.pos[0] - player.pos.x, AUDIT_MACHINE.pos[2] - player.pos.z) <= 6'));
   assert.ok(client.includes('auditRt.introSeen = true;'));
+  const intro = client.slice(client.indexOf("const startIntro"), client.indexOf("const openSeal"));
+  assert.ok(!intro.includes('setPanel({ kind: "seal" })'), "the intro must not launch the puzzle prematurely");
+  assert.ok(intro.includes("releaseCamera()"), "camera should return to player control after the story");
   assert.match(client, /auditRt\.introSeen = a\.intro/);
 });
 
