@@ -282,8 +282,8 @@ function Gate({ lang }: { lang: Lang }) {
     return t;
   }, []);
   useFrame((s) => {
-    // 숨은 결말: 기록 없는 사람 앞에서 문의 레이저가 꺼진다
-    if (lasers.current) lasers.current.visible = gaze.mood !== "blind";
+    // 空 결말: 검문소가 정지할 대상을 찾지 못하면 문의 레이저가 꺼진다
+    if (lasers.current) lasers.current.visible = !gaze.gateOpen;
     lasers.current?.children.forEach((c, i) => {
       ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(s.clock.elapsedTime * 8 + i) * 0.3;
     });
@@ -358,9 +358,13 @@ function DescentRoute({ lang }: { lang: Lang }) {
   const steps = useMemo(() => Array.from({ length: 16 }, (_, i) => i), []);
   return (
     <group>
-      {/* 광장에서 큰길로 들어서는 감시 기둥에 붙은 낡은 표지 (남쪽을 향해 걸려 있다) */}
-      <group position={[-(AVENUE - 1.9), 6.2, 8.3]}>
-        <mesh>
+      {/* 광장에서 큰길로 들어서는 자리의 낡은 표지판 (남쪽을 향한다). 감시 기둥(x -8.4, z 8)과 떨어진 제 기둥에 선다 */}
+      <group position={[-(AVENUE - 2.7), 0, 9.6]}>
+        <mesh position={[0, 1.75, -0.08]}>
+          <cylinderGeometry args={[0.06, 0.08, 3.5, 8]} />
+          <meshStandardMaterial color="#3a3d44" metalness={0.6} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, 3.9, 0]}>
           <planeGeometry args={[3.2, 0.93]} />
           <meshBasicMaterial map={sign} toneMapped={false} />
         </mesh>

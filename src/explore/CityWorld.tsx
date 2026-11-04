@@ -273,7 +273,8 @@ export function Bridge() {
         </mesh>
       ))}
       {lamps.flatMap((z) =>
-        [-1, 1].map((s) => (
+        // 승강장 입구 기둥과 겹치지 않도록, 오른쪽 난간 틈 근처의 가로등은 세우지 않는다
+        (z < GAP[0] + 1 && z > GAP[1] - 1 ? [-1] : [-1, 1]).map((s) => (
           <group key={`${z}${s}`} position={[s * 4.4, 0, z]}>
             <mesh position={[0, 1.6, 0]}>
               <boxGeometry args={[0.35, 3.2, 0.35]} />

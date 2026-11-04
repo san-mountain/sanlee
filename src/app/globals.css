@@ -1057,11 +1057,12 @@ span.cookie-clear { cursor: default; text-decoration: none; }
 /* 지상에서 이산이 직접 하는 짧은 말: 방송(.notice)과 같은 자리, 분홍 글씨 */
 .notice.san-say { color: #ffd6f4; border-color: #ff2bd666; font-family: inherit; font-size: 14px; word-break: keep-all; }
 .notice.san-say b { font-family: var(--mono); font-size: 10px; letter-spacing: .2em; color: var(--pink); margin-right: 6px; }
-/* 검문소가 보는 동행인 */
-.choice-companion { margin: 6px 0 0 !important; font-family: var(--mono); font-size: 11px !important; color: #ffb6ef !important; letter-spacing: .03em; }
-/* 空 결말의 마지막 한 걸음 */
-.ending-step { margin-top: 22px; display: inline-flex; gap: 10px; align-items: center; animation: fadeIn 1.6s ease; }
-.ending-step kbd { font-family: var(--mono); font-size: 10px; opacity: .6; }
+/* 검문소가 보는 두 사람 */
+.choice-status { list-style: none; margin: 8px 0 0; padding: 8px 10px; border-left: 2px solid #ff2bd666; font-family: var(--mono); font-size: 11px; line-height: 1.6; color: #ffb6ef; letter-spacing: .02em; word-break: keep-all; }
+.choice-status li:last-child { color: #ff6a8a; }
+/* 결정하지 않고 물러나기: 작지만 분명하게 */
+.choice-withdraw { all: unset; cursor: pointer; display: block; margin: 14px auto 0; padding: 8px 14px; font-size: 13px; color: #d8d2e8; border: 1px solid #6b638599; border-radius: 4px; }
+.choice-withdraw:hover, .choice-withdraw:focus-visible { color: #fff; border-color: #d8d2e8; }
 /* 꼬리말 삭제 확인 */
 .forget-ask { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; max-width: 520px; font-size: 12px; line-height: 1.5; color: var(--ink); word-break: keep-all; }
 .forget-ask > span { flex-basis: 100%; }

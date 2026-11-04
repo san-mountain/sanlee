@@ -7,9 +7,11 @@ import { Human, Tap, type TapFn } from "./parts";
 import { player } from "./Player";
 import { CITY, type Interactable } from "./zones";
 import { resolve } from "./collide";
+import { coverState } from "./Jabi";
 
 // 지상에서 이산이 잠깐 먼저 가서 기다리는 자리 (ExploreClient가 정하고, 방문자가 그 자리를 지나 북쪽으로 가면 풀린다)
-export const sanHold: { at: { x: number; z: number } | null } = { at: null };
+// cover: 기대고 있는 엄폐물(COVERS 번호). 그 엄폐물이 부서지면 기다림을 풀고 다시 따라온다
+export const sanHold: { at: { x: number; z: number; cover: number } | null } = { at: null };
 
 // 복원된 산: 방공호에서는 동상 주위를 거닐고, 지상에서는 방문자 곁을 따라 걷는다
 const PATH: [number, number][] = [
@@ -39,12 +41,20 @@ export default function SanNPC({ mode, item, onTap, start, beside, stay, at }: {
     let tz = S.z;
     let speed = 1.3;
     if (at) {
-      // 결말: 정해진 자리에 서서 정해진 쪽을 본다
-      S.x = at[0];
-      S.z = at[1];
-      S.yaw = at[2];
-      g.position.set(S.x, 0, S.z);
-      g.rotation.y = S.yaw;
+      // 결말: 정해진 자리로 천천히 걸어가 서서 정해진 쪽을 본다 (충돌 무시: 다리 위 승강장 앞에서만 쓴다)
+      const ax = at[0] - S.x;
+      const az = at[1] - S.z;
+      const ad = Math.hypot(ax, az);
+      const walking = ad > 0.05;
+      if (walking) {
+        const st = Math.min(ad, 1.4 * dt);
+        S.x += (ax / ad) * st;
+        S.z += (az / ad) * st;
+        S.bob += st * 5;
+      }
+      S.yaw = ad > 0.4 ? Math.atan2(ax, az) : at[2];
+      g.position.set(S.x, walking ? Math.abs(Math.sin(S.bob)) * 0.05 : 0, S.z);
+      g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, S.yaw, 0.12);
       item.pos.set(S.x, 1.5, S.z);
       return;
     }
@@ -63,7 +73,7 @@ export default function SanNPC({ mode, item, onTap, start, beside, stay, at }: {
       tx = h.x;
       tz = h.z;
       speed = 3.4;
-      if (player.pos.z < h.z - 5) sanHold.at = null;
+      if (player.pos.z < h.z - 5 || !coverState[h.cover]?.alive) sanHold.at = null;
     } else if (mode === "follow") {
       // 목줄처럼 따라온다: 3m 넘게 멀어질 때만 다가오고, 가까우면 멈춰서 방문자를 바라본다.
       // 그래서 돌아서면 언제든 마주할 수 있다.

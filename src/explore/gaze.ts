@@ -18,11 +18,15 @@ export const gaze = {
   // 처음 시선 구역에 들어설 때의 소개 장면: 게이지를 멈추고 카메라가 lookAt을 바라본다
   intro: false,
   lookAt: null as { x: number; y: number; z: number } | null,
+  // 空 결말: 검문소가 정지할 대상을 찾지 못해 성문의 레이저가 꺼진다
+  gateOpen: false,
 };
 
 // 결말 연출에서 시점을 스스로 걷게 한다 (충돌 무시). Player가 읽는다
 // yaw: 다 왔을 때 바라볼 방향 (없으면 북쪽)
 export const autoWalk: { to: { x: number; z: number; speed: number; pitch?: number; yaw?: number } | null } = { to: null };
+// 결말 중 잠깐 조작을 돌려줄 때 걸을 수 있는 좁은 구역 (이 구역 밖으로는 못 나간다). Player가 읽는다
+export const walkArea: { box: { x0: number; x1: number; z0: number; z1: number } | null } = { box: null };
 
 export function resetGaze() {
   gaze.meter = 0;

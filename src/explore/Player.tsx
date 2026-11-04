@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
-import { autoWalk, gaze } from "./gaze";
+import { autoWalk, gaze, walkArea } from "./gaze";
 import type { Interactable, ZoneDef } from "./zones";
 
 const EYE = 1.65;
@@ -127,7 +127,8 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       const st = Math.min(ad, aw.speed * dt);
       p.x = ad > 1e-4 ? s.x + (ax / ad) * st : s.x;
       p.z = ad > 1e-4 ? s.z + (az / ad) * st : s.z;
-    } else resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
+    } else if (walkArea.box) resolve(p, RADIUS, walkArea.box, [], []);
+    else resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
     s.x = p.x;
     s.z = p.z;

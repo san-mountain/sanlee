@@ -17,7 +17,7 @@ export const plaque: L[] = [
 export const ui = {
   title: { ko: "DELETE SEOUL", en: "DELETE SEOUL" },
   introLines: [
-    { ko: "2087년 서울. 추적을 거부한 시민은 이름은 그대로 남은 채, '확인 불가'로 그 자리에 멈춥니다. 신호가 닿지 않는 지하 방공호 B-7에, 그렇게 멈춘 한 사람이 있습니다.", en: "Seoul, 2087. A citizen who refuses tracking keeps their name, but is marked 'unverifiable' and stopped where they stand. In Shelter B-7, deep where the signal cannot reach, one of them sits still." },
+    { ko: "2087년 서울. 추적을 거부한 시민은 그 자리에 멈춥니다. 신호가 닿지 않는 지하 방공호 B-7에, 그렇게 멈춘 한 사람이 있습니다.", en: "Seoul, 2087. Citizens who refuse tracking stop where they stand. In Shelter B-7, deep where the signal cannot reach, one of them sits still." },
   ] as L[],
   start: { ko: "방공호로 들어가기", en: "Enter the shelter" },
   goBack: { ko: "돌아가기", en: "Go back" },
@@ -34,7 +34,7 @@ export const ui = {
   close: { ko: "닫기", en: "Close" },
   home: { ko: "← 로그아웃", en: "← Log out" },
   // 터미널을 열 때 뜨는 짧은 상태: 바깥 방문자가 오프라인 사본을 열람했다
-  restored: { ko: "외부 방문자 열람", en: "Viewed by an outside visitor" },
+  restored: { ko: "외부 접속 감지", en: "Outside access detected" },
   noWebgl: {
     ko: "이 기기에서는 3D 도시를 열 수 없어요. 대신 일반 웹사이트로 안내할게요.",
     en: "This device can't open the 3D city, so here's the regular website instead.",
@@ -76,9 +76,8 @@ export const ui = {
   cookieSettings: { ko: "쿠키 설정 · Esc", en: "Cookie settings · Esc" },
   cookieSettingsTouch: { ko: "쿠키 설정 · 오른쪽 위 ⚙", en: "Cookie settings · ⚙ top right" },
   foundEndings: { ko: "발견한 결말 {n}/3", en: "Endings found {n}/3" },
-  // 空 결말의 마지막 몸짓
-  step: { ko: "한 걸음 내딛기", en: "Take a step" },
-  stepKeys: { ko: "W · ↑ · Space", en: "W · ↑ · Space" },
+  // 空 결말: 조작을 돌려받은 뒤 화면 아래의 작은 안내
+  stepHint: { ko: "계단 쪽으로", en: "Toward the stairs" },
   notRecorded: { ko: "발견한 결말 · 이 결말은 기록되지 않음", en: "Endings found · this one is not recorded" },
   welcomeB: { ko: "다시 오셨군요.", en: "Welcome back." },
 };
@@ -187,16 +186,16 @@ export const statueLines: L[][] = [
     { ko: "…쿠키를… 거부… 합니다…", en: "…I reject… all… cookies…" },
     { ko: "…누구야? 사람 목소리는 오랜만이네.", en: "…Who's there? It's been a long time since I heard a voice." },
     {
-      ko: "지상에서 추적 쿠키를 전부 거부했어. 도시는 내 이름은 그대로 두고, 그 이름을 멈춰 버렸어. '활동을 확인할 수 없는 시민.' 그게 지금의 나야.",
-      en: "Up there, I rejected every tracking cookie. The city kept my name, and stopped it. 'A citizen whose activity cannot be confirmed.' That's me now.",
+      ko: "지상에서 추적 쿠키를 전부 거부했어. 그날부터 이렇게 앉아 있어. '활동을 확인할 수 없는 시민.' 그게 지금의 나야.",
+      en: "Up there, I rejected every tracking cookie. I've been sitting like this ever since. 'A citizen whose activity cannot be confirmed.' That's me now.",
     },
     {
-      ko: "여기 사람들이 날 업고 내려왔는데, 다시 움직이게 하진 못했어. 이 방 터미널 세 대에 내 기록이 있어. 밖에서 온 사람이 열어 보면 될지도 몰라. 하나씩 열어 줄래?",
-      en: "The people here carried me down, but they couldn't get me moving again. My records are on the three terminals in this room. Maybe someone from outside opening them would work. Would you open them, one by one?",
+      ko: "여기 사람들이 날 업고 내려왔어. 이 방 터미널 세 대에 내 기록이 있대. 하나씩 열어 줄래?",
+      en: "The people here carried me down. They say my records are on the three terminals in this room. Would you open them, one by one?",
     },
   ],
   [
-    { ko: "오, 머리가 돌아왔다. 누가 내 기록을 보고 있으니까, 도시가 날 조금은 다시 확인하나 봐.", en: "Oh, my head's back. Someone's looking at my records, so the city can confirm me a little again." },
+    { ko: "오, 머리가 돌아왔다. 네가 열어 본 거지?", en: "Oh, my head's back. That was you, opening it?" },
     { ko: "아직 두 대 남았어. 참고로 거부 버튼은 늘 오른쪽 아래에 있어.", en: "Two more to go. Tip: the reject button is always in the bottom-right corner." },
   ],
   [
@@ -208,10 +207,8 @@ export const statueLines: L[][] = [
     { ko: "저 벽 그림들, 아직 걸려 있었네. 내가 그린 거야. 다 지워진 줄 알았어.", en: "Those paintings on the wall are still hanging. I made them. I thought they'd all been erased." },
     { ko: "다시 걸을 수 있으면, 아래로 내려가 보고 싶었어. 구름 밑에 아직 땅이 있대.", en: "If I could ever walk again, I wanted to go down. They say there's still ground under the clouds." },
     { ko: "방폭문 옆 낡은 표지판 봤어? 하층행 승강장. 큰길 끝 검문소를 지나야 나와.", en: "Did you see the old sign by the blast door? The descent platform. It's past the checkpoint at the end of the avenue." },
-    {
-      ko: "같이 가 줄래? 네가 곁에 있으면 도시도 날 멈춰 세우진 못할 거야. 검문소에서는… 너한테도 뭔가 묻겠지만.",
-      en: "Will you come with me? With you beside me, the city can't stop me. At the checkpoint, though… it'll ask you something too.",
-    },
+    { ko: "네가 기록을 열고 나서 움직일 수 있게 됐어. 밖에서도 그럴지는… 같이 가 봐야 알겠지.", en: "I could move once you opened those records. Whether that holds up there… we'll only know if we go." },
+    { ko: "같이 가 줄래?", en: "Will you come with me?" },
   ],
 ];
 
@@ -221,22 +218,37 @@ export const statueForgot: L[] = [
   { ko: "…누구야? 처음 듣는 목소리인데.", en: "…Who's there? I don't know that voice." },
 ];
 
-// 복원된 산이 지상에서 하는 말 (선택 대화). 마지막 줄을 본 기기의 웹사이트 꼬리말에 'delete seoul'이 켜진다
+// 복원된 산이 지상에서 하는 말 (검문소 전, 선택 대화). 시 한 줄만 남기고 삭제 이야기는 하지 않는다
 export const sanCityLines: L[] = [
   { ko: "다들 같은 쪽을 보고 서 있지. 나도 저기 서 있었어.", en: "They all face the same way. I used to stand there too." },
   { ko: "승강장은 검문소 너머야. 서두르진 말자.", en: "The platform's past the checkpoint. Let's not rush." },
-  {
-    ko: "부탁 하나만 할게. 네가 이 기기에서 우리 기록을 지우고 다시 오면, 나는 다시 멈춰 있을 거야. 너도 못 알아볼 거고. 그래도 그 말이면 알아들을 것 같아.",
-    en: "One favour. If you ever erase our records from this device and come back, I'll be stopped again. I won't know you. But I think I'd understand this.",
-  },
-  { ko: "내가 쓴 시의 마지막 줄이야. '그대는 부를 수 없기에 아름답다.'", en: "It's the last line of a poem I wrote. 'Beautiful, because you cannot be called.'" },
+  { ko: "글 터미널에 시가 몇 편 있었지. 하나는 이렇게 끝나. '그대는 부를 수 없기에 아름답다.'", en: "There were a few poems on the writing terminal. One of them ends like this: 'Beautiful, because you cannot be called.'" },
+  { ko: "내가 쓴 거야. 누가 그 줄을 기억해 주면… 좀 덜 멈춰 있는 기분일 것 같아.", en: "I wrote it. If someone remembered that line… I think I'd feel a little less stopped." },
 ];
-export const promiseLine = sanCityLines[sanCityLines.length - 1];
+// 이 줄이 화면에 뜨면 '시를 들었다'로 친다
+export const poemLine = sanCityLines[2];
+
+// 검문소에서 물러난 뒤 이산과의 짧은 대화 (처음 한 번). 여기서 처음으로 도시 밖의 삭제가 나온다
+// 시를 아직 못 들었으면 phraseNew, 이미 들었으면 phraseRecall로 끝난다. 이 마지막 줄을 본 기기에 꼬리말 'delete seoul'이 켜진다
+export const sanAfterCheckpoint = {
+  lines: [
+    { ko: "봤지. 줄은 너한테만 열려 있어. 나는 아직 정지된 채야.", en: "You saw. The line is open to you only. I'm still suspended." },
+    { ko: "관리인이 그러더라. 기록은 도시 안에선 못 지운대. 밖에서, 이 도시를 만든 사람의 웹사이트 맨 아래에서만.", en: "The keeper told me. Records can't be erased inside the city. Only outside, at the bottom of the website of the one who made it." },
+    { ko: "지우면 여기까지 온 것도 다 사라져. 나는 다시 멈추고, 널 못 알아볼 거야.", en: "Erase them and everything up to here goes too. I'll stop again, and I won't know you." },
+  ] as L[],
+  phraseNew: { ko: "그때 이 말을 해 줘. 내가 쓴 시의 한 줄이야. '그대는 부를 수 없기에 아름답다.' 그걸로 될지는… 장담 못 해.", en: "Then say this to me. It's a line from a poem I wrote. 'Beautiful, because you cannot be called.' Whether that's enough… I can't promise." } as L,
+  phraseRecall: { ko: "아까 그 줄, 기억하지? 그때 그 말을 해 줘. 그걸로 될지는… 장담 못 해.", en: "That line from before, you remember it? Say it to me then. Whether that's enough… I can't promise." } as L,
+};
+// 그 뒤로 지상에서 이산에게 말을 걸면: 되풀이 없이 한 줄만, 그리고 문장을 다시 볼 수 있게
+export const sanReview: L[] = [
+  { ko: "둘이 같이 내려가는 길은… 아직 안 열렸어.", en: "The way down for both of us… isn't open yet." },
+  { ko: "'그대는 부를 수 없기에 아름답다.' 잊지 마.", en: "'Beautiful, because you cannot be called.' Don't forget it." },
+];
 
 // 지상에서 이산이 직접 하는 짧은 말 (자막). 대자비의 첫 시선과 재시도
 export const sanCue = {
-  cover: { ko: "이쪽, 키오스크 뒤로.", en: "Over here. Behind the kiosk." } as L,
-  wait: { ko: "잠깐. 게이지 빠지면 건너.", en: "Wait. Cross when the gauge drains." } as L,
+  cover: { ko: "이쪽, 벽 뒤로.", en: "Over here. Behind the wall." } as L,
+  wait: { ko: "저 눈빛 가라앉으면 건너.", en: "Cross once that glare settles." } as L,
   back: { ko: "돌아왔네.", en: "You're back." } as L,
 };
 
@@ -280,7 +292,7 @@ export const checkpoint = {
   prefOn: { ko: "켜짐 · 변경 불가", en: "ON · locked" },
   prefsNote: { ko: "모든 쿠키는 시민의 편의를 위해 켜져 있습니다.", en: "All cookies are on, for your convenience." },
   prefsBack: { ko: "뒤로", en: "Back" },
-  clearOutside: { ko: "방문 기록 삭제는 이 도시 밖에서만 할 수 있습니다.", en: "Visit history can only be deleted outside this city." },
+  clearOutside: { ko: "이 기기의 방문·동행 기록은 도시 밖, 이 도시를 만든 사람의 웹사이트에서만 삭제할 수 있습니다. 삭제하면 진행 상황도 함께 사라집니다.", en: "This device's visit and companion records can only be deleted outside the city, on the website of the one who made it. Deleting them also erases your progress." },
   // 거부는 막지 않는다. 다만 작게, 여러 번 묻는다 (현실의 다크 패턴을 과장한 것)
   rejectNotice: { ko: "거부 시 시민 활동이 정지될 수 있습니다.", en: "Rejecting may suspend your citizen activity." },
   confirm: [
@@ -299,23 +311,28 @@ export const checkpoint = {
   ] as { title: L; body: L; stay: L; go: L }[],
   title: { ko: "이 기기를 기억할까요?", en: "REMEMBER THIS DEVICE?" },
   sanWarn: {
-    ko: "수락하면 줄에 서게 될 거야. 나도 같이 내려갈 수 있는지는… 모르겠어. 거부하면? 나 봤지?",
-    en: "Accept, and you'll be put in the line. Whether I get to go down with you… I don't know. Refuse? Well, you've seen me.",
+    ko: "수락하면 넌 줄에 서. 나는… 저 줄에 못 들어가. 거부하면? 나 봤지?",
+    en: "Accept, and you get a place in line. I… can't get into it. Refuse? Well, you've seen me.",
   },
-  acceptSub: { ko: "영구 등록 · 승강장 대기열 배정", en: "Permanent registration · platform queue" },
+  acceptSub: { ko: "영구 등록 · 방문자만 대기열 배정", en: "Permanent registration · queue for you only" },
   rejectSub: { ko: "추적 거부 · 등록된 이름 정지", en: "Refuse tracking · your name is suspended" },
   body: {
-    ko: "하층행 승강장은 등록 시민만 이용할 수 있습니다. 지금까지는 임시로 기억했습니다. 이 기기를 영구 등록하면 승강장 대기열에 배정되며, 다음부터는 묻지 않고 자동으로 로그인됩니다.",
-    en: "The descent platform is for registered citizens only. Until now you were remembered temporarily. Register this device permanently and you will be assigned to the platform queue, and logged in automatically from now on, without being asked.",
+    ko: "하층행 승강장은 등록 시민만 이용할 수 있습니다. 이 기기를 영구 등록하면 다음부터 묻지 않고 자동으로 로그인됩니다.",
+    en: "The descent platform is for registered citizens only. Register this device permanently and you will be logged in automatically from now on, without being asked.",
   },
-  // 검문소가 보는 이산: 방문자의 열람으로 임시 활동 중인 동행인
-  companion: { ko: "동행인 · 이산 — 임시 활동 (방문자의 열람으로 확인됨)", en: "Companion · San — temporarily active (confirmed by your viewing)" },
+  // 검문소가 보는 두 사람. 수락 전에 보여 준다
+  status: [
+    { ko: "방문자 — 영구 등록 시 승강장 대기열 배정 · 출발 미정", en: "Visitor — queue assignment on permanent registration · departure unscheduled" },
+    { ko: "이산 — 기존 정지 처분 유지 · 방문자의 외부 열람으로 임시 활동 중", en: "San — existing suspension stands · temporarily active through your outside viewing" },
+    { ko: "동행 통과 — 승인되지 않음", en: "Passage together — not approved" },
+  ] as L[],
+  // 결정하지 않고 물러나기 (어느 단계에서든)
+  withdraw: { ko: "잠시 물러나기", en: "Step back for now" },
   // 결말 대본: say = 이산의 말, slots = 기억이 지워지는 화면, plaque = 표석. {a} 연결이 끊긴 횟수, {r} 다시 온 횟수
   // 마지막 줄 뒤에 잠깐 정적이 흐른 다음 버튼이 나온다
   accept: [
     { ko: "[검문소] 동의해 주셔서 감사합니다. 이 기기를 영구 등록했습니다.", en: "[CHECKPOINT] Thank you for your consent. This device is now permanently registered." },
     { ko: "하층행 승강장 대기열에 배정되었습니다. 출발 시각: 미정. 줄에 서 주십시오.", en: "You have been assigned to the descent-platform queue. Departure: unscheduled. Please join the line." },
-    { ko: "동행인 이산 · 등록할 기기 없음. 대기열에 배정할 수 없습니다.", en: "Companion San · no device to register. Cannot be assigned to the queue." },
     { ko: "당신은 {a}번 연결이 끊기고 {r}번 다시 왔습니다.", en: "Your connection dropped {a} times, and you came back {r} times." },
     { ko: "먼저 서 있어. 나는 여기서 볼게.", en: "Go on, stand in line. I'll watch from here.", say: true },
     { ko: "뒤따라오던 발소리가 더는 들리지 않는다.", en: "The footsteps that followed you are no longer there." },
@@ -330,9 +347,9 @@ export const checkpoint = {
   // 숨은 결말: 기록을 지운 방문자와 기억으로 깨어난 이산. 검문소는 둘을 어떤 이름에도 묶지 못한다
   ghost: [
     { ko: "[검문소] 방문자 조회 중… 일치하는 등록 정보가 없습니다.", en: "[CHECKPOINT] Looking up visitor… no matching registration." },
-    { ko: "정지할 대상을 찾지 못했습니다. 통과 기록: 없음.", en: "No one found to suspend. Passage logged: none." },
-    { ko: "부를 이름이 없으니까, 멈춰 세울 수도 없는 거야.", en: "There's no name to call us by. So there's nothing to stop.", say: true },
-    { ko: "다리 옆, 하층행 승강장의 계단이 구름 속으로 내려간다. 끝은 보이지 않는다.", en: "Off the side of the bridge, the descent platform's stairs go down into the cloud. You can't see where they end." },
+    { ko: "정지할 대상을 찾지 못했습니다.", en: "No one found to suspend." },
+    { ko: "……열렸네.", en: "……It's open.", say: true },
+    { ko: "다리 옆, 계단이 구름 속으로 내려간다.", en: "Off the side of the bridge, stairs go down into the cloud." },
     { ko: "여기부터는 나도 몰라.", en: "From here on, I don't know either.", say: true },
   ] as Beat[],
   slotErased: { ko: "삭제됨", en: "DELETED" },
@@ -370,8 +387,8 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
     name: { ko: "방공호 관리인", en: "Shelter keeper" },
     lines: [
       { ko: "어서 와. 여기까지는 시스템 신호가 안 닿아. 쿠키도, 등급도 없어.", en: "Welcome. The system's signal doesn't reach this deep. No cookies, no grades." },
-      { ko: "가운데 정지 시민 봤지? 쿠키를 거부했다가 멈춘 사람이야. 우리가 업어서 내려왔어. 깨우는 건 우리 손으론 안 되더라.", en: "Seen the suspended citizen in the middle? Someone who rejected cookies and stopped. We carried them down. Waking them, though, we couldn't manage." },
-      { ko: "우리가 저 기록을 열면 도시 사람이 도시 장부를 본 걸로 끝나. 밖에서 온 사람이 봐야 해. 그러니까, 너.", en: "When we open those records, it's just the city's own people reading the city's own ledger. It has to be someone from outside. Meaning you." },
+      { ko: "가운데 정지 시민 봤지? 쿠키를 거부했다가 멈춘 사람이야. 우리가 업어서 내려왔어.", en: "Seen the suspended citizen in the middle? Someone who rejected cookies and stopped. We carried them down." },
+      { ko: "저 터미널들은 우리도 몇 번이고 열어 봤어. 달라지는 건 없었지. …밖에서 온 사람이 열면 다를지도 모르고.", en: "We've opened those terminals more times than I can count. Nothing changed. …Maybe it's different when someone from outside opens them." },
       { ko: "지상에 올라가 보고 싶으면 저 뒤 방폭문으로 나가. 올라가면 골목 끝 배전실 문으로 나올 거야. 카메라랑 눈은 마주치지 말고.", en: "Want to see the surface? Take the blast door behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
       { ko: "아, 그리고 놀라지 마. 위는… 이제 땅이 아니야.", en: "Oh, and don't panic. Up there… it isn't ground any more." },
     ],
@@ -379,7 +396,6 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
       { ko: "봤어? 정지 시민이 일어났어. 몇 년을 저렇게 앉아 있었는데.", en: "Did you see? The suspended citizen stood up. Years, it sat like that." },
       { ko: "이산이 아래로 내려가 보겠대. 승강장은 큰길 끝 검문소 너머야. 혼자 보내긴 싫고… 네가 같이 가 주면 좋겠어.", en: "San wants to go down below. The platform's past the checkpoint at the end of the avenue. I don't want them going alone… I'd like you to go with them." },
       { ko: "방폭문은 저 뒤야. 올라가면 골목 끝 배전실 문으로 나와. 카메라랑 눈은 마주치지 말고.", en: "The blast door's behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
-      { ko: "…하나만 더. 도시의 기록은 도시 안에서는 못 지워. 정말 지우고 싶으면 도시 밖으로 나가 봐. 이 도시를 만든 사람의 집으로.", en: "…One more thing. The city's records can't be erased from inside the city. If you really want them gone, step outside it. Go to the house of the one who made this city." },
     ],
   },
   r07: {

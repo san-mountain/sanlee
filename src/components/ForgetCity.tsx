@@ -4,8 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLang } from "./LangProvider";
 import { BACKUP_KEY, forgetCityRecords } from "@/explore/backup";
 
-// 꼬리말 끝의 'delete seoul': 지상에서 이산이 '그 문장'을 남긴 기기에서만 켜지는 작은 네온 간판.
-// (관리인의 단서 "도시 밖, 이 도시를 만든 사람의 집으로"를 들은 뒤에야 집 앞에 불이 켜진다)
+// 꼬리말 끝의 'delete seoul': 검문소에서 물러난 뒤 이산의 부탁(시 한 줄)을 끝까지 들은 기기에서만 켜지는 작은 네온 간판.
 // 누르면 먼저 무엇을 지우는지 한 줄로 알려 주고, 한 번 더 누르면 간판이 꺼지며 이 기기의 DELETE SEOUL 기록이
 // 한 줄씩 나타났다 지워진다. 실제로 지운다. 웹사이트·작품·다른 데이터는 건드리지 않고, 언어·효과음 설정도 남긴다
 const PROMISE_KEY = "sanlee-promise";
@@ -38,7 +37,7 @@ function describe(ko: boolean): Line[] {
   const found = read<string[]>("sanlee-endings-found", []);
   if (found.length) lines.push({ text: ko ? `발견한 결말 ${found.length}개` : `${found.length} endings found` });
   if (read<string | null>("sanlee-ending", null) === "accept") lines.push({ text: ko ? "자동 로그인 동의" : "Automatic login consent" });
-  if (read<string | null>("sanlee-promise", null) !== null) lines.push({ text: ko ? "이산과 함께 지상에 오른 기록" : "Record of going up with San" });
+  if (read<string | null>("sanlee-promise", null) !== null) lines.push({ text: ko ? "검문소 앞에서 들은 이산의 부탁" : "San's request at the checkpoint" });
   if (!lines.length) lines.push({ text: ko ? "방문 기록" : "Visit history" });
   // 마지막 줄은 지워지지 않는다: 기억은 이 기기에 있지 않으니까
   lines.push({ text: ko ? "당신이 기억하는 것 · 이 기기에 없음" : "What you remember · not on this device", kept: true });
