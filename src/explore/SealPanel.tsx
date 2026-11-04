@@ -135,6 +135,14 @@ export default function SealPanel({
       if (onMove(p.id, to)) sfx.sealSlide(Math.abs(to - d.at));
     } else if (d.moved) sfx.sealSettle();
   };
+  // 모바일 OS 제스처/화면 방향 전환 중 pointercancel은 확정 이동이 아니다.
+  // 원래 onPointerCancel에서 end()를 호출해 의도하지 않은 블록 이동이 저장되던 문제 방지.
+  const cancel = (e: React.PointerEvent, p: Piece) => {
+    const d = dragRef.current;
+    if (!d || d.pointer !== e.pointerId || d.id !== p.id) return;
+    dragRef.current = null;
+    setDrag(null);
+  };
 
   const cells = useMemo(() => Array.from({ length: SIZE * SIZE }, (_, i) => i), []);
   const pct = (n: number) => `${(n * 100) / SIZE}%`;
@@ -192,8 +200,8 @@ export default function SealPanel({
                   onPointerDown={(e) => begin(e, p)}
                   onPointerMove={(e) => move(e, p)}
                   onPointerUp={(e) => end(e, p)}
-                  onPointerCancel={(e) => end(e, p)}
-                  onLostPointerCapture={(e) => end(e, p)}
+                  onPointerCancel={(e) => cancel(e, p)}
+                  onLostPointerCapture={(e) => cancel(e, p)}
                 >
                   <span className="seal-face">
                     {p.id === CASSETTE ? (
