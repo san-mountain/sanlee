@@ -1382,12 +1382,12 @@ export default function ExploreClient() {
       )}
 
       {active && !near && !cine && !faceLine && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
-      {active && locked && <div className="crosshair" aria-hidden />}
+      {active && locked && !near && <div className="crosshair" aria-hidden />}
       {active && !cine && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
       {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
       {active && !cine && touch && <Joystick />}
-      <InteractionGuide active={active && touch && !cine && !!near} color={nearColor} />
+      <InteractionGuide active={active && !cine && !!near} color={nearColor} />
       {active && !cine && touch && (
         <JumpButton
           action={
