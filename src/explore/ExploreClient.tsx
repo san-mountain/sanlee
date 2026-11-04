@@ -255,6 +255,7 @@ export default function ExploreClient() {
     toAuditPhase(restPhase(f, a));
     auditRt.pos = { ...a.seal.pos };
     auditRt.poweredAt = 0;
+    auditRt.introSeen = a.intro;
     setAuditView({ solved: a.solved, litAt: a.solved ? 1 : 0 });
     setWebgl(hasWebGL());
     setTouch(window.matchMedia("(pointer: coarse)").matches);
@@ -431,6 +432,7 @@ export default function ExploreClient() {
           sfx.sealBump();
           later(600, () =>
             playLines(auditScenes.sealed, lineEvents, () => {
+              auditRt.introSeen = true;
               updateAudit(seeIntro(auditRef.current));
               toAuditPhase("focus");
               auditRt.focus = null;
@@ -1008,6 +1010,7 @@ export default function ExploreClient() {
     auditRef.current = a;
     setAudit(a);
     resetAuditRt();
+    auditRt.introSeen = a.intro;
     auditRt.pos = { ...a.seal.pos };
     setAuditView({ solved: a.solved, litAt: a.solved ? 1 : 0 });
     setSealClosing(false);
