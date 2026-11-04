@@ -165,6 +165,8 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       camera.rotation.z += (Math.random() - 0.5) * sh * 0.25;
       camera.rotation.x += (Math.random() - 0.5) * sh * 0.15;
     }
+    // Projection uses the camera's current frame, not the previous rendered frame.
+    camera.updateMatrixWorld();
     player.pos.set(s.x, EYE, s.z);
     player.yaw = s.yaw;
     player.pitch = s.pitch;
