@@ -652,6 +652,7 @@ export const auditLines = {
   // 장면 3: 봉인판 뒤의 붉은 원본 카세트
   sealed: { id: "b.archive.sealed", speaker: "archive", ms: 2200, ko: "원본 입력 기록 — 봉인됨", en: "Original input record — SEALED" },
   refused: { id: "b.san.refused", speaker: "san", ms: 3600, ko: "……내가 거부했었구나.", en: "...So I did refuse." },
+  forcedConsent: { id: "b.city.forced-consent", speaker: "city", ms: 3700, ko: "거부 입력은 시민 보호를 위해 동의로 강제 보정됩니다.", en: "For citizen protection, refusals are forcibly converted to consent." },
   stillHere: { id: "b.san.still-here", speaker: "san", ms: 4200, ko: "그런데 난 왜 아직 여기 있는 거지?", en: "Then why am I still stuck here?" },
   guarantor: { id: "b.guarantor.required", speaker: "guarantor", ms: 3800, ko: "보증인 등록이 필요합니다.", en: "Guarantor registration required." },
   after: { id: "b.san.after", speaker: "san", ms: 5000, ko: "난 거부했어. 그런데 도시의 기록에선 아직도 동의한 시민이야.", en: "I refused. But in the city's records, I'm still a citizen who consented." },
@@ -661,7 +662,7 @@ export const auditScenes = {
   official: [auditLines.official, auditLines.consented],
   ask: [auditLines.ask],
   sealed: [auditLines.sealed],
-  san: [auditLines.refused, auditLines.stillHere],
+  san: [auditLines.refused, auditLines.forcedConsent, auditLines.stillHere],
   guarantor: [auditLines.guarantor],
   after: [auditLines.after],
 };
@@ -680,8 +681,8 @@ export const auditUi = {
   endTag: { ko: "시제품 · 퍼즐 B 끝", en: "PROTOTYPE · PUZZLE B COMPLETE" },
   endTitle: { ko: "보증인 등록이 필요합니다", en: "Guarantor registration required" },
   endBody: {
-    ko: "원본 기록에는 '모두 거부'가 남아 있었습니다. 하지만 도시의 공식 기록은 여전히 '모두 동의'입니다. 이산의 다리는 아직 굳어 있습니다.",
-    en: "The original record still held 'Reject all'. But the city's official record still says 'Accept all'. San's legs are still stone.",
+    ko: "이산은 '모두 거부'를 선택했습니다. 도시는 그 거부를 강제로 '모두 동의'로 바꿔 기록했습니다. 원본을 찾아냈지만 이산의 다리는 아직 굳어 있습니다.",
+    en: "San chose Reject all. The city forcibly changed that refusal to Accept all in its official record. You recovered the original, but San's legs are still stone.",
   },
   endNext: { ko: "다음 이야기는 준비 중입니다.", en: "The next part is in progress." },
   recProtected: { ko: "범종의 보호로 원본을 꺼낸 행동은 시민 활동 기록에 남지 않았습니다.", en: "Under the bell's protection, taking out the original left no citizen activity record." },
@@ -698,6 +699,8 @@ export const sealUi = {
   cassette: { ko: "원본", en: "ORIGINAL" },
   reading: { ko: "원본 판독 중", en: "Reading original" },
   originalTag: { ko: "원본 입력 기록", en: "ORIGINAL INPUT RECORD" },
+  officialTag: { ko: "도시 공식 기록", en: "CITY OFFICIAL RECORD" },
+  forcedTag: { ko: "도시가 강제로 바꾼 기록", en: "FORCIBLY CHANGED BY THE CITY" },
 };
 
 // 개발·검수용 재시작 (?debug에서만 설정창에 보인다)
