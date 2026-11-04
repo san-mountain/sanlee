@@ -118,8 +118,10 @@ export default function ExploreClient() {
 
   // 배경음악: 방공호, 지상, 대자비 구역(처음 시선 구역에 들어선 뒤부터), 결말
   const [jabiStage, setJabiStage] = useState(false);
+  // 대자비 소개(고개 돌림 + 설명 팝업)가 끝나 팝업이 닫힌 뒤에야 대자비 곡이 시작된다
+  const [jabiIntroOn, setJabiIntroOn] = useState(false);
   // 방공호로 돌아가면 다시 지상 음악부터 (시선 구역은 도시에 다시 올라왔을 때 새로 들어선다)
-  const track = leaving || intro ? null : ending ? "ending" : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
+  const track = leaving || intro ? null : ending ? "ending" : zone === "bunker" ? "bunker" : jabiStage && !jabiIntroOn ? "jabi" : "ground";
   useEffect(() => {
     playBgm(track);
   }, [track]);
@@ -186,6 +188,7 @@ export default function ExploreClient() {
     setTimeout(() => {
       setZone(to);
       setJabiStage(false);
+      setJabiIntroOn(false);
       setArrived(viaDoor);
       setTracked(false);
       // 배전실 문을 나서는 순간 도시가 위치를 기억한다. 첫 기억에는 '계속 걸으면 동의' 한 줄이 따라 나온다
@@ -593,6 +596,7 @@ export default function ExploreClient() {
     if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
   }, [panel]);
   const startJabiIntro = useCallback(() => {
+    setJabiIntroOn(true);
     gaze.intro = true;
     gaze.frozen = true;
     gaze.lookAt = { x: JABI.eye.x, y: JABI.eye.y, z: JABI.eye.z };
@@ -614,6 +618,7 @@ export default function ExploreClient() {
     gaze.intro = false;
     gaze.frozen = false;
     gaze.lookAt = null;
+    setJabiIntroOn(false);
   }, []);
   // 팝업이 어떤 식으로 닫히든(Esc 포함) 소개 상태를 풀어 준다
   useEffect(() => {
