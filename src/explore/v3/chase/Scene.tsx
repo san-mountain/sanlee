@@ -11,8 +11,8 @@ import { concreteTexture, hazardTexture, signTexture } from "../../textures";
 import { towerMaterial } from "../../towerMaterial";
 import { Human } from "../../parts";
 import {
-  BUILDINGS, COVERS, GATE_PANEL, GATE_Z, RELAY, SHUTTER_PANEL, SHUTTER_Z, STAIR_BOTTOM_Z, STAIR_DROP, STAIR_TOP_Z,
-  type Block,
+  BREAKER, BUILDINGS, COVERS, GATE_PANEL, GATE_Z, LIGHTS, PASSAGE_DOOR_Z, RELAY, SAN_START, SHUTTER_PANEL, SHUTTER_Z,
+  STAIR_BOTTOM_Z, STAIR_DROP, STAIR_TOP_Z, type Block,
 } from "./level";
 import { beaconOf, type Game } from "./logic";
 
@@ -50,7 +50,7 @@ function Ground() {
     <group>
       {/* 지하철 계단 자리를 비워 두고 바닥을 세 조각으로 깐다 */}
       {[
-        [0, (35 + STAIR_TOP_Z) / 2, 40, 35 - STAIR_TOP_Z],
+        [0, (51 + STAIR_TOP_Z) / 2, 40, 51 - STAIR_TOP_Z],
         [-11.25, (STAIR_TOP_Z - 66) / 2, 17.5, 66 + STAIR_TOP_Z],
         [11.25, (STAIR_TOP_Z - 66) / 2, 17.5, 66 + STAIR_TOP_Z],
       ].map(([x, z, w, d], i) => (
@@ -191,17 +191,128 @@ function AlleyDressing({ gameRef }: { gameRef: GameRef }) {
           <meshBasicMaterial color="#0b0d10" />
         </mesh>
       ))}
-      {/* ACT 1에서 이미 복구한 첫 번째 장치 (연속성) */}
-      <group position={[2.75, 0, 29.4]} rotation-y={-Math.PI / 2}>
-        <mesh position={[0, 0.9, 0]}>
-          <boxGeometry args={[0.9, 1.8, 0.5]} />
-          <meshStandardMaterial color="#2f3a40" roughness={0.7} />
+    </group>
+  );
+}
+
+/* ---------- 도입부: 통로 B-2, 첫 번째 장치(국소 전원), 통로 문 ----------
+   첫 장치의 케이블은 바로 앞 통로 문, 통로 조명, 그리고 골목 안쪽 셔터 제어판으로만 이어진다.
+   켜면 이 좁은 통로만 살아난다. (두 번째 장치의 케이블은 큰길 감시탑으로 간다) */
+
+const CABLE_COLOR = "#1a1d21";
+
+/** 두 점을 잇는 케이블 한 토막 */
+function Cable({ from, to, r = 0.035 }: { from: [number, number, number]; to: [number, number, number]; r?: number }) {
+  const { pos, quat, len } = useMemo(() => {
+    const a = new THREE.Vector3(...from);
+    const b = new THREE.Vector3(...to);
+    const d = b.clone().sub(a);
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+    return { pos: a.add(b).multiplyScalar(0.5), quat: q, len: d.length() };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [from.join(","), to.join(",")]);
+  return (
+    <mesh position={pos} quaternion={quat}>
+      <cylinderGeometry args={[r, r, len, 5]} />
+      <meshBasicMaterial color={CABLE_COLOR} />
+    </mesh>
+  );
+}
+
+function Passage({ gameRef }: { gameRef: GameRef }) {
+  const door = useRef<THREE.Group>(null);
+  const doorLamp = useRef<THREE.MeshBasicMaterial>(null);
+  const devLamp = useRef<THREE.MeshBasicMaterial>(null);
+  const lampMat = useDisposable(() => new THREE.MeshBasicMaterial({ color: "#1c1a16", toneMapped: false }));
+  const poolMat = useDisposable(() => lightPoolMaterial("#d9e6ff", 0.0, "top"));
+  const label = useSign([["국소 전원 · 통로 B-2", 1], ["연결: 통로 문 · 통로 조명 · 셔터 제어", 0.55]], { color: "#b9c6cf", bg: "#0f1418", border: true, mono: true });
+  const doorSign = useSign([["B-2", 1.2], ["전원 차단 시 잠김", 0.5]], { color: "#c9a25c", bg: "#14110b", border: true, mono: true });
+  const ribs = useDisposable(() => {
+    const t = hazardTexture();
+    t.repeat.set(6, 1);
+    return t;
+  });
+  useFrame(({ clock }) => {
+    const b = gameRef.current.breaker;
+    if (door.current) door.current.position.y = b.door * 3.6;
+    // 꺼진 장치는 고장 난 표시등만 불규칙하게 깜빡인다
+    const flick = Math.sin(clock.elapsedTime * 23) * Math.sin(clock.elapsedTime * 7.3) > 0.55 ? 0.9 : 0.12;
+    devLamp.current?.color.set(b.done ? "#5fe0a8" : "#d0503e").multiplyScalar(b.done ? 1 : flick + b.hold * 0.8);
+    doorLamp.current?.color.set(b.done ? "#5fe0a8" : "#1e2226");
+    lampMat.color.setRGB(0.11 + 0.85 * b.light, 0.1 + 0.9 * b.light, 0.09 + 0.95 * b.light);
+    poolMat.color.setRGB(0.85, 0.9, 1).multiplyScalar(0.7 * b.light);
+  });
+  const lamps: [number, number, number][] = [[2.9, 4.2, 35.2], [-2.9, 4.2, 42.6]];
+  return (
+    <group>
+      {/* 통로 문 */}
+      <group ref={door}>
+        <mesh position={[0, 2, PASSAGE_DOOR_Z]}>
+          <boxGeometry args={[6.4, 4, 0.22]} />
+          <meshStandardMaterial color="#4a4f55" metalness={0.55} roughness={0.5} />
         </mesh>
-        <mesh position={[0, 1.4, 0.26]}>
-          <planeGeometry args={[0.3, 0.12]} />
-          <meshBasicMaterial color="#5fe0a8" toneMapped={false} />
+        <mesh position={[0, 0.35, PASSAGE_DOOR_Z + 0.12]}>
+          <planeGeometry args={[6.4, 0.3]} />
+          <meshBasicMaterial map={ribs} />
+        </mesh>
+        <mesh position={[0, 2.4, PASSAGE_DOOR_Z + 0.12]}>
+          <planeGeometry args={[1.4, 0.7]} />
+          <meshBasicMaterial map={doorSign} toneMapped={false} />
         </mesh>
       </group>
+      <mesh position={[0, 4.25, PASSAGE_DOOR_Z]}>
+        <boxGeometry args={[6.6, 0.5, 0.6]} />
+        <meshStandardMaterial color="#1b1f24" />
+      </mesh>
+      <mesh position={[-2.4, 4.25, PASSAGE_DOOR_Z + 0.31]}>
+        <planeGeometry args={[0.16, 0.1]} />
+        <meshBasicMaterial ref={doorLamp} color="#1e2226" toneMapped={false} />
+      </mesh>
+      {/* 첫 번째 장치: 서쪽 벽의 작은 분전함 */}
+      <group position={[-3.0, 0, BREAKER.z]} rotation-y={Math.PI / 2}>
+        <mesh position={[0, 1.25, 0]}>
+          <boxGeometry args={[0.8, 1.1, 0.36]} />
+          <meshStandardMaterial color="#39414a" roughness={0.6} metalness={0.4} />
+        </mesh>
+        <mesh position={[0, 1.55, 0.19]}>
+          <planeGeometry args={[0.32, 0.1]} />
+          <meshBasicMaterial ref={devLamp} color="#d0503e" toneMapped={false} />
+        </mesh>
+        <mesh position={[0, 2.25, 0.02]}>
+          <planeGeometry args={[1.5, 0.62]} />
+          <meshBasicMaterial map={label} toneMapped={false} />
+        </mesh>
+      </group>
+      {/* 케이블: 장치 → 통로 문틀 → 문 위를 건너 동쪽 벽을 따라 셔터 제어판까지 */}
+      <Cable from={[-3.1, 1.8, BREAKER.z]} to={[-3.1, 3.9, BREAKER.z]} />
+      <Cable from={[-3.1, 3.9, BREAKER.z]} to={[-3.1, 3.9, PASSAGE_DOOR_Z + 0.35]} />
+      <Cable from={[-3.1, 3.9, PASSAGE_DOOR_Z + 0.35]} to={[3.1, 3.9, PASSAGE_DOOR_Z + 0.35]} />
+      <Cable from={[3.1, 3.9, PASSAGE_DOOR_Z + 0.35]} to={[3.1, 3.9, SHUTTER_PANEL.z]} />
+      <Cable from={[3.1, 3.9, SHUTTER_PANEL.z]} to={[3.1, 1.55, SHUTTER_PANEL.z]} />
+      {/* 통로 조명 (첫 장치로만 켜진다) */}
+      {lamps.map(([x, y, z], i) => (
+        <group key={i}>
+          <mesh position={[x, y, z]} material={lampMat}>
+            <boxGeometry args={[0.4, 0.1, 0.9]} />
+          </mesh>
+          <mesh position={[x * 0.7, 0.02, z]} rotation-x={-Math.PI / 2} material={poolMat}>
+            <planeGeometry args={[4.4, 4.4]} />
+          </mesh>
+        </group>
+      ))}
+      {/* 이산이 숨어 있던 벽감: 쌓인 상자와 접힌 방수포 */}
+      <mesh position={[2.85, 0.45, SAN_START.z - 1.2]}>
+        <boxGeometry args={[0.6, 0.9, 0.8]} />
+        <meshStandardMaterial color="#4a3f30" roughness={0.9} />
+      </mesh>
+      <mesh position={[2.9, 0.3, SAN_START.z + 1.1]} rotation-y={0.3}>
+        <boxGeometry args={[0.5, 0.6, 0.6]} />
+        <meshStandardMaterial color="#3d3428" roughness={0.9} />
+      </mesh>
+      <mesh position={[2.6, 0.04, SAN_START.z]} rotation-x={-Math.PI / 2}>
+        <planeGeometry args={[1.1, 1.4]} />
+        <meshStandardMaterial color="#2d3a3a" roughness={1} />
+      </mesh>
     </group>
   );
 }
@@ -231,7 +342,8 @@ function Shutter({ gameRef }: { gameRef: GameRef }) {
   useFrame(() => {
     const g = gameRef.current;
     if (door.current) door.current.position.y = g.shutter.open * 3.6;
-    light.current?.color.set(g.shutter.state === "closed" ? "#d65a4a" : "#5fe0a8");
+    // 국소 전원이 없으면 제어판은 꺼져 있다. 전원이 들어오면 잠김(주황), 열리면 초록
+    light.current?.color.set(!g.breaker.done ? "#1e2226" : g.shutter.state === "closed" ? "#e0a040" : "#5fe0a8");
   });
   return (
     <group>
@@ -264,7 +376,7 @@ function Shutter({ gameRef }: { gameRef: GameRef }) {
 function Relay({ gameRef }: { gameRef: GameRef }) {
   const lamp = useRef<THREE.MeshBasicMaterial>(null);
   const pl = useRef<THREE.PointLight>(null);
-  const warn = useSign([["변전 제어 · 7구역", 1], ["복구 권한 필요", 0.7]], { color: "#e2b36a", bg: "#16120c", border: true, mono: true });
+  const warn = useSign([["구역 전원 · 7구역", 1], ["연동: 큰길 차단문 · 감시망", 0.55]], { color: "#e2b36a", bg: "#16120c", border: true, mono: true });
   useFrame(({ clock }) => {
     const g = gameRef.current;
     const done = g.relay.done;
@@ -295,6 +407,23 @@ function Relay({ gameRef }: { gameRef: GameRef }) {
         <meshStandardMaterial color="#14171b" />
       </mesh>
       <pointLight ref={pl} position={[0, 1.8, 1.4]} distance={7} decay={1.6} intensity={3} color="#f0a43a" />
+    </group>
+  );
+}
+
+/** 두 번째 장치의 굵은 케이블: 서쪽 벽을 따라 큰길로 내려가, 머리 위로 길을 건너 감시탑(L1)에 닿는다.
+ *  첫 장치의 가는 케이블과 굵기·경로가 달라서, 이 장치가 감시망과 연결돼 있다는 것을 공간으로 읽을 수 있다 */
+function RelayCable() {
+  const tower = LIGHTS.find((l) => l.id === "L1")!;
+  const x = -9.9, y = 5.4;
+  return (
+    <group>
+      <Cable r={0.07} from={[RELAY.x - 0.75, 2.2, RELAY.z]} to={[x, y, RELAY.z]} />
+      <Cable r={0.07} from={[x, y, RELAY.z]} to={[x, y, tower.src.z]} />
+      <Cable r={0.07} from={[x, y, tower.src.z]} to={[tower.src.x, tower.src.y - 1.5, tower.src.z]} />
+      {/* 큰길 차단문 쪽 분기 */}
+      <Cable r={0.05} from={[x, y, GATE_Z + 1.5]} to={[x, y, GATE_Z + 0.4]} />
+      <Cable r={0.05} from={[x, y, GATE_Z + 0.4]} to={[GATE_PANEL.x + 1.0, y, GATE_Z + 0.4]} />
     </group>
   );
 }
@@ -378,7 +507,8 @@ function Gate({ gameRef }: { gameRef: GameRef }) {
     const g = gameRef.current;
     if (door.current) door.current.position.y = g.gate.open * 4.2;
     const k = g.gate.hold / 3.2;
-    status.current?.color.set(g.gate.opened ? "#5fe0a8" : k > 0 ? "#f0c35a" : "#e0485c");
+    // 구역 전원(두 번째 장치)이 꺼져 있으면 제어판도 꺼져 있다
+    status.current?.color.set(!g.relay.done ? "#262a30" : g.gate.opened ? "#5fe0a8" : k > 0 ? "#f0c35a" : "#e0485c");
     if (bar.current) bar.current.scale.x = Math.max(0.001, k);
   });
   return (
@@ -562,12 +692,20 @@ function Searchlights({ gameRef }: { gameRef: GameRef }) {
 
 function San({ gameRef }: { gameRef: GameRef }) {
   const g = useRef<THREE.Group>(null);
+  const body = useRef<THREE.Group>(null);
   const visor = useRef<THREE.MeshBasicMaterial>(null);
   useFrame(({ clock }) => {
     const s = gameRef.current.san;
     if (!g.current) return;
+    // 표시 여부와 자세는 React 재렌더링이 아니라 게임 상태에서 매 프레임 읽는다 (첫 만남 전에는 보이지 않는다)
+    g.current.visible = s.visible;
+    if (!s.visible) return;
     const t = clock.elapsedTime;
     g.current.position.set(s.x, s.moving ? Math.abs(Math.sin(t * 9)) * 0.06 : 0, s.z);
+    // 웅크림(숨어 있을 때, 감시등에 걸렸을 때)
+    const crouch = s.pose === "stand" ? 1 : s.pose === "hide" ? 0.6 : 0.68;
+    const bd = body.current;
+    if (bd) bd.scale.y += (crouch - bd.scale.y) * 0.2;
     // 부드럽게 돈다
     let dy = s.yaw - g.current.rotation.y;
     dy = Math.atan2(Math.sin(dy), Math.cos(dy));
@@ -577,12 +715,14 @@ function San({ gameRef }: { gameRef: GameRef }) {
     visor.current?.color.set(speaking ? "#9ff7ec" : "#3fb5ac");
   });
   return (
-    <group ref={g}>
-      <Human position={[0, 0, 0]} color="#22303f" skin="#d9b9a0" hood="#16161a" />
-      <mesh position={[0, 1.66, 0.11]}>
-        <boxGeometry args={[0.2, 0.035, 0.02]} />
-        <meshBasicMaterial ref={visor} color="#3fb5ac" toneMapped={false} />
-      </mesh>
+    <group ref={g} visible={false}>
+      <group ref={body} scale={[1, 0.6, 1]}>
+        <Human position={[0, 0, 0]} color="#22303f" skin="#d9b9a0" hood="#16161a" />
+        <mesh position={[0, 1.66, 0.11]}>
+          <boxGeometry args={[0.2, 0.035, 0.02]} />
+          <meshBasicMaterial ref={visor} color="#3fb5ac" toneMapped={false} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -690,8 +830,10 @@ export function ChaseScene({ gameRef, quality }: { gameRef: GameRef; quality: Ch
       <Ground />
       <Buildings quality={quality} />
       <AlleyDressing gameRef={gameRef} />
+      <Passage gameRef={gameRef} />
       <Shutter gameRef={gameRef} />
       <Relay gameRef={gameRef} />
+      <RelayCable />
       {COVERS.map((c, i) => <Cover key={i} c={c} />)}
       {BUILDINGS.filter((b: Block) => b.kind === "cover").map((b, i) => {
         const [cx, cz] = center(b);

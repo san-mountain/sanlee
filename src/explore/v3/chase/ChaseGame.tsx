@@ -1,6 +1,7 @@
 "use client";
-// DELETE SEOUL 추격 프로토타입 (/deleteseoul-lab/chase)
-// ACT 2 후반(두 번째 복구 장치) → ACT 3(추격, 차단문, 지하철 입구)까지.
+// DELETE SEOUL 프로토타입 (/deleteseoul-lab/chase)
+// 도입(혼자, 첫 번째 장치) → 이산과의 첫 만남 → 셔터 협력 → 두 번째 장치와 감시 재가동 → 추격 → 지하철 입구.
+// 지하철 계단 도착은 이야기의 결말이 아니라 현재 구현 구간의 끝이다.
 //
 // 구조
 // - logic.ts : 게임 규칙과 상태(순수 TS). 매 프레임 stepGame() 한 번.
@@ -21,7 +22,7 @@ import styles from "./chase.module.css";
 type Screen = "intro" | "play" | "pause" | "caught" | "complete";
 const QUALITY_KEY = "sanlee-chase-quality-v1";
 
-const ACTION_LABEL: Record<string, string> = { relay: "전력 장치 복구", gate: "차단문 해제" };
+const ACTION_LABEL: Record<string, string> = { breaker: "통로 전원 복구", relay: "구역 전원 복구", gate: "차단문 해제" };
 
 function initialQuality(touch: boolean): ChaseQuality {
   if (typeof window === "undefined") return "low";
@@ -37,6 +38,7 @@ function initialQuality(touch: boolean): ChaseQuality {
 
 function playEvent(e: GameEvent) {
   switch (e) {
+    case "power": return sfx.open();
     case "door": return sfx.door();
     case "warn": return sfx.suspect();
     case "restore": return sfx.restore();
@@ -305,7 +307,7 @@ export default function ChaseGame() {
           <div ref={joyBase} className={styles.joyBase}>
             <div ref={joyKnob} className={styles.joyKnob} />
           </div>
-          {snap.phase === "approach" && <span className={styles.lookHint}>오른쪽을 끌어 둘러보기</span>}
+          {snap.phase === "intro" && <span className={styles.lookHint}>오른쪽을 끌어 둘러보기</span>}
         </div>
       )}
       {showAction && (
@@ -332,11 +334,11 @@ export default function ChaseGame() {
       {screen !== "play" && (
         <div className={styles.overlay}>
           <div className={`${styles.panel} ${screen === "complete" ? styles.late : ""}`} role="dialog" aria-modal="true">
-            <small>SAN LEE / DEVELOPMENT BUILD · 2026 · CHASE PROTOTYPE</small>
+            <small>SAN LEE / DEVELOPMENT BUILD · 2026 · PROTOTYPE</small>
             {screen === "intro" && (
               <>
                 <h1>DELETE SEOUL</h1>
-                <p>2087년 서울. 첫 번째 전력 장치는 이미 복구했습니다. 이산과 함께 골목 안쪽의 두 번째 장치로 향하세요.</p>
+                <p>2087년 서울. 정전된 골목의 막힌 통로에서 접속이 시작됩니다.</p>
                 <ul className={styles.controls}>
                   {touch ? (
                     <>
@@ -380,9 +382,9 @@ export default function ChaseGame() {
             )}
             {screen === "complete" && (
               <>
-                <h2>지하로</h2>
-                <p>계단 아래, 감시등이 닿지 않는 곳. 이산이 숨을 고릅니다.</p>
-                <p className={styles.dim}>다음 구간: 지하 기록실 (개발 예정)</p>
+                <h2>현재 구현 구간 끝</h2>
+                <p>계단 아래, 감시등이 닿지 않는 곳까지 왔습니다. 이산이 숨을 고릅니다.</p>
+                <p className={styles.dim}>이야기의 결말이 아닙니다. 지하 기록실과 그 이후는 아직 만들지 않은 구간입니다.</p>
                 <p className={styles.dim}>재시도 {snap.retries}회</p>
                 <div className={styles.buttons}>
                   <button type="button" onClick={restart}>처음부터 다시</button>
