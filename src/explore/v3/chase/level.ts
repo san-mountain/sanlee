@@ -23,16 +23,32 @@ export const EYE_HEIGHT = 1.62;
 /** 감시등이 겨누는 플레이어 몸통 높이 */
 export const CHEST_HEIGHT = 1.25;
 
-export const START: V2 = { x: 0.4, z: 28 };
-export const SAN_START: V2 = { x: -1.3, z: 25.5 };
+// ACT 1 도입: 플레이어는 혼자, 정전된 막다른 통로(B-2)에서 시작한다
+export const START: V2 = { x: 0.4, z: 44.5 };
+/** 통로 끝 정상 범위 (+z 쪽 벽) */
+export const MAX_Z = 46.6;
+
+// 첫 번째 장치: 통로 B-2의 국소 전원. 케이블은 바로 앞 통로 문과 통로 조명, 안쪽 셔터 제어판으로만 이어진다
+export const BREAKER: V2 = { x: -2.55, z: 40.6 };
+export const BREAKER_RANGE = 2.2;
+export const BREAKER_HOLD = 1.2;
+/** 첫 번째 장치가 여는 통로 문 */
+export const PASSAGE_DOOR_Z = 38;
+
+// 이산은 통로 문 너머 벽감에 숨어 있다. 통로 조명이 켜지면 처음 드러난다
+export const SAN_START: V2 = { x: 2.3, z: 34.4 };
 
 // ACT 2: 이산이 열어 주는 셔터
 export const SHUTTER_Z = 18;
 export const SHUTTER_PANEL: V2 = { x: 2.55, z: 18.9 };
-export const SHUTTER_TRIGGER_Z = 21.5;
 
-// 두 번째 복구 장치 (골목 출구 교차로 서쪽 벽)
+// 두 번째 복구 장치: 7구역 구역 전원 (골목 출구 교차로 서쪽 벽).
+// 케이블이 큰길 차단문과 감시탑으로 이어진다. 첫 장치와 달리 감시망까지 함께 살아난다
 export const RELAY: V2 = { x: -8.9, z: 1.6 };
+/** 이산이 장치 옆까지 다가와 감시 회로 케이블을 발견하는 자리 */
+export const SAN_RELAY_SPOT: V2 = { x: -7.3, z: 3.7 };
+/** 이산이 교차로에서 기다리는 자리 */
+export const SAN_JUNCTION: V2 = { x: -4.6, z: 3.6 };
 export const RELAY_RANGE = 2.4;
 /** 장치를 길게 눌러야 하는 시간(초). 경고는 누르는 도중에 나온다 */
 export const RELAY_HOLD = 2.0;
@@ -58,10 +74,10 @@ export const CHECKPOINTS = {
 
 // 걷는 공간 밖은 모두 건물이다
 export const BUILDINGS: Block[] = [
-  // 골목 양쪽 벽과 막다른 끝
-  block(-8.6, 20, 10.8, 28, 16, "building"),
-  block(8.6, 20, 10.8, 28, 13, "building"),
-  block(0, 33, 6.4, 4, 9, "building"),
+  // 골목 양쪽 벽과 막다른 끝 (통로 B-2까지 이어진다)
+  block(-8.6, 28, 10.8, 44, 16, "building"),
+  block(8.6, 28, 10.8, 44, 13, "building"),
+  block(0, 49, 6.4, 4, 9, "building"),
   // 큰길 양쪽
   block(-15, -26, 10, 68, 22, "building"),
   block(15, -26, 10, 68, 26, "building"),
@@ -85,6 +101,7 @@ export const COVERS: (Block & { look: "container" | "shelter" | "van" | "kiosk" 
 ];
 
 export const SHUTTER_BLOCK: Block = block(0, SHUTTER_Z, 6.4, 0.4, 4, "door");
+export const PASSAGE_DOOR_BLOCK: Block = block(0, PASSAGE_DOOR_Z, 6.4, 0.4, 4, "door");
 export const GATE_BLOCK: Block = block(0, GATE_Z, 20, 0.6, 4.2, "door");
 
 /** 감시등. 앞쪽 탑 위 광원(src)에서 바닥 지점을 비춘다. path는 바닥 지점이 순환하는 경로.

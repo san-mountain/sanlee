@@ -3,18 +3,21 @@
 // 모든 시간(대사, 연출, 감시등)은 이 시뮬레이션 시간으로 흘러서 일시정지하면 함께 멈춘다.
 
 import {
-  BUILDINGS, CHECKPOINTS, CHEST_HEIGHT, COVERS, EXIT_Z, GATE_BLOCK, GATE_HOLD, GATE_PANEL, GATE_RANGE,
-  LIGHTS, PLAYER_RADIUS, RELAY, RELAY_HOLD, RELAY_RANGE, RELAY_WARN_AT, SAN_ESCAPE_ROUTE, SAN_ROUTE, SAN_START,
-  SHUTTER_BLOCK, SHUTTER_PANEL, SHUTTER_Z, STAIR_BOTTOM_Z, STAIR_DROP, STAIR_TOP_Z, START,
+  BREAKER, BREAKER_HOLD, BREAKER_RANGE, BUILDINGS, CHECKPOINTS, CHEST_HEIGHT, COVERS, EXIT_Z, GATE_BLOCK, GATE_HOLD,
+  GATE_PANEL, GATE_RANGE, LIGHTS, MAX_Z, PASSAGE_DOOR_BLOCK, PASSAGE_DOOR_Z, PLAYER_RADIUS, RELAY, RELAY_HOLD,
+  RELAY_RANGE, RELAY_WARN_AT, SAN_ESCAPE_ROUTE, SAN_JUNCTION, SAN_RELAY_SPOT, SAN_ROUTE, SAN_START, SHUTTER_BLOCK,
+  SHUTTER_PANEL, SHUTTER_Z, STAIR_BOTTOM_Z, STAIR_DROP, STAIR_TOP_Z, START,
   type Block, type LightDef, type V2,
 } from "./level";
 
-export type Phase = "approach" | "relay" | "surge" | "chase" | "escape" | "complete";
+// intro: 혼자, 정전된 통로 B-2 · meet: 국소 전원 복구 직후 이산과 첫 만남 · approach: 셔터 협력
+// relay: 구역 전원(두 번째 장치) · surge: 감시 재가동 · chase/escape: 추격 · complete: 현재 구현 구간의 끝(이야기의 결말 아님)
+export type Phase = "intro" | "meet" | "approach" | "relay" | "surge" | "chase" | "escape" | "complete";
 export type Speaker = "san" | "system";
-export type Interact = "relay" | "gate";
+export type Interact = "breaker" | "relay" | "gate";
 export type FrameInput = { move: { x: number; y: number; run: boolean }; look: { yaw: number; pitch: number }; hold: boolean };
 export type GameEvent =
-  | "door" | "warn" | "restore" | "beam" | "alarm" | "spotted" | "caught" | "gate-tick" | "gate-open" | "complete" | "san-call";
+  | "door" | "warn" | "restore" | "beam" | "alarm" | "spotted" | "caught" | "gate-tick" | "gate-open" | "complete" | "san-call" | "power";
 
 export type LightState = { def: LightDef; on: boolean; x: number; z: number; seg: number; tracking: boolean; lostFor: number; seen: number };
 
@@ -23,9 +26,19 @@ export type Game = {
   phaseT: number;
   time: number;
   player: { x: number; z: number; y: number; yaw: number; pitch: number; speed: number };
-  san: { x: number; z: number; yaw: number; idx: number; moving: boolean; lagFor: number; callAt: number; warnAt: number; state: "lead" | "panel" | "wait" | "watch" | "run" };
+  san: {
+    x: number; z: number; yaw: number; idx: number; moving: boolean; lagFor: number; callAt: number; warnAt: number;
+    /** 첫 만남 전에는 보이지도, 움직이지도, 말하지도 않는다. Scene이 매 프레임 이 값을 읽어 표시한다 */
+    visible: boolean;
+    pose: "hide" | "stand" | "duck";
+    state: "hidden" | "met" | "lead" | "panel" | "wait" | "watch" | "run";
+  };
+  /** 첫 번째 장치(국소 전원)와 그 전원으로 움직이는 통로 문 */
+  breaker: { hold: number; done: boolean; door: number; doorState: "closed" | "opening" | "open"; light: number };
   shutter: { open: number; state: "closed" | "opening" | "open"; t: number };
-  relay: { hold: number; warned: boolean; releasedFor: number; hesitated: boolean; done: boolean };
+  relay: { hold: number; warned: boolean; releasedFor: number; hesitated: boolean; done: boolean; sanNear: boolean; toldGate: boolean };
+  /** 감시 재가동 연출: 거대 감시등이 이산을 훑은 시각 */
+  surge: { sanHitAt: number };
   gate: { hold: number; open: number; opened: boolean; lastTick: number; calledNow: number; calledHide: number };
   lights: LightState[];
   lampsOn: number;
@@ -62,13 +75,15 @@ function makeLights(): LightState[] {
 
 export function newGame(): Game {
   const g: Game = {
-    phase: "approach",
+    phase: "intro",
     phaseT: 0,
     time: 0,
     player: { ...START, y: 0, yaw: 0, pitch: 0, speed: 0 },
-    san: { ...SAN_START, yaw: 0, idx: 0, moving: false, lagFor: 0, callAt: -99, warnAt: -99, state: "lead" },
+    san: { ...SAN_START, yaw: 0, idx: 0, moving: false, lagFor: 0, callAt: -99, warnAt: -99, visible: false, pose: "hide", state: "hidden" },
+    breaker: { hold: 0, done: false, door: 0, doorState: "closed", light: 0 },
     shutter: { open: 0, state: "closed", t: 0 },
-    relay: { hold: 0, warned: false, releasedFor: 0, hesitated: false, done: false },
+    relay: { hold: 0, warned: false, releasedFor: 0, hesitated: false, done: false, sanNear: false, toldGate: false },
+    surge: { sanHitAt: -1 },
     gate: { hold: 0, open: 0, opened: false, lastTick: 0, calledNow: -99, calledHide: -99 },
     lights: makeLights(),
     lampsOn: 0,
@@ -87,7 +102,8 @@ export function newGame(): Game {
     line: null,
     events: [],
   };
-  say(g, "san", "하나 더 남았어. 저 셔터 너머에.", 2.8, 0.8);
+  // 도입부에는 이산의 대사가 없다. 처음 보이는 문장은 시스템의 정전 표시뿐
+  say(g, "system", "[통로 B-2 · 전원 없음]", 2.6, 1.2);
   return g;
 }
 
@@ -104,6 +120,7 @@ function setPhase(g: Game, p: Phase) {
 
 function solidBlocks(g: Game): Block[] {
   const list: Block[] = [...BUILDINGS, ...COVERS];
+  if (g.breaker.door < 0.6) list.push(PASSAGE_DOOR_BLOCK);
   if (g.shutter.open < 0.6) list.push(SHUTTER_BLOCK);
   if (g.gate.open < 0.6) list.push(GATE_BLOCK);
   return list;
@@ -111,7 +128,7 @@ function solidBlocks(g: Game): Block[] {
 
 /** 원(플레이어)을 사각형들 밖으로 밀어낸다 */
 export function resolveCircle(p: V2, blocks: Block[], r = PLAYER_RADIUS): V2 {
-  const out = { x: Math.max(-9.6, Math.min(9.6, p.x)), z: Math.max(-59.5, Math.min(30.6, p.z)) };
+  const out = { x: Math.max(-9.6, Math.min(9.6, p.x)), z: Math.max(-59.5, Math.min(MAX_Z, p.z)) };
   for (let pass = 0; pass < 2; pass++) {
     for (const b of blocks) {
       const cx = Math.max(b.x0, Math.min(b.x1, out.x));
@@ -203,6 +220,8 @@ function moveToward(o: { x: number; z: number }, t: V2, step: number) {
 }
 
 export function stepLights(g: Game, dt: number) {
+  // 감시 재가동 연출 중의 거대 감시등은 stepStory가 직접 움직인다
+  if (g.phase === "surge") return;
   for (const l of g.lights) {
     if (!l.on) continue;
     if (l.tracking) {
@@ -223,13 +242,23 @@ function spotNear(g: Game, p: V2, pad: number) {
 function stepSan(g: Game, dt: number) {
   const s = g.san;
   const P = g.player;
+  // 첫 만남 전: 이산은 존재하지 않는 것처럼 아무것도 하지 않는다
+  if (!s.visible) {
+    s.moving = false;
+    return;
+  }
   let goal: V2 | null = null;
   let speed = SAN_WALK;
-  if (g.phase === "approach") {
+  if (g.phase === "meet") {
+    goal = null;
+  } else if (g.phase === "approach") {
     if (s.state === "panel") goal = SHUTTER_PANEL;
     else goal = null;
-  } else if (g.phase === "relay" || g.phase === "surge") {
-    goal = g.shutter.state === "open" ? { x: -4.6, z: 3.6 } : SHUTTER_PANEL;
+  } else if (g.phase === "relay") {
+    goal = g.shutter.state !== "open" ? SHUTTER_PANEL : g.relay.sanNear ? SAN_RELAY_SPOT : SAN_JUNCTION;
+  } else if (g.phase === "surge") {
+    // 빛에 걸리기 전까지는 장치 옆으로 다가가고, 걸린 뒤에는 그 자리에 웅크린다
+    goal = g.surge.sanHitAt < 0 ? SAN_RELAY_SPOT : null;
   } else if (g.phase === "chase") {
     speed = SAN_RUN;
     const route = SAN_ROUTE;
@@ -265,8 +294,11 @@ function stepSan(g: Game, dt: number) {
     }
   }
   if (!s.moving) {
-    // 멈춰 있을 때는 플레이어 쪽(추격 중엔 위협 쪽)을 본다
-    const look = g.phase === "chase" && g.gate.hold > 0 ? GATE_PANEL : P;
+    // 멈춰 있을 때는 플레이어 쪽을 본다. 차단문 망보기 중엔 제어판, 장치 앞에선 감시 회로 케이블 쪽을 본다
+    const look =
+      g.phase === "chase" && g.gate.hold > 0 ? GATE_PANEL
+      : (g.phase === "relay" && g.relay.sanNear) || g.phase === "surge" ? RELAY
+      : P;
     s.yaw = Math.atan2(look.x - s.x, look.z - s.z);
   }
 }
@@ -275,12 +307,14 @@ function stepSan(g: Game, dt: number) {
 
 export function currentTarget(g: Game): Interact | null {
   if (g.caught) return null;
+  if (g.phase === "intro" && !g.breaker.done && dist(g.player, BREAKER) < BREAKER_RANGE) return "breaker";
   if (g.phase === "relay" && !g.relay.done && dist(g.player, RELAY) < RELAY_RANGE) return "relay";
   if (g.phase === "chase" && !g.gate.opened && dist(g.player, GATE_PANEL) < GATE_RANGE) return "gate";
   return null;
 }
 
 export function holdProgress(g: Game) {
+  if (g.target === "breaker") return g.breaker.hold / BREAKER_HOLD;
   if (g.target === "relay") return g.relay.hold / RELAY_HOLD;
   if (g.target === "gate") return g.gate.hold / GATE_HOLD;
   return 0;
@@ -292,34 +326,79 @@ function stepStory(g: Game, dt: number, hold: boolean) {
   const P = g.player;
   const s = g.san;
   switch (g.phase) {
-    case "approach": {
-      // 이산이 셔터를 열어 주는 짧은 협력
-      if (s.state === "lead" && (P.z < 25.5 || g.phaseT > 3.2)) {
-        s.state = "panel";
-        say(g, "san", "잠깐. 이건 내가 열 수 있어.", 2.2);
+    case "intro": {
+      // 혼자. 문은 전원이 없어 닫혀 있고, 바로 옆 벽의 국소 전원 장치에서 케이블이 문틀로 이어진다
+      const b = g.breaker;
+      if (g.target === "breaker" && hold) {
+        b.hold = Math.min(BREAKER_HOLD, b.hold + dt);
+        if (b.hold >= BREAKER_HOLD) {
+          b.done = true;
+          b.doorState = "opening";
+          g.queue = [];
+          g.line = null;
+          g.events.push("power");
+          setPhase(g, "meet");
+        }
+      } else {
+        b.hold = Math.max(0, b.hold - dt * 1.5);
       }
+      break;
+    }
+    case "meet": {
+      // 통로 조명이 켜지며 문 너머 벽감에 웅크린 사람이 드러난다. 서로 모르는 사이의 첫 만남
+      const t = g.phaseT;
+      const at = (k: number) => t >= k && t - dt < k;
+      if (at(0.9)) {
+        s.visible = true;
+        s.state = "met";
+      }
+      if (at(1.8)) {
+        s.pose = "stand";
+        say(g, "san", "……누구야.", 1.8);
+      }
+      if (at(4.0)) say(g, "san", "그거, 네가 켰어?", 2.0);
+      // 이산이 시설을 안다는 것은 설명 대신 셔터 쪽을 가리키는 짧은 정보로만 드러난다
+      if (at(6.6)) say(g, "san", "이 길, 안쪽 셔터에서 한 번 더 막혀.", 2.6);
+      if (at(9.6)) say(g, "san", "……나도 저쪽으로 가야 해.", 2.4);
+      if (t > 12.2 || (t > 9.8 && P.z < PASSAGE_DOOR_Z - 1)) {
+        s.state = "lead";
+        setPhase(g, "approach");
+      }
+      break;
+    }
+    case "approach": {
+      // 이산이 셔터를 열어 주는 짧은 협력. 셔터 제어판은 첫 장치(국소 전원)로 막 살아난 상태다
+      if (s.state === "lead" && (P.z < SAN_START.z - 2 || g.phaseT > 2.5)) s.state = "panel";
       if (s.state === "panel" && dist(s, SHUTTER_PANEL) < 0.3 && g.shutter.state === "closed") {
         g.shutter.state = "opening";
         g.shutter.t = 0;
         g.events.push("door");
       }
-      if (g.shutter.state === "opening" && g.shutter.t > 0.6 && g.shutter.t - dt <= 0.6) {
-        say(g, "san", "너 혼자였으면 여기서 막혔을 거야.", 2.8, 0.4);
-      }
+      if (g.shutter.state === "opening" && g.shutter.t > 0.6 && g.shutter.t - dt <= 0.6) say(g, "san", "됐다.", 1.4, 0.3);
       if (g.shutter.state === "open") setPhase(g, "relay");
       break;
     }
     case "relay": {
       const r = g.relay;
+      // 이산은 큰길 차단문에 전원이 없다는 사실만 말한다. 장치로 안내하는 것은 HUD(복구 권한)의 목표다
+      if (!r.toldGate && P.z < 9) {
+        r.toldGate = true;
+        say(g, "san", "큰길 문은 죽어 있어. 전원이 안 들어와.", 2.6, 0.4);
+      }
+      // 플레이어가 장치 앞에 서면 이산도 다가와 장치를 본다
+      if (!r.sanNear && dist(P, RELAY) < 4) r.sanNear = true;
       if (g.target === "relay" && hold) {
         r.hold = Math.min(RELAY_HOLD, r.hold + dt);
         r.releasedFor = 0;
         if (!r.warned && r.hold >= RELAY_WARN_AT) {
-          // 이산의 경고는 작동 '직전', 플레이어가 손을 대고 있는 순간에 나온다
+          // 경고는 작동 '직전', 플레이어가 손을 대고 있는 순간에 나온다.
+          // 금지가 아니라, 장치 위로 감시탑까지 올라가는 케이블을 이산이 막 알아본 반응이다
           r.warned = true;
+          r.sanNear = true;
           g.queue = [];
           g.line = null;
-          say(g, "san", "잠깐. 그건 건드리지 마.", 2.4);
+          say(g, "san", "잠깐.", 0.9);
+          say(g, "san", "그 선… 감시탑까지 이어져 있어.", 2.4, 0.9);
           g.events.push("warn");
         }
         if (r.hold >= RELAY_HOLD) {
@@ -334,10 +413,11 @@ function stepStory(g: Game, dt: number, hold: boolean) {
         if (r.warned) {
           r.releasedFor += dt;
           if (!r.hesitated && r.releasedFor > 1.3) {
-            // 플레이어가 경고를 듣고 멈췄다
+            // 플레이어가 경고를 듣고 멈췄다. 선택이 끝난 것처럼 말하지 않고, 남은 길이 하나뿐임을 같이 확인한다
             r.hesitated = true;
-            say(g, "san", "……고마워.", 1.8, 0.2);
-            say(g, "san", "근데 그게 꺼져 있으면, 저 앞 문도 안 열려.", 3.2, 2.4);
+            say(g, "san", "……", 1.2, 0.2);
+            say(g, "san", "다른 길은 없어. 저 문도 이 전원을 써.", 2.8, 1.6);
+            say(g, "san", "켜면, 바로 뛸 준비 해.", 2.2, 4.6);
           }
         }
       }
@@ -349,27 +429,49 @@ function stepStory(g: Game, dt: number, hold: boolean) {
       const at = (k: number) => t >= k && t - dt < k;
       if (at(1.0)) say(g, "san", "……젠장.", 1.4);
       if (at(2.6)) say(g, "san", "전력만 돌아오는 게 아니야.", 1.8);
-      // 4.4~5.6초: 정적. 그 뒤 시선을 큰길 끝 감시탑 쪽으로 부드럽게 돌려 준다 (플레이어 입력은 계속 먹는다)
-      if (t > 5.3 && t < 6.8) {
-        const want = Math.atan2(P.x - 0, P.z + 59);
+      // 4.4~5.6초: 정적.
+      // 5.6초: 큰길 끝의 거대 감시등이 켜지고, 바닥 지점이 큰길을 거슬러 올라와 장치 옆의 이산을 훑는다.
+      // 최초 경보는 이산의 노출이다. 시선은 움직이는 빛을 따라 부드럽게 돌려 준다 (플레이어 입력은 계속 먹는다)
+      const L3 = g.lights.find((l) => l.def.id === "L3")!;
+      const sv = g.surge;
+      if (at(5.6)) {
+        L3.on = true;
+        L3.x = 1;
+        L3.z = -14;
+        L3.tracking = true;
+        g.events.push("beam");
+      }
+      if (t > 5.6 && sv.sanHitAt < 0) {
+        moveToward(L3, s, 9 * dt);
+        if (dist(L3, s) < L3.def.radius * 0.5 || t > 8.4) {
+          sv.sanHitAt = t;
+          g.alarm = 1;
+          s.pose = "duck";
+          g.events.push("spotted");
+          say(g, "system", "[미등록 개체 감지]", 2.2);
+        }
+      } else if (sv.sanHitAt >= 0) {
+        // 빛은 이산 위에 머문다
+        moveToward(L3, s, 6 * dt);
+      }
+      const focus = sv.sanHitAt >= 0 ? s : L3;
+      if (t > 5.4 && (sv.sanHitAt < 0 || t < sv.sanHitAt + 0.6)) {
+        const want = Math.atan2(P.x - focus.x, P.z - focus.z);
         const d = Math.atan2(Math.sin(want - P.yaw), Math.cos(want - P.yaw));
         P.yaw += d * Math.min(1, dt * 3.2);
-        P.pitch += (0.05 - P.pitch) * Math.min(1, dt * 3);
+        P.pitch += (-0.12 - P.pitch) * Math.min(1, dt * 3);
       }
-      if (at(5.6)) {
-        g.lights.find((l) => l.def.id === "L3")!.on = true;
-        g.alarm = 1;
-        g.events.push("beam");
-        say(g, "system", "[미등록 개체 감지]", 2.2);
-      }
-      if (at(7.1)) {
+      if (sv.sanHitAt >= 0 && t >= sv.sanHitAt + 1.2) {
         say(g, "san", "뛰어!", 1.6);
         g.events.push("alarm");
         for (const l of g.lights) if (l.def.from === "chase") l.on = true;
+        // 감시등은 이산을 놓치고 원래 경로로 돌아간다 (추격 판정은 이후 플레이어 기준)
+        L3.tracking = false;
         setPhase(g, "chase");
         g.checkpoint = "chase";
         s.idx = 0;
         s.state = "run";
+        s.pose = "stand";
         g.grace = GRACE;
       }
       break;
@@ -469,6 +571,11 @@ export function stepGame(g: Game, rawDt: number, f: FrameInput) {
   stepPlayer(g, dt, f);
   g.target = currentTarget(g);
   stepStory(g, dt, f.hold);
+  if (g.breaker.doorState === "opening") {
+    g.breaker.door = Math.min(1, g.breaker.door + dt / 1.4);
+    if (g.breaker.door >= 1) g.breaker.doorState = "open";
+  }
+  if (g.breaker.done) g.breaker.light = Math.min(1, g.breaker.light + dt / 0.6);
   if (g.shutter.state === "opening") {
     g.shutter.t += dt;
     g.shutter.open = Math.min(1, g.shutter.t / 1.6);
@@ -485,17 +592,19 @@ export function stepGame(g: Game, rawDt: number, f: FrameInput) {
 }
 
 function stepDetection(g: Game, dt: number) {
-  const watching = g.phase === "chase" || g.phase === "escape" || (g.phase === "surge" && g.phaseT > 5.6);
+  // 재가동 연출 중의 감시등은 이산을 겨눈다. 플레이어 탐지는 "뛰어!" 이후부터
+  const watching = g.phase === "chase" || g.phase === "escape";
   const e = exposureOf(g.lights, g.player);
   g.covered = e.covered && !e.exposed;
   const wasExposed = g.exposed;
   g.exposed = e.exposed && watching;
   for (const l of g.lights) {
+    if (!watching) break;
     if (l === e.by && g.exposed) {
       l.seen += dt;
       l.lostFor = 0;
-      // 0.35초 이상 머물면 감시등이 플레이어를 쫓기 시작한다
-      if (l.seen > 0.35) l.tracking = true;
+      // 0.35초 이상 머물면 감시등이 플레이어를 쫓기 시작한다 (재시작·추격 시작 직후의 유예 시간에는 쫓지 않는다)
+      if (l.seen > 0.35 && g.grace <= 0) l.tracking = true;
     } else {
       l.seen = 0;
       l.lostFor += dt;
@@ -550,6 +659,10 @@ export function retryFromCheckpoint(g: Game): Game {
   }
   g.phaseT = 0;
   g.san.lagFor = 0;
+  // 재시도는 첫 만남 이후의 체크포인트에서만 일어난다. 이산은 이미 동행 중이다
+  g.san.visible = true;
+  g.san.pose = "stand";
+  g.san.state = "run";
   const at = g.caughtAt;
   // 실패를 기억하는 듯한 대사는 단 한 번만
   if (!g.memoryLineUsed && at) {
@@ -585,10 +698,14 @@ export type Snapshot = {
 
 export function objectiveOf(g: Game): string {
   switch (g.phase) {
+    case "intro":
+      return "통로 문에 전원이 없다 · 가까운 전원 장치 복구";
+    case "meet":
+      return "통로 B-2 전원 복구됨";
     case "approach":
-      return g.shutter.state === "closed" ? "이산을 따라 골목 안쪽으로" : "셔터가 열리고 있다";
+      return g.shutter.state === "closed" ? "골목 안쪽 셔터로" : "셔터가 열리고 있다";
     case "relay":
-      return "두 번째 전력 장치 복구 (교차로 서쪽 벽)";
+      return "7구역 구역 전원 복구 · 큰길 차단문 전원 (교차로 서쪽 벽)";
     case "surge":
       return "……";
     case "chase":
@@ -596,7 +713,7 @@ export function objectiveOf(g: Game): string {
     case "escape":
       return "지하철 입구 계단으로";
     case "complete":
-      return "지하 진입";
+      return "지하 진입 · 현재 구현 구간 끝";
   }
 }
 
@@ -629,6 +746,8 @@ export function sameSnapshot(a: Snapshot, b: Snapshot) {
 /** 목표 표시(3D 비컨) 위치 */
 export function beaconOf(g: Game): V2 | null {
   switch (g.phase) {
+    case "intro":
+      return BREAKER;
     case "approach":
       return g.shutter.state === "closed" ? null : { x: 0, z: SHUTTER_Z };
     case "relay":
