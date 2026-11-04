@@ -165,7 +165,7 @@ export const BUNKER: ZoneDef = {
     { id: "face-std", kind: "face", pos: machinePoint(-0.58, 1, 0.55), radius: 3, color: "#ff5fb0", label: faceUi.applyStandard, when: () => faceRt.phase === "choice" },
     { id: "face-keep", kind: "face", pos: machinePoint(0.58, 1, 0.55), radius: 3, color: "#e8c27a", label: faceUi.keepOriginal, when: () => faceRt.phase === "choice" },
     // 퍼즐 B 기록 보관 장치: 장치 전체가 하나의 대상. 조작하면 봉인 격자(2D 조작판)로 다가간다
-    { id: "audit-machine", kind: "audit", pos: auditPoint(0, 1.3, 0.45), radius: 3.6, label: auditUi.machine, when: () => auditRt.phase === "ready" },
+    { id: "audit-machine", kind: "audit", pos: auditPoint(0, 1.3, 0.45), radius: 3.6, label: auditUi.machine, when: () => auditRt.phase === "ready" && auditRt.introSeen },
     { id: "audit-guarantor", kind: "audit", pos: v(GUARANTOR.pos[0], 1.2, GUARANTOR.pos[2]), radius: 2.6, color: "#ffd27a", label: { ko: "보증 장치", en: "Guarantor unit" }, when: () => auditRt.phase === "done" },
     // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
