@@ -449,8 +449,8 @@ export default function ExploreClient() {
 
   // 장치에 다가간다: 카메라가 봉인 격자로 다가가고 2D 조작판이 열린다 (이동·점프·조이스틱은 멈춘다)
   const openSeal = useCallback(() => {
-    if (auditRt.phase !== "ready") return;
-    if (!auditRef.current.intro) return startIntro();
+    // The reveal must play before the device can be opened; no premature 2D panel.
+    if (auditRt.phase !== "ready" || !auditRef.current.intro) return;
     toAuditPhase("focus");
     gaze.frozen = true;
     gaze.lookAt = sealPoint();
@@ -460,7 +460,7 @@ export default function ExploreClient() {
       toAuditPhase("puzzle");
       setPanel({ kind: "seal" });
     });
-  }, [startIntro, toAuditPhase, later]);
+  }, [toAuditPhase, later]);
   // 나가기: 확대가 풀리며 3D로 돌아간다. 진행은 저장되어 있어 다시 들어오면 그대로다
   const closeSeal = useCallback(() => {
     if (auditRt.phase !== "puzzle") return;
@@ -558,6 +558,20 @@ export default function ExploreClient() {
       });
     });
   }, [later, lineEvents, finishAuditFlow]);
+
+  // First B approach: start the world/story reveal at ~6m, well *before* the
+  // record machine's 3.6m interaction range. The button is not usable until
+  // this cutscene has finished. Reopening a completed intro skips this sequence.
+  useEffect(() => {
+    if (zone !== "bunker" || auditPhase !== "ready" || audit.intro || facePhase !== "done") return;
+    const watch = setInterval(() => {
+      if (!activeRef.current || gaze.frozen) return;
+      if (Math.hypot(AUDIT_MACHINE.pos[0] - player.pos.x, AUDIT_MACHINE.pos[2] - player.pos.z) <= 6) {
+        startIntro();
+      }
+    }, 180);
+    return () => clearInterval(watch);
+  }, [zone, auditPhase, audit.intro, facePhase, startIntro]);
 
   useEffect(() => () => faceTimers.current.forEach(clearTimeout), []);
 
@@ -706,9 +720,10 @@ export default function ExploreClient() {
         return;
       }
       const it = ZONES[zone].items.find((i) => i.id === id);
-      if (!it) return;
+      if (!it || (it.when && !it.when())) return;
       const d = Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z);
-      if (d > (it.kind === "audit" || it.kind === "face" ? 4.6 : 10)) return;
+      const touchReach = it.radius + (it.kind === "npc" ? 2 : it.kind === "statue" ? 1.5 : 0.8);
+      if (d > touchReach) return;
       interact(it);
     },
     [touch, panel, intro, fade, ending, paused, zone, interact, faceEnd, turnDrum]
