@@ -182,13 +182,27 @@ test("every puzzle B line has a unique b.* id, a known speaker, both languages a
   }
   assert.deepEqual(auditScenes.san.map((l) => l.ko), ["……내가 거부했었구나.", "그런데 난 왜 아직 여기 있는 거지?"]);
   assert.equal(auditScenes.guarantor[0].ko, "보증인 등록이 필요합니다.");
+  assert.equal(auditScenes.forced[0].speaker, "city");
+  assert.match(auditScenes.forced[0].ko, /거부.*동의.*정정/);
+  assert.match(sealUi.forcedRewrite.ko, /강제 정정/);
+  assert.match(sealUi.discrepancy.ko, /거부.*동의/);
+  assert.match(auditUi.endBody.ko, /강제로/);
 });
 
 test("the intro tells why and what (official 'accept', San doesn't remember, the original is sealed) without giving away 'reject'", () => {
   const intro = [...auditScenes.official, ...auditScenes.ask, ...auditScenes.sealed];
   assert.deepEqual(intro.map((l) => l.ko), ["공식 기록 · 14:02:01 — 모두 동의", "……내가 동의했다고?", "마지막 순간이 기억나지 않아. 원본을 확인해 줘.", "원본 입력 기록 — 봉인됨"]);
   // 퍼즐을 풀기 전에 보이는 글 어디에도 정답이 없다
-  const before = [...intro.flatMap((l) => [l.ko, l.en]), ...Object.values(sealUi).flatMap((l) => [l.ko, l.en]).filter((x) => x !== sealUi.reading.ko), auditUi.sealedSign.ko, auditUi.sealedSign.en, auditUi.quest.ko, auditUi.machine.ko];
+  // 성공 화면에서만 보여 주는 '거부 -> 도시의 강제 정정 -> 동의'는
+  // 도입 중에 노출되면 안 된다. 실제 퍼즐 시작 전에 렌더되는 문구만 검사한다.
+  const beforeUi = [sealUi.title, sealUi.goal, sealUi.undo, sealUi.reset, sealUi.exit, sealUi.cassette, sealUi.reading];
+  const before = [
+    ...intro.flatMap((l) => [l.ko, l.en]),
+    ...beforeUi.flatMap((l) => [l.ko, l.en]),
+    auditUi.correctionStatus.ko, auditUi.correctionStatus.en,
+    auditUi.sealedSign.ko, auditUi.sealedSign.en,
+    auditUi.quest.ko, auditUi.machine.ko,
+  ];
   for (const text of before) assert.ok(!/거부|REJECT/i.test(text), text);
   // 길이: 대사만 약 10초, 카메라 전환 포함 12초 남짓
   const ms = intro.reduce((t, l) => t + l.ms, 0);
