@@ -216,7 +216,7 @@ export default function ExploreV2Client() {
       if (s.phase === "investigating") {
         observe("child");
         show(named.kid, [
-          say("아까 네 얼굴을 그렸어. 근데 저장하고 나니까 빈 종이가 됐어.", "I drew your face earlier. But after saving it, the file turned blank."),
+          say("네 얼굴을 그려 봤는데, 저장하자마자 빈 종이가 됐어.", "I tried drawing you, but the file went blank the moment I saved it."),
           say("그림은 여기 있는데, 기계는 처음부터 없었대.", "The drawing's here. The machine says it never existed."),
           say("내가 기억하는 게 틀린 걸까?", "Am I remembering it wrong?"),
         ]);
@@ -244,8 +244,8 @@ export default function ExploreV2Client() {
     if (it.id === "monk") {
       if (!s.memories.monkClue) rememberFlag("monkClue");
       show(named.monk, [
-        say("만든 자와 만들어진 자는 서로를 닮아도 같은 사람은 아니지.", "The maker and the made may resemble each other, but they are not the same."),
-        say("그대는 누군가의 세계를 지운 적이 있는가?", "Have you ever erased someone's world?"),
+        say("여기엔 오래전부터 비어 있는 자리가 하나 있어.", "There has always been an empty seat here."),
+        say("이름표를 떼도 그 자리가 비었다는 사실까지 없어지는 건 아니지.", "Taking away the nameplate doesn't make the empty seat disappear."),
       ]);
       return;
     }
