@@ -1,29 +1,61 @@
 import { useSyncExternalStore } from "react";
 
-// 화면 효과 단계. 프레임이 떨어지면 PerformanceMonitor가 한 단계씩 낮춘다.
-// high: 빛 번짐 + 젖은 도로 반사 / mid: 빛 번짐만 / low: 효과 없음
+// DELETE SEOUL's highest cost is full-screen postprocessing + planar road
+// reflections on HiDPI screens. Retina MacBooks can run the *scene* smoothly,
+// but defaulting them to GPU-heavy effects causes severe stalls and throttling.
 export type Quality = "high" | "mid" | "low";
 
 const ORDER: Quality[] = ["low", "mid", "high"];
-// 비교·테스트용: 주소에 ?fx=high 를 붙이면 단계 고정, ?fx=off 는 효과 끔
+export const GRAPHICS_KEY = "sanlee-graphics-quality-v1";
 const forced: Quality | null = (() => {
-  if (typeof location === "undefined") return null;
-  const v = new URLSearchParams(location.search).get("fx");
+  if (typeof window === "undefined") return null;
+  const v = new URLSearchParams(window.location.search).get("fx");
   return v === "high" || v === "mid" ? v : v === "off" ? "low" : null;
 })();
-let current: Quality = forced ?? "high";
+
+export function recommendedQuality(): Quality {
+  if (typeof window === "undefined") return "low";
+  // GPU-safe initial preset. It is pixel count, not 16 GB of system memory,
+  // that makes a Retina laptop particularly expensive to postprocess.
+  return window.devicePixelRatio >= 1.6 ? "low" : "mid";
+}
+
+function initialQuality(): Quality {
+  if (forced) return forced;
+  if (typeof window === "undefined") return "low";
+  try {
+    const stored = window.localStorage.getItem(GRAPHICS_KEY);
+    if (stored === "high" || stored === "mid" || stored === "low") return stored;
+  } catch {}
+  return recommendedQuality();
+}
+
+let current: Quality = initialQuality();
 const subs = new Set<() => void>();
 
-export function setQuality(q: Quality) {
+function emit(q: Quality) {
   if (q === current) return;
   current = q;
   subs.forEach((f) => f());
 }
 
+export function setQuality(q: Quality) {
+  if (forced) return;
+  emit(q);
+}
+
+// A user-selected preset is remembered across visits; automatic FPS fallback
+// deliberately does NOT overwrite the chosen preset.
+export function chooseQuality(q: Quality) {
+  if (forced) return;
+  try { window.localStorage.setItem(GRAPHICS_KEY, q); } catch {}
+  emit(q);
+}
+
 export function lowerQuality() {
   if (forced) return;
   const i = ORDER.indexOf(current);
-  if (i > 0) setQuality(ORDER[i - 1]);
+  if (i > 0) emit(ORDER[i - 1]);
 }
 
 export function useQuality() {
@@ -33,8 +65,7 @@ export function useQuality() {
       return () => subs.delete(f);
     },
     () => current,
-    () => "high" as Quality
+    () => "low" as Quality
   );
 }
-
 export const isForced = () => forced !== null;

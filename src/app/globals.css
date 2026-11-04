@@ -1309,3 +1309,11 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 @media (prefers-reduced-motion: reduce) {
   .interaction-guide { transition: none; }
 }
+
+/* Lightweight graphics selector: three compact touch targets, no overlapping
+   text on narrow phones. It intentionally reuses the pause menu's switch style. */
+.pause-row.graphics-row { grid-template-columns: 1fr; }
+.graphics-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.pause .graphics-options .switch { min-width: 0; min-height: 38px; padding: 6px 4px; word-break: keep-all; white-space: normal; }
+.pause .graphics-options .switch:disabled { cursor: not-allowed; opacity: .5; }
+@media (max-width: 360px) { .pause .graphics-options .switch { font-size: 10px; padding: 6px 2px; } }

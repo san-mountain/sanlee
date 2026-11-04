@@ -4,7 +4,7 @@ import { PerformanceMonitor } from "@react-three/drei";
 import { useThree } from "@react-three/fiber";
 import { Bloom, EffectComposer, Noise, ToneMapping, Vignette } from "@react-three/postprocessing";
 import { BlendFunction, KernelSize, ToneMappingMode, type BloomEffect } from "postprocessing";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import * as THREE from "three";
 import { isForced, lowerQuality, useQuality } from "./quality";
 
@@ -26,6 +26,12 @@ gl_FragColor = vec4( outgoingLight, diffuseColor.a );`
 export default function Effects() {
   const q = useQuality();
   const setDpr = useThree((s) => s.setDpr);
+  useEffect(() => {
+    // HiDPI 2x renders four times as many pixels before any bloom/reflection pass.
+    // Bound the *actual* device pixel ratio instead of Canvas's former [1, 1.75].
+    const limit = q === "high" ? 1.5 : q === "mid" ? 1.25 : 1.1;
+    setDpr(Math.min(window.devicePixelRatio || 1, limit));
+  }, [q, setDpr]);
   // 빛 번짐이 읽는 첫 단계에서 Inf/NaN 픽셀을 걸러낸다. 한 픽셀이라도 새면 흐림 단계에서 화면 전체가 까맣게 된다.
   const bloomRef = useCallback((b: BloomEffect | null) => {
     const m = b?.luminanceMaterial;
@@ -42,15 +48,14 @@ export default function Effects() {
         flipflops={2}
         onDecline={() => {
           if (isForced()) return;
-          setDpr(1);
           lowerQuality();
         }}
       />
       {q !== "low" && (
-        <EffectComposer multisampling={q === "high" ? 4 : 0}>
-          <Bloom ref={bloomRef} mipmapBlur luminanceThreshold={0.5} luminanceSmoothing={0.1} intensity={0.7} radius={0.3} kernelSize={KernelSize.MEDIUM} />
-          <Vignette offset={0.3} darkness={0.62} />
-          <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.18} />
+        <EffectComposer multisampling={0}>
+          <Bloom ref={bloomRef} mipmapBlur luminanceThreshold={0.6} luminanceSmoothing={0.12} intensity={q === "mid" ? 0.35 : 0.65} radius={0.3} kernelSize={KernelSize.MEDIUM} />
+          <Vignette offset={0.3} darkness={0.6} />
+          {q === "high" && <Noise premultiply blendFunction={BlendFunction.SOFT_LIGHT} opacity={0.12} />}
           <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
         </EffectComposer>
       )}
