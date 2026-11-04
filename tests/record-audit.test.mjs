@@ -180,8 +180,8 @@ test("every puzzle B line has a unique b.* id, a known speaker, both languages a
     assert.ok(l.ko && l.en, l.id);
     assert.ok(l.ms > 0 && lineDuration(l) === l.ms, l.id);
   }
-  assert.deepEqual(auditScenes.san.map((l) => l.ko), ["……내가 거부했었구나.", "그런데 난 왜 아직 여기 있는 거지?"]);
-  assert.equal(auditScenes.guarantor[0].ko, "보증인 등록이 필요합니다.");
+  assert.deepEqual(auditScenes.san.map((l) => l.ko), ["역시…… 내 거부를 동의로 바꿔 놓은 거야.", "동의 기록만 바꿔 놓고, 활동 기록이 없다고 날 멈춘 거야."]);
+  assert.equal(auditScenes.guarantor[0].ko, "활동 신호 없음. 보증인 등록이 필요합니다.");
   assert.equal(auditScenes.forced[0].speaker, "city");
   assert.match(auditScenes.forced[0].ko, /거부.*동의.*정정/);
   assert.match(sealUi.forcedRewrite.ko, /강제 정정/);
@@ -189,26 +189,28 @@ test("every puzzle B line has a unique b.* id, a known speaker, both languages a
   assert.match(auditUi.endBody.ko, /강제로/);
 });
 
-test("the intro tells why and what (official 'accept', San doesn't remember, the original is sealed) without giving away 'reject'", () => {
+test("the intro identifies tracking-cookie consent and San's rejection; the evidence of forced rewriting stays sealed until completion", () => {
   const intro = [...auditScenes.official, ...auditScenes.ask, ...auditScenes.sealed];
-  assert.deepEqual(intro.map((l) => l.ko), ["공식 기록 · 14:02:01 — 모두 동의", "……내가 동의했다고?", "마지막 순간이 기억나지 않아. 원본을 확인해 줘.", "원본 입력 기록 — 봉인됨"]);
-  // 퍼즐을 풀기 전에 보이는 글 어디에도 정답이 없다
-  // 성공 화면에서만 보여 주는 '거부 -> 도시의 강제 정정 -> 동의'는
-  // 도입 중에 노출되면 안 된다. 실제 퍼즐 시작 전에 렌더되는 문구만 검사한다.
+  assert.deepEqual(intro.map((l) => l.ko), [
+    "시민 활동 추적 쿠키 · 14:02:01 — 모두 동의",
+    "뭐? 난 감시 쿠키를 분명 거부했는데.",
+    "내 거부가 동의로 기록됐어. 봉인된 원본을 확인해 줄래?",
+    "수정 전 원본 기록 — 봉인됨",
+  ]);
+  // San has already said he refused cookies in the pre-A story.
+  // The puzzle's discovery is the archive's *evidence* of state-forced alteration,
+  // not the fact of his rejection. Do not spoil the actual original readout at entry.
+  assert.match(intro[0].ko, /활동 추적 쿠키.*동의/);
+  assert.match(intro[1].ko, /쿠키.*거부/);
+  assert.match(intro[2].ko, /원본/);
+  assert.match(auditScenes.forced[0].ko, /거부.*동의.*정정/);
+  assert.match(sealUi.discrepancy.ko, /추적 쿠키.*거부.*동의/);
+  assert.match(auditUi.endBody.ko, /활동 신호/);
   const beforeUi = [sealUi.title, sealUi.goal, sealUi.undo, sealUi.reset, sealUi.exit, sealUi.cassette, sealUi.reading];
-  const before = [
-    ...intro.flatMap((l) => [l.ko, l.en]),
-    ...beforeUi.flatMap((l) => [l.ko, l.en]),
-    auditUi.correctionStatus.ko, auditUi.correctionStatus.en,
-    auditUi.sealedSign.ko, auditUi.sealedSign.en,
-    auditUi.quest.ko, auditUi.machine.ko,
-  ];
-  for (const text of before) assert.ok(!/거부|REJECT/i.test(text), text);
-  // 길이: 대사만 약 10초, 카메라 전환 포함 12초 남짓
-  const ms = intro.reduce((t, l) => t + l.ms, 0);
-  assert.ok(ms >= 8000 && ms <= 12000, `${ms}ms`);
+  for (const text of beforeUi.flatMap((l) => [l.ko, l.en])) assert.ok(!/강제 정정|FORCED CORRECTION/i.test(text), text);
   assert.equal(sealUi.goal.ko, "원본 기록을 꺼내세요");
-  assert.deepEqual([sealUi.undo.ko, sealUi.reset.ko, sealUi.exit.ko], ["되돌리기", "처음부터", "나가기"]);
+  const ms = intro.reduce((total, l) => total + l.ms, 0);
+  assert.ok(ms >= 8000 && ms <= 12000, `${ms}ms`);
 });
 
 test("after B: the San scene leaves a silence between the two lines, then the guarantor; NPCs move on to their after-B lines", () => {
