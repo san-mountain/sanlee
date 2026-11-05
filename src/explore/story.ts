@@ -28,13 +28,13 @@ export const ui = {
     },
     // QR 코드로 곧장 들어온 방문자도 이곳이 웹사이트의 일부라는 것을 처음부터 알도록
     {
-      ko: "이 게임은 2026년의 작가 이산의 포트폴리오 웹사이트 안에 있습니다. 방공호의 터미널에는 그 웹사이트의 소개, 작업, 글이 옮겨져 있습니다.",
-      en: "This game lives inside the portfolio website of the artist San Lee, made in 2026. The shelter's terminals hold that website's introduction, works and writing.",
+      ko: "이 게임은 이산의 개인 웹사이트 안에 있습니다. 방공호의 터미널에는 그 웹사이트의 소개, 작업, 글이 옮겨져 있습니다.",
+      en: "This game lives inside San Lee's personal website. The shelter's terminals hold that website's introduction, works and writing.",
     },
   ] as L[],
   start: { ko: "방공호로 들어가기", en: "Enter the shelter" },
   // 터미널 기록 패널 머리: 이 내용이 게임 밖 웹사이트의 실제 페이지라는 표시
-  recordSource: { ko: "2026 · 이산의 웹사이트에서 옮겨 온 기록", en: "2026 · carried over from San Lee's website" },
+  recordSource: { ko: "2026 · 이산의 개인 웹사이트에서 옮겨 온 기록", en: "2026 · carried over from San Lee's personal website" },
   goBack: { ko: "웹사이트로 돌아가기", en: "Back to the website" },
   hintPc: { ko: "화면을 클릭하면 마우스로 둘러볼 수 있습니다.", en: "Click the screen to look around with the mouse." },
   hintLocked: { ko: "WASD 이동 · Shift 달리기 전환 · Space 점프 · E/클릭 상호작용 · Esc 일시정지", en: "WASD move · Shift toggle run · Space jump · E/click interact · Esc pause" },
@@ -240,9 +240,11 @@ export const statueLines: L[][] = [
   ],
   [
     { ko: "……움직인다. 고마워.", en: "……I can move. Thank you." },
+    // 되찾은 얼굴에 대한 의구심 (표준 미소를 골랐든 원본을 지켰든 같은 말)
+    { ko: "얼굴이 돌아왔는데, 이상하게 낯설어. 장치는 ‘원본’이라고 했지만… 그 원본은 누구 얼굴일까.", en: "My face is back, but it feels strangely unfamiliar. The machine called it 'original'… but whose face was the original?" },
     { ko: "저 그림, 내가 그렸던 게 기억나. 그런데 옆에 적힌 연도는 2026년이네.", en: "That painting. I remember painting it. But the year written beside it is 2026." },
     // 방공호를 나서는 동기: 데이터 이산의 존재에 대한 회의 → 쿠키를 거부한 진짜 이유 → 기록이 아닌 경험 하나
-    { ko: "내가 아는 건 전부 그 사람의 기록이야. 그림도, 글도. 난 그걸 읽고 있을 뿐인지도 몰라.", en: "Everything I know is that person's record. The paintings, the writing. Maybe I'm only reading them." },
+    { ko: "내가 아는 건 전부 그 사람의 기록이야. 얼굴도, 그림도, 글도. 난 그걸 읽고 있을 뿐인지도 몰라.", en: "Everything I know is that person's record. The face, the paintings, the writing. Maybe I'm only reading them." },
     { ko: "처음엔 위치가 기록되는 게 싫은 줄 알았어. 그런데 사실은, 도시가 날 적을수록 나도 그냥 기록이 되어 버리는 것 같았어.", en: "At first I thought I just didn't want my location recorded. But really, the more the city wrote me down, the more I felt like I was becoming nothing but a record." },
     { ko: "그래서 모든 쿠키를 거부했어. 그랬더니 이렇게 멈춰 버렸지만.", en: "So I rejected every cookie. And then I stopped, like this." },
     { ko: "남쪽 망원경으로는 구름 아래가 보일 때도 있대. 바깥은 위험하지만, 남한테 들은 얘기 말고 내 눈으로 보고 싶어.", en: "They say you can sometimes see below the clouds from the south scope. It's dangerous out there, but I want to see it with my own eyes, not hear it from someone else." },
@@ -295,16 +297,16 @@ export const scopeScene = {
 // 망원경 가는 길의 짧은 만남. 가까이 지나가면 한 번, 자막으로 (긴 이야기는 말을 걸면 대화창으로)
 export const encounters: Record<"grandma" | "courier" | "edgekid", { who: "san" | "npc"; ko: string; en: string }[]> = {
   grandma: [
-    { who: "san", ko: "할머니는 구름 아래를 본 적 있어요?", en: "Have you ever seen below the clouds?" },
-    { who: "npc", ko: "어릴 땐 봤지. 요즘은 온통 구름이야. 남쪽 전망대에 가 봐. 가끔 구름이 걷힌다더라.", en: "When I was little. These days it's all cloud. Go to the south lookout. They say it clears sometimes." },
+    { who: "san", ko: "할머니, 구름 아래를 본 적 있어요?", en: "Grandma, have you ever seen below the clouds?" },
+    { who: "npc", ko: "보기만 했겠어, 거기서 살았지. 요샌 남쪽 전망대에서나 가끔 보인다더라.", en: "Seen it? I lived there. These days, they say you only catch a glimpse from the south lookout." },
   ],
   courier: [
-    { who: "npc", ko: "경로를 찾을 수 없습니다. 지도에 없는 길입니다.", en: "Route not found. This path is not on the map." },
-    { who: "san", ko: "아직도 배송 중이라고 뜨네.", en: "It still says 'delivering'." },
+    { who: "npc", ko: "경로를 찾을 수 없습니다. 현재 위치가 지도에 없습니다.", en: "Route not found. Current location is not on the map." },
+    { who: "san", ko: "화면엔 아직 ‘배송 중’이라고 떠 있네.", en: "Its screen still says 'delivering'." },
   ],
   edgekid: [
-    { who: "npc", ko: "저 구름 아래에도 도시가 있어요?", en: "Is there a city under those clouds too?" },
-    { who: "san", ko: "나도 몰라. 그래서 보러 왔어.", en: "I don't know either. That's why I came to look." },
+    { who: "npc", ko: "저 구름 아래에도 동네가 있어요?", en: "Is there a town under those clouds too?" },
+    { who: "san", ko: "나도 몰라. 그래서 직접 보러 가는 길이야.", en: "I don't know either. That's why I'm going to see for myself." },
   ],
 };
 
@@ -506,9 +508,9 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
   vendor: {
     name: { ko: "우산 장수", en: "Umbrella seller" },
     lines: [
-      { ko: "우산 보고 가. 구름 위에 살아도 비는 맞네.", en: "Take a look at the umbrellas. Even above the clouds, we still get rained on." },
-      { ko: "다들 젖은 줄도 모르고 줄만 서 있어.", en: "Everyone just stands in line, not even noticing they're wet." },
-      { ko: "넌 아직 비를 피하려고 하는구나.", en: "You still try to keep out of the rain, I see." },
+      { ko: "우산 하나 보고 가. 구름 위에 살아도 비는 맞더라.", en: "Have a look at the umbrellas. Even above the clouds, the rain still finds you." },
+      { ko: "다들 젖는 줄도 모르고 줄만 서 있어.", en: "Everyone just stands in line, never noticing they're getting soaked." },
+      { ko: "그래도 넌 비를 피하려고 하네. 그거면 됐어.", en: "But you still try to keep out of the rain. That's enough." },
     ],
   },
   whisper: {
@@ -560,32 +562,36 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
   grandma: {
     name: { ko: "포장마차 할머니", en: "Street-stall grandmother" },
     lines: [
-      { ko: "추우면 여기서 쉬어 가. 국물 좀 줄까?", en: "If you're cold, rest here. Want some broth?" },
-      { ko: "이 동네도 원래 땅에 있었어. 구름 위가 더 깨끗하다며 통째로 들어 올렸지. 방공호까지 딸려 왔고.", en: "This neighbourhood used to be on the ground. They lifted the whole thing, saying it's cleaner above the clouds. The shelter came along too." },
-      { ko: "아래에 아직 사람들이 산다는 얘긴 있어. 내 눈으로 확인한 건 아니지만.", en: "There's talk that people still live down below. I haven't seen it with my own eyes, though." },
+      { ko: "추운데 잠깐 앉았다 가. 국물 한 그릇 떠 줄게.", en: "It's cold. Sit a while. I'll ladle you some broth." },
+      { ko: "이 동네도 원래는 땅에 붙어 있었어. 구름 위가 깨끗하다고 통째로 들어 올렸지. 그 바람에 방공호까지 딸려 왔고.", en: "This neighbourhood used to sit on the ground. They lifted the whole thing because it's cleaner above the clouds. The shelter came up with it." },
+      { ko: "그 뒤로 아래 소식은 뚝 끊겼어. 아직 사람이 산다는 말도 있는데, 가서 본 사람은 없어.", en: "Since then, no word from below. Some say people still live there, but nobody's gone to see." },
+      { ko: "옛날 일은 가물가물해도 그때 먹던 국물 맛은 안 잊혀. 그런 건 어디 적어 두지 않아도 남더라.", en: "I've forgotten most of those days, but not the taste of the broth back then. Some things stay without anyone writing them down." },
     ],
   },
   robomonk: {
     name: { ko: "로봇 스님", en: "Robot monk" },
     lines: [
-      { ko: "어서 오십시오. 오늘의 고민을 접수합니다.", en: "Welcome. Today's worries are now being received." },
-      { ko: "상담 내용은 시민 관리에 활용됩니다. 삭제는 지원하지 않습니다.", en: "Consultations are used for citizen management. Deletion is not supported." },
-      { ko: "…이상합니다. 종을 치려는데 자꾸 손이 멈춥니다. 오류는 없다고 나옵니다.", en: "…Strange. When I go to strike the bell, my hand keeps stopping. It reports no error." },
+      { ko: "어서 오십시오. 오늘의 번뇌를 접수하겠습니다.", en: "Welcome. I will now receive today's troubles." },
+      { ko: "상담 내용은 시민 관리 자료로 활용됩니다. 삭제는 지원하지 않습니다.", en: "Consultations are kept as citizen-management data. Deletion is not supported." },
+      { ko: "…이상합니다. 종을 치려 할 때마다 팔이 멈춥니다. 진단 결과는 ‘이상 없음’입니다.", en: "…Strange. Each time I go to strike the bell, my arm stops. Diagnostics report 'no fault'." },
+      { ko: "어쩌면 이 종소리만큼은 기록되지 않기를 바라는지도 모르겠습니다. 누가 바라는 건지는 저도 모르지만요.", en: "Perhaps something wishes this one sound would go unrecorded. Though I don't know who is doing the wishing." },
     ],
   },
   edgekid: {
     name: { ko: "난간의 아이", en: "Child at the railing" },
     lines: [
-      { ko: "구름 아래에도 사람들이 살까요? 엄마는 내려가면 위험하대요.", en: "Do people live under the clouds too? Mum says it's dangerous to go down." },
-      { ko: "여기서 보면 아무것도 안 보여요. 저 망원경으로는 보일까요?", en: "You can't see anything from here. Could you see it through that scope?" },
+      { ko: "구름 아래에도 사람이 살까요? 엄마는 내려가면 위험하대요.", en: "Do people live under the clouds too? Mum says it's dangerous down there." },
+      { ko: "여기서는 아무리 봐도 하얗기만 해요. 저 끝에 있는 망원경으로 보면 보일까요?", en: "From here it's just white, no matter how long I look. Could you see through the scope at the end there?" },
+      { ko: "보고 오면 저한테도 알려 주세요. 엄마한텐 비밀이에요.", en: "If you see it, come and tell me. Don't tell Mum." },
     ],
   },
   courier: {
     name: { ko: "배달 로봇 D-12", en: "Courier bot D-12" },
     lines: [
-      { ko: "경로를 찾을 수 없습니다. 지도에 없는 길입니다.", en: "Route not found. This path is not on the map." },
-      { ko: "배달은 멈췄는데, 화면에는 계속 배송 중이라고 나옵니다.", en: "My delivery has stopped, but my screen still says 'delivering'." },
-      { ko: "조금만 쉬겠습니다. 어차피 늦었습니다.", en: "I'll rest a little. I'm late anyway." },
+      { ko: "경로를 찾을 수 없습니다. 현재 위치가 지도에 없습니다.", en: "Route not found. Current location is not on the map." },
+      { ko: "배송은 이미 오래전에 중단되었습니다. 그런데 상태 표시는 여전히 ‘배송 중’입니다.", en: "The delivery was halted long ago. My status still reads 'delivering'." },
+      { ko: "기록을 고칠 권한이 없습니다. 그래서 기록상 저는 아직 달리는 중입니다.", en: "I have no permission to edit the record. So on record, I am still on the move." },
+      { ko: "이 처마 밑에는 드론의 빛이 닿지 않습니다. 쉬었다 가셔도 됩니다.", en: "The drones' light doesn't reach under these eaves. You may rest here." },
     ],
   },
   // 망원경은 말하지 않는다: 보이는 것만 지문으로
