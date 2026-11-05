@@ -11,7 +11,7 @@ import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
 import { MUSIC_URL, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
-import { AVENUE_EDGE_Z, BAY, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
+import { AVENUE_EDGE_Z, BAY, EDGE, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
 import { sanHold, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -25,7 +25,6 @@ import { autoWalk, gaze, resetGaze, route, stopWalk, walkArea, walkPath, type Re
 import { drone, laneClear, presetSweep, resetDrones } from "./Drones";
 import DroneHUD from "./DroneHUD";
 import ScopeView from "./ScopeView";
-import RouteSketch from "./RouteSketch";
 import { coverState, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
@@ -709,10 +708,9 @@ export default function ExploreClient() {
           if (it.id === "frozen-san") {
             setPanel({
               kind: "dialog",
-              name: plaque[0],
+              name: replayUi.name,
               lines: replayUi.frozen,
               step: 0,
-              plaque: true,
               choices: [
                 { at: 0, label: replayUi.thaw, go: () => thawRef.current() },
                 { at: 0, label: replayUi.leave, go: () => closePanelRef.current() },
@@ -1339,7 +1337,8 @@ export default function ExploreClient() {
         return;
       }
       const backing = ph === "descent" && routeRef.current.list === BACK;
-      const want: RoutePt[] | null = ghostRef.current ? null : ph === "scope" ? OUT : backing ? BACK : null;
+      // 망원경 가는 길에서는 경유점마다 멈춰 기다리지 않고 방문자 바로 뒤에서 따라온다 (사용자 요청)
+      const want: RoutePt[] | null = ghostRef.current ? null : backing ? BACK : null;
       if (routeRef.current.list !== want) resetRoute(want);
       const run = routeRef.current;
       const list = run.list;
@@ -1440,13 +1439,8 @@ export default function ExploreClient() {
       if (ph === "scope" && withSan && !c.plaza && Math.abs(px - OUT[0].x) < 2.2 && pz > OUT[0].z - 1.6 && pz < AVENUE_EDGE_Z + 2) {
         c.plaza = true;
         presetSweep(0, 1.6);
-        gaze.lookAt = { x: SCOPE_POS[0], y: 1.2, z: SCOPE_POS[2] };
-        clearTimeout(frameTimer.current);
-        // 허공 너머 망원경을 잠깐 바라본 뒤 길 안내 팝업 (이산의 말이 아니라 대자비 소개 같은 안내 창)
-        frameTimer.current = setTimeout(() => {
-          gaze.lookAt = null;
-          if (!panelRef.current && !endingRef.current) setPanel({ kind: "route" });
-        }, 2600);
+        // 길 안내 팝업 (시야는 붙잡지 않는다. 이산의 말이 아니라 대자비 소개 같은 안내 창)
+        if (!panelRef.current && !endingRef.current) setPanel({ kind: "route" });
       }
       if (ph === "scope" && withSan && !c.shelter && underRoof(px, pz)) {
         c.shelter = true;
@@ -1681,6 +1675,7 @@ export default function ExploreClient() {
 
   // 퀘스트 화살표의 목표: 매 프레임 플레이어 위치에 따라 고른다
   const questRef = useRef<() => QuestTarget>(() => null);
+  const neonReached = useRef(false);
   questRef.current = () => {
     if (ending) return null;
     // 줄에서 다시 시작했다면: 검문소 앞의 굳은 이산에게
@@ -1733,10 +1728,17 @@ export default function ExploreClient() {
       const nh = nextHold(list, nearestHold(list, px, pz).k);
       return nh >= 0 ? { pos: list[nh], label: t(label) } : null;
     };
+    // 망원경 가는 길: 먼저 바닥 네온이 시작되는 처마 밑을 가리키고, 거기서부터는 바깥 다리 입구를,
+    // 다리(판 가장자리 바깥의 산책로·남쪽 다리)에 들어선 순간부터는 망원경을 곧장 가리킨다
     if (phase === "scope") {
       const sc = find("scope-0");
-      if (inBay(px, pz) || !sc) return sc ? { pos: sc.pos, label: t(quest.scope) } : null;
-      return along(OUT, quest.scope);
+      if (!sc) return null;
+      const onBridge = px < -EDGE.x || pz > EDGE.z1;
+      if (onBridge || inBay(px, pz)) return { pos: sc.pos, label: t(quest.scope) };
+      const start = OUT[OUT_HOLD.depot];
+      if (Math.hypot(px - start.x, pz - start.z) < 3) neonReached.current = true;
+      const p = neonReached.current ? OUT[OUT_HOLD.depot + 2] : start;
+      return { pos: { x: p.x, z: p.z }, label: t(quest.scope) };
     }
     // 기억으로 깨어난 둘: 방문자가 앞장서 검문소로
     if (ghost) {
@@ -2052,21 +2054,21 @@ export default function ExploreClient() {
         </div>
       )}
 
-      {/* 골목을 나설 때: 망원경 가는 길 안내 (네온 길 약도) */}
+      {/* 골목을 나설 때: 망원경 가는 길 안내 (실제 플레이 화면 두 장) */}
       {panel?.kind === "route" && (
         <div className="choice-wrap jabi-wrap">
           <div className="jabi-intro route-intro" role="dialog" aria-modal="true" aria-labelledby="route-intro-title">
             <h2 id="route-intro-title">{t(routeUi.title)}</h2>
             <p>{t(routeUi.body)}</p>
-            <figure className="route-sketch">
-              <RouteSketch lang={lang} />
-              <figcaption>{t(routeUi.caption)}</figcaption>
-            </figure>
-            <ol className="jabi-rules">
-              {routeUi.rules.map((r, i) => (
-                <li key={i}>{t(r)}</li>
+            <div className="jabi-shots">
+              {routeUi.shots.map((sh) => (
+                <figure key={sh.src}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={sh.src} alt={t(sh.cap)} width={480} height={360} />
+                  <figcaption>{t(sh.cap)}</figcaption>
+                </figure>
               ))}
-            </ol>
+            </div>
             <div className="panel-actions">
               <button className="btn primary" autoFocus onClick={closePanel}>
                 {t(routeUi.ok)}

@@ -1017,15 +1017,13 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 }
 /* 팝업의 그림: 대자비 두 장면 / 망원경 가는 길 약도 */
 .jabi-shots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 4px; }
-.jabi-shots figure, .route-sketch { margin: 0; }
+.jabi-shots figure { margin: 0; }
 .jabi-shots img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid #ffc04055; }
-.jabi-shots figcaption, .route-sketch figcaption { margin-top: 5px; font-family: var(--mono); font-size: 11px; line-height: 1.4; color: #ffb36b; }
+.jabi-shots figcaption { margin-top: 5px; font-family: var(--mono); font-size: 11px; line-height: 1.4; color: #ffb36b; }
 .route-intro { border-color: #3ff0ff77; }
 .route-intro h2 { color: #8ff8ff; }
-.route-intro .jabi-rules li::marker { color: #3ff0ff; }
-.route-sketch { margin: 12px 0 4px; }
-.route-sketch svg { display: block; width: 100%; height: auto; border: 1px solid #3ff0ff44; background: #05060c; }
-.route-sketch figcaption { color: #8ff8ff; }
+.route-intro .jabi-shots img { border-color: #3ff0ff55; }
+.route-intro .jabi-shots figcaption { color: #8ff8ff; }
 
 /* 시·일기 본문: 모바일에서 본문 폭을 조금 넓힌다.
    글자 크기는 PC와 같은 17px을 유지하고, 모바일에서는 왼쪽 들여쓰기만 없앤다.

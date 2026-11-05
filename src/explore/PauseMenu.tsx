@@ -160,14 +160,6 @@ export default function PauseMenu({
             </button>
           </div>
 
-          {/* 기록 삭제는 여기서 하지 않는다: 안내만 한다 (실제 삭제는 웹사이트 꼬리말의 delete seoul) */}
-          <div className="pause-row">
-            <span>{t(pause.reset)}</span>
-            <button type="button" className="switch" aria-label={t(pause.reset)} onClick={() => say(t(pause.resetNote))}>
-              ⓘ
-            </button>
-          </div>
-
           {onRestart && (
             <div className="pause-row">
               <span>{ask ? t(pause.restartAsk) : t(pause.restart)}</span>

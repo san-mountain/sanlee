@@ -141,8 +141,6 @@ export const pause = {
   cookies: { ko: "쿠키 설정", en: "Cookie settings" },
   cookiesNo: { ko: "이 설정은 검문소에서 변경할 수 있습니다.", en: "This setting can be changed at the checkpoint." },
   // 정보 항목: 여기서는 아무것도 지우지 않는다
-  reset: { ko: "기록 삭제 안내", en: "About deleting records" },
-  resetNote: { ko: "이 메뉴에서는 기록을 지울 수 없습니다. 웹사이트로 돌아가 맨 아래의 delete seoul을 이용하세요.", en: "Records can't be deleted from this menu. Go back to the website and use delete seoul at the very bottom." },
   // 수락 결말 뒤 줄에서 빠져나오는 길 (진행을 실제로 처음으로 되돌린다. 숨은 길은 열리지 않는다)
   restart: { ko: "처음부터 다시", en: "Start over" },
   restartAsk: { ko: "진행 상황이 처음으로 돌아갑니다. 계속하시겠습니까?", en: "Your progress will go back to the beginning. Continue?" },
@@ -301,8 +299,8 @@ export const encounters: Record<"grandma" | "courier" | "edgekid", { who: "san" 
     { who: "npc", ko: "보기만 했겠어, 거기서 살았지. 요샌 남쪽 전망대에서나 가끔 보인다더라.", en: "Seen it? I lived there. These days, they say you only catch a glimpse from the south lookout." },
   ],
   courier: [
-    { who: "npc", ko: "경로를 찾을 수 없습니다. 현재 위치가 지도에 없습니다.", en: "Route not found. Current location is not on the map." },
-    { who: "san", ko: "화면엔 아직 ‘배송 중’이라고 떠 있네.", en: "Its screen still says 'delivering'." },
+    { who: "npc", ko: "경로를 찾을 수 없습니다. 지도에 없는 길입니다.", en: "Route not found. This path is not on the map." },
+    { who: "san", ko: "아직도 배송 중이라고 뜨네.", en: "It still says 'delivering'." },
   ],
   edgekid: [
     { who: "npc", ko: "저 구름 아래에도 동네가 있어요?", en: "Is there a town under those clouds too?" },
@@ -582,16 +580,14 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
     lines: [
       { ko: "구름 아래에도 사람이 살까요? 엄마는 내려가면 위험하대요.", en: "Do people live under the clouds too? Mum says it's dangerous down there." },
       { ko: "여기서는 아무리 봐도 하얗기만 해요. 저 끝에 있는 망원경으로 보면 보일까요?", en: "From here it's just white, no matter how long I look. Could you see through the scope at the end there?" },
-      { ko: "보고 오면 저한테도 알려 주세요. 엄마한텐 비밀이에요.", en: "If you see it, come and tell me. Don't tell Mum." },
     ],
   },
   courier: {
     name: { ko: "배달 로봇 D-12", en: "Courier bot D-12" },
     lines: [
-      { ko: "경로를 찾을 수 없습니다. 현재 위치가 지도에 없습니다.", en: "Route not found. Current location is not on the map." },
-      { ko: "배송은 이미 오래전에 중단되었습니다. 그런데 상태 표시는 여전히 ‘배송 중’입니다.", en: "The delivery was halted long ago. My status still reads 'delivering'." },
-      { ko: "기록을 고칠 권한이 없습니다. 그래서 기록상 저는 아직 달리는 중입니다.", en: "I have no permission to edit the record. So on record, I am still on the move." },
-      { ko: "이 처마 밑에는 드론의 빛이 닿지 않습니다. 쉬었다 가셔도 됩니다.", en: "The drones' light doesn't reach under these eaves. You may rest here." },
+      { ko: "경로를 찾을 수 없습니다. 지도에 없는 길입니다.", en: "Route not found. This path is not on the map." },
+      { ko: "배달은 멈췄는데, 화면에는 계속 배송 중이라고 나옵니다.", en: "My delivery has stopped, but my screen still says 'delivering'." },
+      { ko: "조금만 쉬겠습니다. 어차피 늦었습니다.", en: "I'll rest a little. I'm late anyway." },
     ],
   },
   // 망원경은 말하지 않는다: 보이는 것만 지문으로
@@ -749,13 +745,12 @@ export const faceUi = {
 // 골목을 나서 광장에 처음 들어설 때 뜨는 망원경 길 안내 팝업 (대자비 소개와 같은 꼴)
 export const routeUi = {
   title: { ko: "드론을 피해 남쪽 망원경으로", en: "Reach the south scope, avoiding the drones" } as L,
-  body: { ko: "바닥의 푸른 네온을 따라가세요. 길 위를 드론 세 대가 훑습니다.", en: "Follow the blue neon on the ground. Three drones sweep the way." } as L,
-  rules: [
-    { ko: "드론의 빛 원에 들어가면 식별됩니다. 빛이 지나간 뒤에 건너세요.", en: "Step into a drone's circle of light and you're identified. Cross after it passes." },
-    { ko: "배송 대기소 처마 밑에는 빛이 닿지 않습니다.", en: "The light can't reach under the eaves of the delivery depot." },
-    { ko: "마지막 다리에서는 빛이 다리 전체를 오갑니다. 빈틈이 보이면 망원경까지 달리세요.", en: "On the last bridge the light sweeps the whole span. When there's a gap, run all the way to the scope." },
-  ] as L[],
-  caption: { ko: "푸른 선: 네온 길 · 주황: 드론의 빛", en: "Blue: neon path · Orange: drone light" } as L,
+  body: { ko: "드론의 빛에 들어가면 식별됩니다. 빛을 피해 바닥의 푸른 네온을 따라가세요.", en: "Step into a drone's light and you're identified. Keep out of the light and follow the blue neon on the ground." } as L,
+  // 실제 플레이 화면 두 장 (대자비 안내창처럼)
+  shots: [
+    { src: "/deleteseoul/drone-light.webp", cap: { ko: "드론의 빛: 지나간 뒤에 건너기", en: "Drone light: cross after it passes" } },
+    { src: "/deleteseoul/drone-neon.webp", cap: { ko: "푸른 네온: 망원경까지 가는 길", en: "Blue neon: the way to the scope" } },
+  ] as { src: string; cap: L }[],
   ok: { ko: "계속하기", en: "Continue" } as L,
 };
 
@@ -763,8 +758,9 @@ export const routeUi = {
 // 이산의 기록을 다시 열어 보이면(처음 이산을 움직였던 그 일) 이산이 풀려나고, 곧바로 검문소에 다시 도전할 수 있다
 export const replayUi = {
   frozen: [
-    { ko: "이산은 줄 밖에 선 채 굳어 있다. 발치의 표지: 정지 처분 · 추적 거부 기록.", en: "San stands frozen outside the line. The tag at their feet: SUSPENDED · RECORD OF REFUSING TRACKING.", who: "narr" },
+    { ko: "정지된 시민이다. 줄 밖에 선 채 굳어 있는 사람은 이산이다. 발치의 표지: 정지 처분 · 추적 거부 기록.", en: "A suspended citizen. The one frozen outside the line is San. The tag at their feet: SUSPENDED · RECORD OF REFUSING TRACKING.", who: "narr" },
   ] as Line[],
+  name: { ko: "정지된 시민", en: "Suspended citizen" } as L,
   thaw: { ko: "이산의 기록을 다시 열어 보인다", en: "Open San's records for them again" } as L,
   leave: { ko: "그대로 둔다", en: "Leave them be" } as L,
   // 풀려난 이산의 첫마디

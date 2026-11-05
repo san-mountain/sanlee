@@ -143,7 +143,7 @@ export const BUNKER: ZoneDef = {
       label: { ko: `${t.id.toUpperCase()} 터미널`, en: `${t.id.toUpperCase()} terminal` },
     })),
     // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
-    { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
+    { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지된 시민", en: "Suspended citizen" } },
     // 얼굴 복원 장치: 터미널 셋을 연 뒤 맞추는 동안만 대상이 된다 (바라보는 원통을 돌린다)
     { id: "face-machine", kind: "face", pos: machinePoint(0, 1.7, 0.35), radius: 3.2, label: faceUi.quest, when: () => faceRt.phase === "idle" },
     // 얼굴을 맞춘 뒤 도시가 내미는 두 조작부: 왼쪽 분홍 버튼, 오른쪽 나무 레버
@@ -541,7 +541,7 @@ export const CITY: ZoneDef = {
     { id: "checkpoint", kind: "checkpoint", pos: v(0, 1.6, EDGE.z0 + 4.5), radius: 5.5, label: { ko: "검문소", en: "Checkpoint" } },
     { id: "san", kind: "statue", pos: v(9999, 0, 9999), radius: 2.6, label: { ko: "이산", en: "San" } },
     // 수락한 뒤 다시 오면: 검문소 앞 줄 밖에 정지 처분된 이산 (FROZEN_SAN)
-    { id: "frozen-san", kind: "statue", pos: v(FROZEN_SAN.x, 1.4, FROZEN_SAN.z), radius: 3, label: { ko: "정지 시민 · 이산", en: "Suspended citizen · San" }, when: () => route.frozenSan },
+    { id: "frozen-san", kind: "statue", pos: v(FROZEN_SAN.x, 1.4, FROZEN_SAN.z), radius: 3, label: { ko: "정지된 시민 · 이산", en: "Suspended citizen · San" }, when: () => route.frozenSan },
     { id: "patrol", kind: "npc", npc: "patrol", pos: v(6, 2, -10), radius: 3.4, label: { ko: "순찰 기계 P-3", en: "Patrol unit P-3" } },
     { id: "patrol2", kind: "npc", npc: "patrol2", pos: v(-6, 2, -10), radius: 3.4, label: { ko: "순찰 기계 P-3′", en: "Patrol unit P-3′" } },
   ],

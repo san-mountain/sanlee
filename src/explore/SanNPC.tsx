@@ -102,14 +102,14 @@ export default function SanNPC({ mode, item, onTap, start, path }: { mode: "wand
       speed = h.speed ?? 3.4;
       if (!h.manual && (player.pos.z < h.z - 5 || (h.cover >= 0 && !coverState[h.cover]?.alive))) sanHold.at = null;
     } else if (mode === "follow") {
-      // 목줄처럼 따라온다: 3m 넘게 멀어질 때만 다가오고, 가까우면 멈춰서 방문자를 바라본다.
-      // 그래서 돌아서면 언제든 마주할 수 있다.
-      if (dp > 3.2 || S.wp === 1) {
-        S.wp = dp > 2.2 ? 1 : 0;
-        const k = 2.0 / Math.max(dp, 0.001);
+      // 바로 뒤에서 따라온다: 2m 넘게 멀어지면 곧장 다가와 1.4m 뒤에 서고, 가까우면 멈춰서 방문자를 바라본다.
+      // 달리는 방문자(6.2m/s)보다 조금 빠르게 붙는다. 돌아서면 언제든 마주할 수 있다.
+      if (dp > 2 || S.wp === 1) {
+        S.wp = dp > 1.5 ? 1 : 0;
+        const k = 1.4 / Math.max(dp, 0.001);
         tx = player.pos.x + (S.x - player.pos.x) * k;
         tz = player.pos.z + (S.z - player.pos.z) * k;
-        speed = Math.min(6.5, 1.6 + dp * 0.9);
+        speed = Math.min(7.6, 2.4 + dp * 1.6);
       }
       // 너무 멀어지면 (다른 길로 돌아갔을 때) 가까이 다시 나타난다
       if (dp > 16) {

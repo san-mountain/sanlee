@@ -75,8 +75,10 @@ function neonArrowTexture() {
 export function NeonRoute() {
   const segs = useMemo(() => {
     const base = neonArrowTexture();
-    return LOOKOUT_PATH.slice(1).map((b, i) => {
-      const a = LOOKOUT_PATH[i];
+    // 네온은 배송 대기소 처마 밑(경유점 2)부터 전망대까지 (골목에서 처마까지는 퀘스트 화살표가 안내한다)
+    const pts = LOOKOUT_PATH.slice(2);
+    return pts.slice(1).map((b, i) => {
+      const a = pts[i];
       const len = Math.hypot(b.x - a.x, b.z - a.z);
       const tex = base.clone();
       tex.needsUpdate = true;
