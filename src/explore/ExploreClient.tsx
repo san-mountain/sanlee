@@ -87,8 +87,6 @@ type Panel =
       scene?: "after" | "decide";
       // 그 줄에서 방문자가 할 수 있는 행동 (말이 아니라 몸짓: 고개 끄덕이기, 두 번 두드리기, 흉내 내기)
       choices?: { at: number; label: L; go: () => void }[];
-      // 그 줄 아래에 작게 함께 보이는 기록 한 줄 (검문소의 상세를 열지 않은 방문자에게 망원경 이용 기록)
-      note?: { at: number; line: L };
     }
   | { kind: "choice"; confirm?: number; game?: boolean }
   | { kind: "jabi" }
@@ -219,7 +217,7 @@ export default function ExploreClient() {
   const [stepped, setStepped] = useState(false);
   const steppedRef = useRef(false);
   // 검문소에서 물러난 적이 있는지 / 물러난 뒤 이산과의 대화를 끝까지 들었는지 / 검문소의 '도시가 저장한 기록 보기'를 연 적이 있는지 (이번 방문 동안만)
-  const cpRef = useRef({ seen: false, talked: false, details: false });
+  const cpRef = useRef({ seen: false, talked: false });
   const ghostRef = useRef(false);
   ghostRef.current = ghost;
   const endingRef = useRef<Ending>(null);
@@ -425,20 +423,12 @@ export default function ExploreClient() {
   }, []);
 
   // 검문소에서 물러난 뒤의 이산 대화. 마지막 줄은 '그래도 다시 와 줄래?'라는 부탁 (꼬리말 조건)
-  // 두 번째 페이지("망원경을 쓴 건 적혀 있는데")는 방문자도 그 기록을 본 뒤여야 한다: 상세를 열지 않았다면 그 줄 아래에 이용 기록 한 줄을 함께 보여 준다
-  const afterCheckpointPanel = (): Panel => {
-    const sc = readScope();
-    const n = String(sc.uses);
-    const scopeLine: L | null = sc.uses > 0 ? { ko: checkpoint.evScope.ko.replace("{n}", n), en: checkpoint.evScope.en.replace("{n}", n) } : sc.seen ? checkpoint.evScopeDone : null;
-    return {
-      kind: "dialog",
-      name: SAN,
-      // 기록을 본 적도, 보여 줄 기록도 없다면 그 페이지는 뺀다 (방문자가 보지 못한 줄을 이산이 말하지 않게)
-      lines: [...sanAfterCheckpoint.lines.filter((_, i) => i !== 1 || cpRef.current.details || scopeLine), sanAfterCheckpoint.memory],
-      step: 0,
-      note: !cpRef.current.details && scopeLine ? { at: 1, line: scopeLine } : undefined,
-    };
-  };
+  const afterCheckpointPanel = (): Panel => ({
+    kind: "dialog",
+    name: SAN,
+    lines: [...sanAfterCheckpoint.lines, sanAfterCheckpoint.memory],
+    step: 0,
+  });
 
   // ---------- 남쪽 전망대의 망원경 장면 ----------
   // idle → offer(방문자가 먼저 들여다본다. 이산은 옆에 비켜서 기다린다: scopeMove) →
@@ -1570,7 +1560,7 @@ export default function ExploreClient() {
     walkArea.rects = null;
     gaze.gateOpen = false;
     cueRef.current = { cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0, passed: false, lead: false };
-    cpRef.current = { seen: false, talked: false, details: false };
+    cpRef.current = { seen: false, talked: false };
     metRef.current = {};
     clearTimeout(beatTimer.current);
     setBeat("");
@@ -1952,6 +1942,7 @@ export default function ExploreClient() {
               <h2>{sectionMeta.label.toUpperCase()}</h2>
               <small>{sectionMeta.labelKo}</small>
             </div>
+            <p className="record-source">{t(ui.recordSource)}</p>
             <SectionBody id={panel.id} inExplore />
             <div className="panel-actions">
               <button className="btn" onClick={closePanel}>
@@ -1983,7 +1974,7 @@ export default function ExploreClient() {
       )}
 
       {panel?.kind === "dialog" && !hush && (
-        <div className="panel-wrap">
+        <div className="panel-wrap dialog-wrap">
           <div className="panel pink dialog">
             {panel.plaque ? (
               <div className="plaque">
@@ -2003,7 +1994,6 @@ export default function ExploreClient() {
                 </>
               );
             })()}
-            {panel.note && panel.note.at === panel.step && <p className="line-note">{t(panel.note.line)}</p>}
             {panel.choices?.some((c) => c.at === panel.step) && (
               <div className="dialog-choices">
                 {panel.choices
@@ -2143,12 +2133,7 @@ export default function ExploreClient() {
                     {t(checkpoint.rejectBtn)}
                   </button>
                 </div>
-                <details
-                  className="cp-details"
-                  onToggle={(e) => {
-                    if ((e.currentTarget as HTMLDetailsElement).open) cpRef.current.details = true;
-                  }}
-                >
+                <details className="cp-details">
                   <summary>{t(checkpoint.evidenceTitle)}</summary>
                   <ul>
                     {evidence.map((l, i) => (

@@ -26,8 +26,15 @@ export const ui = {
       ko: "2087년, 구름 위로 떠오른 서울. 도시는 시민의 일거수일투족을 기록합니다. 추적을 거부한 한 사람이 지하 방공호 B-7에 멈춰 있습니다.",
       en: "Seoul, 2087, lifted above the clouds. The city records every move its citizens make. One person who refused tracking sits frozen in Shelter B-7, underground.",
     },
+    // QR 코드로 곧장 들어온 방문자도 이곳이 웹사이트의 일부라는 것을 처음부터 알도록
+    {
+      ko: "이 게임은 2026년의 작가 이산의 포트폴리오 웹사이트 안에 있습니다. 방공호의 터미널에는 그 웹사이트의 소개, 작업, 글이 옮겨져 있습니다.",
+      en: "This game lives inside the portfolio website of the artist San Lee, made in 2026. The shelter's terminals hold that website's introduction, works and writing.",
+    },
   ] as L[],
   start: { ko: "방공호로 들어가기", en: "Enter the shelter" },
+  // 터미널 기록 패널 머리: 이 내용이 게임 밖 웹사이트의 실제 페이지라는 표시
+  recordSource: { ko: "2026 · 이산의 웹사이트에서 옮겨 온 기록", en: "2026 · carried over from San Lee's website" },
   goBack: { ko: "웹사이트로 돌아가기", en: "Back to the website" },
   hintPc: { ko: "화면을 클릭하면 마우스로 둘러볼 수 있습니다.", en: "Click the screen to look around with the mouse." },
   hintLocked: { ko: "WASD 이동 · Shift 달리기 전환 · Space 점프 · E/클릭 상호작용 · Esc 일시정지", en: "WASD move · Shift toggle run · Space jump · E/click interact · Esc pause" },
@@ -219,8 +226,8 @@ export const statueLines: L[][] = [
       en: "I didn't want the city recording where I was. So I rejected every cookie. My body hasn't moved since.",
     },
     {
-      ko: "여기 사람들이 날 업고 내려왔어. 터미널에 내 기록도 가져다 놨고. 네가 한번 열어 봐 줄래?",
-      en: "The people here carried me down. They brought my records to the terminals too. Would you open them?",
+      ko: "여기 사람들이 날 업고 내려왔어. 터미널엔 내 기록을 옮겨 놨고. 2026년의 어느 웹사이트에서 가져온 거래. 네가 한번 열어 봐 줄래?",
+      en: "The people here carried me down, and put my records on the terminals. They say they came from a website, back in 2026. Would you open them?",
     },
   ],
   [
@@ -234,8 +241,12 @@ export const statueLines: L[][] = [
   [
     { ko: "……움직인다. 고마워.", en: "……I can move. Thank you." },
     { ko: "저 그림, 내가 그렸던 게 기억나. 그런데 옆에 적힌 연도는 2026년이네.", en: "That painting. I remember painting it. But the year written beside it is 2026." },
-    { ko: "여기 사람들한테 들었어. 남쪽 망원경으로는 구름 아래가 보일 때도 있대.", en: "The people here told me you can sometimes see below the clouds from the south scope." },
-    { ko: "남한테 들은 얘기 말고, 직접 보고 싶어. 같이 가 줄래? 보고 돌아오자.", en: "Not something I heard from someone else. I want to see it myself. Will you come with me? We'll look and come back." },
+    // 방공호를 나서는 동기: 데이터 이산의 존재에 대한 회의 → 쿠키를 거부한 진짜 이유 → 기록이 아닌 경험 하나
+    { ko: "내가 아는 건 전부 그 사람의 기록이야. 그림도, 글도. 난 그걸 읽고 있을 뿐인지도 몰라.", en: "Everything I know is that person's record. The paintings, the writing. Maybe I'm only reading them." },
+    { ko: "처음엔 위치가 기록되는 게 싫은 줄 알았어. 그런데 사실은, 도시가 날 적을수록 나도 그냥 기록이 되어 버리는 것 같았어.", en: "At first I thought I just didn't want my location recorded. But really, the more the city wrote me down, the more I felt like I was becoming nothing but a record." },
+    { ko: "그래서 모든 쿠키를 거부했어. 그랬더니 이렇게 멈춰 버렸지만.", en: "So I rejected every cookie. And then I stopped, like this." },
+    { ko: "남쪽 망원경으로는 구름 아래가 보일 때도 있대. 바깥은 위험하지만, 남한테 들은 얘기 말고 내 눈으로 보고 싶어.", en: "They say you can sometimes see below the clouds from the south scope. It's dangerous out there, but I want to see it with my own eyes, not hear it from someone else." },
+    { ko: "기록이 아닌 걸 하나라도 갖고 싶어. 같이 가 줄래? 보고 돌아오자.", en: "I want just one thing that isn't a record. Will you come with me? We'll look and come back." },
   ],
 ];
 
@@ -269,8 +280,8 @@ export const scopeScene = {
   // 방문자가 망원경에서 눈을 뗀 뒤. 두 번째 페이지 앞의 정적 동안 둘은 아래를 내려다본다
   after: [
     { ko: "너도 봤어? 지금은 구름뿐이야. 분명히 봤는데. 잠깐이었어.", en: "Did you see it? It's only clouds now. I definitely saw it. Just for a moment." },
-    { ko: "저 그림을 그린 기억은 있는데… 그건 2026년에 살던 사람이 한 일이잖아.", en: "I remember painting that picture… but that was done by someone who lived in 2026.", pause: 1600 },
-    { ko: "방금 본 건 내 기억이야. 여기서, 내가 본 거니까.", en: "What I just saw is my memory. Because I saw it, here." },
+    { ko: "그림도, 글도 2026년의 그 사람 거였는데…", en: "The paintings, the writing, they all belonged to that person in 2026…", pause: 1600 },
+    { ko: "방금 본 건 내 기억이야. 그 사람의 기록이 아니라, 여기서 내가 본 거니까.", en: "What I just saw is my memory. Not that person's record. I saw it, here." },
     { ko: "나도 나만의 경험을 하고 싶어. 내려가서 확인하고 싶어. 아까 그게 뭐였는지.", en: "I want an experience of my own, too. I want to go down and find out what that was." },
   ] as Line[],
   // 결정: 처음에는 after에 이어서, 미뤘다면 이 한 페이지만
@@ -299,12 +310,10 @@ export const encounters: Record<"grandma" | "courier" | "edgekid", { who: "san" 
 
 // 검문소에서 물러난 뒤 이산과의 대화 (처음 한 번). 다른 방송은 뜨지 않는다
 // 마지막 페이지(memory)가 뜬 기기에 웹사이트 꼬리말의 'delete seoul'이 켜진다
-// scopeLine: 두 번째 페이지. 망원경 이용 기록을 방문자가 본 적이 없으면 그 줄을 이 자리에서 함께 보여 준다(ExploreClient)
 export const sanAfterCheckpoint = {
   lines: [
     { ko: "너만 줄에 설 수 있대. 난 움직이고 있는데도, 저기엔 아직 정지된 사람으로 나와.", en: "Only you can join the line. I'm moving, but it still lists me as suspended." },
-    { ko: "망원경을 쓴 건 적혀 있는데, 내가 본 건 없네.", en: "It records that the scope was used, but not what I saw." },
-    { ko: "그 웹사이트엔 나도 있어? 오늘 너랑 여기까지 걸어온 나도?", en: "Am I on that website too? The me who walked here with you today?" },
+    { ko: "저 명단도 결국 그 웹사이트에 저장된대. 터미널의 내 기록처럼, 오늘 네가 지나온 길까지 전부.", en: "That list is saved on the website in the end, they say. Like my records in the terminals, down to every step you took today." },
     { ko: "아까 화면에 쓰여 있었지. 기록은 웹사이트로 돌아가야 지울 수 있다고.", en: "It said so on the screen. The records can only be deleted back on the website." },
     { ko: "지우면 난 다시 멈출 거야. 오늘 일도 잊어버릴 테고.", en: "If you delete them, I'll stop again. I'll forget today, too." },
     // 방문자가 기억해 갈 구절 (재회 때 세 구절 중에서 고른다: reunion.verses)
@@ -344,7 +353,7 @@ export const sanCue = {
 export const reunion = {
   // 기록을 지우고 돌아온 방문자가 굳은 이산에게 들려줄 구절: 셋 중 하나만 이산이 부탁한 구절이다 (모두 2026년 이산의 시)
   verses: [
-    { ko: "‘별들은 어디 가고 우두커니 서있는 당신은 고고합니까?’", en: "‘Where have the stars gone, and you who stand there alone, are you noble?’", right: false },
+    { ko: "‘울분으로 조각되어 어느때보다 작아졌지만 광휘를 머금은 형태는 바위의 이끼보다 세밀한 바입니다’", en: "‘Carved by indignation, smaller than ever, yet the form that holds its radiance is finer than the moss on a rock’", right: false },
     { ko: "‘수놓인 별들 아래 걸음이 서투른 저희는 고고합니까?’", en: "‘Beneath the embroidered stars, are we, so clumsy in our steps, noble?’", right: true },
     { ko: "‘이름 없는 사랑이여 그대는 부를 수 없기에 아름답다’", en: "‘O nameless love, you are beautiful because you cannot be called’", right: false },
   ] as (L & { right: boolean })[],
