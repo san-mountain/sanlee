@@ -29,7 +29,7 @@ import RouteSketch from "./RouteSketch";
 import { coverState, finalBeam, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
-import { FACE_KEY, emptyFace, faceFinished, loadFace, rotateDrum, saveFace, seamJoined, type FaceMethod, type FaceState } from "./faceAuth";
+import { FACE_KEY, SOLUTION, emptyFace, faceFinished, loadFace, rotateDrum, saveFace, seamJoined, type Drums, type FaceMethod, type FaceState } from "./faceAuth";
 import { faceRt, setFacePhase, type FacePhase } from "./faceRuntime";
 
 const World = dynamic(() => import("./World"), { ssr: false });
@@ -668,6 +668,22 @@ export default function ExploreClient() {
     sfx.restore();
     writeScope({ ...readScope(), seen: true, agreed: true });
     setTalked(true);
+    try {
+      localStorage.setItem(TALK_KEY, "1");
+      // 대자비 재가동: 소개 팝업은 다시 띄우지 않는다 (곡만 바뀐다)
+      sessionStorage.setItem("sanlee-jabi-intro", "1");
+    } catch {}
+    // 이미 끝낸 길이다: 예전 버전의 저장(표준 미소 선택이 없는 얼굴, 빠진 열람 기록)이 검문소를 막지 않게 채운다
+    if (visited.length < sections.length) {
+      const all = sections.map((x) => x.id);
+      setVisited(all);
+      try {
+        localStorage.setItem(KEY, JSON.stringify(all));
+      } catch {}
+    }
+    const f = faceRef.current;
+    if (!faceFinished(f)) updateFace({ drums: [...SOLUTION] as Drums, solved: true, method: f.method ?? "exception", asked: true });
+    setFaceAwake(true);
     setReplay(true);
     setAccepted(false);
     gaze.mood = "";

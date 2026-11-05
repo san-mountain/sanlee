@@ -40,6 +40,8 @@ export function loadFace(): FaceState {
     state.solved = isSolved(state.drums);
     state.asked = data.asked === true || state.solved;
     if (state.solved && (data.method === "standard" || data.method === "exception")) state.method = data.method;
+    // 표준 미소 선택이 생기기 전에 맞추고 이산과 대화까지 한 저장은 원본 얼굴을 지킨 것으로 본다
+    else if (state.solved && localStorage.getItem("sanlee-san-talked") === "1") state.method = "exception";
   } catch {}
   return state;
 }
