@@ -112,7 +112,8 @@ export default function Minimap({ zone, get }: { zone: Zone; get: () => QuestTar
       // 상호작용할 수 있는 것들
       for (const it of def.items) {
         const col = DOT[it.kind];
-        if (!col) continue;
+        // 골목의 정지된 시민들은 점으로 찍지 않는다 (지도가 점투성이가 되지 않게)
+        if (!col || it.npc === "frozen") continue;
         ctx.fillStyle = col;
         ctx.beginPath();
         ctx.arc(it.pos.x, it.pos.z, ((it.kind === "painting" ? 2.2 : 3.2) * (px / 150)) / scale, 0, Math.PI * 2);

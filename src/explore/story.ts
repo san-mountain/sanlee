@@ -582,6 +582,11 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
       { ko: "여기서는 아무리 봐도 하얗기만 해요. 저 끝에 있는 망원경으로 보면 보일까요?", en: "From here it's just white, no matter how long I look. Could you see through the scope at the end there?" },
     ],
   },
+  // 골목에 굳어 선 사람들 (말을 걸면 지문 한 줄)
+  frozen: {
+    name: { ko: "정지된 시민", en: "Suspended citizen" },
+    lines: [{ ko: "정지된 시민이다.", en: "A suspended citizen.", who: "narr" }],
+  },
   courier: {
     name: { ko: "배달 로봇 D-12", en: "Courier bot D-12" },
     lines: [
@@ -758,9 +763,8 @@ export const routeUi = {
 // 이산의 기록을 다시 열어 보이면(처음 이산을 움직였던 그 일) 이산이 풀려나고, 곧바로 검문소에 다시 도전할 수 있다
 export const replayUi = {
   frozen: [
-    { ko: "정지된 시민이다. 줄 밖에 선 채 굳어 있는 사람은 이산이다. 발치의 표지: 정지 처분 · 추적 거부 기록.", en: "A suspended citizen. The one frozen outside the line is San. The tag at their feet: SUSPENDED · RECORD OF REFUSING TRACKING.", who: "narr" },
+    { ko: "이산은 줄 밖에 선 채 굳어 있다. 발치의 표지: 정지 처분 · 추적 거부 기록.", en: "San stands frozen outside the line. The tag at their feet: SUSPENDED · RECORD OF REFUSING TRACKING.", who: "narr" },
   ] as Line[],
-  name: { ko: "정지된 시민", en: "Suspended citizen" } as L,
   thaw: { ko: "이산의 기록을 다시 열어 보인다", en: "Open San's records for them again" } as L,
   leave: { ko: "그대로 둔다", en: "Leave them be" } as L,
   // 풀려난 이산의 첫마디

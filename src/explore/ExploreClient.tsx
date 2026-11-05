@@ -708,9 +708,10 @@ export default function ExploreClient() {
           if (it.id === "frozen-san") {
             setPanel({
               kind: "dialog",
-              name: replayUi.name,
+              name: plaque[0],
               lines: replayUi.frozen,
               step: 0,
+              plaque: true,
               choices: [
                 { at: 0, label: replayUi.thaw, go: () => thawRef.current() },
                 { at: 0, label: replayUi.leave, go: () => closePanelRef.current() },
@@ -1807,7 +1808,7 @@ export default function ExploreClient() {
     else if (scopeData.seen) evidence.push(t(checkpoint.evScopeDone));
   }
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || scopeStage === "idle" || scopeStage === "done") ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
+  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || scopeStage === "idle" || scopeStage === "done") ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" || near.npc === "frozen" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
   quietRef.current = !!panel || !!scopeView || !!sanSay || !!toast || !!beat || paused;
   const rootClass = [
     "explore-root",

@@ -350,7 +350,7 @@ export function AlleyDecor() {
   );
 }
 
-/* ---------- 골목 사람들: 바이저를 벗고 아무 데나 기대 서 있다 ---------- */
+/* ---------- 골목 사람들: 아무 데나 기대 선 채 굳어 있는 정지된 시민들 (다가가 보면 '정지된 시민이다.') ---------- */
 export function AlleyPeople() {
   const geo = citizenGeometry();
   const ref = useRef<THREE.InstancedMesh>(null);
