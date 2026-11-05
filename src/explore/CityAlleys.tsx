@@ -424,7 +424,7 @@ export function Grandma({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
   const { pos, rotY } = CITY_NPCS.grandma;
   const sx = pos[0] + Math.sin(rotY) * 0.9;
   const sz = pos[2] + Math.cos(rotY) * 0.9;
-  const sign = useSign([[lang === "ko" ? "어묵 · 떡볶이" : "FISHCAKE · TTEOKBOKKI", 1], [lang === "ko" ? "등급 안 따짐" : "ALL GRADES WELCOME", 0.55]], { color: "#ffe9c0", bg: "#a8321e", w: 512, h: 180 });
+  const sign = useSign([[lang === "ko" ? "어묵 · 떡볶이" : "FISHCAKE · TTEOKBOKKI", 1], [lang === "ko" ? "누구나 쉬어 가세요" : "EVERYONE WELCOME TO REST", 0.55]], { color: "#ffe9c0", bg: "#a8321e", w: 512, h: 180 });
   return (
     <Tap id="grandma" onTap={onTap}>
       <group scale={0.88}>
@@ -465,7 +465,7 @@ export function Courier({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
   const { pos, rotY } = CITY_NPCS.courier;
   const ref = useRef<THREE.Group>(null);
   const screen = useRef<THREE.MeshBasicMaterial>(null);
-  const tag = useSign([[lang === "ko" ? "D-12 · 상태: 배송 중" : "D-12 · STATUS: DELIVERING", 1]], { color: "#7dff7a", bg: "#06120a", mono: true, w: 512, h: 96 });
+  const tag = useSign([[lang === "ko" ? "D-12 · 배송 중" : "D-12 · DELIVERING", 1]], { color: "#7dff7a", bg: "#06120a", mono: true, w: 512, h: 96 });
   useFrame((s) => {
     const t = s.clock.elapsedTime;
     // 쉬는 숨처럼 아주 천천히 고개(몸)를 돌린다

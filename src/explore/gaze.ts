@@ -18,7 +18,7 @@ export const gaze = {
   // 처음 시선 구역에 들어설 때의 소개 장면: 게이지를 멈추고 카메라가 lookAt을 바라본다
   intro: false,
   lookAt: null as { x: number; y: number; z: number } | null,
-  // 空 결말: 성문의 정지 장벽이 고정할 활동 기록을 찾지 못해 빛을 거둔다 (City의 Gate가 천천히 끈다)
+  // 空 결말: 성문의 조준 빛이 겨눌 방문 기록을 찾지 못해 빛을 거둔다 (City의 Gate가 천천히 끈다)
   gateOpen: false,
   // 큰길 드론의 빛이 지금 방문자를 비추는가 (줄 속에 서 있어도 보인다). Drones가 쓰고 GazeSystem이 읽는다
   droneLit: false,
@@ -32,11 +32,9 @@ export const gaze = {
 // 진행 단계 하나: ExploreClient가 정하고 3D 쪽이 읽는다
 // restore 기록 복원 중 → talk 풀려난 이산과 대화 전 → scope 남쪽 망원경으로(함께 보기 전) →
 // decide 함께 봤고, 승강장으로 갈지 아직 답하지 않음 → descent 승강장으로 가기로 함
-// open: 통제선 끝의 천막을 이산이 실제로 걷었는가 (단계와 따로. 천막 그림과 충돌이 이 값을 따른다)
+// 큰길은 단계와 상관없이 걸어 들어갈 수 있다 (진행에 따라 생기는 막힘은 없다)
 export type RoutePhase = "restore" | "talk" | "scope" | "decide" | "descent";
-export const route: { phase: RoutePhase; open: boolean } = { phase: "restore", open: false };
-// 진행에 따라 생기고 사라지는 막힘 (통제선 끝 천막). Player와 SanNPC가 zone.boxes 다음에 함께 피한다
-export const walkBlock: { boxes: { x0: number; x1: number; z0: number; z1: number }[] } = { boxes: [] };
+export const route: { phase: RoutePhase } = { phase: "restore" };
 
 // 시점을 스스로 걷게 한다 (충돌 무시: 미리 확인한 빈 자리 사이만 잇는다). Player가 읽는다
 // to: 지금 가는 점, queue: 그다음 점들 (도착할 때마다 하나씩 꺼낸다), arrived: 마지막 점에 도착했는가

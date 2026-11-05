@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import { player } from "./Player";
 import { AIR, BARRIERS, COVERS, DRONE_R, DRONE_RAILS, GAZE_ZONE, ROOFS, ZONES, type Zone } from "./zones";
 import { droneAt } from "./Drones";
-import { walkBlock } from "./gaze";
 import { coverState } from "./Jabi";
 import type { QuestTarget } from "./QuestArrow";
 
@@ -89,14 +88,13 @@ export default function Minimap({ zone, get }: { zone: Zone; get: () => QuestTar
         ctx.fill();
       }
       if (city) {
-        // 통제선과 엄폐물 (엄폐물은 레이저에 부서지면 사라진다)
+        // 띠 A의 레이저 울타리와 엄폐물 (엄폐물은 레이저에 부서지면 사라진다)
         ctx.fillStyle = "#ff2b4a";
         for (const o of BARRIERS) ctx.fillRect(o.x0, o.z0, Math.max(o.x1 - o.x0, lw * 2), Math.max(o.z1 - o.z0, lw * 2));
         COVERS.forEach((c, i) => {
           ctx.fillStyle = coverState[i].alive ? "#ffb347" : "#3a2a20";
           ctx.fillRect(c.x - c.w / 2, c.z - c.d / 2, c.w, c.d);
         });
-        for (const o of walkBlock.boxes) ctx.fillRect(o.x0, o.z0, o.x1 - o.x0, o.z1 - o.z0);
         // 지붕 (드론 빛을 가리는 곳)
         ctx.fillStyle = "#8fa6b8";
         for (const r of ROOFS) ctx.fillRect(r.x - r.w / 2, r.z - r.d / 2, r.w, r.d);

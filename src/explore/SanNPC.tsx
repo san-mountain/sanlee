@@ -8,7 +8,6 @@ import { player } from "./Player";
 import { CITY, type Interactable } from "./zones";
 import { resolve } from "./collide";
 import { coverState } from "./Jabi";
-import { walkBlock } from "./gaze";
 
 // 지상에서 이산이 잠깐 먼저 가서 기다리는 자리 (ExploreClient가 정하고, 방문자가 그 자리를 지나 북쪽으로 가면 풀린다).
 // 이 자리로 갈 때는 평소처럼 장애물을 피해 걷는다 (경유점 사이가 비어 있도록 ExploreClient가 점을 고른다)
@@ -132,7 +131,6 @@ export default function SanNPC({ mode, item, onTap, start, path }: { mode: "wand
       const p = { x: S.x + (dx / d) * step, z: S.z + (dz / d) * step };
       if (mode === "follow") {
         resolve(p, 0.35, CITY.bounds, CITY.boxes, CITY.circles);
-        if (walkBlock.boxes.length) resolve(p, 0.35, CITY.bounds, walkBlock.boxes, []);
       }
       S.x = p.x;
       S.z = p.z;

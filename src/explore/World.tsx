@@ -22,7 +22,7 @@ type Props = {
   sanPath?: SanPath; // 망원경 장면·결말: 이산이 걸어갈 정해진 길과 마지막에 바라볼 방향
   hideSan?: boolean;
   secondStatue?: boolean;
-  awake?: boolean; // 기록 없이 이산의 말로 깨웠을 때 (터미널은 그대로, 이산만 깨어 있다)
+  awake?: boolean; // 기록을 지우고 돌아와 곁에 앉아 기다린 뒤 (터미널은 그대로, 이산만 깨어 있다)
   arrived?: boolean;
 };
 

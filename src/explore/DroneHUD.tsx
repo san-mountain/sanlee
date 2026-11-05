@@ -6,9 +6,9 @@ import { drone } from "./Drones";
 import { gaze } from "./gaze";
 import { droneUi } from "./story";
 
-// 드론 경고: 대자비의 붉은 게이지와 따로, 화면 위쪽에 차가운 흰빛·주황의 작은 막대로 뜬다.
-// 광장에서 식별되면 화면이 잠깐 어두워지고, onCaught가 그 드론 길 앞의 안전한 자리로 돌려보낸다.
-// 기록 없이 돌아온 둘에게 빛이 닿으면 게이지 없이 '형체 감지 · 활동 기록 연결 불가'만 뜬다 (식별도 추적도 없다)
+// 드론 경고 (광장·바깥 산책로만): 화면 위쪽에 차가운 흰빛·주황의 작은 막대로 뜬다. 큰길에서는 대자비의 감시 게이지 하나만 쓴다.
+// 광장에서 발각되면 화면이 잠깐 어두워지고, onCaught가 그 드론 길 앞의 안전한 자리로 돌려보낸다.
+// 저장된 방문 기록이 없는 방문자에게 빛이 닿으면 게이지 없이 '방문자 기록 없음 · 추적 불가'가 이번 방문에 한 번 뜬다
 export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
   const { t } = useLang();
   const tRef = useRef(t);
@@ -27,16 +27,23 @@ export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
     let handled = false;
     let prev = "";
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let shapeUntil = 0;
     const loop = () => {
       raf = requestAnimationFrame(loop);
       const now = performance.now();
-      const sent = drone.sent && now - drone.sent < 2400;
-      const key = drone.caught ? "caught" : sent ? "sent" : drone.lit >= 0 ? "lit" : drone.shape ? "shape" : drone.meter > 0.5 ? "lost" : "";
+      // 큰길의 드론 빛은 대자비의 감시 게이지에 합쳐진다 (여기서는 광장·산책로 드론만 보여 준다)
+      const plazaLit = drone.lit >= 0 && drone.zone === "plaza";
+      // 기록 없는 방문자에게 고리가 붙지 못한 일은 이번 방문에 한 번만 글로 알린다
+      if (drone.shape && !drone.shapeSeen) {
+        drone.shapeSeen = true;
+        shapeUntil = now + 2800;
+      }
+      const key = drone.caught ? "caught" : plazaLit ? "lit" : now < shapeUntil ? "shape" : drone.meter > 0.5 ? "lost" : "";
       if (wrap.current) {
         wrap.current.style.opacity = key ? "1" : "0";
         wrap.current.dataset.state = key;
       }
-      if (fill.current) fill.current.style.width = `${Math.round(sent ? 100 : key === "shape" ? 0 : drone.meter)}%`;
+      if (fill.current) fill.current.style.width = `${Math.round(key === "shape" ? 0 : drone.meter)}%`;
       if (key !== prev) {
         prev = key;
         const s = key ? tRef.current(droneUi[key as keyof typeof droneUi]) : "";

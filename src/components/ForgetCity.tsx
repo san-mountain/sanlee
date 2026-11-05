@@ -32,19 +32,19 @@ function describe(ko: boolean): Line[] {
     lines.push({ text: ko ? `마지막 접속 ${t}` : `Last login ${t}` });
   }
   const visited = read<string[]>("sanlee-visited", []);
-  if (visited.length) lines.push({ text: ko ? `열람한 이산의 기록 ${visited.length}건` : `${visited.length} of San's records viewed` });
+  if (visited.length) lines.push({ text: ko ? `기록 열람 ${visited.length}건` : `${visited.length} records viewed` });
   const b = read<{ n?: number; deaths?: number } | null>(BACKUP_KEY, null);
-  if (b?.n) lines.push({ text: ko ? `위치 백업 ${b.n}건` : `${b.n} position backups` });
-  if (b?.deaths) lines.push({ text: ko ? `보관 처리 ${b.deaths}회` : `Archived ${b.deaths} times` });
+  if (b?.n) lines.push({ text: ko ? `위치 저장 ${b.n}회` : `${b.n} positions saved` });
+  if (b?.deaths) lines.push({ text: ko ? `연결 중단 ${b.deaths}회` : `Disconnected ${b.deaths} time(s)` });
   const found = read<string[]>("sanlee-endings-found", []);
   if (found.length) lines.push({ text: ko ? `발견한 결말 ${found.length}개` : `${found.length} endings found` });
-  if (read<string | null>("sanlee-ending", null) === "accept") lines.push({ text: ko ? "자동 로그인 동의" : "Automatic login consent" });
+  if (read<string | null>("sanlee-ending", null) === "accept") lines.push({ text: ko ? "자동 접속 설정" : "Automatic sign-in setting" });
   const scope = read<{ uses?: number } | null>("sanlee-scope", null);
   if (scope?.uses) lines.push({ text: ko ? `남쪽 망원경 이용 ${scope.uses}회` : `South scope used ${scope.uses} time(s)` });
-  if (String(read<unknown>(PROMISE_KEY, null)) === PROMISE_NOW) lines.push({ text: ko ? "검문소 앞에서 들은 이산의 부탁" : "San's request at the checkpoint" });
+  if (String(read<unknown>(PROMISE_KEY, null)) === PROMISE_NOW) lines.push({ text: ko ? "이산의 부탁을 들은 기록" : "Record of hearing San's request" });
   if (!lines.length) lines.push({ text: ko ? "방문 기록" : "Visit history" });
   // 마지막 줄은 지워지지 않는다: 기억은 이 기기에 있지 않으니까
-  lines.push({ text: ko ? "당신이 기억하는 것 · 이 기기에 없음" : "What you remember · not on this device", kept: true });
+  lines.push({ text: ko ? "당신의 기억 · 이 기기에 저장되지 않음" : "Your memory · not stored on this device", kept: true });
   return lines;
 }
 
@@ -91,17 +91,17 @@ export default function ForgetCity() {
   if (!has) return null;
   if (phase === "confirm")
     return (
-      <span className="forget-ask" role="group" aria-label={ko ? "도시 기록 지우기 확인" : "Confirm deleting city records"}>
+      <span className="forget-ask" role="group" aria-label={ko ? "DELETE SEOUL 기록 삭제 확인" : "Confirm deleting DELETE SEOUL records"}>
         <span>
           {ko
-            ? "이 기기에 남은 DELETE SEOUL 기록(열람한 기록, 위치 백업, 결말, 접속 시각)을 지웁니다. 웹사이트와 작품은 그대로 남습니다. 다음에 들어가면 이산은 당신을 알아보지 못합니다."
+            ? "이 기기에 저장된 DELETE SEOUL의 진행 상황과 방문 기록을 모두 지웁니다. 이산은 다시 멈추고, 당신을 기억하지 못합니다. 웹사이트와 작품, 언어·효과음 설정은 그대로 남습니다."
             : "This erases the DELETE SEOUL records kept on this device (records viewed, position backups, endings, last login). The website and the work stay as they are. Next time you enter, San will not recognise you."}
         </span>
         <button type="button" className="forget-city" onClick={onClick}>
-          {ko ? "지우기" : "Delete"}
+          {ko ? "기록 지우기" : "Delete records"}
         </button>
         <button type="button" className="forget-cancel" onClick={() => setPhase("idle")}>
-          {ko ? "그만두기" : "Cancel"}
+          {ko ? "취소" : "Cancel"}
         </button>
       </span>
     );
@@ -118,7 +118,7 @@ export default function ForgetCity() {
           {l.text}
         </span>
       ))}
-      {phase === "done" && <span className="final">{ko ? "이 기기에서 도시의 기록을 지웠습니다. 웹사이트는 그대로입니다." : "The city's records on this device are gone. The website is unchanged."}</span>}
+      {phase === "done" && <span className="final">{ko ? "DELETE SEOUL 기록을 지웠습니다. 웹사이트와 작품은 그대로 남아 있습니다." : "DELETE SEOUL records deleted. The website and the work remain as they are."}</span>}
     </span>
   );
 }

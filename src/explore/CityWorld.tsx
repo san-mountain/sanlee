@@ -194,7 +194,36 @@ export function Platform() {
       ).map(([x0, x1, z0, z1], i) => (
         <mesh key={`deck${i}`} position={[(x0 + x1) / 2, -0.2, (z0 + z1) / 2]}>
           <boxGeometry args={[x1 - x0, 0.36, z1 - z0]} />
-          <meshStandardMaterial color="#1b1c21" roughness={0.75} metalness={0.5} />
+          {/* 바깥 산책로·다리·전망대 바닥만 조금 밝게 (#1b1c21 → #2a2c34). 도시 전체 노출은 그대로 */}
+          <meshStandardMaterial color="#2a2c34" roughness={0.75} metalness={0.4} />
+        </mesh>
+      ))}
+      {/* 길 조명: 따뜻한 낮은 빛. 그림자 없음 (드론의 흰·주황 빛, 대자비의 붉은 빛과 구별된다). 후처리 없이도 길이 보이게
+          산책로 입구 틈 → 산책로 가운데 → 모퉁이(아이) → 다리 둘 → 망원경. 할머니 포장마차와 배송 대기소는 원래 조명이 있다 */}
+      {(
+        [
+          [-66.4, 1.3, 30.4, 5, 8],
+          [-66.8, 1.3, 40.6, 4, 8],
+          [-67, 1.6, 48.2, 6, 8],
+          [-55, 1.3, 48.6, 4, 8],
+          [-43, 1.3, 48.6, 4, 8],
+          [-30.4, 1.9, 48.9, 8, 7],
+        ] as [number, number, number, number, number][]
+      ).map(([x, y, z, intensity, distance], i) => (
+        <pointLight key={`route${i}`} position={[x, y, z]} intensity={intensity} distance={distance} decay={2} color="#ffb877" />
+      ))}
+      {/* 바닥 가장자리의 낮은 띠 (길의 꺾임을 미리 읽게): 산책로 안쪽, 다리 북쪽, 전망대 둘레 */}
+      {(
+        [
+          [WALK.x1 - 0.12, WALK.z0, WALK.x1 - 0.12, LOOK.z0],
+          [WALK.x1, LOOK.z0 + 0.12, BAY.x0, LOOK.z0 + 0.12],
+          [BAY.x0 + 0.12, BAY.z0, BAY.x0 + 0.12, LOOK.z0],
+          [BAY.x0, BAY.z0 + 0.12, BAY.x1, BAY.z0 + 0.12],
+        ] as [number, number, number, number][]
+      ).map(([x0, z0, x1, z1], i) => (
+        <mesh key={`edge${i}`} position={[(x0 + x1) / 2, 0.0, (z0 + z1) / 2]}>
+          <boxGeometry args={[Math.max(0.06, Math.abs(x1 - x0)), 0.04, Math.max(0.06, Math.abs(z1 - z0))]} />
+          <meshBasicMaterial color="#c9874a" toneMapped={false} />
         </mesh>
       ))}
       {[WALK.z0 + 2, 36, 44, LOOK.z1 - 1].map((z) => (

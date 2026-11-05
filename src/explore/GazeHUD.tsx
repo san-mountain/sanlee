@@ -55,7 +55,6 @@ export default function GazeHUD({
   const fill = useRef<HTMLDivElement>(null);
   const label = useRef<HTMLSpanElement>(null);
   const [dead, setDead] = useState<Dead | null>(null);
-  const [tip, setTip] = useState(false);
   const shown = useRef(false);
   const tRef = useRef(t);
   tRef.current = t;
@@ -101,8 +100,7 @@ export default function GazeHUD({
         const s = tRef.current(jabiUi.states[key as keyof typeof jabiUi.states] ?? jabiUi.states.idle);
         if (label.current.textContent !== s) label.current.textContent = s;
       }
-      // 처음 시선 구역에 들어가면 요령을 한 번 알려 준다
-      // 처음 시선 구역에 들어서면 소개 장면을 연다 (방문마다 한 번: 탭을 새로 열면 다시 나온다). 이미 봤다면 짧은 요령만
+      // 처음 시선 구역에 들어서면 소개 장면을 연다 (방문마다 한 번: 탭을 새로 열면 다시 나온다). 이미 봤다면 곡만 바꾼다 (요령 문단을 따로 띄우지 않는다)
       if (gaze.inZone && !shown.current && gaze.mood !== "blind") {
         shown.current = true;
         let seenIntro = false;
@@ -111,11 +109,7 @@ export default function GazeHUD({
         } catch {}
         // 소개 팝업이 뜨면 대자비 무대(음악)는 팝업을 닫을 때 시작된다 (ExploreClient의 endJabiIntro)
         if (!seenIntro && introRef.current) introRef.current();
-        else {
-          stageRef.current?.();
-          setTip(true);
-          setTimeout(() => setTip(false), 15000);
-        }
+        else stageRef.current?.();
       }
       if (gaze.meter >= 35) armed = true;
       if (armed && gaze.meter <= 0.5 && gaze.inZone && gaze.hiddenBy && !gaze.dead) {
@@ -169,7 +163,6 @@ export default function GazeHUD({
         <span className="gaze-state" ref={label} />
       </div>
       <div className="gaze-vignette" aria-hidden />
-      {tip && <div className="gaze-tip">{t(jabiUi.tip)}</div>}
       {dead && (
         <div className={`archived ${dead.kind === "gone" ? "gone" : ""}`}>
           <div>

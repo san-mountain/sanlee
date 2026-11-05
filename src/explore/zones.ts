@@ -151,7 +151,7 @@ export const BUNKER: ZoneDef = {
     bnpc("kid", { ko: "그림 그리는 아이", en: "Child drawing" }, 0.9, 2.4),
     bnpc("dj", { ko: "음향 담당 진성", en: "Jinseong, on sound" }),
     bnpc("sleeper", { ko: "잠든 사람", en: "Sleeper" }, 0.6, 2.4),
-    { id: "exit", kind: "door", to: "city", pos: v(0, 1.6, -19), radius: 3.6, label: { ko: "지상으로 올라가기", en: "Go up to the surface" } },
+    { id: "exit", kind: "door", to: "city", pos: v(0, 1.6, -19), radius: 3.6, label: { ko: "지상 출구", en: "Surface exit" } },
   ],
 };
 
@@ -276,10 +276,8 @@ export const DEPOT = { x: -53.6, z: 30.4, w: 4.8, d: 3.6, y0: 2.45, y1: 2.7 };
 export const DEPOT_WALL = box(DEPOT.x, DEPOT.z + DEPOT.d / 2 - 0.1, DEPOT.w, 0.2);
 // 드론 빛을 가리는 지붕들 (광장 드론). Drones의 가림 판정과 바닥 빛 원 셰이더가 같은 상자를 쓴다
 export const ROOFS = [DEPOT];
-// 광장에서 큰길로 들어서는 입구의 통제선. 동쪽 인도 끝(x GAP~11.5)은 천막을 덮은 짐더미가 막고 있다.
-// 이산이 그 자리까지 가서 천막을 걷어야 틈이 열린다 (그 틈만 ExploreClient가 막고 연다)
-export const CORDON = { z: 13.4, gap: 9.1 };
-export const CORDON_TARP = box((CORDON.gap + 11.5) / 2, CORDON.z, 11.5 - CORDON.gap, 1.2);
+// 광장과 큰길의 경계 (z가 이보다 작으면 큰길). 막는 것은 없다: 큰길은 언제든 걸어 들어갈 수 있다
+export const AVENUE_EDGE_Z = 13.4;
 
 // 이산이 지나는 길: 경유점(hold = 드론 빛이 닿지 않아 기다릴 수 있는 자리, lane = 이 점으로 올 때 건너는 드론 길)
 // 이산은 hold에서만 기다리고, 그 사이는 장애물을 피해 이어 둔 점을 차례로 걷는다. 돌아갈 때는 거꾸로 걷는다
@@ -294,26 +292,24 @@ export const LOOKOUT_PATH: RoutePt[] = [
   { x: -66.6, z: 47.8, hold: true, lane: 1 }, // 6 모퉁이
   { x: -32.6, z: 47.6, hold: true }, // 7 전망대: 망원경 옆, 비켜선 자리
 ];
-// 망원경 뒤 돌아오는 길의 끝: 광장 북쪽에서 통제선 끝의 천막까지, 그리고 걷은 틈 너머
-export const CORDON_PATH: RoutePt[] = [
-  { x: -20, z: 16.6 },
-  { x: 4, z: 15.8 },
-  { x: (CORDON.gap + 11.5) / 2, z: CORDON.z + 1.3, hold: true }, // 천막 앞
-];
-export const GAP_THROUGH = { x: (CORDON.gap + 11.5) / 2, z: CORDON.z - 1.8 };
 
 // 순찰 드론: 레일을 따라 x 방향으로 오가며(x = c + a·cos θ) 바닥에 빛 원(반지름 DRONE_R)을 비춘다.
+// 빛에 든 사람을 따라갈 때는 x와 z 모두로 움직이되, 레일 둘레의 순찰 범위(x c±a, z z±dz) 밖으로는 나가지 않는다.
+// dz는 기다리는 자리(LOOKOUT_PATH의 hold)에 빛이 닿지 않도록 정했다: 광장 A는 z 20.1~24.9 → 빛은 z 17.5~27.5
+// (광장 북쪽 hold z 17.2, 처마 밑 hold z 29.6 밖), 산책로 B는 z 39.1~43.9 → 빛은 z 36.5~46.5 (hold z 35.2, 47.8 밖)
 // 광장의 둘은 망원경 가는 길의 두 건너는 자리(광장, 바깥 산책로)를, 큰길의 넷은 엄폐물 사이를 가로지른다.
 // fx: 빛 원을 그리는 바닥의 x 범위 (허공 위에는 그리지 않는다)
-export type DroneRail = { zone: "plaza" | "avenue"; z: number; c: number; a: number; y: number; period: number; phase: number; fx?: [number, number] };
+// 산책로 B: 폭(x -68.6~-65)을 벗어나 허공 위를 훑던 시간을 줄였다(a 7→4.5, 주기 9→8.5초). 빛 원 가장자리가 산책로 가운데(x -66.6)에서
+// 0.4m 이상 떨어지는 때는 한쪽 끝마다 약 2.3초씩, 주기당 두 번 온다(|cos θ|>0.67). 아무도 시험해 보지 않은 기하 계산이다
+export type DroneRail = { zone: "plaza" | "avenue"; z: number; c: number; a: number; y: number; period: number; phase: number; dz: number; fx?: [number, number] };
 export const DRONE_R = 2.6;
 export const DRONE_RAILS: DroneRail[] = [
-  { zone: "plaza", z: 22.5, c: -44, a: 18, y: 7, period: 12, phase: 0.3, fx: [-64, -20] },
-  { zone: "plaza", z: 41.5, c: -66.8, a: 7, y: 6.4, period: 9, phase: 2.2, fx: [WALK.x0, WALK.x1] },
-  { zone: "avenue", z: -36.5, c: 0, a: 8.6, y: 8, period: 8.5, phase: 0.4 },
-  { zone: "avenue", z: -58, c: 0, a: 8.6, y: 8, period: 9.5, phase: 2.1 },
-  { zone: "avenue", z: -84, c: 0, a: 8.6, y: 8, period: 8, phase: 1.0 },
-  { zone: "avenue", z: -108, c: 0, a: 8.6, y: 8, period: 9, phase: 2.8 },
+  { zone: "plaza", z: 22.5, c: -44, a: 18, y: 7, period: 12, phase: 0.3, dz: 2.4, fx: [-64, -20] },
+  { zone: "plaza", z: 41.5, c: -66.8, a: 4.5, y: 6.4, period: 8.5, phase: 2.2, dz: 2.4, fx: [WALK.x0, WALK.x1] },
+  { zone: "avenue", z: -36.5, c: 0, a: 8.6, y: 8, period: 8.5, phase: 0.4, dz: 3 },
+  { zone: "avenue", z: -58, c: 0, a: 8.6, y: 8, period: 9.5, phase: 2.1, dz: 3 },
+  { zone: "avenue", z: -84, c: 0, a: 8.6, y: 8, period: 8, phase: 1.0, dz: 3 },
+  { zone: "avenue", z: -108, c: 0, a: 8.6, y: 8, period: 9, phase: 2.8, dz: 3 },
 ];
 
 export const QUEUE_X = [-3.6, 3.6];
@@ -481,8 +477,6 @@ export const CITY: ZoneDef = {
     ...EDGE_RAILS,
     ...AIR,
     DEPOT_WALL,
-    // 큰길 입구 통제선 (동쪽 끝의 틈은 CORDON_TARP)
-    { x0: -11.6, x1: CORDON.gap, z0: CORDON.z - 0.25, z1: CORDON.z + 0.25 },
     ...LOTS,
     ...BARRIERS,
     ...COVERS.map(coverBox),
@@ -518,7 +512,7 @@ export const CITY: ZoneDef = {
       npc: `scope${i}`,
       pos: v(s.pos[0], 1.3, s.pos[2]),
       radius: i === 0 ? 2.8 : 2.4,
-      label: { ko: "전망 망원경", en: "Viewing scope" },
+      label: { ko: "망원경", en: "Scope" },
     })),
     { id: "checkpoint", kind: "checkpoint", pos: v(0, 1.6, EDGE.z0 + 4.5), radius: 5.5, label: { ko: "검문소", en: "Checkpoint" } },
     { id: "san", kind: "statue", pos: v(9999, 0, 9999), radius: 2.6, label: { ko: "이산", en: "San" } },

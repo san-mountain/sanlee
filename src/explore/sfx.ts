@@ -176,6 +176,13 @@ export const sfx = {
     tone(659, 0.18, { vol: 0.16, at: 0.12 });
     tone(784, 0.4, { vol: 0.14, at: 0.24 });
   },
+  // R-07에게 두 번 두드림 (방문자의 말이 아니라 실제 소리)
+  knock: () => {
+    tone(190, 0.07, { type: "triangle", f2: 120, vol: 0.32 });
+    noise(0.05, { vol: 0.12, from: 1800, to: 600 });
+    tone(190, 0.07, { type: "triangle", f2: 120, vol: 0.32, at: 0.2 });
+    noise(0.05, { vol: 0.12, from: 1800, to: 600, at: 0.2 });
+  },
   // 잠긴 문·검문소
   denied: () => {
     tone(160, 0.14, { type: "square", vol: 0.12 });

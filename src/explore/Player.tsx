@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
-import { autoWalk, gaze, walkArea, walkBlock, type Rect } from "./gaze";
+import { autoWalk, gaze, walkArea, type Rect } from "./gaze";
 import { GATE_STOP, type Interactable, type ZoneDef } from "./zones";
 import type { Box } from "./collide";
 
@@ -163,7 +163,6 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       }
     } else {
       resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
-      if (walkBlock.boxes.length && zoneKey === "city") resolve(p, RADIUS, zone.bounds, walkBlock.boxes, []);
     }
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
     s.x = p.x;

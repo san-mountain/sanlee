@@ -163,7 +163,7 @@ function Terminal({ id, pos, rotY, color, lang, visited, onTap }: { id: SectionI
     [
       [id.toUpperCase(), 2.2],
       [lang === "ko" ? ko : `ARCHIVE / ${id}`, 1],
-      [visited ? (lang === "ko" ? "✓ 복원 완료" : "✓ RESTORED") : lang === "ko" ? "▸ 기록 손상됨" : "▸ RECORD CORRUPTED", 0.9],
+      [visited ? (lang === "ko" ? "✓ 열람 완료" : "✓ VIEWED") : lang === "ko" ? "▸ 열람 전" : "▸ NOT YET VIEWED", 0.9],
     ],
     { color, bg: "#03060a", mono: true, glow: true, w: 512, h: 320 }
   );
@@ -785,7 +785,7 @@ function BackupRack({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
   const screen = useSign(
     [
       ["BACKUP", 1.6],
-      [lang === "ko" ? "신호 끊김" : "SIGNAL LOST", 0.9],
+      [lang === "ko" ? "감시 신호 없음" : "NO SURVEILLANCE SIGNAL", 0.9],
     ],
     { color: "#ff4a5a", bg: "#0a0204", mono: true, glow: true, w: 512, h: 256 }
   );
@@ -890,8 +890,8 @@ function WallText({ lang }: { lang: Lang }) {
   const big = useSign([["B-7", 1]], { color: "#c9a227", w: 512, h: 256 });
   const warn = useSign(
     [
-      [lang === "ko" ? "비인가 신호 차단 구역" : "SIGNAL-FREE ZONE", 1],
-      [lang === "ko" ? "쿠키 · 추적 · 등급 없음" : "NO COOKIES · NO TRACKING · NO GRADES", 0.6],
+      [lang === "ko" ? "감시 신호가 닿지 않는 곳" : "BEYOND THE SURVEILLANCE SIGNAL", 1],
+      [lang === "ko" ? "방공호 B-7" : "SHELTER B-7", 0.6],
     ],
     { color: "#d8d2c0", w: 1024, h: 256 }
   );
@@ -899,7 +899,7 @@ function WallText({ lang }: { lang: Lang }) {
   const old = useSign(
     [
       [lang === "ko" ? "하층행 승강장" : "DESCENT PLATFORM", 1],
-      [lang === "ko" ? "지상 출구 → 큰길 끝" : "SURFACE EXIT → END OF THE AVENUE", 0.6],
+      [lang === "ko" ? "지상 출구 → 큰길 → 검문소" : "SURFACE EXIT → AVENUE → CHECKPOINT", 0.6],
     ],
     { color: "#c9a227", w: 1024, h: 256 }
   );

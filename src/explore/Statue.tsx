@@ -91,10 +91,10 @@ const TOP = 1.2; // 받침대 높이
 export function Pedestal({ lang, empty, second }: { lang: Lang; empty?: boolean; second?: boolean }) {
   const plate = useSign(
     [
-      second ? [lang === "ko" ? "방문자 (마지막 접속: 방금)" : "VISITOR (LAST SEEN: JUST NOW)", 1] : [lang === "ko" ? "이산 (마지막 접속: 2087년)" : "SAN LEE (LAST SEEN: 2087)", 1],
+      second ? [lang === "ko" ? "방문자 · 접속 중단" : "VISITOR · DISCONNECTED", 1] : [lang === "ko" ? "이산 · 2087년 접속 중단" : "SAN LEE · DISCONNECTED IN 2087", 1],
       second
         ? [lang === "ko" ? "끝까지 '모두 거부'를 누른 두 번째 사람" : "THE SECOND ONE WHO REJECTED ALL", 0.62]
-        : [empty ? (lang === "ko" ? "— 걸어 나감 —" : "— WALKED AWAY —") : lang === "ko" ? "끝까지 '모두 거부'를 누른 사람" : "THE ONE WHO REJECTED ALL", 0.7],
+        : [empty ? (lang === "ko" ? "빈자리" : "EMPTY") : lang === "ko" ? "끝까지 '모두 거부'를 누른 사람" : "THE ONE WHO REJECTED ALL", 0.7],
     ],
     { color: "#2a1d08", w: 512, h: 144 }
   );

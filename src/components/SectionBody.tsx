@@ -105,9 +105,9 @@ function WorksViewer({ list }: { list: Work[] }) {
         ) : (
           // 이 작품은 지금 보고 있는 바로 그 작품: 그림 대신 '현재 위치' 표시
           <div className="viewer-here">
-            <span className="vh-badge">{lang === "ko" ? "● 현재 관람 중" : "● NOW VIEWING"}</span>
+            <span className="vh-badge">{lang === "ko" ? "● 지금 관람 중" : "● VIEWING NOW"}</span>
             <span className="vh-title">DELETE SEOUL</span>
-            <span className="vh-pin">{lang === "ko" ? "▼ 당신은 여기에 있습니다" : "▼ YOU ARE HERE"}</span>
+            <span className="vh-pin">{lang === "ko" ? "▼ 지금 있는 곳" : "▼ YOU ARE HERE"}</span>
           </div>
         )}
         <button type="button" className="viewer-nav prev" aria-label={t(ui.prev)} onClick={() => go(-1)}>
@@ -139,8 +139,8 @@ function WorksViewer({ list }: { list: Work[] }) {
         {!w.image && (
           <p className="viewer-here-note">
             {lang === "ko"
-              ? "축하합니다. 당신은 이미 이 작품 안에 있습니다. 액자는 없고, 관람객이 곧 재료입니다. 관람 시간: 진행 중 · 쿠키: 거부됨 · 출구: 각자 찾을 것."
-              : "Congratulations: you're already inside this one. No frame; the visitor is the medium. Viewing time: ongoing · Cookies: rejected · Exit: find your own."}
+              ? "지금 보고 있는 작품이 당신이 걷고 있는 도시입니다. 이곳에서의 방문 기록은 이 기기에 저장됩니다."
+              : "The work you are looking at is the city you are walking through. Your visit here is recorded on this device."}
           </p>
         )}
         <span className="viewer-count">
