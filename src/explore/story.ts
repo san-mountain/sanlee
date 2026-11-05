@@ -375,7 +375,9 @@ export const checkpoint = {
   body: { ko: "대기열에 등록하려면 위치 추적에 동의해야 합니다.", en: "To register for the queue, you must consent to location tracking." },
   ifAccept: { ko: "수락하면", en: "If you accept" },
   acceptWhat: [
-    { ko: "당신만 대기열에 등록됩니다. 이산은 남습니다.", en: "Only you are registered for the queue. San stays behind." },
+    // 왜 방문자만 등록되는가: 대기열의 조건은 추적 동의 하나뿐이고, 이산은 이미 추적을 거부해 정지 처분을 받은 사람이다
+    { ko: "위치 추적에 동의했으므로 당신은 승강장 대기열에 등록됩니다.", en: "Because you consented to location tracking, you are registered for the platform queue." },
+    { ko: "이산은 추적을 거부한 기록이 있어 등록할 수 없습니다. 이산은 다시 정지 처분됩니다.", en: "San has a record of refusing tracking and cannot be registered. San will be suspended again." },
     { ko: "출발 시각은 정해지지 않았습니다.", en: "No departure time has been set." },
   ] as L[],
   ifReject: { ko: "거부하면", en: "If you refuse" },
@@ -406,7 +408,7 @@ export const checkpoint = {
   accept: [
     { ko: "기기를 등록했습니다. 다음 방문부터 자동으로 접속됩니다.", en: "Device registered. You will be signed in automatically from your next visit." },
     { ko: "승강장 대기열에 등록됐습니다. 출발 시각은 정해지지 않았습니다.", en: "You are registered for the platform queue. No departure time has been set." },
-    { ko: "연결 중단 {a}회 · 복원 {r}회", en: "Disconnected {a} times · restored {r} times" },
+    { ko: "동행인 이산: 추적 거부 기록으로 등록 불가. 정지 처분합니다. (연결 중단 {a}회 · 복원 {r}회)", en: "Companion San: cannot be registered due to a record of refusing tracking. Suspending. (Disconnected {a} times · restored {r} times)" },
     { ko: "먼저 가 있어. 난 여기 있을게.", en: "Go on ahead. I'll stay here.", say: true },
     { ko: "뒤따라오던 발소리가 더는 들리지 않는다.", en: "The footsteps that followed you can no longer be heard." },
   ] as Beat[],
