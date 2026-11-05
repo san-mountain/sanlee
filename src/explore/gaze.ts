@@ -18,7 +18,7 @@ export const gaze = {
   // 처음 시선 구역에 들어설 때의 소개 장면: 게이지를 멈추고 카메라가 lookAt을 바라본다
   intro: false,
   lookAt: null as { x: number; y: number; z: number } | null,
-  // 空 결말: 검문소가 정지할 대상을 찾지 못해 성문의 레이저가 꺼진다
+  // 空 결말: 성문의 정지 장벽이 고정할 활동 기록을 찾지 못해 빛을 거둔다 (City의 Gate가 천천히 끈다)
   gateOpen: false,
   // 큰길 드론의 빛이 지금 방문자를 비추는가 (줄 속에 서 있어도 보인다). Drones가 쓰고 GazeSystem이 읽는다
   droneLit: false,
@@ -29,18 +29,35 @@ export const gaze = {
   clamp: null as { yaw: number; dy: number; p0: number; p1: number } | null,
 };
 
-// 진행 단계 하나: ExploreClient가 정하고 3D 쪽(통제선 천막, 드론 재시작)이 읽는다
-// restore 기록 복원 중 → talk 풀려난 이산과 대화 전 → scope 남쪽 망원경으로 → descent 하층행 승강장으로
-export type RoutePhase = "restore" | "talk" | "scope" | "descent";
-export const route: { phase: RoutePhase } = { phase: "restore" };
+// 진행 단계 하나: ExploreClient가 정하고 3D 쪽이 읽는다
+// restore 기록 복원 중 → talk 풀려난 이산과 대화 전 → scope 남쪽 망원경으로(함께 보기 전) →
+// decide 함께 봤고, 승강장으로 갈지 아직 답하지 않음 → descent 승강장으로 가기로 함
+// open: 통제선 끝의 천막을 이산이 실제로 걷었는가 (단계와 따로. 천막 그림과 충돌이 이 값을 따른다)
+export type RoutePhase = "restore" | "talk" | "scope" | "decide" | "descent";
+export const route: { phase: RoutePhase; open: boolean } = { phase: "restore", open: false };
 // 진행에 따라 생기고 사라지는 막힘 (통제선 끝 천막). Player와 SanNPC가 zone.boxes 다음에 함께 피한다
 export const walkBlock: { boxes: { x0: number; x1: number; z0: number; z1: number }[] } = { boxes: [] };
 
-// 결말 연출에서 시점을 스스로 걷게 한다 (충돌 무시). Player가 읽는다
-// yaw: 다 왔을 때 바라볼 방향 (없으면 북쪽)
-export const autoWalk: { to: { x: number; z: number; speed: number; pitch?: number; yaw?: number } | null } = { to: null };
-// 결말 중 잠깐 조작을 돌려줄 때 걸을 수 있는 좁은 구역 (이 구역 밖으로는 못 나간다). Player가 읽는다
-export const walkArea: { box: { x0: number; x1: number; z0: number; z1: number } | null } = { box: null };
+// 시점을 스스로 걷게 한다 (충돌 무시: 미리 확인한 빈 자리 사이만 잇는다). Player가 읽는다
+// to: 지금 가는 점, queue: 그다음 점들 (도착할 때마다 하나씩 꺼낸다), arrived: 마지막 점에 도착했는가
+// yaw: 그 점에 다 왔을 때 바라볼 방향 (없으면 북쪽), pitch: 걷는 동안 맞출 고개 높이,
+// faceYaw: 걷는 쪽으로 돌아보지 않고 처음부터 yaw를 본다 (망원경에서 한 걸음 물러날 때)
+export type WalkStep = { x: number; z: number; speed: number; pitch?: number; yaw?: number; faceYaw?: boolean };
+export const autoWalk: { to: WalkStep | null; queue: WalkStep[]; arrived: boolean } = { to: null, queue: [], arrived: false };
+export function walkPath(steps: WalkStep[]) {
+  autoWalk.to = steps[0] ?? null;
+  autoWalk.queue = steps.slice(1);
+  autoWalk.arrived = !steps.length;
+}
+export function stopWalk() {
+  autoWalk.to = null;
+  autoWalk.queue = [];
+  autoWalk.arrived = false;
+}
+// 결말에서 평소 구역 밖(성문 너머 다리)을 걷게 할 때: 걸을 수 있는 직사각형들의 합. 눈에 보이는 난간·기단과 같은 자리다.
+// 이 안에서는 평소처럼 걷고(구역의 장애물도 피한다), 밖으로는 나가지 못한다. Player가 읽는다
+export type Rect = { x0: number; x1: number; z0: number; z1: number };
+export const walkArea: { rects: Rect[] | null } = { rects: null };
 
 export function resetGaze() {
   gaze.meter = 0;

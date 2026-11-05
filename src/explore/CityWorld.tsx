@@ -6,7 +6,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { NEO_POST_GLSL, useNeoPost } from "./neoPost";
 import { useFrame } from "@react-three/fiber";
-import { BUDDHAS, DECK, EDGE, ISLANDS, OVERSEER_ISLAND } from "./zones";
+import { BAY, BUDDHAS, EDGE, ISLANDS, LOOK, OVERSEER_ISLAND, WALK } from "./zones";
 import { roofGeometry } from "./models";
 
 const tmpM = new THREE.Matrix4();
@@ -137,22 +137,27 @@ export function Platform() {
   const W = EDGE.x * 2 + 2;
   const D = EDGE.z1 - EDGE.z0 + 2;
   const cz = (EDGE.z1 + EDGE.z0) / 2;
-  // 난간 구간: 북쪽은 성문 자리(|x|<13)를 비운다
+  // 난간 구간: 북쪽은 성문 자리(|x|<13)를 비운다. 서쪽은 바깥 산책로로 나가는 틈(WALK.gate0~gate1)을 비운다.
+  // 바깥 산책로와 남쪽 전망대에도 바깥쪽·안쪽(허공 쪽) 난간을 두른다. 선은 zones의 충돌 상자 가장자리와 같다
   const segs = useMemo(() => {
     const x = EDGE.x;
-    // 남쪽은 전망대 데크 자리를 비우고, 데크 양옆과 끝에 난간을 두른다
-    const d0 = DECK.x - DECK.w / 2;
-    const d1 = DECK.x + DECK.w / 2;
     return [
-      { a: [-x, EDGE.z1], b: [d0, EDGE.z1] },
-      { a: [d1, EDGE.z1], b: [x, EDGE.z1] },
-      { a: [d0, EDGE.z1], b: [d0, DECK.z1] },
-      { a: [d1, EDGE.z1], b: [d1, DECK.z1] },
-      { a: [d0, DECK.z1], b: [d1, DECK.z1] },
+      { a: [-x, EDGE.z1], b: [x, EDGE.z1] },
       { a: [-x, EDGE.z0], b: [-13, EDGE.z0] },
       { a: [13, EDGE.z0], b: [x, EDGE.z0] },
-      { a: [-x, EDGE.z0], b: [-x, EDGE.z1] },
+      { a: [-x, EDGE.z0], b: [-x, WALK.gate0] },
+      { a: [-x, WALK.gate1], b: [-x, EDGE.z1] },
       { a: [x, EDGE.z0], b: [x, EDGE.z1] },
+      // 바깥 산책로: 바깥(서쪽) 난간, 북쪽 끝, 판과 떨어진 구간의 안쪽 난간
+      { a: [WALK.x0, WALK.z0], b: [WALK.x0, LOOK.z1] },
+      { a: [WALK.x0, WALK.z0], b: [-x, WALK.z0] },
+      { a: [WALK.x1, EDGE.z1 + 1], b: [WALK.x1, LOOK.z0] },
+      // 남쪽 다리와 전망대
+      { a: [WALK.x0, LOOK.z1], b: [LOOK.x1, LOOK.z1] },
+      { a: [WALK.x1, LOOK.z0], b: [BAY.x0, LOOK.z0] },
+      { a: [BAY.x0, LOOK.z0], b: [BAY.x0, BAY.z0] },
+      { a: [BAY.x0, BAY.z0], b: [BAY.x1, BAY.z0] },
+      { a: [BAY.x1, BAY.z0], b: [BAY.x1, BAY.z1] },
     ] as { a: [number, number]; b: [number, number] }[];
   }, []);
   const posts = useMemo(() => {
@@ -179,14 +184,28 @@ export function Platform() {
         <boxGeometry args={[W, 6, D]} />
         <meshStandardMaterial color="#121216" roughness={0.6} metalness={0.7} />
       </mesh>
-      {/* 남쪽 전망대: 구름 위로 튀어나온 좁은 데크와 그 아래 받침 */}
-      <mesh position={[DECK.x, -0.18, (DECK.z0 + DECK.z1) / 2 + 0.5]}>
-        <boxGeometry args={[DECK.w, 0.36, DECK.z1 - DECK.z0 + 1]} />
-        <meshStandardMaterial color="#1b1c21" roughness={0.75} metalness={0.5} />
-      </mesh>
-      {[-1, 1].map((sx) => (
-        <mesh key={sx} position={[DECK.x + sx * (DECK.w / 2 - 0.3), -2.2, (DECK.z0 + DECK.z1) / 2 - 1]} rotation={[0.42, 0, 0]}>
-          <boxGeometry args={[0.25, 0.25, DECK.z1 - DECK.z0]} />
+      {/* 서쪽 바깥 산책로와 남쪽 다리·전망대: 판 옆에 매달린 얇은 바닥과 그 아래 받침대 (판과 같은 재질) */}
+      {(
+        [
+          [WALK.x0, WALK.x1, WALK.z0, LOOK.z0],
+          [LOOK.x0, BAY.x0, LOOK.z0, LOOK.z1],
+          [BAY.x0, BAY.x1, BAY.z0, BAY.z1],
+        ] as [number, number, number, number][]
+      ).map(([x0, x1, z0, z1], i) => (
+        <mesh key={`deck${i}`} position={[(x0 + x1) / 2, -0.2, (z0 + z1) / 2]}>
+          <boxGeometry args={[x1 - x0, 0.36, z1 - z0]} />
+          <meshStandardMaterial color="#1b1c21" roughness={0.75} metalness={0.5} />
+        </mesh>
+      ))}
+      {[WALK.z0 + 2, 36, 44, LOOK.z1 - 1].map((z) => (
+        <mesh key={`wz${z}`} position={[WALK.x0 + 1.4, -2.0, z]} rotation={[0, 0, -0.5]}>
+          <boxGeometry args={[0.25, 4.2, 0.25]} />
+          <meshStandardMaterial color="#121216" roughness={0.6} metalness={0.7} />
+        </mesh>
+      ))}
+      {[-58, -48, -38, -30].map((x) => (
+        <mesh key={`lx${x}`} position={[x, -2.6, LOOK.z0 + 1]} rotation={[0.42, 0, 0]}>
+          <boxGeometry args={[0.25, 0.25, 12]} />
           <meshStandardMaterial color="#121216" roughness={0.6} metalness={0.7} />
         </mesh>
       ))}

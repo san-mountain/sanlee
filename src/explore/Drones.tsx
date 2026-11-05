@@ -2,14 +2,16 @@
 
 // 순찰 드론: 레일을 따라 오가며 바닥에 빛 원을 비춘다.
 // 빛 원(그림), 빛기둥(그림), 가림 판정, 맞음 판정이 모두 아래의 같은 값(드론 위치·반지름·가림 상자)에서 나온다.
-// - 광장: 망원경 가는 길. 빛 속에 오래 있으면 식별되어 그 구간 처음 자리로 돌아간다 (DroneHUD → ExploreClient)
+// - 광장·바깥 산책로: 망원경 가는 길. 빛 속에 오래 있으면 식별되어 그 드론 길 앞의 안전한 자리로 돌아간다 (DroneHUD → ExploreClient)
 // - 큰길: 빛 속에서는 줄에 섞여 있어도 대자비에게 보이고(gaze.droneLit), 오래 비치면 대자비가 곧장 조준한다.
 //   죽음은 언제나 대자비의 레이저 하나뿐이다 (드론에는 따로 죽이는 타이머가 없다)
+// - 기록 없이 돌아온 둘(gaze.mood "blind"): 빛은 그대로 훑고, 몸에 닿으면 형체만 감지한다.
+//   이 몸을 이을 활동 기록이 없어서 따라가지도, 게이지를 채우지도, 위치를 보내지도 않는다 (drone.shape)
 // 그림자를 만드는 조명은 쓰지 않는다: 바닥 원은 셰이더에서 가림 상자를 직접 검사해 그림자 부분을 비운다
 import { useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
-import { COVERS, DRONE_R, DRONE_RAILS, SHELTER } from "./zones";
+import { COVERS, DRONE_R, DRONE_RAILS, ROOFS } from "./zones";
 import { coverState } from "./Jabi";
 import { gaze } from "./gaze";
 import { player } from "./Player";
@@ -24,7 +26,8 @@ const DRAIN = 40;
 const LOSE = 0.8; // 이만큼 놓치면 다시 레일을 훑는다
 const MAXB = 4;
 
-const ROOF: OBox = { x0: SHELTER.x - SHELTER.w / 2, x1: SHELTER.x + SHELTER.w / 2, y0: SHELTER.y0, y1: SHELTER.y1, z0: SHELTER.z - SHELTER.d / 2, z1: SHELTER.z + SHELTER.d / 2 };
+// 광장의 지붕들 (배송 대기소 처마 등). 지붕이 새로 생기면 zones의 ROOFS에 넣으면 판정과 그림이 같이 따른다
+const ROOF_BOXES: OBox[] = ROOFS.map((r) => ({ x0: r.x - r.w / 2, x1: r.x + r.w / 2, y0: r.y0, y1: r.y1, z0: r.z - r.d / 2, z1: r.z + r.d / 2 }));
 
 // 화면 HUD와 ExploreClient가 읽는 드론 상태
 export const drone = {
@@ -33,6 +36,8 @@ export const drone = {
   meter: 0, // 0~100. 다 차면 식별
   caught: false, // 광장에서 식별됨: ExploreClient가 구간 처음 자리로 돌려보내고 resetDrones를 부른다
   sent: 0, // 큰길에서 식별되어 대자비에게 위치를 보낸 시각 (performance.now)
+  shape: false, // 기록 없는 몸에 빛이 닿음: 형체는 감지했지만 이을 활동 기록이 없다
+  by: -1, // 식별한 드론 번호 (광장 A=0 / 바깥 산책로 B=1). 돌려보낼 자리를 고를 때 쓴다
 };
 
 const st = DRONE_RAILS.map((r) => ({ th: r.phase, x: r.c + r.a * Math.cos(r.phase), track: false, neg: false, lost: 0 }));
@@ -44,6 +49,8 @@ export function resetDrones() {
   drone.meter = 0;
   drone.caught = false;
   drone.sent = 0;
+  drone.shape = false;
+  drone.by = -1;
   gaze.droneLit = false;
   st.forEach((s, i) => {
     if (!s.track) return;
@@ -101,13 +108,17 @@ function segHits(ax: number, ay: number, az: number, bx: number, by: number, bz:
   return true;
 }
 
-// 이 드론의 빛을 가릴 수 있는 상자: 광장은 정류장 지붕, 큰길은 부서지지 않은 엄폐물 (빛 원 근처만)
+// 이 드론의 빛을 가릴 수 있는 상자: 광장·산책로는 배송 대기소 지붕, 큰길은 부서지지 않은 엄폐물 (빛 원 근처만)
 function occluders(i: number, out: OBox[]) {
   out.length = 0;
   const r = DRONE_RAILS[i];
   const x = st[i].x;
   if (r.zone === "plaza") {
-    if (Math.abs(ROOF.z0 - r.z) < DRONE_R + 4 || Math.abs(ROOF.z1 - r.z) < DRONE_R + 4) out.push(ROOF);
+    for (const b of ROOF_BOXES) {
+      if (out.length >= MAXB) break;
+      if (b.z0 - r.z > DRONE_R + 4 || r.z - b.z1 > DRONE_R + 4 || b.x0 - x > DRONE_R + 4 || x - b.x1 > DRONE_R + 4) continue;
+      out.push(b);
+    }
     return out;
   }
   for (let k = 0; k < COVERS.length && out.length < MAXB; k++) {
@@ -240,13 +251,18 @@ export default function Drones() {
     const now = s.clock.elapsedTime;
     const px = player.pos.x;
     const pz = player.pos.z;
-    // 지금 빛이 사람을 찾을 수 있는가. 기록을 지운 사람(blind)은 훑기만 하고 결코 붙잡지도, 남기지도 않는다
-    const live = gaze.enabled && !gaze.dead && !gaze.frozen && !gaze.intro && gaze.mood !== "blind" && !drone.caught;
+    // 지금 빛이 사람을 찾을 수 있는가. 기록 없이 돌아온 둘(blind)에게는 빛이 닿아도 형체만 감지된다
+    const awake = gaze.enabled && !gaze.dead && !gaze.frozen && !gaze.intro && !drone.caught;
+    const blind = gaze.mood === "blind";
+    const live = awake && !blind;
     let litI = -1;
+    let shape = false;
     DRONE_RAILS.forEach((r, i) => {
       const S = st[i];
       occluders(i, occ[i]);
-      const hit = live && (r.zone === "plaza" || gaze.inZone) && lights(i, px, pz, occ[i]);
+      const onFloor = r.zone === "plaza" || gaze.inZone;
+      if (awake && blind && onFloor && lights(i, px, pz, occ[i])) shape = true;
+      const hit = live && onFloor && lights(i, px, pz, occ[i]);
       if (hit && litI < 0) litI = i;
       if (hit) {
         if (!S.track) {
@@ -303,12 +319,14 @@ export default function Drones() {
       prevLit.current = litI;
     }
     drone.lit = litI;
+    drone.shape = shape;
     if (litI >= 0) drone.zone = DRONE_RAILS[litI].zone;
     gaze.droneLit = litI >= 0 && DRONE_RAILS[litI].zone === "avenue";
     if (drone.meter >= 100 && !drone.caught && litI >= 0) {
       sfx.droneId();
       if (drone.zone === "plaza") {
         drone.caught = true;
+        drone.by = litI;
       } else {
         // 큰길: 드론이 위치를 보내면 대자비가 곧장 조준한다 (기존의 붉은 조준 신호와 바닥 선이 그대로 나온다)
         if (gaze.state !== "lock" && gaze.state !== "fire" && gaze.state !== "cool") gaze.meter = 100;
@@ -334,10 +352,16 @@ export default function Drones() {
               <meshBasicMaterial color="#dff4ff" transparent opacity={0.045} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} fog={false} />
             </mesh>
           </group>
-          {/* 바닥 빛 원은 드론과 같은 x, 레일의 z에 고정. 셰이더가 uD로 그린다 */}
-          <mesh position={[r.c, 0.035, r.z]} rotation={[-Math.PI / 2, 0, 0]} material={mats[i]} frustumCulled={false}>
-            <planeGeometry args={[r.a * 2 + DRONE_R * 2 + 1, DRONE_R * 2 + 1]} />
-          </mesh>
+          {/* 바닥 빛 원은 드론과 같은 x, 레일의 z에 고정. 셰이더가 uD로 그린다. 판(fx) 밖 허공 위에는 그리지 않는다 */}
+          {(() => {
+            const x0 = r.fx ? r.fx[0] : r.c - r.a - DRONE_R - 0.5;
+            const x1 = r.fx ? r.fx[1] : r.c + r.a + DRONE_R + 0.5;
+            return (
+              <mesh position={[(x0 + x1) / 2, 0.035, r.z]} rotation={[-Math.PI / 2, 0, 0]} material={mats[i]} frustumCulled={false}>
+                <planeGeometry args={[x1 - x0, DRONE_R * 2 + 1]} />
+              </mesh>
+            );
+          })()}
         </group>
       ))}
     </group>

@@ -419,15 +419,18 @@ export function Hatch({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
 }
 
 /* ---------- 골목 포장마차와 할머니 ---------- */
+// 판대는 할머니 앞 0.9m (zones의 판대 충돌 상자와 같은 자리). 할머니가 보는 쪽이 손님 쪽이다
 export function Grandma({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
   const { pos, rotY } = CITY_NPCS.grandma;
+  const sx = pos[0] + Math.sin(rotY) * 0.9;
+  const sz = pos[2] + Math.cos(rotY) * 0.9;
   const sign = useSign([[lang === "ko" ? "어묵 · 떡볶이" : "FISHCAKE · TTEOKBOKKI", 1], [lang === "ko" ? "등급 안 따짐" : "ALL GRADES WELCOME", 0.55]], { color: "#ffe9c0", bg: "#a8321e", w: 512, h: 180 });
   return (
     <Tap id="grandma" onTap={onTap}>
       <group scale={0.88}>
         <Human position={[pos[0] / 0.88, 0, pos[2] / 0.88]} rotationY={rotY} color="#7a4a5a" skin="#d8b8a0" hood="#c8c0b0" />
       </group>
-      <group position={[pos[0], 0, -13.6]}>
+      <group position={[sx, 0, sz]} rotation={[0, rotY, 0]}>
         <mesh position={[0, 0.5, 0]}>
           <boxGeometry args={[2.4, 1, 0.6]} />
           <meshStandardMaterial color="#8a7a60" roughness={0.8} />
@@ -456,19 +459,26 @@ export function Grandma({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
   );
 }
 
-/* ---------- 지도에 없는 골목에서 멈춘 배달 로봇 ---------- */
-export function Courier({ onTap }: { onTap: TapFn }) {
+/* ---------- 배송 대기소 처마 밑에서 쉬는 배달 로봇 D-12 ---------- */
+// 몸은 멈춰 쉬고 있는데, 머리 위 상태 표시는 여전히 '배송 중'이다 (기록과 지금이 어긋난다)
+export function Courier({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
   const { pos, rotY } = CITY_NPCS.courier;
   const ref = useRef<THREE.Group>(null);
   const screen = useRef<THREE.MeshBasicMaterial>(null);
+  const tag = useSign([[lang === "ko" ? "D-12 · 상태: 배송 중" : "D-12 · STATUS: DELIVERING", 1]], { color: "#7dff7a", bg: "#06120a", mono: true, w: 512, h: 96 });
   useFrame((s) => {
     const t = s.clock.elapsedTime;
-    if (ref.current) ref.current.rotation.y = rotY + Math.sin(t * 0.4) * 0.8;
-    if (screen.current) screen.current.color.setRGB(0.1, 0.9, 1).multiplyScalar(Math.sin(t * 6) > 0 ? 1 : 0.35);
+    // 쉬는 숨처럼 아주 천천히 고개(몸)를 돌린다
+    if (ref.current) ref.current.rotation.y = rotY + Math.sin(t * 0.25) * 0.18;
+    if (screen.current) screen.current.color.setRGB(0.1, 0.9, 1).multiplyScalar(0.45 + Math.sin(t * 1.2) * 0.15);
   });
   return (
     <Tap id="courier" onTap={onTap}>
       <group position={pos}>
+        <mesh position={[0, 1.55, 0]} rotation={[0, rotY, 0]}>
+          <planeGeometry args={[1.1, 0.21]} />
+          <meshBasicMaterial map={tag} toneMapped={false} side={THREE.DoubleSide} />
+        </mesh>
         <group ref={ref}>
           <mesh position={[0, 0.55, 0]}>
             <boxGeometry args={[0.7, 0.6, 0.9]} />
@@ -716,7 +726,7 @@ export function StonePagoda() {
 
 /* ---------- 전망 망원경 ---------- */
 export function Scopes({ onTap }: { onTap: TapFn }) {
-  // 남쪽 망원경으로 들여다보는 동안(시야가 좁아진 동안)에는 망원경 몸체가 시야를 가리지 않게 감춘다
+  // 남쪽 망원경으로 들여다보는 동안(시야가 좁아진 동안)에는 망원경 몸체가 시야를 가리지 않게 감춘다 (눈 자리가 몸체 바로 뒤라서)
   const south = useRef<THREE.Group>(null);
   useFrame(() => {
     if (south.current) south.current.visible = gaze.zoom === 1;

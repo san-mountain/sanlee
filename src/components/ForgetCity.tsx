@@ -39,7 +39,7 @@ function describe(ko: boolean): Line[] {
   const found = read<string[]>("sanlee-endings-found", []);
   if (found.length) lines.push({ text: ko ? `발견한 결말 ${found.length}개` : `${found.length} endings found` });
   if (read<string | null>("sanlee-ending", null) === "accept") lines.push({ text: ko ? "자동 로그인 동의" : "Automatic login consent" });
-  const scope = read<{ uses?: number; done?: boolean } | null>("sanlee-scope", null);
+  const scope = read<{ uses?: number } | null>("sanlee-scope", null);
   if (scope?.uses) lines.push({ text: ko ? `남쪽 망원경 이용 ${scope.uses}회` : `South scope used ${scope.uses} time(s)` });
   if (String(read<unknown>(PROMISE_KEY, null)) === PROMISE_NOW) lines.push({ text: ko ? "검문소 앞에서 들은 이산의 부탁" : "San's request at the checkpoint" });
   if (!lines.length) lines.push({ text: ko ? "방문 기록" : "Visit history" });

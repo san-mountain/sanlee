@@ -7,7 +7,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
 import { billboards, ticker } from "./story";
-import { AVENUE, CAMERA_POLES, CITY, CITY_NPCS, CORDON, CROSS, DECK, EDGE, ISLANDS, LOTS, OVERSEER_ISLAND, QUEUE_X, QUEUE_Z, SHELTER } from "./zones";
+import { AVENUE, CAMERA_POLES, CITY, CITY_NPCS, CORDON, CROSS, DEPOT, EDGE, ISLANDS, LOTS, NS2_X, OVERSEER_ISLAND, QUEUE_X, QUEUE_Z, WALK } from "./zones";
 import { AirTraffic, Arks, Bridge, CloudSea, Islands, Platform, Sky, TwinBuddhas } from "./CityWorld";
 import { AlleyDecor, AlleyPeople, ChalkMarks, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
 import { citizenGeometry, roofGeometry, visorGeometry } from "./models";
@@ -272,22 +272,61 @@ function Gate({ lang }: { lang: Lang }) {
   const gateSign = useSign(
     [
       [lang === "ko" ? "하층행 승강장" : "DESCENT PLATFORM", 1.3],
-      [lang === "ko" ? "등록 시민 전용 · 상시 식별" : "REGISTERED CITIZENS ONLY · ALWAYS IDENTIFIED", 0.6],
+      [lang === "ko" ? "대기열: 등록 시민 · 정지 장벽: 식별된 기록" : "QUEUE: REGISTERED CITIZENS · STOP FIELD: IDENTIFIED RECORDS", 0.55],
     ],
     { color: "#ff2a3d", glow: true, mono: true, w: 1024, h: 256, bg: "#0a0204" }
   );
+  // 성문의 정지 장벽: 식별된 기록에 고정되는 빛의 띠. 어떤 대상에 고정되어 있는지 성문 옆 표시가 알려 준다
+  // bound: 방문자·이산의 기록에 고정됨 / search: 기록 없는 둘 앞에서 대상을 찾는 중 / free: 고정할 대상이 없어 꺼짐
+  const ko = lang === "ko";
+  const panelBound = useSign(
+    [
+      [ko ? "정지 장벽 · 대상 고정" : "STOP FIELD · TARGET BOUND", 0.95],
+      [ko ? "방문자 기록 · 이산 기록(외부 열람으로 임시 활동)" : "VISITOR RECORD · SAN'S RECORD (ACTIVE VIA OUTSIDE VIEWING)", 0.5],
+    ],
+    { color: "#ff6a7a", bg: "#140406", mono: true, w: 1024, h: 192 }
+  );
+  const panelSearch = useSign(
+    [
+      [ko ? "정지 장벽 · 대상 조회 중" : "STOP FIELD · RESOLVING TARGET", 0.95],
+      [ko ? "형체 2 감지 · 활동 기록 대조 중" : "2 FORMS DETECTED · MATCHING ACTIVITY RECORDS", 0.5],
+    ],
+    { color: "#c8ccd4", bg: "#0c0d10", mono: true, w: 1024, h: 192 }
+  );
+  const panelFree = useSign(
+    [
+      [ko ? "활동 기록 연결 불가" : "NO ACTIVITY RECORD LINKED", 0.95],
+      [ko ? "정지 명령 대상 없음 · 장벽 대기" : "NO TARGET FOR STOP ORDER · FIELD IDLE", 0.5],
+    ],
+    { color: "#9aa0a8", bg: "#0c0d10", mono: true, w: 1024, h: 192 }
+  );
   const lasers = useRef<THREE.Group>(null);
+  const panels = useRef<(THREE.Mesh | null)[]>([]);
+  const fade = useRef(1);
   const stone = useMemo(() => {
     const t = concreteTexture(17, 110);
     t.repeat.set(3, 3);
     return t;
   }, []);
-  useFrame((s) => {
-    // 空 결말: 검문소가 정지할 대상을 찾지 못하면 문의 레이저가 꺼진다
-    if (lasers.current) lasers.current.visible = !gaze.gateOpen;
-    lasers.current?.children.forEach((c, i) => {
-      ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(s.clock.elapsedTime * 8 + i) * 0.3;
-    });
+  useFrame((s, rawDt) => {
+    const dt = Math.min(rawDt, 0.05);
+    const t = s.clock.elapsedTime;
+    const blind = gaze.mood === "blind";
+    // 空 결말: 고정할 활동 기록이 없어 장벽이 빛을 거둔다 (천천히 꺼진다. 문이 열리는 것이 아니다)
+    fade.current = gaze.gateOpen ? Math.max(0, fade.current - dt * 0.8) : 1;
+    const g = lasers.current;
+    if (g) {
+      g.visible = fade.current > 0.01;
+      g.children.forEach((c, i) => {
+        const m = c as THREE.Mesh;
+        const flick = gaze.gateOpen ? (Math.sin(t * 31 + i * 2.1) > 0.2 ? 1 : 0.25) : 1;
+        (m.material as THREE.MeshBasicMaterial).opacity = (0.55 + Math.sin(t * 8 + i) * 0.3) * fade.current * flick;
+        // 대상을 찾는 동안에는 띠가 위아래로 훑는다
+        m.position.y = 0.5 + i * 0.85 + (blind && !gaze.gateOpen ? Math.sin(t * 1.6 + i * 0.5) * 0.3 : 0);
+      });
+    }
+    const which = gaze.gateOpen ? 2 : blind ? 1 : 0;
+    panels.current.forEach((m, i) => m && (m.visible = i === which));
   });
   return (
     <group>
@@ -329,6 +368,13 @@ function Gate({ lang }: { lang: Lang }) {
           <planeGeometry args={[9, 1.6]} />
           <meshBasicMaterial map={gateSign} toneMapped={false} />
         </mesh>
+        {/* 장벽 표시: 홍예문 오른쪽 기단 앞면 */}
+        {[panelBound, panelSearch, panelFree].map((tex, i) => (
+          <mesh key={i} ref={(m) => { panels.current[i] = m; }} position={[6.2, 3.1, 3.02]} visible={i === 0}>
+            <planeGeometry args={[4.6, 0.86]} />
+            <meshBasicMaterial map={tex} toneMapped={false} />
+          </mesh>
+        ))}
         <group ref={lasers} position={[0, 0, 3.1]}>
           {Array.from({ length: 7 }, (_, i) => (
             <mesh key={i} position={[0, 0.5 + i * 0.85, 0]}>
@@ -398,12 +444,12 @@ function DescentRoute({ lang }: { lang: Lang }) {
   );
 }
 
-/* ---------- 광장: 남쪽 전망대 표지, 버려진 정류장, 큰길 입구의 통제선 ---------- */
-// 정류장 지붕은 머리 위 드론 빛을 가린다 (Drones의 가림 상자와 같은 크기)
-function Shelter({ lang }: { lang: Lang }) {
+/* ---------- 광장: 남쪽 전망대 표지, 배송 대기소, 큰길 입구의 통제선 ---------- */
+// 배송 대기소: 서쪽 난간 틈 옆의 처마와 남쪽 벽. 처마는 머리 위 드론 빛을 가린다 (Drones의 ROOFS와 같은 상자)
+function Depot({ lang }: { lang: Lang }) {
   const ko = lang === "ko";
-  const sign = useSign([[ko ? "정류장 · 운행 종료" : "BUS STOP · NO SERVICE", 1]], { color: "#cfd6dd", bg: "#14181c", mono: true, w: 512, h: 96 });
-  const { x, z, w, d, y0, y1 } = SHELTER;
+  const sign = useSign([[ko ? "배송 대기소 7-서" : "COURIER BAY 7-W", 1]], { color: "#cfd6dd", bg: "#14181c", mono: true, w: 512, h: 96 });
+  const { x, z, w, d, y0, y1 } = DEPOT;
   return (
     <group position={[x, 0, z]}>
       <mesh position={[0, (y0 + y1) / 2, 0]}>
@@ -418,12 +464,12 @@ function Shelter({ lang }: { lang: Lang }) {
           </mesh>
         ))
       )}
-      {/* 서쪽 벽의 흐린 유리판과 낡은 표지 */}
-      <mesh position={[-w / 2 + 0.15, 1.2, 0]}>
-        <boxGeometry args={[0.04, 1.9, d - 0.4]} />
-        <meshStandardMaterial color="#8fd8ff" transparent opacity={0.14} depthWrite={false} />
+      {/* 남쪽 벽 (충돌 DEPOT_WALL과 같은 자리) */}
+      <mesh position={[0, y0 / 2, d / 2 - 0.1]}>
+        <boxGeometry args={[w, y0, 0.2]} />
+        <meshStandardMaterial color="#24272c" roughness={0.85} metalness={0.3} />
       </mesh>
-      {/* 광장 쪽(북쪽, 골목 입구)을 향한다 */}
+      {/* 광장 쪽(북쪽)을 향한 표지 */}
       <mesh position={[0, y1 + 0.28, -d / 2 + 0.05]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[2.4, 0.45]} />
         <meshBasicMaterial map={sign} toneMapped={false} />
@@ -432,31 +478,41 @@ function Shelter({ lang }: { lang: Lang }) {
   );
 }
 
-function DeckSign({ lang }: { lang: Lang }) {
+// 남쪽 전망대 가는 길 표지: 골목 입구 앞(북쪽을 향함)과 서쪽 난간 틈 옆(동쪽 광장을 향함)
+function LookoutSigns({ lang }: { lang: Lang }) {
   const ko = lang === "ko";
   const sign = useSign(
     [
-      [ko ? "남쪽 전망대 ↓" : "SOUTH LOOKOUT ↓", 1.05],
+      [ko ? "남쪽 전망대 · 서쪽 바깥 산책로로" : "SOUTH LOOKOUT · VIA WEST OUTER WALK", 0.9],
       [ko ? "망원경 1대 · 드론 순찰 구역" : "1 VIEWING SCOPE · DRONE PATROL", 0.55],
     ],
     { color: "#d8d2c0", bg: "#101418", mono: true, w: 768, h: 224 }
   );
   return (
-    <group position={[DECK.x + DECK.w / 2 + 0.6, 0, DECK.z0 - 1.2]}>
-      <mesh position={[0, 1.5, 0]}>
-        <cylinderGeometry args={[0.06, 0.08, 3, 8]} />
-        <meshStandardMaterial color="#3a3d44" metalness={0.6} roughness={0.5} />
-      </mesh>
-      {/* 광장 쪽(북쪽)을 향한다 */}
-      <mesh position={[0, 3.3, -0.06]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[2.6, 0.76]} />
-        <meshBasicMaterial map={sign} toneMapped={false} />
-      </mesh>
+    <group>
+      {(
+        [
+          [-NS2_X - 2.4, 15.0, Math.PI],
+          [-63.2, WALK.gate0 - 1.0, Math.PI / 2],
+        ] as [number, number, number][]
+      ).map(([px, pz, ry], i) => (
+        <group key={i} position={[px, 0, pz]}>
+          <mesh position={[0, 1.5, 0]}>
+            <cylinderGeometry args={[0.06, 0.08, 3, 8]} />
+            <meshStandardMaterial color="#3a3d44" metalness={0.6} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 3.3, 0]} rotation={[0, ry, 0]}>
+            <planeGeometry args={[2.6, 0.76]} />
+            <meshBasicMaterial map={sign} toneMapped={false} side={THREE.DoubleSide} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
 
-// 큰길 입구 통제선: 줄무늬 바리케이드. 동쪽 끝 인도는 천막 덮인 짐더미가 막고 있다가, 망원경 장면 뒤에는 천막이 걷혀 틈이 된다
+// 큰길 입구 통제선: 줄무늬 바리케이드. 동쪽 끝 인도는 천막 덮인 짐더미가 막고 있다가,
+// 이산이 그 앞에 가서 천막을 걷으면(route.open) 틈이 된다. 충돌은 ExploreClient가 같은 값으로 연다
 function Cordon({ lang }: { lang: Lang }) {
   const ko = lang === "ko";
   const sign = useSign(
@@ -470,7 +526,7 @@ function Cordon({ lang }: { lang: Lang }) {
   const tarp = useRef<THREE.Group>(null);
   const rolled = useRef<THREE.Group>(null);
   useFrame(() => {
-    const open = route.phase === "descent";
+    const open = route.open;
     if (tarp.current) tarp.current.visible = !open;
     if (rolled.current) rolled.current.visible = open;
   });
@@ -1165,8 +1221,8 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
       <Ground />
       <Gate lang={lang} />
       <DescentRoute lang={lang} />
-      <Shelter lang={lang} />
-      <DeckSign lang={lang} />
+      <Depot lang={lang} />
+      <LookoutSigns lang={lang} />
       <Cordon lang={lang} />
       <Jabi lang={lang} />
       <Billboards lang={lang} />
@@ -1187,7 +1243,7 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
       <AlleyPeople />
       <Hatch lang={lang} onTap={onTap} />
       <Grandma lang={lang} onTap={onTap} />
-      <Courier onTap={onTap} />
+      <Courier lang={lang} onTap={onTap} />
       <EdgeKid onTap={onTap} />
       <RoboMonk onTap={onTap} />
       <BellPavilion />

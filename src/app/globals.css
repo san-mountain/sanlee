@@ -1125,6 +1125,9 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .drone-fill { height: 100%; width: 0; background: linear-gradient(90deg, #dff4ff, #ffb02e); box-shadow: 0 0 8px #ffb02e; transition: width .1s linear; }
 .drone-state { color: #ffcf7a; }
 .drone-hud[data-state="lost"] .drone-state { color: #9fb4c0; }
+/* 기록 없는 몸에 빛이 닿았을 때: 형체만 감지, 게이지는 비어 있다 */
+.drone-hud[data-state="shape"] .drone-state { color: #c8ccd4; }
+.drone-hud[data-state="shape"] .drone-bar { border-color: #9aa0a855; }
 .drone-hud[data-state="caught"] .drone-state, .drone-hud[data-state="sent"] .drone-state { color: #fff; animation: gazeBlink .25s steps(1) infinite; }
 .drone-out { position: absolute; inset: 0; z-index: 58; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   pointer-events: none; font-family: var(--mono); color: #0a1418; background: #dff4ff; animation: droneOut 1.9s ease-out forwards; text-align: center; }
@@ -1136,18 +1139,24 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 /* ---------- 남쪽 망원경으로 들여다보기: 둥근 시야, 그 앞을 흐르는 구름 ---------- */
 .scope-view { position: absolute; inset: 0; z-index: 32; pointer-events: none; }
 .scope-mask { position: absolute; inset: 0; background: radial-gradient(circle at 50% 46%, transparent 0 min(36vmin, 300px), #000 calc(min(36vmin, 300px) + 2px)); }
-.scope-cloud { position: absolute; inset: -20%; opacity: .78;
+/* 구름 두 겹: ScopeView가 고개 돌린 만큼 반대로 옮긴다 (화면에 붙은 무늬가 아니다). 넓게 깔아 끝이 보이지 않게 한다 */
+.scope-cloud { position: absolute; inset: -120% -160%; will-change: transform; }
+.scope-cloud.far { opacity: .62;
   background:
-    radial-gradient(ellipse 38% 22% at 30% 52%, #d9dbe4cc, transparent 70%),
-    radial-gradient(ellipse 42% 26% at 62% 44%, #c9ccd8bb, transparent 72%),
-    radial-gradient(ellipse 30% 18% at 48% 62%, #e6e7eecc, transparent 70%);
-  animation: scopeCloud 18s linear infinite alternate; }
-@keyframes scopeCloud { from { transform: translateX(-6%); } to { transform: translateX(6%); } }
+    radial-gradient(ellipse 9% 6% at 38% 50%, #c9ccd8bb, transparent 72%),
+    radial-gradient(ellipse 11% 7% at 52% 47%, #d9dbe4aa, transparent 70%),
+    radial-gradient(ellipse 8% 5% at 61% 54%, #c9ccd8bb, transparent 72%),
+    radial-gradient(ellipse 10% 6% at 45% 57%, #e6e7eeaa, transparent 70%); }
+.scope-cloud.near { opacity: .7;
+  background:
+    radial-gradient(ellipse 7% 5% at 41% 46%, #e6e7eecc, transparent 70%),
+    radial-gradient(ellipse 6% 4% at 56% 52%, #d9dbe4cc, transparent 70%),
+    radial-gradient(ellipse 8% 4% at 49% 59%, #eceef3bb, transparent 72%),
+    radial-gradient(ellipse 5% 3% at 63% 44%, #d9dbe4bb, transparent 70%); }
 .scope-sees { position: absolute; left: 50%; bottom: calc(50% - min(36vmin, 300px) - 40px); transform: translateX(-50%); width: min(520px, 90vw); margin: 0;
   text-align: center; font-family: var(--mono); font-size: 12px; color: #d8dce6; text-shadow: 0 0 6px #000; }
 .scope-actions { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: auto; }
 .scope-actions small { font-family: var(--mono); font-size: 11px; color: #9aa0b0; }
-@media (prefers-reduced-motion: reduce) { .scope-cloud { animation: none; } }
 
 /* 대화: 방문자의 말, 지문, 고를 수 있는 말 */
 .dialog .line.you { color: #cfe9ff; }

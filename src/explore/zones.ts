@@ -163,7 +163,7 @@ export const CITY_BOUNDS: Box = { x0: -EDGE.x + 0.6, x1: EDGE.x - 0.6, z0: EDGE.
 export const AVENUE = 9;
 export const ALLEY = 3.5;
 // 검문소 레이저 앞에서 멈추도록 큰길 끝에 보이지 않는 벽
-const GATE_STOP = box(0, EDGE.z0 + 2.5, 2 * AVENUE + 4, 7);
+export const GATE_STOP = box(0, EDGE.z0 + 2.5, 2 * AVENUE + 4, 7);
 export const CROSS: [number, number][] = [
   [-36, -26],
   [-70, -60],
@@ -237,6 +237,7 @@ export const JUNK = box(HATCH.alleyX, 13.3, ALLEY, 1.4);
 
 const NS1 = COLS[0][1] + ALLEY / 2; // 23.75: 방공호 골목
 const NS2 = COLS[1][1] + ALLEY / 2; // 37.75
+export const NS2_X = NS2;
 // 골목 사람들이 바닥에 남긴 분필 화살표: 방공호 골목에서 광장까지 (rotY 0 = 북쪽, π/2 = 서쪽, π = 남쪽)
 export const CHALK: { x: number; z: number; rotY: number; turn?: boolean }[] = [
   { x: -NS1, z: 6.2, rotY: 0 },
@@ -247,26 +248,68 @@ export const CHALK: { x: number; z: number; rotY: number; turn?: boolean }[] = [
   { x: -NS2, z: 12.8, rotY: Math.PI },
 ];
 
-// 남쪽 전망대: 광장 남쪽 난간에서 구름 위로 튀어나온 좁은 데크. 끝에 망원경이 있다.
-// 분필 화살표가 끝나는 골목 입구(NS2)와 일직선이라, 골목을 나서면 정면에 망원경이 보인다
-export const DECK = { x: -NS2, w: 4.2, z0: EDGE.z1, z1: EDGE.z1 + 12 };
-// 데크 앞 광장의 버려진 정류장. 지붕(y0~y1)이 머리 위 드론 빛을 가린다
-export const SHELTER = { x: -NS2, z: 30, w: 4.6, d: 3.2, y0: 2.45, y1: 2.7 };
-// 골목 입구(드론 빛이 닿지 않는 첫 안전한 자리)와 데크 끝 망원경 앞의 안전한 자리
-export const ALLEY_MOUTH = { x: -NS2, z: 12.4, yaw: Math.PI };
-export const DECK_SAFE = { x: -NS2, z: DECK.z1 - 3.4, yaw: 0 };
-// 광장에서 큰길로 들어서는 입구의 통제선. 동쪽 인도 끝(x GAP~11.5)은 천막을 덮은 짐더미가 막고 있다가,
-// 망원경 장면 뒤 이산이 천막을 걷으면 틈이 열린다 (그 틈만 ExploreClient가 막고 연다)
+// ---------- 남쪽 전망대 가는 길 ----------
+// 방공호 골목 → (분필 화살표) 교차로의 포장마차 → 골목 입구 → 광장 드론 길 A → 서쪽 배송 대기소(D-12) →
+// 서쪽 난간의 틈 → 도시 판 바깥에 매달린 산책로 → 드론 길 B → 모퉁이의 아이 → 남쪽 전망대 끝의 망원경.
+// 망원경은 광장에서 허공 너머로 보이지만, 판과 전망대 사이는 비어 있어서 바깥 산책로로 돌아가야 닿는다.
+// 바닥(CityWorld), 난간, 충돌(CITY), 미니맵, 드론 빛, 이산의 경유점이 모두 아래 값을 쓴다
+// 서쪽 바깥 산책로: 판의 서쪽 가장자리(x -65) 바깥에 붙은 폭 3.6m의 다리. 판 안쪽 난간(x -64)에 출입 틈이 있다
+export const WALK = { x0: -68.6, x1: -65, z0: 25, z1: 50.4, gate0: 28.6, gate1: 31.6 };
+// 남쪽 다리: 산책로 남쪽 끝에서 동쪽으로 꺾여 판 남쪽 허공 위를 지난다. 동쪽 끝은 넓은 전망대(BAY)
+export const LOOK = { x0: WALK.x0, x1: -26, z0: 46.4, z1: WALK.z1 };
+export const BAY = { x0: -36, x1: LOOK.x1, z0: 44.2, z1: LOOK.z1 };
+// 판 가장자리 바깥의 허공 (걸을 수 없는 곳). 충돌 상자로 막고, 미니맵에는 빈 곳으로 그린다
+export const AIR: Box[] = [
+  { x0: -72, x1: -64.25, z0: EDGE.z0 - 8, z1: WALK.z0 }, // 산책로 북쪽 끝 너머의 판 서쪽 바깥
+  { x0: WALK.x1, x1: BAY.x0, z0: EDGE.z1 + 1, z1: LOOK.z0 }, // 판과 남쪽 다리 사이
+  { x0: BAY.x0, x1: BAY.x1, z0: EDGE.z1 + 1, z1: BAY.z0 }, // 판과 전망대 사이
+  { x0: BAY.x1, x1: EDGE.x + 8, z0: EDGE.z1 + 1, z1: LOOK.z1 + 6 }, // 전망대 동쪽
+];
+// 판의 서쪽·남쪽 난간 (서쪽은 산책로 출입 틈을 비운다). 난간 선과 같은 자리의 얇은 충돌 상자
+export const EDGE_RAILS: Box[] = [
+  { x0: -64.25, x1: -63.75, z0: EDGE.z0 - 1, z1: WALK.gate0 },
+  { x0: -64.25, x1: -63.75, z0: WALK.gate1, z1: EDGE.z1 },
+  { x0: -64.25, x1: EDGE.x + 2, z0: EDGE.z1 - 0.25, z1: EDGE.z1 + 1 },
+];
+// 산책로 출입 틈 옆, 서쪽 배송 대기소: 처마(y0~y1)가 머리 위 드론 빛을 가리고, 남쪽은 벽이다. 배달 로봇 D-12가 쉰다
+export const DEPOT = { x: -53.6, z: 30.4, w: 4.8, d: 3.6, y0: 2.45, y1: 2.7 };
+export const DEPOT_WALL = box(DEPOT.x, DEPOT.z + DEPOT.d / 2 - 0.1, DEPOT.w, 0.2);
+// 드론 빛을 가리는 지붕들 (광장 드론). Drones의 가림 판정과 바닥 빛 원 셰이더가 같은 상자를 쓴다
+export const ROOFS = [DEPOT];
+// 광장에서 큰길로 들어서는 입구의 통제선. 동쪽 인도 끝(x GAP~11.5)은 천막을 덮은 짐더미가 막고 있다.
+// 이산이 그 자리까지 가서 천막을 걷어야 틈이 열린다 (그 틈만 ExploreClient가 막고 연다)
 export const CORDON = { z: 13.4, gap: 9.1 };
 export const CORDON_TARP = box((CORDON.gap + 11.5) / 2, CORDON.z, 11.5 - CORDON.gap, 1.2);
 
+// 이산이 지나는 길: 경유점(hold = 드론 빛이 닿지 않아 기다릴 수 있는 자리, lane = 이 점으로 올 때 건너는 드론 길)
+// 이산은 hold에서만 기다리고, 그 사이는 장애물을 피해 이어 둔 점을 차례로 걷는다. 돌아갈 때는 거꾸로 걷는다
+export type RoutePt = { x: number; z: number; hold?: boolean; lane?: number };
+export const LOOKOUT_PATH: RoutePt[] = [
+  { x: -NS2 + 0.5, z: 12.2, hold: true }, // 0 골목 입구 안쪽
+  { x: -44, z: 17.2, hold: true }, // 1 광장 북쪽 가장자리 (드론 길 A 앞)
+  { x: -52.6, z: 29.6, hold: true, lane: 0 }, // 2 배송 대기소 처마 밑
+  { x: -62.4, z: 30.1 }, // 3 난간 틈 앞
+  { x: -66.2, z: 30.1 }, // 4 틈을 지나 산책로로
+  { x: -66.6, z: 35.2, hold: true }, // 5 산책로 북쪽 (드론 길 B 앞)
+  { x: -66.6, z: 47.8, hold: true, lane: 1 }, // 6 모퉁이
+  { x: -32.6, z: 47.6, hold: true }, // 7 전망대: 망원경 옆, 비켜선 자리
+];
+// 망원경 뒤 돌아오는 길의 끝: 광장 북쪽에서 통제선 끝의 천막까지, 그리고 걷은 틈 너머
+export const CORDON_PATH: RoutePt[] = [
+  { x: -20, z: 16.6 },
+  { x: 4, z: 15.8 },
+  { x: (CORDON.gap + 11.5) / 2, z: CORDON.z + 1.3, hold: true }, // 천막 앞
+];
+export const GAP_THROUGH = { x: (CORDON.gap + 11.5) / 2, z: CORDON.z - 1.8 };
+
 // 순찰 드론: 레일을 따라 x 방향으로 오가며(x = c + a·cos θ) 바닥에 빛 원(반지름 DRONE_R)을 비춘다.
-// 광장의 둘은 망원경 가는 길을, 큰길의 넷은 엄폐물 사이의 건너는 자리를 가로지른다
-export type DroneRail = { zone: "plaza" | "avenue"; z: number; c: number; a: number; y: number; period: number; phase: number };
+// 광장의 둘은 망원경 가는 길의 두 건너는 자리(광장, 바깥 산책로)를, 큰길의 넷은 엄폐물 사이를 가로지른다.
+// fx: 빛 원을 그리는 바닥의 x 범위 (허공 위에는 그리지 않는다)
+export type DroneRail = { zone: "plaza" | "avenue"; z: number; c: number; a: number; y: number; period: number; phase: number; fx?: [number, number] };
 export const DRONE_R = 2.6;
 export const DRONE_RAILS: DroneRail[] = [
-  { zone: "plaza", z: 22.5, c: -NS2, a: 16, y: 7, period: 11, phase: 0.3 },
-  { zone: "plaza", z: 36.2, c: -NS2, a: 8, y: 6.4, period: 7.5, phase: 2.2 },
+  { zone: "plaza", z: 22.5, c: -44, a: 18, y: 7, period: 12, phase: 0.3, fx: [-64, -20] },
+  { zone: "plaza", z: 41.5, c: -66.8, a: 7, y: 6.4, period: 9, phase: 2.2, fx: [WALK.x0, WALK.x1] },
   { zone: "avenue", z: -36.5, c: 0, a: 8.6, y: 8, period: 8.5, phase: 0.4 },
   { zone: "avenue", z: -58, c: 0, a: 8.6, y: 8, period: 9.5, phase: 2.1 },
   { zone: "avenue", z: -84, c: 0, a: 8.6, y: 8, period: 8, phase: 1.0 },
@@ -403,7 +446,7 @@ export const BELL = { pos: [-10, 0, 27] as Vec3 };
 export const PAGODA = { pos: [10, 0, 26] as Vec3 };
 // 전망 망원경 (가장자리)
 export const SCOPES: { pos: Vec3; rotY: number }[] = [
-  { pos: [DECK.x, 0, DECK.z1 - 0.9], rotY: Math.PI },
+  { pos: [-30, 0, BAY.z1 - 1.0], rotY: Math.PI },
   { pos: [EDGE.x - 1.2, 0, -46], rotY: -Math.PI / 2 },
   { pos: [-EDGE.x + 1.2, 0, -14], rotY: Math.PI / 2 },
 ];
@@ -411,14 +454,14 @@ export const SCOPES: { pos: Vec3; rotY: number }[] = [
 export const CITY_NPCS = {
   vendor: { pos: [-7.2, 0, 4] as Vec3, rotY: 1.2 },
   whisper: { pos: [QUEUE_X[1], 0, QUEUE_Z[3]] as Vec3, rotY: Math.PI },
-  // 골목 포장마차 할머니 (오른쪽 동서 골목)
-  grandma: { pos: [30, 0, -14.5] as Vec3, rotY: 0 },
+  // 골목 포장마차 할머니: 방공호 골목에서 골목 입구로 꺾는 교차로의 서쪽 끝 (동쪽, 교차로를 향한다)
+  grandma: { pos: [-43.4, 0, 1.25] as Vec3, rotY: Math.PI / 2 },
   // 로봇 스님 (범종각 옆)
   robomonk: { pos: [-6.6, 0, 27.5] as Vec3, rotY: Math.PI / 2 },
-  // 동쪽 끝에서 아래를 내려다보는 아이
-  edgekid: { pos: [EDGE.x - 1.6, 0, -50] as Vec3, rotY: -Math.PI / 2 },
-  // 지도에 없는 골목에서 길을 잃은 배달 로봇
-  courier: { pos: [-37.75, 0, -48] as Vec3, rotY: 0.4 },
+  // 바깥 산책로 모퉁이에서 남쪽 난간 너머를 내려다보는 아이 (드론 길 B를 지난 뒤, 망원경 자리와 떨어져 있다)
+  edgekid: { pos: [-67.7, 0, 49.5] as Vec3, rotY: 0 },
+  // 서쪽 배송 대기소 처마 밑에서 쉬는 배달 로봇 (지도에 없는 자리)
+  courier: { pos: [DEPOT.x - 1.2, 0, DEPOT.z + 0.9] as Vec3, rotY: Math.PI },
 };
 
 const npcItem = (id: keyof typeof CITY_NPCS, label: L, radius = 2.6, y = 1.5): Interactable => ({
@@ -432,11 +475,12 @@ const npcItem = (id: keyof typeof CITY_NPCS, label: L, radius = 2.6, y = 1.5): I
 
 export const CITY: ZoneDef = {
   spawn: { pos: [HATCH.alleyX, 0, 8.6], yaw: 0 },
-  // 남쪽 전망대 데크까지 걸을 수 있다. 데크 바깥의 남쪽은 아래 두 상자가 막는다
-  bounds: { ...CITY_BOUNDS, z1: DECK.z1 - 0.45 },
+  // 서쪽 바깥 산책로와 남쪽 전망대까지 걸을 수 있다. 판 가장자리의 난간과 그 바깥 허공은 상자로 막는다
+  bounds: { ...CITY_BOUNDS, x0: WALK.x0, z1: LOOK.z1 },
   boxes: [
-    { x0: -EDGE.x - 2, x1: DECK.x - DECK.w / 2, z0: EDGE.z1 - 0.6, z1: DECK.z1 + 2 },
-    { x0: DECK.x + DECK.w / 2, x1: EDGE.x + 2, z0: EDGE.z1 - 0.6, z1: DECK.z1 + 2 },
+    ...EDGE_RAILS,
+    ...AIR,
+    DEPOT_WALL,
     // 큰길 입구 통제선 (동쪽 끝의 틈은 CORDON_TARP)
     { x0: -11.6, x1: CORDON.gap, z0: CORDON.z - 0.25, z1: CORDON.z + 0.25 },
     ...LOTS,
@@ -446,7 +490,7 @@ export const CITY: ZoneDef = {
     JUNK,
     box(-7.2, 5.2, 2.2, 1.4), // 노점 수레
     box(7.2, 5.2, 2.2, 1.4), // 맞은편 복제 수레
-    box(30, -13.6, 2.4, 0.6), // 포장마차 판대
+    box(CITY_NPCS.grandma.pos[0] + 0.9, CITY_NPCS.grandma.pos[2], 0.6, 2.4), // 포장마차 판대 (할머니 앞, 동쪽)
     box(BELL.pos[0], BELL.pos[2], 5.2, 5.2),
     box(PAGODA.pos[0], PAGODA.pos[2], 3.4, 3.4),
     ...CAMERA_POLES.map(([x, , z]) => box(x, z, 0.4, 0.4)),
@@ -456,8 +500,8 @@ export const CITY: ZoneDef = {
     { x: -CITY_NPCS.vendor.pos[0], z: CITY_NPCS.vendor.pos[2], r: 0.4 },
     ...(["grandma", "robomonk", "edgekid", "courier"] as const).map((k) => ({ x: CITY_NPCS[k].pos[0], z: CITY_NPCS[k].pos[2], r: 0.45 })),
     ...SCOPES.map((s) => ({ x: s.pos[0], z: s.pos[2], r: 0.4 })),
-    // 정류장 기둥 넷
-    ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => ({ x: SHELTER.x + sx * (SHELTER.w / 2 - 0.15), z: SHELTER.z + sz * (SHELTER.d / 2 - 0.15), r: 0.12 }))),
+    // 배송 대기소 기둥 넷
+    ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => ({ x: DEPOT.x + sx * (DEPOT.w / 2 - 0.15), z: DEPOT.z + sz * (DEPOT.d / 2 - 0.15), r: 0.12 }))),
     ...ALLEY_PEOPLE.map((p) => ({ x: p.x, z: p.z, r: 0.32 })),
   ],
   items: [

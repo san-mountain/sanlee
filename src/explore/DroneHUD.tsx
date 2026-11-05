@@ -7,7 +7,8 @@ import { gaze } from "./gaze";
 import { droneUi } from "./story";
 
 // 드론 경고: 대자비의 붉은 게이지와 따로, 화면 위쪽에 차가운 흰빛·주황의 작은 막대로 뜬다.
-// 광장에서 식별되면 화면이 잠깐 어두워지고, onCaught가 그 구간 처음 자리로 돌려보낸다
+// 광장에서 식별되면 화면이 잠깐 어두워지고, onCaught가 그 드론 길 앞의 안전한 자리로 돌려보낸다.
+// 기록 없이 돌아온 둘에게 빛이 닿으면 게이지 없이 '형체 감지 · 활동 기록 연결 불가'만 뜬다 (식별도 추적도 없다)
 export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
   const { t } = useLang();
   const tRef = useRef(t);
@@ -30,12 +31,12 @@ export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
       raf = requestAnimationFrame(loop);
       const now = performance.now();
       const sent = drone.sent && now - drone.sent < 2400;
-      const key = drone.caught ? "caught" : sent ? "sent" : drone.lit >= 0 ? "lit" : drone.meter > 0.5 ? "lost" : "";
+      const key = drone.caught ? "caught" : sent ? "sent" : drone.lit >= 0 ? "lit" : drone.shape ? "shape" : drone.meter > 0.5 ? "lost" : "";
       if (wrap.current) {
         wrap.current.style.opacity = key ? "1" : "0";
         wrap.current.dataset.state = key;
       }
-      if (fill.current) fill.current.style.width = `${Math.round((sent ? 100 : drone.meter))}%`;
+      if (fill.current) fill.current.style.width = `${Math.round(sent ? 100 : key === "shape" ? 0 : drone.meter)}%`;
       if (key !== prev) {
         prev = key;
         const s = key ? tRef.current(droneUi[key as keyof typeof droneUi]) : "";

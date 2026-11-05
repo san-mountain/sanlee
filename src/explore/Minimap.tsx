@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { player } from "./Player";
-import { BARRIERS, COVERS, DRONE_R, DRONE_RAILS, GAZE_ZONE, SHELTER, ZONES, type Zone } from "./zones";
+import { AIR, BARRIERS, COVERS, DRONE_R, DRONE_RAILS, GAZE_ZONE, ROOFS, ZONES, type Zone } from "./zones";
 import { droneAt } from "./Drones";
 import { walkBlock } from "./gaze";
 import { coverState } from "./Jabi";
@@ -75,9 +75,14 @@ export default function Minimap({ zone, get }: { zone: Zone; get: () => QuestTar
       ctx.lineWidth = lw * 1.5;
       ctx.strokeRect(b.x0, b.z0, b.x1 - b.x0, b.z1 - b.z0);
 
+      // 판 바깥의 허공은 바닥 밖과 같은 빈 색 (바깥 산책로·남쪽 전망대만 판 밖에 바닥으로 남는다)
+      if (city) {
+        ctx.fillStyle = "rgba(6,3,16,1)";
+        for (const o of AIR) ctx.fillRect(o.x0, o.z0, o.x1 - o.x0, o.z1 - o.z0);
+      }
       // 건물·벽
       ctx.fillStyle = "#3d3260";
-      for (const o of def.boxes) ctx.fillRect(o.x0, o.z0, o.x1 - o.x0, o.z1 - o.z0);
+      for (const o of def.boxes) if (!city || !AIR.includes(o)) ctx.fillRect(o.x0, o.z0, o.x1 - o.x0, o.z1 - o.z0);
       for (const c of def.circles) {
         ctx.beginPath();
         ctx.arc(c.x, c.z, c.r, 0, Math.PI * 2);
@@ -92,9 +97,9 @@ export default function Minimap({ zone, get }: { zone: Zone; get: () => QuestTar
           ctx.fillRect(c.x - c.w / 2, c.z - c.d / 2, c.w, c.d);
         });
         for (const o of walkBlock.boxes) ctx.fillRect(o.x0, o.z0, o.x1 - o.x0, o.z1 - o.z0);
-        // 정류장 지붕 (드론 빛을 가리는 곳)
+        // 지붕 (드론 빛을 가리는 곳)
         ctx.fillStyle = "#8fa6b8";
-        ctx.fillRect(SHELTER.x - SHELTER.w / 2, SHELTER.z - SHELTER.d / 2, SHELTER.w, SHELTER.d);
+        for (const r of ROOFS) ctx.fillRect(r.x - r.w / 2, r.z - r.d / 2, r.w, r.d);
         // 드론 빛 원: 지금 있는 자리
         ctx.strokeStyle = "#dff4ffcc";
         ctx.lineWidth = lw * 1.4;
