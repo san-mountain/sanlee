@@ -145,6 +145,9 @@ export const BUNKER: ZoneDef = {
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
     // 얼굴 복원 장치: 터미널 셋을 연 뒤 맞추는 동안만 대상이 된다 (바라보는 원통을 돌린다)
     { id: "face-machine", kind: "face", pos: machinePoint(0, 1.7, 0.35), radius: 3.2, label: faceUi.quest, when: () => faceRt.phase === "idle" },
+    // 얼굴을 맞춘 뒤 도시가 내미는 두 조작부: 왼쪽 분홍 버튼, 오른쪽 나무 레버
+    { id: "face-std", kind: "face", pos: machinePoint(-0.56, 1.0, 0.3), radius: 2.6, label: faceUi.applyStandard, color: "#ff79c0", when: () => faceRt.phase === "choice" },
+    { id: "face-keep", kind: "face", pos: machinePoint(0.56, 1.2, 0.3), radius: 2.6, label: faceUi.keepOriginal, color: "#f1d6a0", when: () => faceRt.phase === "choice" },
     {
       id: "keeper",
       kind: "npc",

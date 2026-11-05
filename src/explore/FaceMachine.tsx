@@ -10,9 +10,9 @@ import type { Lang } from "@/data/site";
 import { Tap, type TapFn } from "./parts";
 import { signTexture } from "./textures";
 import { FACE_MACHINE, machinePoint } from "./zones";
-import { faceRt } from "./faceRuntime";
-import { drumTexture, seamPoints } from "./faceArt";
-import { FACES, seamJoined, type Drums } from "./faceAuth";
+import { faceRt, type FacePhase } from "./faceRuntime";
+import { drumTexture, seamPoints, smileTexture } from "./faceArt";
+import { FACES, seamJoined, type Drums, type FaceMethod } from "./faceAuth";
 import { player } from "./Player";
 import { sfx } from "./sfx";
 import { faceUi } from "./story";
@@ -144,7 +144,7 @@ function Seam({ s, joined }: { s: 0 | 1; joined: boolean }) {
     since.current = joined ? performance.now() : 0;
   }, [joined]);
   useFrame(() => {
-    const locked = faceRt.phase === "restored" || faceRt.phase === "done";
+    const locked = faceRt.phase !== "idle" && faceRt.phase !== "locked";
     const age = since.current ? (performance.now() - since.current) / 1000 : 0;
     // 막 이어진 순간 밝게 번쩍이고 은은하게 남는다. 장치가 잠기면 계속 켜져 있다
     const o = joined || locked ? Math.min(1, age * 4) * (0.55 + 0.45 * Math.exp(-age * 2.2)) : 0;
@@ -160,6 +160,184 @@ function Seam({ s, joined }: { s: 0 | 1; joined: boolean }) {
         <mesh key={k} position={p}>
           <sphereGeometry args={[0.026, 10, 8]} />
           <meshBasicMaterial ref={(m) => { dotMat.current[k] = m; }} color="#fff0c0" transparent opacity={0} toneMapped={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// 도시가 덧씌우려는 표준 미소 (분홍 홀로그램)
+function Smile({ method }: { method: FaceMethod | null }) {
+  const tex = useMemo(() => smileTexture(), []);
+  useEffect(() => () => tex.dispose(), [tex]);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  const mesh = useRef<THREE.Mesh>(null);
+  useFrame((st) => {
+    const p = faceRt.phase;
+    const t = st.clock.elapsedTime;
+    const age = (performance.now() - faceRt.since) / 1000;
+    let o = 0;
+    let z = R + 0.09;
+    let sy = 1;
+    if (p === "twist") o = age < 1.2 ? (Math.sin(age * 40) > 0 ? 0.85 : 0.15) * Math.min(1, age * 2) : 0.8;
+    else if (p === "choice") o = 0.62 + Math.sin(t * 3) * 0.12 + (Math.sin(t * 23) > 0.93 ? -0.4 : 0);
+    else if (p === "applying" || p === "done") {
+      if (method === "standard") {
+        // 얼굴 위로 눌러 붙는다
+        const k = p === "applying" ? Math.min(1, age / 1.2) : 1;
+        z = R + 0.09 - 0.07 * k;
+        o = p === "applying" ? 0.8 + 0.2 * k : 0.55 + Math.sin(t * 2) * 0.08;
+      } else if (method === "exception" && p === "applying") {
+        // 지직거리며 납작하게 꺼진다
+        const k = Math.min(1, age / 0.9);
+        sy = 1 - k;
+        o = (1 - k) * (Math.sin(age * 60) > 0 ? 0.9 : 0.3);
+      }
+    }
+    if (mat.current) mat.current.opacity = o;
+    if (mesh.current) {
+      mesh.current.visible = o > 0.01;
+      mesh.current.position.z = z;
+      mesh.current.scale.y = Math.max(0.001, sy);
+    }
+  });
+  return (
+    <mesh ref={mesh} position={[0, (DRUM_Y[1] + DRUM_Y[2]) / 2 + 0.02, R + 0.09]} visible={false}>
+      <planeGeometry args={[0.72, 1.08]} />
+      <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} toneMapped={false} depthWrite={false} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
+// 받침 장의 작은 화면: 장치가 하는 말을 그대로 비춘다. 장치의 말은 호박색, 도시의 말은 분홍
+function Screen({ phase, method, lang }: { phase: FacePhase; method: FaceMethod | null; lang: Lang }) {
+  const line = phase === "restored" ? faceUi.restored : phase === "twist" || phase === "choice" ? faceUi.smileMissing : method && (phase === "applying" || phase === "done") ? faceUi[method] : null;
+  const city = phase === "twist" || phase === "choice" || (method === "standard" && (phase === "applying" || phase === "done"));
+  const tex = useCanvasSign(line ? [[line[lang], 1]] : [["", 1]], { color: city ? "#ff79c0" : "#ffc76a", bg: city ? "#1d0a16" : "#120d06", w: 512, h: 160, glow: true });
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  useFrame((st) => {
+    if (!mat.current) return;
+    // 도시의 말은 가끔 화면이 튄다
+    const glitch = line && city && Math.sin(st.clock.elapsedTime * 17) > 0.96;
+    mat.current.opacity = line ? (glitch ? 0.5 : 1) : 0.18;
+  });
+  return (
+    <group position={[0, 0.6, 0.452]}>
+      <mesh position={[0, 0, -0.005]}>
+        <boxGeometry args={[0.6, 0.26, 0.02]} />
+        <meshStandardMaterial color={BRASS} metalness={0.8} roughness={0.4} />
+      </mesh>
+      <mesh position={[0, 0, 0.007]}>
+        <planeGeometry args={[0.54, 0.2]} />
+        <meshBasicMaterial ref={mat} map={tex} transparent toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+// 두 조작부: 왼쪽은 도시가 덧대어 놓은 분홍 버튼, 오른쪽은 장치에 원래 달린 나무 레버
+function Controls({ method, lang, onTap }: { method: FaceMethod | null; lang: Lang; onTap: TapFn }) {
+  const ko = lang === "ko";
+  const stdSign = useCanvasSign(
+    [
+      [ko ? faceUi.applyStandard.ko : faceUi.applyStandard.en.toUpperCase(), 1],
+      [faceUi.standard[lang], 0.6],
+    ],
+    { color: "#ff79c0", bg: "#22101b", w: 512, h: 220 }
+  );
+  const keepSign = useCanvasSign(
+    [
+      [ko ? faceUi.keepOriginal.ko : faceUi.keepOriginal.en.toUpperCase(), 1],
+      [faceUi.exception[lang], 0.6],
+    ],
+    { color: "#f1d6a0", bg: "#2a1a0e", w: 512, h: 220 }
+  );
+  const button = useRef<THREE.Mesh>(null);
+  const buttonMat = useRef<THREE.MeshStandardMaterial>(null);
+  const lever = useRef<THREE.Group>(null);
+  const leverLamp = useRef<THREE.MeshStandardMaterial>(null);
+  const signs = useRef<THREE.MeshBasicMaterial[]>([]);
+  // 바라보는 조작부를 감싸는 빛 고리
+  const halos = useRef<(THREE.Mesh | null)[]>([]);
+  useFrame((st) => {
+    const p = faceRt.phase;
+    const t = st.clock.elapsedTime;
+    const live = p === "choice";
+    const age = (performance.now() - faceRt.since) / 1000;
+    const chose = p === "applying" || p === "done";
+    // 고른 쪽은 눌리거나 당겨진 채로 남는다
+    const pressed = chose && method === "standard" ? Math.min(1, (p === "applying" ? age : 1) * 6) : 0;
+    const pulled = chose && method === "exception" ? Math.min(1, (p === "applying" ? age : 1) * 2.5) : 0;
+    if (button.current) button.current.position.y = 0.075 - pressed * 0.035;
+    const fStd = live && faceRt.focus === "face-std";
+    const fKeep = live && faceRt.focus === "face-keep";
+    if (buttonMat.current) buttonMat.current.emissiveIntensity = fStd ? 1.8 + Math.sin(t * 8) * 0.5 : live ? 0.6 + Math.sin(t * 4) * 0.25 : method === "standard" && chose ? 0.8 : 0.08;
+    if (lever.current) lever.current.rotation.x = -0.55 + pulled * 1.25;
+    if (leverLamp.current) leverLamp.current.emissiveIntensity = fKeep ? 1.8 + Math.sin(t * 8) * 0.5 : live ? 0.6 + Math.sin(t * 4 + 1.5) * 0.25 : method === "exception" && chose ? 0.8 : 0.05;
+    signs.current.forEach((m, k) => m && (m.opacity = live ? ((k ? fKeep : fStd) ? 1 : 0.7) : chose ? 1 : 0.32));
+    halos.current.forEach((h, k) => {
+      if (!h) return;
+      const on = k ? fKeep : fStd;
+      h.visible = on;
+      if (on) {
+        h.scale.setScalar(1 + Math.sin(t * 6) * 0.08);
+        (h.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(t * 6) * 0.25;
+      }
+    });
+  });
+  return (
+    <group>
+      {/* 분홍 버튼: 매끈한 플라스틱 상자가 놋쇠 띠로 장에 억지로 묶여 있다 */}
+      <Tap id="face-std" onTap={onTap}>
+        <group position={[-0.56, 0.92, 0.22]}>
+          <mesh position={[0, 0.03, 0]}>
+            <boxGeometry args={[0.26, 0.06, 0.22]} />
+            <meshStandardMaterial color="#f4eef2" roughness={0.25} metalness={0.05} />
+          </mesh>
+          <mesh position={[0, 0.03, 0]}>
+            <boxGeometry args={[0.28, 0.02, 0.06]} />
+            <meshStandardMaterial color={BRASS} metalness={0.8} roughness={0.4} />
+          </mesh>
+          <mesh ref={button} position={[0, 0.075, 0]}>
+            <sphereGeometry args={[0.075, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2]} />
+            <meshStandardMaterial ref={buttonMat} color="#ff5fb0" roughness={0.2} emissive="#ff3aa8" emissiveIntensity={0.08} />
+          </mesh>
+        </group>
+      </Tap>
+      {/* 나무 레버 */}
+      <Tap id="face-keep" onTap={onTap}>
+        <group position={[0.56, 0.92, 0.22]}>
+          <mesh position={[0, 0.015, 0]}>
+            <boxGeometry args={[0.18, 0.03, 0.24]} />
+            <meshStandardMaterial color={BRASS} metalness={0.8} roughness={0.4} />
+          </mesh>
+          <mesh position={[0, 0.03, -0.09]}>
+            <sphereGeometry args={[0.022, 12, 8]} />
+            <meshStandardMaterial ref={leverLamp} color="#c99a4a" emissive="#ffb54a" emissiveIntensity={0.05} />
+          </mesh>
+          <group ref={lever} position={[0, 0.04, 0]} rotation={[-0.55, 0, 0]}>
+            <mesh position={[0, 0.2, 0]}>
+              <cylinderGeometry args={[0.022, 0.028, 0.4, 10]} />
+              <meshStandardMaterial color="#6e4426" roughness={0.75} />
+            </mesh>
+            <mesh position={[0, 0.41, 0]}>
+              <sphereGeometry args={[0.045, 14, 10]} />
+              <meshStandardMaterial color="#3b2112" roughness={0.6} />
+            </mesh>
+          </group>
+        </group>
+      </Tap>
+      {/* 바라보는 쪽을 감싸는 빛 고리 (장 윗면에 눕힌 원) */}
+      {["#ff79c0", "#ffd27a"].map((c, k) => (
+        <mesh key={c} ref={(m) => { halos.current[k] = m; }} position={[k ? 0.56 : -0.56, 0.935, 0.22]} rotation={[-Math.PI / 2, 0, 0]} visible={false}>
+          <ringGeometry args={[0.17, 0.205, 40]} />
+          <meshBasicMaterial color={c} transparent opacity={0.8} toneMapped={false} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+      ))}
+      {[stdSign, keepSign].map((tex, k) => (
+        <mesh key={k} position={[k ? 0.56 : -0.56, 0.6, 0.452]}>
+          <planeGeometry args={[0.44, 0.19]} />
+          <meshBasicMaterial ref={(m) => { if (m) signs.current[k] = m; }} map={tex} transparent toneMapped={false} />
         </mesh>
       ))}
     </group>
@@ -248,7 +426,7 @@ function Bulb() {
     const on = faceRt.wokeAt ? (performance.now() - faceRt.wokeAt) / 1000 : -1;
     // 켜지는 순간 몇 번 깜박인다
     let k = on < 0 ? 0.04 : on < 0.9 ? (Math.sin(on * 31) > 0.2 ? 1 : 0.1) : 1;
-    if (faceRt.phase === "restored") k = 1.6;
+    if (faceRt.phase === "restored" || faceRt.phase === "applying") k = 1.6;
     if (bulb.current) bulb.current.emissiveIntensity = 0.2 + k * 2.2;
     if (light.current) light.current.intensity = k * 2.4;
   });
@@ -285,7 +463,7 @@ function Conduit() {
     if (!mat.current) return;
     const p = faceRt.phase;
     // 얼굴이 맞으면 빛이 장치에서 이산에게로 흘러간다
-    mat.current.emissiveIntensity = p === "restored" ? 0.8 + Math.sin(st.clock.elapsedTime * 9) * 0.5 : p === "done" ? 0.25 : 0;
+    mat.current.emissiveIntensity = p === "applying" ? 0.8 + Math.sin(st.clock.elapsedTime * 9) * 0.5 : p === "done" ? 0.25 : p === "locked" || p === "idle" ? 0 : 0.12;
   });
   return (
     <mesh geometry={geo}>
@@ -294,7 +472,7 @@ function Conduit() {
   );
 }
 
-export default function FaceMachine({ drums, lang, onTap }: { drums: Drums; lang: Lang; onTap: TapFn }) {
+export default function FaceMachine({ drums, phase, method, lang, onTap }: { drums: Drums; phase: FacePhase; method: FaceMethod | null; lang: Lang; onTap: TapFn }) {
   const camera = useThree((s) => s.camera);
   const inv = useMemo(() => new THREE.Matrix4(), []);
   const tmp = useMemo(() => ({ o: new THREE.Vector3(), d: new THREE.Vector3() }), []);
@@ -332,6 +510,9 @@ export default function FaceMachine({ drums, lang, onTap }: { drums: Drums; lang
       ))}
       <Seam s={0} joined={seamJoined(drums, 0)} />
       <Seam s={1} joined={seamJoined(drums, 1)} />
+      <Smile method={method} />
+      <Screen phase={phase} method={method} lang={lang} />
+      <Controls method={method} lang={lang} onTap={onTap} />
       <Bulb />
     </group>
   );

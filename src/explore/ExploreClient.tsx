@@ -28,7 +28,7 @@ import ScopeView from "./ScopeView";
 import { coverState, finalBeam, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
-import { FACE_KEY, emptyFace, loadFace, rotateDrum, saveFace, seamJoined, type FaceState } from "./faceAuth";
+import { FACE_KEY, emptyFace, faceFinished, loadFace, rotateDrum, saveFace, seamJoined, type FaceMethod, type FaceState } from "./faceAuth";
 import { faceRt, setFacePhase, type FacePhase } from "./faceRuntime";
 
 const World = dynamic(() => import("./World"), { ssr: false });
@@ -216,13 +216,15 @@ export default function ExploreClient() {
   ghostRef.current = ghost;
   const endingRef = useRef<Ending>(null);
   endingRef.current = ending;
-  // 터미널 셋을 다 연 뒤 이산 곁의 장치에서 얼굴을 맞춰야 이산이 깨어난다
+  // 터미널 셋 → 굳은 이산에게 말 걸기 → 이산 곁의 장치에서 얼굴 맞추기 → 표준 미소 선택. 그래야 이산이 깨어난다
   const [face, setFace] = useState<FaceState>(emptyFace);
   const faceRef = useRef(face);
   faceRef.current = face;
-  // 맞춘 뒤 장치가 잠기는 연출이 끝나야 깨어난다 (불러온 저장은 바로)
+  // 고른 쪽을 장치가 실행하는 연출이 끝나야 깨어난다 (불러온 저장은 바로)
   const [faceAwake, setFaceAwake] = useState(false);
-  const faceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // 3D 장치가 다시 그리는 단계 (faceRt.phase와 같은 값)
+  const [facePhase, setFacePhaseView] = useState<FacePhase>("locked");
+  const faceTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const restored = visited.length >= sections.length;
   const complete = (restored && faceAwake) || ghost;
   // 진행 단계는 이 값 하나로 정한다. 목표 문구·화살표·미니맵·검문소·재시작 자리·이산의 길이 모두 이 값을 따른다.
@@ -316,26 +318,48 @@ export default function ExploreClient() {
     setScopeData(readScope());
     const f = loadFace();
     setFace(f);
-    setFaceAwake(f.solved);
+    setFaceAwake(faceFinished(f));
   }, []);
 
-  // 장치의 연출 단계는 진행 상태를 따른다 (잠기는 연출 도중에는 그대로 둔다)
+  // 지금 잡힌 상호작용 대상을 장치에 알려 준다 (분홍 버튼·나무 레버 강조)
+  useEffect(() => {
+    faceRt.focus = near?.id ?? null;
+  }, [near]);
+  const toFacePhase = useCallback((p: FacePhase) => {
+    setFacePhase(p);
+    setFacePhaseView(p);
+  }, []);
+  const faceLater = (ms: number, fn: () => void) => faceTimers.current.push(setTimeout(fn, ms));
+  const clearFaceTimers = () => {
+    faceTimers.current.forEach(clearTimeout);
+    faceTimers.current = [];
+  };
+  // 장치의 연출 단계는 진행 상태를 따른다 (잠김·도시의 끼어듦·실행 연출 도중에는 그대로 둔다)
   useEffect(() => {
     faceRt.drums = face.drums;
-    if (faceRt.phase === "restored") return;
-    const want: FacePhase = faceAwake ? "done" : restored && !ghost ? "idle" : "locked";
-    if (faceRt.phase !== want) setFacePhase(want);
-  }, [face.drums, faceAwake, restored, ghost]);
-  useEffect(() => () => clearTimeout(faceTimer.current), []);
+    faceRt.method = face.method;
+    if (faceRt.phase === "restored" || faceRt.phase === "twist" || faceRt.phase === "applying") return;
+    const want: FacePhase = faceAwake ? "done" : restored && !ghost && face.asked ? (face.solved ? "choice" : "idle") : "locked";
+    if (faceRt.phase !== want) toFacePhase(want);
+  }, [face, faceAwake, restored, ghost, toFacePhase]);
+  useEffect(() => () => faceTimers.current.forEach(clearTimeout), []);
 
+  const updateFace = (f: FaceState) => {
+    faceRef.current = f;
+    faceRt.drums = f.drums;
+    faceRt.method = f.method;
+    setFace(f);
+    saveFace(f);
+  };
   const resetFace = () => {
-    clearTimeout(faceTimer.current);
+    clearFaceTimers();
     const f = emptyFace();
     faceRef.current = f;
+    faceRt.method = null;
     setFace(f);
     setFaceAwake(false);
     faceRt.wokeAt = 0;
-    setFacePhase("locked");
+    toFacePhase("locked");
   };
 
   const showToast = useCallback((msg: string) => {
@@ -585,32 +609,49 @@ export default function ExploreClient() {
     return { kind: "dialog", name: n.name, lines: n.lines, step: 0, choices };
   };
 
-  // 얼굴 복원 장치의 원통 하나를 한 칸 돌린다. 세 부분이 다 맞으면 장치가 잠기고, 잠시 뒤 이산이 깨어난다
+  // 얼굴 복원 장치의 원통 하나를 한 칸 돌린다. 세 부분이 다 맞으면 장치가 잠기고, 도시가 표준 미소를 내민다
   const turnDrum = (i: number) => {
     if (faceRt.phase !== "idle" || endingRef.current) return;
     const prev = faceRef.current;
     const next = rotateDrum(prev, i);
     if (next === prev) return;
-    faceRef.current = next;
-    faceRt.drums = next.drums;
-    setFace(next);
-    saveFace(next);
+    updateFace(next);
     sfx.ratchet();
     if (([0, 1] as const).some((k) => !seamJoined(prev.drums, k) && seamJoined(next.drums, k))) setTimeout(() => sfx.seam(), 300);
     if (!next.solved) return;
-    setFacePhase("restored");
-    setTimeout(() => sfx.faceLock(), 450);
+    // 잠김 → 장치의 말 → 도시의 끼어듦 → 두 조작부
+    toFacePhase("restored");
+    faceLater(450, () => sfx.faceLock());
     speak([{ who: faceUi.machine, line: faceUi.restored, ms: 2600 }]);
-    clearTimeout(faceTimer.current);
-    faceTimer.current = setTimeout(() => {
-      setFacePhase("done");
+    faceLater(2600, () => {
+      toFacePhase("twist");
+      sfx.cityVoice();
+      speak([{ who: faceUi.city, line: faceUi.smileMissing, ms: 3400 }]);
+      faceLater(3400, () => toFacePhase("choice"));
+    });
+  };
+  // 표준 미소 적용(분홍 버튼) 또는 원본 얼굴 보존(나무 레버). 어느 쪽이든 이산이 깨어난다
+  const chooseFace = (method: FaceMethod) => {
+    if (faceRt.phase !== "choice" || endingRef.current) return;
+    updateFace({ ...faceRef.current, method });
+    toFacePhase("applying");
+    if (method === "standard") sfx.press();
+    else sfx.lever();
+    speak([{ who: method === "standard" ? faceUi.city : faceUi.machine, line: faceUi[method], ms: 2600 }]);
+    faceLater(2600, () => {
+      toFacePhase("done");
       sfx.restore();
       setFaceAwake(true);
       showNotice(ui.exitTalk);
-    }, 2600);
+    });
   };
-  const turnDrumRef = useRef(turnDrum);
-  turnDrumRef.current = turnDrum;
+  const faceAct = (id: string) => {
+    if (id === "face-std") chooseFace("standard");
+    else if (id === "face-keep") chooseFace("exception");
+    else turnDrum(faceRt.aim);
+  };
+  const faceActRef = useRef(faceAct);
+  faceActRef.current = faceAct;
 
   const interact = useCallback(
     (it: Interactable) => {
@@ -632,7 +673,7 @@ export default function ExploreClient() {
           break;
         case "face":
           // PC: 바라보는 원통 / 휴대폰: 상호작용 버튼은 마지막으로 바라본 원통 (원통을 직접 누를 수도 있다)
-          turnDrumRef.current(faceRt.aim);
+          faceActRef.current(it.id);
           break;
         case "statue":
           // 기억으로 깨어난 이산은 짧게만 말한다
@@ -652,7 +693,13 @@ export default function ExploreClient() {
             setPanel({ kind: "dialog", name: SAN, lines: getBackup().deaths > 0 ? [...base, sanAfterDeath] : base, step: 0 });
           } else if (ghost) setPanel({ kind: "dialog", name: SAN, lines: [reunion.stay], step: 0 });
           // 기록은 다 열었지만 얼굴을 아직 맞추지 않았다: 이산은 굳어 있고, 곁의 장치를 가리킨다
-          else if (restored && !complete) setPanel({ kind: "dialog", name: plaque[0], lines: [{ ...faceUi.frozen, who: "narr" }], step: 0, plaque: true });
+          // 기록은 다 열었지만 아직 얼굴이 굳어 있다: 처음 말을 걸면 이산이 곁의 장치를 부탁하고, 그 뒤로는 장치를 가리킨다
+          else if (restored && !complete) {
+            if (!faceRef.current.asked) {
+              setPanel({ kind: "dialog", name: plaque[0], lines: faceUi.ask, step: 0, plaque: true });
+              updateFace({ ...faceRef.current, asked: true });
+            } else setPanel({ kind: "dialog", name: plaque[0], lines: [{ ...faceUi.frozen, who: "narr" }], step: 0, plaque: true });
+          }
           else if (complete) {
             setPanel({ kind: "dialog", name: SAN, lines: statueLines[statueLines.length - 1], step: 0 });
             setTalked(true);
@@ -767,11 +814,11 @@ export default function ExploreClient() {
       // PC에서는 클릭이 마우스 잠금·상호작용(E)으로 쓰이므로 물체 직접 탭은 터치 화면에서만
       if (!touch || panel || intro || fade || ending || paused || beat) return;
       // 얼굴 복원 장치의 원통: 장치 가까이에서 맞추는 동안만
-      if (id.startsWith("face-drum-")) {
+      if (id.startsWith("face-")) {
         const m = ZONES.bunker.items.find((i) => i.id === "face-machine")!;
-        if (zone !== "bunker" || faceRt.phase !== "idle" || Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) > 4) return;
-        faceRt.aim = Number(id.slice(10));
-        turnDrumRef.current(faceRt.aim);
+        if (zone !== "bunker" || Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) > 4) return;
+        if (id.startsWith("face-drum-")) faceRt.aim = Number(id.slice(10));
+        faceActRef.current(id);
         return;
       }
       const it = ZONES[zone].items.find((i) => i.id === id);
@@ -790,7 +837,7 @@ export default function ExploreClient() {
       goTo,
       tp: (x: number, z: number, yaw = 0) => (teleport.req = { x, z, yaw }),
       restore: () => setVisited(sections.map((s) => s.id)),
-      face: () => turnDrumRef.current(faceRt.aim),
+      face: (id = "face-machine") => faceActRef.current(id),
       pos: () => [player.pos.x, player.pos.z, player.yaw, player.air, player.pitch],
       input,
       look: (pitch: number) => (input.look.pitch += pitch),
@@ -1596,8 +1643,8 @@ export default function ExploreClient() {
         return it ? { pos: it.pos, label: t(quest.statue) } : null;
       }
       if (restored && !complete) {
-        const it = items.find((i) => i.id === "face-machine");
-        return it ? { pos: it.pos, label: t(faceUi.quest) } : null;
+        const it = items.find((i) => i.id === (face.asked ? "face-machine" : "statue"));
+        return it ? { pos: it.pos, label: t(face.asked ? faceUi.quest : faceUi.questAsk) } : null;
       }
       if (!complete) {
         const left = items.filter((i) => i.kind === "section" && !visited.includes(i.section!));
@@ -1702,7 +1749,7 @@ export default function ExploreClient() {
     else if (scopeData.seen) evidence.push(t(checkpoint.evScopeDone));
   }
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || (phase !== "scope" && scopeStage !== "after")) ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.kind === "face" ? faceUi.turn : ui.open) : null;
+  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || (phase !== "scope" && scopeStage !== "after")) ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
   quietRef.current = !!panel || !!scopeView || !!sanSay || !!toast || !!beat || paused;
   const rootClass = [
     "explore-root",
@@ -1731,7 +1778,7 @@ export default function ExploreClient() {
             hideSan={accepted}
             secondStatue={secondStatue}
             awake={complete}
-            drums={face.drums}
+            face={{ drums: face.drums, phase: facePhase, method: face.method }}
             arrived={arrived}
           />
         </div>
@@ -1794,7 +1841,9 @@ export default function ExploreClient() {
       )}
 
       {active && walkable && <div className="hint">{t(ui.stepHint)}</div>}
-      {active && !walkable && near?.kind === "face" && !scopeView && <div className="hint">{t(touch ? faceUi.hintTouch : faceUi.hintPc)}</div>}
+      {active && !walkable && near?.id === "face-machine" && !scopeView && <div className="hint">{t(touch ? faceUi.hintTouch : faceUi.hintPc)}</div>}
+      {/* 휴대폰: 장치 앞에서는 화면 가운데에 조준점을 띄운다 (조준점이 가리키는 원통이 빛나고, 행동 버튼이 그 원통을 돌린다) */}
+      {active && touch && near?.kind === "face" && !scopeView && <div className="crosshair crosshair-face" aria-hidden />}
       {active && !walkable && !near && !scopeView && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
       {active && locked && !scopeView && <div className="crosshair" aria-hidden />}
       {active && !scopeView && <QuestArrow get={getQuest} />}

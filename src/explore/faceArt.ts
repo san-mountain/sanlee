@@ -314,3 +314,48 @@ export function seamPoints(seam: 0 | 1) {
   // 위·가운데 이음매에서는 구레나룻 바깥선, 가운데·아래에서는 볼 외곽선
   return [at(LEFT) / W, at(RIGHT) / W];
 }
+// 도시가 내미는 '표준 미소': 대칭, 반달 눈, 분홍 볼, 크게 올라간 입꼬리
+export function smileTexture() {
+  const c = document.createElement("canvas");
+  c.width = 512;
+  c.height = 768;
+  const g = c.getContext("2d")!;
+  g.translate(256, -384);
+  const pink = "#ff5fb0";
+  g.fillStyle = "rgba(255,170,215,0.16)";
+  outline(g, 1);
+  g.fill();
+  g.strokeStyle = pink;
+  g.lineCap = "round";
+  g.lineWidth = 7;
+  for (const k of [-1, 1]) {
+    // 반달 눈
+    g.beginPath();
+    g.arc(k * 77, 500, 30, Math.PI * 1.05, Math.PI * 1.95);
+    g.stroke();
+    // 볼
+    g.fillStyle = "rgba(255,95,176,0.35)";
+    g.beginPath();
+    g.ellipse(k * 98, 720, 34, 20, 0, 0, Math.PI * 2);
+    g.fill();
+  }
+  // 입: 귀에 걸릴 듯한 대칭 미소
+  g.lineWidth = 10;
+  g.beginPath();
+  g.moveTo(-96, 800);
+  g.quadraticCurveTo(0, 912, 96, 800);
+  g.stroke();
+  g.lineWidth = 5;
+  g.beginPath();
+  g.moveTo(-70, 820);
+  g.quadraticCurveTo(0, 860, 70, 820);
+  g.stroke();
+  // 홀로그램 줄무늬
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalCompositeOperation = "destination-out";
+  g.fillStyle = "rgba(0,0,0,0.35)";
+  for (let y = 0; y < 768; y += 6) g.fillRect(0, y, 512, 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}

@@ -16,7 +16,7 @@ import { BUNKER } from "./zones";
 import { LotusStrings } from "./CityAlleys";
 import { useLightPool } from "./atmosphere";
 import FaceMachine, { FaceConduit } from "./FaceMachine";
-import type { Drums } from "./faceAuth";
+import type { FaceView } from "./faceRuntime";
 
 const W = 12; // 방의 반폭
 const LEN = BUNKER_Z1 - BUNKER_Z0;
@@ -944,7 +944,7 @@ function SmallLamp() {
   );
 }
 
-export default function Bunker({ lang, visited, onTap, secondStatue, awake, drums }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean; drums: Drums }) {
+export default function Bunker({ lang, visited, onTap, secondStatue, awake, face }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean; face: FaceView }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -972,7 +972,7 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake, drum
       {/* 이산 곁의 얼굴 복원 장치: 터미널 셋을 연 뒤 어긋난 얼굴을 맞추면 이산이 깨어난다 */}
       {!secondStatue && (
         <>
-          <FaceMachine drums={drums} lang={lang} onTap={onTap} />
+          <FaceMachine drums={face.drums} phase={face.phase} method={face.method} lang={lang} onTap={onTap} />
           <FaceConduit />
         </>
       )}

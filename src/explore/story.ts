@@ -690,6 +690,24 @@ export const faceUi = {
   quest: { ko: "얼굴을 맞추십시오", en: "Match the face" } as L,
   turn: { ko: "돌리기", en: "Turn" } as L,
   machine: { ko: "복원 장치", en: "Restoration machine" } as L,
+  // 터미널 셋을 다 연 뒤 굳은 이산에게 말을 걸면 (이산의 말)
+  ask: [
+    { ko: "…팔다리에 감각이 돌아왔어. 기록을 열어 줘서 고마워.", en: "…I can feel my arms and legs again. Thank you for opening the records." },
+    { ko: "그런데 얼굴이 굳은 채야. 내 얼굴이 어땠는지 기억나지 않아.", en: "But my face is still frozen. I can't remember what my face looked like." },
+    { ko: "옆에 있는 장치에 내 얼굴 조각이 걸려 있대. 맞춰 줄래?", en: "They say the pieces of my face are on the machine beside me. Would you put them together?" },
+  ] as L[],
+  // 얼굴을 맞추라고 부탁받은 뒤의 목표
+  questAsk: { ko: "이산에게 말 걸기", en: "Talk to San" } as L,
+  city: { ko: "도시", en: "City" } as L,
+  press: { ko: "누르기", en: "Press" } as L,
+  pull: { ko: "당기기", en: "Pull" } as L,
+  applyStandard: { ko: "표준 미소 적용", en: "Apply standard smile" } as L,
+  keepOriginal: { ko: "원본 얼굴 보존", en: "Keep original face" } as L,
+  // 얼굴이 맞자 도시가 끼어든다
+  smileMissing: { ko: "표준 미소가 누락되었습니다.", en: "Standard smile missing." } as L,
+  // 고른 뒤 장치가 실행하며 하는 말 (표준은 도시, 원본은 장치)
+  standard: { ko: "더 나은 당신을 환영합니다", en: "Welcome, a better you" } as L,
+  exception: { ko: "비표준 얼굴로 등록됩니다", en: "Registered as a non-standard face" } as L,
   // 장치가 잠길 때 장치의 안내
   restored: { ko: "원본 얼굴 복원 완료.", en: "Original face restored." } as L,
   // 터미널 셋을 다 열었지만 얼굴을 맞추기 전에 이산을 살피면 (지문)
