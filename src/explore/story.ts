@@ -406,6 +406,9 @@ export const checkpoint = {
   ] as { title: L; body: L; stay: L; go: L }[],
   // 결정하지 않고 물러나기 (어느 단계에서든)
   withdraw: { ko: "결정하지 않고 물러나기", en: "Step back without deciding" },
+  // 물러난 뒤의 대화를 아직 듣지 않았다면: 버튼이 그 대화로 이어진다는 것을 알려 준다 (뒤에 선 이산의 작은 말 한 줄과 함께)
+  withdrawTalk: { ko: "정하기 전에 이산과 이야기하기", en: "Talk to San before deciding" },
+  sanBehind: { ko: "이산 “…정하기 전에, 잠깐 나랑 얘기할래?”", en: "San: “…Before you decide, will you talk with me a moment?”" },
   // 결말 대본: say = 이산의 말, slots = 기억이 지워지는 화면, plaque = 표석. {a} 연결 중단 횟수, {r} 복원 횟수
   // 마지막 줄 뒤에 잠깐 정적이 흐른 다음 버튼이 나온다
   accept: [

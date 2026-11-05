@@ -164,11 +164,6 @@ function GazeSystem() {
   return null;
 }
 
-// 거부 결말: 대자비의 마지막 레이저
-export function finalBeam() {
-  startBeam();
-}
-
 function startBeam(at?: THREE.Vector3) {
   sfx.beam();
   gaze.state = "fire";

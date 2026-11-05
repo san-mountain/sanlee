@@ -1053,6 +1053,9 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 /* 결정하지 않고 물러나기: 작지만 분명하게 */
 .choice-withdraw { all: unset; cursor: pointer; display: block; margin: 14px auto 0; padding: 8px 14px; font-size: 13px; color: #d8d2e8; border: 1px solid #6b638599; border-radius: 4px; }
 .choice-withdraw:hover, .choice-withdraw:focus-visible { color: #fff; border-color: #d8d2e8; }
+.choice-withdraw.talk { color: #ffd9a8; border-color: #ffb87799; }
+.choice-withdraw.talk:hover, .choice-withdraw.talk:focus-visible { color: #fff2df; border-color: #ffb877; }
+.cp-san-behind { margin: 16px 0 0; font-size: 13px; line-height: 1.5; color: #ffcf9a; text-align: center; word-break: keep-all; }
 /* 꼬리말 삭제 확인 */
 .forget-ask { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; max-width: 520px; font-size: 12px; line-height: 1.5; color: var(--ink); word-break: keep-all; }
 .forget-ask > span { flex-basis: 100%; }

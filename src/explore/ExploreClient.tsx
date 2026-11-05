@@ -26,7 +26,7 @@ import { drone, laneClear, presetSweep, resetDrones } from "./Drones";
 import DroneHUD from "./DroneHUD";
 import ScopeView from "./ScopeView";
 import RouteSketch from "./RouteSketch";
-import { coverState, finalBeam, restoreCovers } from "./Jabi";
+import { coverState, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
 import { FACE_KEY, SOLUTION, emptyFace, faceFinished, loadFace, rotateDrum, saveFace, seamJoined, type Drums, type FaceMethod, type FaceState } from "./faceAuth";
@@ -1152,7 +1152,7 @@ export default function ExploreClient() {
       }
     } else if (kind === "reject") {
       if (step === 0) {
-        finalBeam();
+        // 레이저 없이: 화면이 하얗게 멎는 것으로 정지를 보여 준다
         sceneTimer.current = setTimeout(() => setFlash(true), 1500);
       }
       if (step === 3) {
@@ -2164,8 +2164,10 @@ export default function ExploreClient() {
               </>
             )}
             {/* 어느 단계에서든 결정하지 않고 물러날 수 있다 (Esc와 같다). 쿠키 끄기 화면이 닫히면 그 타이머도 멈춘다 */}
-            <button type="button" className="choice-withdraw" onClick={withdraw}>
-              {t(checkpoint.withdraw)}
+            {/* 물러난 뒤의 대화를 아직 듣지 않았다면 버튼이 이산과의 대화로 이어진다는 것을 보여 준다 (空 경로 제외) */}
+            {!cpRef.current.talked && !ghost && <p className="cp-san-behind">{t(checkpoint.sanBehind)}</p>}
+            <button type="button" className={`choice-withdraw${!cpRef.current.talked && !ghost ? " talk" : ""}`} onClick={withdraw}>
+              {t(!cpRef.current.talked && !ghost ? checkpoint.withdrawTalk : checkpoint.withdraw)}
             </button>
             <p className="cp-delete-note">{t(checkpoint.deleteNote)}</p>
           </div>
