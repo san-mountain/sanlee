@@ -2,13 +2,15 @@ import * as THREE from "three";
 import type { L, SectionId } from "@/data/site";
 import { works } from "@/data/site";
 import { box, type Box, type Circle } from "./collide";
+import { faceRt } from "./faceRuntime";
+import { faceUi } from "./story";
 
 export type Vec3 = [number, number, number];
 export type Zone = "bunker" | "city";
 
 export type Interactable = {
   id: string;
-  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup";
+  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup" | "face";
   pos: THREE.Vector3; // NPC처럼 움직이는 것은 컴포넌트가 이 값을 갱신
   radius: number;
   label: L;
@@ -17,6 +19,8 @@ export type Interactable = {
   work?: number;
   npc?: string;
   to?: Zone;
+  // false면 지금은 가까이 가도 상호작용 대상이 아니다 (연출 단계에 따라 켜고 끈다)
+  when?: () => boolean;
 };
 
 export type ZoneDef = {
@@ -35,6 +39,14 @@ const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 /* ---------------- 지하 방공호 B-7 ---------------- */
 // 방 크기: x -12~12, z -20~14, 천장 7.5m. 동상은 (0,0), 정면은 +z.
 export const BUNKER_W = 24;
+// 이산 옆의 얼굴 복원 장치. 정면이 다가오는 사람(방 입구 쪽)과 이산 사이를 향한다
+export const FACE_MACHINE = { pos: [3.3, 0, 1.3] as Vec3, rotY: -0.55 };
+// 장치 기준 좌표(정면 +z)를 방 좌표로
+export function machinePoint(x: number, y: number, z: number) {
+  const c = Math.cos(FACE_MACHINE.rotY);
+  const s = Math.sin(FACE_MACHINE.rotY);
+  return new THREE.Vector3(FACE_MACHINE.pos[0] + x * c + z * s, y, FACE_MACHINE.pos[2] - x * s + z * c);
+}
 export const BUNKER_Z0 = -20;
 export const BUNKER_Z1 = 14;
 export const BUNKER_H = 7.5;
@@ -108,6 +120,7 @@ export const BUNKER: ZoneDef = {
     box(10.9, -16.8, 1.2, 2.4), // 무전 탁자
     box(-10.75, 11.4, 1.1, 2.3), // 간이침대
     box(-10.3, -7.4, 0.9, 1.8), // 믹서 탁자
+    box(FACE_MACHINE.pos[0], FACE_MACHINE.pos[2], 1.5, 1.3), // 얼굴 복원 장치
   ],
   circles: [
     { x: 0, z: 0, r: 2.15 },
@@ -130,6 +143,8 @@ export const BUNKER: ZoneDef = {
     })),
     // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
+    // 얼굴 복원 장치: 터미널 셋을 연 뒤 맞추는 동안만 대상이 된다 (바라보는 원통을 돌린다)
+    { id: "face-machine", kind: "face", pos: machinePoint(0, 1.7, 0.35), radius: 3.2, label: faceUi.quest, when: () => faceRt.phase === "idle" },
     {
       id: "keeper",
       kind: "npc",

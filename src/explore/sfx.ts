@@ -176,6 +176,28 @@ export const sfx = {
     tone(659, 0.18, { vol: 0.16, at: 0.12 });
     tone(784, 0.4, { vol: 0.14, at: 0.24 });
   },
+  // 얼굴 복원 장치: 원통이 돌아가는 톱니 소리와 제자리에 걸리는 소리
+  ratchet: () => {
+    for (let i = 0; i < 4; i++) tone(1900 + i * 90, 0.025, { type: "square", vol: 0.05, at: i * 0.075 });
+    noise(0.32, { vol: 0.07, from: 2600, to: 900, q: 2 });
+  },
+  clunk: () => {
+    tone(150, 0.12, { type: "triangle", f2: 90, vol: 0.32, attack: 0.002 });
+    noise(0.09, { vol: 0.16, from: 1400, to: 500, q: 1.4 });
+  },
+  // 두 조각의 외곽선이 이어졌다: 짧고 맑은 울림
+  seam: () => {
+    tone(1046, 0.6, { vol: 0.07 });
+    tone(1568, 0.7, { vol: 0.05, at: 0.05 });
+  },
+  // 얼굴이 맞아 장치가 잠긴다: 무거운 걸쇠, 그리고 낮은 화음
+  faceLock: () => {
+    tone(90, 0.3, { type: "triangle", f2: 60, vol: 0.45, attack: 0.002 });
+    noise(0.2, { vol: 0.2, from: 1000, to: 300 });
+    tone(392, 1.6, { vol: 0.12, at: 0.35, attack: 0.03 });
+    tone(523, 1.8, { vol: 0.1, at: 0.45, attack: 0.03 });
+    tone(784, 2.2, { vol: 0.07, at: 0.6, attack: 0.03 });
+  },
   // R-07에게 두 번 두드림 (방문자의 말이 아니라 실제 소리)
   knock: () => {
     tone(190, 0.07, { type: "triangle", f2: 120, vol: 0.32 });

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, type Beat, type Line } from "./story";
+import { MUSIC_URL, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, type Beat, type Line } from "./story";
 import { AVENUE_EDGE_Z, BAY, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
 import { sanHold, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
@@ -28,6 +28,8 @@ import ScopeView from "./ScopeView";
 import { coverState, finalBeam, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
+import { FACE_KEY, emptyFace, loadFace, rotateDrum, saveFace, seamJoined, type FaceState } from "./faceAuth";
+import { faceRt, setFacePhase, type FacePhase } from "./faceRuntime";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -214,7 +216,15 @@ export default function ExploreClient() {
   ghostRef.current = ghost;
   const endingRef = useRef<Ending>(null);
   endingRef.current = ending;
-  const complete = visited.length >= sections.length || ghost;
+  // 터미널 셋을 다 연 뒤 이산 곁의 장치에서 얼굴을 맞춰야 이산이 깨어난다
+  const [face, setFace] = useState<FaceState>(emptyFace);
+  const faceRef = useRef(face);
+  faceRef.current = face;
+  // 맞춘 뒤 장치가 잠기는 연출이 끝나야 깨어난다 (불러온 저장은 바로)
+  const [faceAwake, setFaceAwake] = useState(false);
+  const faceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const restored = visited.length >= sections.length;
+  const complete = (restored && faceAwake) || ghost;
   // 진행 단계는 이 값 하나로 정한다. 목표 문구·화살표·미니맵·검문소·재시작 자리·이산의 길이 모두 이 값을 따른다.
   // 큰길은 어느 단계에서든 걸어 들어갈 수 있다 (막는 천막이 없다). 망원경 전에 검문소에서 멈추는 것은 도시의 금지가 아니라 이야기의 순서다
   const phase: RoutePhase = ghost ? "descent" : !complete ? "restore" : !talked ? "talk" : !scopeData.seen ? "scope" : !scopeData.agreed ? "decide" : "descent";
@@ -304,7 +314,29 @@ export default function ExploreClient() {
       if (Array.isArray(v)) setVisited(v.filter((x) => sections.some((s) => s.id === x)));
     } catch {}
     setScopeData(readScope());
+    const f = loadFace();
+    setFace(f);
+    setFaceAwake(f.solved);
   }, []);
+
+  // 장치의 연출 단계는 진행 상태를 따른다 (잠기는 연출 도중에는 그대로 둔다)
+  useEffect(() => {
+    faceRt.drums = face.drums;
+    if (faceRt.phase === "restored") return;
+    const want: FacePhase = faceAwake ? "done" : restored && !ghost ? "idle" : "locked";
+    if (faceRt.phase !== want) setFacePhase(want);
+  }, [face.drums, faceAwake, restored, ghost]);
+  useEffect(() => () => clearTimeout(faceTimer.current), []);
+
+  const resetFace = () => {
+    clearTimeout(faceTimer.current);
+    const f = emptyFace();
+    faceRef.current = f;
+    setFace(f);
+    setFaceAwake(false);
+    faceRt.wokeAt = 0;
+    setFacePhase("locked");
+  };
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -553,6 +585,33 @@ export default function ExploreClient() {
     return { kind: "dialog", name: n.name, lines: n.lines, step: 0, choices };
   };
 
+  // 얼굴 복원 장치의 원통 하나를 한 칸 돌린다. 세 부분이 다 맞으면 장치가 잠기고, 잠시 뒤 이산이 깨어난다
+  const turnDrum = (i: number) => {
+    if (faceRt.phase !== "idle" || endingRef.current) return;
+    const prev = faceRef.current;
+    const next = rotateDrum(prev, i);
+    if (next === prev) return;
+    faceRef.current = next;
+    faceRt.drums = next.drums;
+    setFace(next);
+    saveFace(next);
+    sfx.ratchet();
+    if (([0, 1] as const).some((k) => !seamJoined(prev.drums, k) && seamJoined(next.drums, k))) setTimeout(() => sfx.seam(), 300);
+    if (!next.solved) return;
+    setFacePhase("restored");
+    setTimeout(() => sfx.faceLock(), 450);
+    speak([{ who: faceUi.machine, line: faceUi.restored, ms: 2600 }]);
+    clearTimeout(faceTimer.current);
+    faceTimer.current = setTimeout(() => {
+      setFacePhase("done");
+      sfx.restore();
+      setFaceAwake(true);
+      showNotice(ui.exitTalk);
+    }, 2600);
+  };
+  const turnDrumRef = useRef(turnDrum);
+  turnDrumRef.current = turnDrum;
+
   const interact = useCallback(
     (it: Interactable) => {
       // 결말 중(空 결말의 마지막 걸음 포함)에는 아무것도 열지 않는다
@@ -571,6 +630,10 @@ export default function ExploreClient() {
         case "painting":
           setPanel({ kind: "painting", work: it.work! });
           break;
+        case "face":
+          // PC: 바라보는 원통 / 휴대폰: 상호작용 버튼은 마지막으로 바라본 원통 (원통을 직접 누를 수도 있다)
+          turnDrumRef.current(faceRt.aim);
+          break;
         case "statue":
           // 기억으로 깨어난 이산은 짧게만 말한다
           if (it.id === "san" && ghost) setPanel({ kind: "dialog", name: SAN, lines: [reunion.awakeLine], step: 0 });
@@ -588,6 +651,8 @@ export default function ExploreClient() {
             const base = phase === "scope" ? sanCity.scope : sanCity.descent;
             setPanel({ kind: "dialog", name: SAN, lines: getBackup().deaths > 0 ? [...base, sanAfterDeath] : base, step: 0 });
           } else if (ghost) setPanel({ kind: "dialog", name: SAN, lines: [reunion.stay], step: 0 });
+          // 기록은 다 열었지만 얼굴을 아직 맞추지 않았다: 이산은 굳어 있고, 곁의 장치를 가리킨다
+          else if (restored && !complete) setPanel({ kind: "dialog", name: plaque[0], lines: [{ ...faceUi.frozen, who: "narr" }], step: 0, plaque: true });
           else if (complete) {
             setPanel({ kind: "dialog", name: SAN, lines: statueLines[statueLines.length - 1], step: 0 });
             setTalked(true);
@@ -660,7 +725,7 @@ export default function ExploreClient() {
               kind: "dialog",
               name: it.label,
               locked: true,
-              lines: complete ? [ui.exitLocked[0], ui.exitTalk] : ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
+              lines: complete ? [ui.exitLocked[0], ui.exitTalk] : restored ? [ui.exitLocked[0], faceUi.frozen] : ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
               step: 0,
             });
             break;
@@ -691,7 +756,7 @@ export default function ExploreClient() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [complete, talked, goTo, markVisited, visited.length, met, ghost, found.length, phase, accepted, friend]
+    [complete, restored, talked, goTo, markVisited, visited.length, met, ghost, found.length, phase, accepted, friend]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -701,6 +766,14 @@ export default function ExploreClient() {
     (id: string) => {
       // PC에서는 클릭이 마우스 잠금·상호작용(E)으로 쓰이므로 물체 직접 탭은 터치 화면에서만
       if (!touch || panel || intro || fade || ending || paused || beat) return;
+      // 얼굴 복원 장치의 원통: 장치 가까이에서 맞추는 동안만
+      if (id.startsWith("face-drum-")) {
+        const m = ZONES.bunker.items.find((i) => i.id === "face-machine")!;
+        if (zone !== "bunker" || faceRt.phase !== "idle" || Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) > 4) return;
+        faceRt.aim = Number(id.slice(10));
+        turnDrumRef.current(faceRt.aim);
+        return;
+      }
       const it = ZONES[zone].items.find((i) => i.id === id);
       if (!it) return;
       const d = Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z);
@@ -717,6 +790,7 @@ export default function ExploreClient() {
       goTo,
       tp: (x: number, z: number, yaw = 0) => (teleport.req = { x, z, yaw }),
       restore: () => setVisited(sections.map((s) => s.id)),
+      face: () => turnDrumRef.current(faceRt.aim),
       pos: () => [player.pos.x, player.pos.z, player.yaw, player.air, player.pitch],
       input,
       look: (pitch: number) => (input.look.pitch += pitch),
@@ -988,7 +1062,7 @@ export default function ExploreClient() {
       if (end) {
         // 도시가 둘을 다시 정지시켰다: 열람·만남·대화·결말·위치 백업이 처음 상태로 돌아간다 (약속과 발견한 결말은 남는다)
         try {
-          [KEY, END_KEY, MET_KEY, TALK_KEY, SCOPE_KEY].forEach((k) => localStorage.removeItem(k));
+          [KEY, END_KEY, MET_KEY, TALK_KEY, SCOPE_KEY, FACE_KEY].forEach((k) => localStorage.removeItem(k));
         } catch {}
         wipeBackup();
       }
@@ -1375,11 +1449,13 @@ export default function ExploreClient() {
       localStorage.removeItem(MET_KEY);
       localStorage.removeItem(TALK_KEY);
       localStorage.removeItem(SCOPE_KEY);
+      localStorage.removeItem(FACE_KEY);
     } catch {}
     setVisited([]);
     setMet(false);
     setTalked(false);
     setScopeData({ ...NO_SCOPE });
+    resetFace();
   };
   const clearScene = () => {
     clearTimeout(sceneTimer.current);
@@ -1472,13 +1548,14 @@ export default function ExploreClient() {
   // 백업이 없는 사람이 레이저에 맞으면: 처음부터 다시
   const onGone = useCallback(() => {
     try {
-      [KEY, MET_KEY, TALK_KEY, SCOPE_KEY].forEach((k) => localStorage.removeItem(k));
+      [KEY, MET_KEY, TALK_KEY, SCOPE_KEY, FACE_KEY].forEach((k) => localStorage.removeItem(k));
     } catch {}
     wipeBackup();
     setVisited([]);
     setMet(false);
     setTalked(false);
     setScopeData({ ...NO_SCOPE });
+    resetFace();
     resetGaze();
     restoreCovers();
     goTo("bunker", false);
@@ -1517,6 +1594,10 @@ export default function ExploreClient() {
       if (!complete && !met && visited.length === 0) {
         const it = find("statue");
         return it ? { pos: it.pos, label: t(quest.statue) } : null;
+      }
+      if (restored && !complete) {
+        const it = items.find((i) => i.id === "face-machine");
+        return it ? { pos: it.pos, label: t(faceUi.quest) } : null;
       }
       if (!complete) {
         const left = items.filter((i) => i.kind === "section" && !visited.includes(i.section!));
@@ -1621,7 +1702,7 @@ export default function ExploreClient() {
     else if (scopeData.seen) evidence.push(t(checkpoint.evScopeDone));
   }
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || (phase !== "scope" && scopeStage !== "after")) ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
+  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || (phase !== "scope" && scopeStage !== "after")) ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.kind === "face" ? faceUi.turn : ui.open) : null;
   quietRef.current = !!panel || !!scopeView || !!sanSay || !!toast || !!beat || paused;
   const rootClass = [
     "explore-root",
@@ -1649,7 +1730,8 @@ export default function ExploreClient() {
             sanPath={sanPath}
             hideSan={accepted}
             secondStatue={secondStatue}
-            awake={ghost}
+            awake={complete}
+            drums={face.drums}
             arrived={arrived}
           />
         </div>
@@ -1712,6 +1794,7 @@ export default function ExploreClient() {
       )}
 
       {active && walkable && <div className="hint">{t(ui.stepHint)}</div>}
+      {active && !walkable && near?.kind === "face" && !scopeView && <div className="hint">{t(touch ? faceUi.hintTouch : faceUi.hintPc)}</div>}
       {active && !walkable && !near && !scopeView && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
       {active && locked && !scopeView && <div className="crosshair" aria-hidden />}
       {active && !scopeView && <QuestArrow get={getQuest} />}

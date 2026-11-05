@@ -83,6 +83,7 @@ export function forgetCityRecords() {
       "sanlee-visited",
       "sanlee-met",
       "sanlee-san-talked",
+      "sanlee-face",
       "sanlee-ending",
       "sanlee-endings-found",
       "sanlee-jabi-intro",

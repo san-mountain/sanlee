@@ -210,6 +210,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     let best: Interactable | null = null;
     let bestScore = Infinity;
     for (const it of zone.items) {
+      if (it.when && !it.when()) continue;
       tmp.current.set(it.pos.x - s.x, 0, it.pos.z - s.z);
       const d = tmp.current.length();
       if (d > it.radius) continue;

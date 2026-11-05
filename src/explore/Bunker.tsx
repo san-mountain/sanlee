@@ -15,6 +15,8 @@ import { player } from "./Player";
 import { BUNKER } from "./zones";
 import { LotusStrings } from "./CityAlleys";
 import { useLightPool } from "./atmosphere";
+import FaceMachine, { FaceConduit } from "./FaceMachine";
+import type { Drums } from "./faceAuth";
 
 const W = 12; // 방의 반폭
 const LEN = BUNKER_Z1 - BUNKER_Z0;
@@ -942,7 +944,7 @@ function SmallLamp() {
   );
 }
 
-export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
+export default function Bunker({ lang, visited, onTap, secondStatue, awake, drums }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean; drums: Drums }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -967,6 +969,13 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { 
       <Sleeper onTap={onTap} />
       <BackupRack lang={lang} onTap={onTap} />
       <BunkerLotus />
+      {/* 이산 곁의 얼굴 복원 장치: 터미널 셋을 연 뒤 어긋난 얼굴을 맞추면 이산이 깨어난다 */}
+      {!secondStatue && (
+        <>
+          <FaceMachine drums={drums} lang={lang} onTap={onTap} />
+          <FaceConduit />
+        </>
+      )}
       {secondStatue ? (
         <>
           {/* 거부 결말: 이산도 다시 보관 처리되어 굳었다. 그 곁에 두 번째 동상이 나란히 앉아 있다 */}
@@ -978,7 +987,7 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { 
           </group>
           <SmallLamp />
         </>
-      ) : awake || visited.length >= TERMINALS.length ? (
+      ) : awake ? (
         <>
           <Pedestal lang={lang} empty />
           <SanNPC mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[0, 3]} />

@@ -681,3 +681,19 @@ export const cookieGame = {
     { ko: "거부 의사 분석", en: "Refusal analysis" },
   ] as L[],
 };
+
+// ---------------- 얼굴 맞추기 (터미널 셋을 연 뒤, 이산이 깨어나기 전) ----------------
+// 방공호의 얼굴 복원 장치: 원통 세 개를 돌려 어긋난 이산의 얼굴을 맞춘다. 맞추면 이산이 깨어난다
+export const faceUi = {
+  quest: { ko: "얼굴을 맞추십시오", en: "Match the face" } as L,
+  turn: { ko: "돌리기", en: "Turn" } as L,
+  machine: { ko: "복원 장치", en: "Restoration machine" } as L,
+  // 장치가 잠길 때 장치의 안내
+  restored: { ko: "원본 얼굴 복원 완료.", en: "Original face restored." } as L,
+  // 터미널 셋을 다 열었지만 얼굴을 맞추기 전에 이산을 살피면 (지문)
+  frozen: { ko: "이산은 아직 굳어 있다. 곁의 장치에 얼굴 조각이 어긋난 채 걸려 있다.", en: "San is still frozen. Beside the pedestal, a machine holds the pieces of a face, out of line." } as L,
+  // 장치 근처 안내 (PC·휴대폰)
+  hintPc: { ko: "원통을 바라보고 E 또는 클릭으로 돌립니다.", en: "Look at a drum and press E or click to turn it." } as L,
+  hintTouch: { ko: "원통을 눌러 돌립니다.", en: "Tap a drum to turn it." } as L,
+};
+
