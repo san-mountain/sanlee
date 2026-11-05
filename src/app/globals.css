@@ -1053,9 +1053,6 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 /* 결정하지 않고 물러나기: 작지만 분명하게 */
 .choice-withdraw { all: unset; cursor: pointer; display: block; margin: 14px auto 0; padding: 8px 14px; font-size: 13px; color: #d8d2e8; border: 1px solid #6b638599; border-radius: 4px; }
 .choice-withdraw:hover, .choice-withdraw:focus-visible { color: #fff; border-color: #d8d2e8; }
-.choice-withdraw.talk { color: #ffd9a8; border-color: #ffb87799; }
-.choice-withdraw.talk:hover, .choice-withdraw.talk:focus-visible { color: #fff2df; border-color: #ffb877; }
-.cp-san-behind { margin: 16px 0 0; font-size: 13px; line-height: 1.5; color: #ffcf9a; text-align: center; word-break: keep-all; }
 /* 꼬리말 삭제 확인 */
 .forget-ask { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; max-width: 520px; font-size: 12px; line-height: 1.5; color: var(--ink); word-break: keep-all; }
 .forget-ask > span { flex-basis: 100%; }
@@ -1187,16 +1184,5 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 /* 대화 아래의 기록 한 줄 (검문소 상세를 보지 않은 방문자에게) */
 .dialog .line-note { margin: 6px 0 0; font-family: var(--mono); font-size: 11.5px; color: #bff8ff; opacity: .85; }
 
-/* 재회: 방문자의 손 실루엣이 한쪽 눈에 댔다가 아래를 가리킨다 (약 2.4초. 말도 회상도 없다) */
-.reunion-hand { position: absolute; inset: 0; z-index: 30; pointer-events: none; overflow: hidden; }
-.reunion-hand svg { position: absolute; right: 18%; bottom: -170px; width: min(30vmin, 220px); height: auto; fill: #07060a; filter: drop-shadow(0 0 2px #ffffff22);
-  animation: handScope 2.4s ease-in-out forwards; }
-@keyframes handScope {
-  0% { transform: translate(0, 0) rotate(-8deg); }
-  30% { transform: translate(-14vw, -46vh) rotate(-24deg); }
-  58% { transform: translate(-14vw, -46vh) rotate(-24deg); }
-  100% { transform: translate(-6vw, -24vh) rotate(160deg); }
-}
 /* 곁에 앉아 기다리는 동안: 화면이 잠깐 가라앉는다 */
 .explore-root.reunion-sit .canvas-wrap { filter: brightness(.55); transition: filter 1.2s ease; }
-@media (prefers-reduced-motion: reduce) { .reunion-hand svg { animation-duration: .01s; transform: translate(-10vw, -30vh); } }

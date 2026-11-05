@@ -1,17 +1,23 @@
-// 배경음악. 장면마다 한 곡(방공호, 지상, 대자비 구역, 결말)이 반복되고, 장면이 바뀌면 서서히 겹쳐 넘어간다.
+// 배경음악. 장면마다 한 곡(방공호, 지상, 대자비 구역, 결말 셋, 空 경로의 지상)이 반복되고, 장면이 바뀌면 서서히 겹쳐 넘어간다.
 // 효과음과 같은 소리 설정을 따른다: 소리를 끄면 음악도 멈춘다. 첫 클릭 뒤에만 재생된다(브라우저 정책).
 import { sfxOn } from "./sfx";
 
-export type Track = "bunker" | "ground" | "jabi" | "ending";
+// ending = 空 결말, accept = 수락 결말(Habitual Suffering), reject = 거부 결말(an open ended promise),
+// fall = 기록을 지우고 돌아와 이산과 재회한 뒤의 지상(f-ALL)
+export type Track = "bunker" | "ground" | "jabi" | "ending" | "accept" | "reject" | "fall";
 const SRC: Record<Track, string> = {
   bunker: "/audio/bgm-bunker.mp3",
   ground: "/audio/bgm-ground.mp3",
   jabi: "/audio/bgm-jabi.mp3",
   ending: "/audio/bgm-ending.mp3",
+  accept: "/audio/bgm-accept.mp3",
+  reject: "/audio/bgm-reject.mp3",
+  fall: "/audio/bgm-fall.mp3",
 };
 const VOL = 0.3;
 // 곡마다 원래 음량이 달라서(대자비가 가장 크다) 방공호 곡에 맞춰 낮춘다
-const LEVEL: Record<Track, number> = { bunker: 1, ground: 0.83, jabi: 0.68, ending: 0.87 };
+// (새 세 곡은 평균 음량(accept −8.0, reject −9.5, fall −8.4 dB)을 기존 곡과 같은 비율로 맞춘 값. 들어 보고 정하지 않았다)
+const LEVEL: Record<Track, number> = { bunker: 1, ground: 0.83, jabi: 0.68, ending: 0.87, accept: 0.61, reject: 0.73, fall: 0.64 };
 const FADE = 1.6;
 
 let ctx: AudioContext | null = null;

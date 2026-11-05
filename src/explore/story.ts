@@ -307,11 +307,15 @@ export const sanAfterCheckpoint = {
     { ko: "그 웹사이트엔 나도 있어? 오늘 너랑 여기까지 걸어온 나도?", en: "Am I on that website too? The me who walked here with you today?" },
     { ko: "아까 화면에 쓰여 있었지. 기록은 웹사이트로 돌아가야 지울 수 있다고.", en: "It said so on the screen. The records can only be deleted back on the website." },
     { ko: "지우면 난 다시 멈출 거야. 오늘 일도 잊어버릴 테고.", en: "If you delete them, I'll stop again. I'll forget today, too." },
+    // 방문자가 기억해 갈 구절 (재회 때 세 구절 중에서 고른다: reunion.verses)
+    { ko: "‘수놓인 별들 아래 걸음이 서투른 저희는 고고합니까?’", en: "‘Beneath the embroidered stars, are we, so clumsy in our steps, noble?’" },
+    { ko: "내가 가장 좋아하는 ‘이산’의 시 구절이야.", en: "It's my favourite line from a poem by ‘San Lee’." },
+    { ko: "물론 내가 쓴 건 아니지만 이 문장이 가장 마음에 들더라.", en: "I didn't write it, of course. But this is the sentence I like best." },
   ] as Line[],
-  memory: { ko: "그래도 다시 와 줄래? 내가 널 몰라봐도, 잠깐만 곁에 있어 줘.", en: "Will you come back anyway? Even if I don't know you, stay beside me for a little while." } as Line,
+  memory: { ko: "그래도 다시 와 줄래? 내가 널 몰라봐도, 이 구절을 들려주면 알아들을지도 몰라.", en: "Will you come back anyway? Even if I don't know you, I might understand if you tell me that line." } as Line,
 };
 // 그 뒤로 지상에서 이산에게 말을 걸면: 되풀이 없이 짧게
-export const sanReview: Line[] = [{ ko: "같이 내려가고 싶었는데… 돌아오면, 오늘 일을 네가 기억해 줘.", en: "I wanted us to go down together… If you come back, remember today for me." }];
+export const sanReview: Line[] = [{ ko: "같이 내려가고 싶었는데… 돌아오면, 그 구절을 들려줘.", en: "I wanted us to go down together… If you come back, tell me that line." }];
 
 // 지상에서 이산이 직접 하는 짧은 말 (자막)
 export const sanCue = {
@@ -338,8 +342,14 @@ export const sanCue = {
 // 기록을 지우고 돌아온 방문자와의 재회. 방문자는 말하지 않는다: 망원경을 보던 몸짓으로만 기억을 건넨다.
 // 그 몸짓이 기억이 돌아왔다는 증거도, 같은 사람이라는 증거도 아니다
 export const reunion = {
-  mimic: { ko: "망원경을 보던 모습을 흉내 낸다", en: "Mimic looking through the scope" } as L,
-  asked: { ko: "망원경…? 나랑 거기 갔었어? 난 기억이 안 나.", en: "The scope…? Did we go there together? I don't remember." } as Line,
+  // 기록을 지우고 돌아온 방문자가 굳은 이산에게 들려줄 구절: 셋 중 하나만 이산이 부탁한 구절이다 (모두 2026년 이산의 시)
+  verses: [
+    { ko: "‘별들은 어디 가고 우두커니 서있는 당신은 고고합니까?’", en: "‘Where have the stars gone, and you who stand there alone, are you noble?’", right: false },
+    { ko: "‘수놓인 별들 아래 걸음이 서투른 저희는 고고합니까?’", en: "‘Beneath the embroidered stars, are we, so clumsy in our steps, noble?’", right: true },
+    { ko: "‘이름 없는 사랑이여 그대는 부를 수 없기에 아름답다’", en: "‘O nameless love, you are beautiful because you cannot be called’", right: false },
+  ] as (L & { right: boolean })[],
+  asked: { ko: "…그 구절, 어떻게 알아? 내가 가장 좋아하는 건데. 난 널 기억 못 하는데.", en: "…How do you know that line? It's my favourite. And I don't remember you." } as Line,
+  wrong: { ko: "…처음 듣는 구절이야.", en: "…I've never heard that line." } as Line,
   sit: { ko: "곁에 앉아 기다린다", en: "Sit beside them and wait" } as L,
   stay: { ko: "…조금 더 같이 있어 줄래?", en: "…Will you stay with me a little longer?" } as Line,
   awakeLine: { ko: "같이 가자. 이번엔 네가 앞장서 줘.", en: "Let's go together. This time, you lead." } as Line,
@@ -406,9 +416,6 @@ export const checkpoint = {
   ] as { title: L; body: L; stay: L; go: L }[],
   // 결정하지 않고 물러나기 (어느 단계에서든)
   withdraw: { ko: "결정하지 않고 물러나기", en: "Step back without deciding" },
-  // 물러난 뒤의 대화를 아직 듣지 않았다면: 버튼이 그 대화로 이어진다는 것을 알려 준다 (뒤에 선 이산의 작은 말 한 줄과 함께)
-  withdrawTalk: { ko: "정하기 전에 이산과 이야기하기", en: "Talk to San before deciding" },
-  sanBehind: { ko: "이산 “…정하기 전에, 잠깐 나랑 얘기할래?”", en: "San: “…Before you decide, will you talk with me a moment?”" },
   // 결말 대본: say = 이산의 말, slots = 기억이 지워지는 화면, plaque = 표석. {a} 연결 중단 횟수, {r} 복원 횟수
   // 마지막 줄 뒤에 잠깐 정적이 흐른 다음 버튼이 나온다
   accept: [

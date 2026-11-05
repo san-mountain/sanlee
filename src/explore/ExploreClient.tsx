@@ -1,7 +1,7 @@
 "use client";
 
 import { sfx } from "./sfx";
-import { duckBgm, playBgm, wakeBgm } from "./bgm";
+import { duckBgm, playBgm, wakeBgm, type Track } from "./bgm";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -265,7 +265,10 @@ export default function ExploreClient() {
   // 방공호로 돌아가면 다시 지상 음악부터 (시선 구역은 도시에 다시 올라왔을 때 새로 들어선다)
   // 결말 곡(空)은 마지막 결과(버튼)가 나올 때부터. 그 전까지는 지상에서는 듣던 곡을 잇고, 방공호로 넘어간 거부 결말은 조용히
   const endShown = !!ending && ending.step >= (checkpoint[ending.kind] as Beat[]).length;
-  const track = leaving || intro ? null : endShown ? "ending" : ending ? (zone === "city" ? (jabiStage ? "jabi" : "ground") : null) : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
+  // 결말 곡은 결말마다 하나 (수락·거부·空). 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 f-ALL
+  const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "ending") : null;
+  const track: Track | null =
+    leaving || intro ? null : endShown ? endTrack : zone === "city" && ghost ? "fall" : ending ? (zone === "city" ? (jabiStage ? "jabi" : "ground") : null) : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
   useEffect(() => {
     playBgm(track);
   }, [track]);
@@ -554,10 +557,10 @@ export default function ExploreClient() {
   const scopeBusy = () => scopeMove.current.mode === "in" || scopeMove.current.mode === "view";
 
   // ---------- 기록을 지우고 돌아온 방문자와의 재회 ----------
-  // 방문자는 말하지 않는다. '망원경을 보던 모습을 흉내 낸다'를 고르면 1인칭 손 실루엣이 한쪽 눈에 대었다가 아래를 가리킨다(약 2.4초).
-  // 이산이 묻고, '곁에 앉아 기다린다'를 고르면 화면이 잠깐 가라앉은 채 실제로 기다린 뒤(약 3초) 이산이 일어난다 (Bunker의 awake).
-  // 몸짓은 기억이 돌아왔다는 증거도, 같은 사람이라는 증거도 아니다. 이 기기에 망원경 기록이 남아 있는지 보지 않는다
-  const [beat, setBeat] = useState<"" | "mimic" | "sit">("");
+  // 방문자는 세 구절 중 하나를 들려준다 (검문소 뒤 이산이 들려준 구절이 정답). 맞으면 이산이 묻고,
+  // '곁에 앉아 기다린다'를 고르면 화면이 잠깐 가라앉은 채 실제로 기다린 뒤(약 3초) 이산이 일어난다 (Bunker의 awake).
+  // 기기는 그 일을 모른다: 기억하는 사람만 고른다
+  const [beat, setBeat] = useState<"" | "sit">("");
   const beatTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(beatTimer.current), []);
   const sitBeside = () => {
@@ -580,14 +583,10 @@ export default function ExploreClient() {
       }, 1800);
     }, 3000);
   };
-  const mimicScope = () => {
-    setPanel(null);
-    setBeat("mimic");
-    clearTimeout(beatTimer.current);
-    beatTimer.current = setTimeout(() => {
-      setBeat("");
-      setPanel({ kind: "dialog", name: SAN, lines: [reunion.asked], step: 0, choices: [{ at: 0, label: reunion.sit, go: sitBeside }] });
-    }, 2400);
+  // 구절을 들려준다: 이산이 부탁한 구절이면 이산이 묻고, 아니면 모르는 구절이라고 한다 (다시 말을 걸면 또 고를 수 있다)
+  const tellVerse = (right: boolean) => {
+    if (right) setPanel({ kind: "dialog", name: SAN, lines: [reunion.asked], step: 0, choices: [{ at: 0, label: reunion.sit, go: sitBeside }] });
+    else setPanel({ kind: "dialog", name: SAN, lines: [reunion.wrong], step: 0 });
   };
   // R-07: 소개 뒤 친구를 묻는다. 친구는 이번 방문 동안만 기억하고, 아무것도 열거나 바꾸지 않는다.
   // 방문자는 말하지 않는다: 고개를 끄덕이거나, 손을 흔들고 돌아서거나, (기록을 지우고 돌아온 사람은) 실제로 두 번 두드린다
@@ -770,15 +769,14 @@ export default function ExploreClient() {
               forgot = localStorage.getItem(FORGOT_KEY) !== null;
             } catch {}
             const blank = forgot && visited.length === 0 && found.length === 0 && getBackup().n === 0;
-            // 기록을 지우고 온 사람에게 이산은 처음 보는 사람처럼 짧게 답한다. 마지막 줄에서 방문자는 망원경을 보던 몸짓을 흉내 낼 수 있다
-            // (기기는 그 일을 모른다. 기억하는 사람만 고른다. 고른다고 해서 무엇이 보장되지는 않는다)
+            // 기록을 지우고 온 사람에게 이산은 처음 보는 사람처럼 짧게 답한다. 마지막 줄에서 방문자는 세 구절 중 하나를 들려준다
             setPanel({
               kind: "dialog",
               name: plaque[0],
               lines: blank ? statueForgot : statueLines[Math.min(visited.length, statueLines.length - 2)],
               step: 0,
               plaque: true,
-              choices: blank ? [{ at: statueForgot.length - 1, label: reunion.mimic, go: mimicScope }] : undefined,
+              choices: blank ? reunion.verses.map((v) => ({ at: statueForgot.length - 1, label: v, go: () => tellVerse(v.right) })) : undefined,
             });
             setMet(true);
             // 기록을 지우고 온 사람에게는 '만남' 기록도 새로 남기지 않는다 (터미널을 열어 평범한 길로 돌아가면 그때 남는다: markVisited)
@@ -2164,22 +2162,11 @@ export default function ExploreClient() {
               </>
             )}
             {/* 어느 단계에서든 결정하지 않고 물러날 수 있다 (Esc와 같다). 쿠키 끄기 화면이 닫히면 그 타이머도 멈춘다 */}
-            {/* 물러난 뒤의 대화를 아직 듣지 않았다면 버튼이 이산과의 대화로 이어진다는 것을 보여 준다 (空 경로 제외) */}
-            {!cpRef.current.talked && !ghost && <p className="cp-san-behind">{t(checkpoint.sanBehind)}</p>}
-            <button type="button" className={`choice-withdraw${!cpRef.current.talked && !ghost ? " talk" : ""}`} onClick={withdraw}>
-              {t(!cpRef.current.talked && !ghost ? checkpoint.withdrawTalk : checkpoint.withdraw)}
+            <button type="button" className="choice-withdraw" onClick={withdraw}>
+              {t(checkpoint.withdraw)}
             </button>
             <p className="cp-delete-note">{t(checkpoint.deleteNote)}</p>
           </div>
-        </div>
-      )}
-
-      {/* 재회: 방문자의 몸짓 (1인칭 손 실루엣. 말도, 회상 장면도, 빛도 없다) */}
-      {beat === "mimic" && (
-        <div className="reunion-hand" aria-hidden>
-          <svg viewBox="0 0 120 160" width="120" height="160">
-            <path d="M44 160 L44 92 Q40 60 46 40 Q50 28 58 30 Q64 32 63 46 L62 70 L66 26 Q68 14 76 16 Q83 18 82 30 L80 70 L86 36 Q88 26 95 28 Q101 30 100 42 L96 84 Q104 70 110 72 Q116 76 112 86 L98 118 Q92 136 92 160 Z" />
-          </svg>
         </div>
       )}
 
@@ -2224,7 +2211,7 @@ export default function ExploreClient() {
                   </small>
                 )}
                 <small className="ending-credit">
-                  ♪ 空 · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
+                  ♪ {ending.kind === "accept" ? "Habitual Suffering" : ending.kind === "reject" ? "an open ended promise" : "空"} · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
                 </small>
                 <div>
                   {ending.kind === "accept" ? (
