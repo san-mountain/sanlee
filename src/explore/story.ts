@@ -733,3 +733,16 @@ export const routeUi = {
   caption: { ko: "푸른 선: 네온 길 · 주황: 드론의 빛", en: "Blue: neon path · Orange: drone light" } as L,
   ok: { ko: "계속하기", en: "Continue" } as L,
 };
+
+// 수락한 뒤 다시 온 방문자: 줄에서 시작하고, 검문소 앞 줄 밖에는 정지 처분된 이산이 서 있다.
+// 이산의 기록을 다시 열어 보이면(처음 이산을 움직였던 그 일) 이산이 풀려나고, 곧바로 검문소에 다시 도전할 수 있다
+export const replayUi = {
+  frozen: [
+    { ko: "이산은 줄 밖에 선 채 굳어 있다. 발치의 표지: 정지 처분 · 추적 거부 기록.", en: "San stands frozen outside the line. The tag at their feet: SUSPENDED · RECORD OF REFUSING TRACKING.", who: "narr" },
+  ] as Line[],
+  thaw: { ko: "이산의 기록을 다시 열어 보인다", en: "Open San's records for them again" } as L,
+  leave: { ko: "그대로 둔다", en: "Leave them be" } as L,
+  // 풀려난 이산의 첫마디
+  woke: { ko: "……또 와 줬네. 이번엔 같이 갈 수 있을까?", en: "……You came back. Can we go together this time?" } as L,
+  quest: { ko: "굳은 이산에게 가기", en: "Go to the frozen San" } as L,
+};

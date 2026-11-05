@@ -3,6 +3,7 @@ import type { L, SectionId } from "@/data/site";
 import { works } from "@/data/site";
 import { box, type Box, type Circle } from "./collide";
 import { faceRt } from "./faceRuntime";
+import { route } from "./gaze";
 import { faceUi } from "./story";
 
 export type Vec3 = [number, number, number];
@@ -296,6 +297,8 @@ export const DEPOT_WALL = box(DEPOT.x, DEPOT.z + DEPOT.d / 2 - 0.1, DEPOT.w, 0.2
 export const ROOFS = [DEPOT];
 // 광장과 큰길의 경계 (z가 이보다 작으면 큰길). 막는 것은 없다: 큰길은 언제든 걸어 들어갈 수 있다
 export const AVENUE_EDGE_Z = 13.4;
+// 수락 결말에서 이산이 남은 자리 (줄 밖, 검문소 앞). 다시 오면 여기 굳어 서 있다
+export const FROZEN_SAN = { x: -0.9, z: -104.6 };
 
 // 이산이 지나는 길: 경유점(hold = 드론 빛이 닿지 않아 기다릴 수 있는 자리, lane = 이 점으로 올 때 건너는 드론 길)
 // 이산은 hold에서만 기다리고, 그 사이는 장애물을 피해 이어 둔 점을 차례로 걷는다. 돌아갈 때는 거꾸로 걷는다
@@ -537,6 +540,8 @@ export const CITY: ZoneDef = {
     })),
     { id: "checkpoint", kind: "checkpoint", pos: v(0, 1.6, EDGE.z0 + 4.5), radius: 5.5, label: { ko: "검문소", en: "Checkpoint" } },
     { id: "san", kind: "statue", pos: v(9999, 0, 9999), radius: 2.6, label: { ko: "이산", en: "San" } },
+    // 수락한 뒤 다시 오면: 검문소 앞 줄 밖에 정지 처분된 이산 (FROZEN_SAN)
+    { id: "frozen-san", kind: "statue", pos: v(FROZEN_SAN.x, 1.4, FROZEN_SAN.z), radius: 3, label: { ko: "정지 시민 · 이산", en: "Suspended citizen · San" }, when: () => route.frozenSan },
     { id: "patrol", kind: "npc", npc: "patrol", pos: v(6, 2, -10), radius: 3.4, label: { ko: "순찰 기계 P-3", en: "Patrol unit P-3" } },
     { id: "patrol2", kind: "npc", npc: "patrol2", pos: v(-6, 2, -10), radius: 3.4, label: { ko: "순찰 기계 P-3′", en: "Patrol unit P-3′" } },
   ],

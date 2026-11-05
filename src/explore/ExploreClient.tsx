@@ -10,8 +10,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, type Beat, type Line } from "./story";
-import { AVENUE_EDGE_Z, BAY, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
+import { MUSIC_URL, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
+import { AVENUE_EDGE_Z, BAY, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
 import { sanHold, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -199,6 +199,11 @@ export default function ExploreClient() {
   const [since] = useState(() => Date.now());
   // 수락 결말을 본 사람: 다시 오면 방공호가 아니라 줄 속에서 시작한다
   const [accepted, setAccepted] = useState(false);
+  // 수락한 뒤 다시 와서, 검문소 앞에 굳은 이산을 풀어 주었는가 (이번 방문 동안만. 그 뒤로는 검문소에 다시 도전한다)
+  const [replay, setReplay] = useState(false);
+  useEffect(() => {
+    route.frozenSan = accepted && zone === "city" && !ending;
+  }, [accepted, zone, ending]);
   // 입장 전 쿠키 창: ask → busy(처리 중…) → yes(수락됨) → done
   // 발견한 결말 (거부 결말은 기록을 지우므로 남지 않는다)
   const [found, setFound] = useState<string[]>([]);
@@ -657,6 +662,21 @@ export default function ExploreClient() {
   const faceActRef = useRef(faceAct);
   faceActRef.current = faceAct;
 
+  // 줄에서 다시 시작한 방문자가 굳은 이산을 풀어 준다: 곧바로 승강장 단계(descent)로, 검문소에 다시 도전한다
+  const thaw = () => {
+    closePanelRef.current();
+    sfx.restore();
+    writeScope({ ...readScope(), seen: true, agreed: true });
+    setTalked(true);
+    setReplay(true);
+    setAccepted(false);
+    gaze.mood = "";
+    sanHold.at = null;
+    setTimeout(() => say(replayUi.woke, 3600), 600);
+  };
+  const thawRef = useRef(thaw);
+  thawRef.current = thaw;
+
   const interact = useCallback(
     (it: Interactable) => {
       // 결말 중(空 결말의 마지막 걸음 포함)에는 아무것도 열지 않는다
@@ -680,6 +700,21 @@ export default function ExploreClient() {
           faceActRef.current(it.id);
           break;
         case "statue":
+          // 수락한 뒤 다시 온 방문자: 줄 밖에 굳은 이산. 기록을 다시 열어 보이면 풀려난다
+          if (it.id === "frozen-san") {
+            setPanel({
+              kind: "dialog",
+              name: plaque[0],
+              lines: replayUi.frozen,
+              step: 0,
+              plaque: true,
+              choices: [
+                { at: 0, label: replayUi.thaw, go: () => thawRef.current() },
+                { at: 0, label: replayUi.leave, go: () => closePanelRef.current() },
+              ],
+            });
+            break;
+          }
           // 기억으로 깨어난 이산은 짧게만 말한다
           if (it.id === "san" && ghost) setPanel({ kind: "dialog", name: SAN, lines: [reunion.awakeLine], step: 0 });
           // 망원경 장면 도중: 이산은 하던 일을 계속한다 (비켜선 뒤에는 같은 말을 한 번 더). 눈을 뗀 뒤의 대화는 그 줄부터 다시
@@ -1643,7 +1678,9 @@ export default function ExploreClient() {
   // 퀘스트 화살표의 목표: 매 프레임 플레이어 위치에 따라 고른다
   const questRef = useRef<() => QuestTarget>(() => null);
   questRef.current = () => {
-    if (ending || accepted) return null;
+    if (ending) return null;
+    // 줄에서 다시 시작했다면: 검문소 앞의 굳은 이산에게
+    if (accepted) return zone === "city" ? { pos: ZONES.city.items.find((i) => i.id === "frozen-san")!.pos, label: t(replayUi.quest) } : null;
     const items = ZONES[zone].items;
     const find = (id: string) => items.find((i) => i.id === id);
     const px = player.pos.x;
@@ -1791,6 +1828,8 @@ export default function ExploreClient() {
             labelEls={labelEls}
             sanPath={sanPath}
             hideSan={accepted}
+            frozenSan={accepted && zone === "city" && !ending}
+            sanStart={replay ? [FROZEN_SAN.x, FROZEN_SAN.z] : undefined}
             secondStatue={secondStatue}
             awake={complete}
             face={{ drums: face.drums, phase: facePhase, method: face.method }}
