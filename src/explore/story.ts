@@ -472,6 +472,8 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
       { ko: "지금 나오는 곡은 D!mple. 여기선 웃어도 아무도 기록하지 않아.", en: "The track playing now is D!mple. Down here, nobody records you for smiling." },
       { ko: "지상에서 들리는 곡은 0x48 0x4F 0x50 0x45. 제목에 말을 하나 숨겨 놨어.", en: "The track you hear on the surface is 0x48 0x4F 0x50 0x45. I hid a word in the title." },
       { ko: "큰길에선 Sti그ma가 흘러. 거기서는 음악에 정신 팔리지 마.", en: "On the avenue it's Sti그ma. Don't get lost in the music out there." },
+      // 결말과 숨은 길의 곡들 (Habitual Suffering, an open ended promise, f-ALL): 제목은 말하지 않는다
+      { ko: "길 끝에도 곡을 몇 개 걸어 뒀어. 어떻게 끝나느냐에 따라 다른 곡이 나와.", en: "I've left a few more tracks at the end of the road. Which one plays depends on how it ends." },
       { ko: "난 백진성이야. 다른 곡도 듣고 싶으면 사운드클라우드에 있어.", en: "I'm Jinseong Baek. If you want to hear more, it's on SoundCloud." },
     ],
     link: { href: MUSIC_URL, label: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" } },
