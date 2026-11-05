@@ -184,6 +184,10 @@ export const jabiUi = {
     { ko: "바닥에 붉은 선이 보이면 옆으로 피하세요.", en: "When a red line appears on the ground, dodge sideways." },
   ] as L[],
   introOk: { ko: "계속하기", en: "Continue" },
+  introShots: [
+    { src: "/deleteseoul/jabi-lock.webp", cap: { ko: "눈과 입이 붉어지면: 조준", en: "Eyes and mouth turn red: locked on" } },
+    { src: "/deleteseoul/jabi-fire.webp", cap: { ko: "빛이 내려오면: 연결 끊김", en: "The light comes down: disconnected" } },
+  ] as { src: string; cap: L }[],
   deadTitle: { ko: "연결이 끊겼습니다", en: "CONNECTION LOST" },
   deadSub: { ko: "큰길 입구에서 다시 시작합니다.", en: "Restarting at the avenue entrance." },
   restoreStart: { ko: "큰길 입구로 돌아왔습니다.", en: "Back at the avenue entrance." },
@@ -257,14 +261,14 @@ export const sanCity = {
 // 차례: ask(방문자가 망원경이나 이산에게 다가가면, 이산이 접안렌즈로 걸어간다) → 도착 뒤 정적 → first[0] → 비켜서며 first[1] →
 // 방문자가 '망원경 보기' → 그만 보고 돌아서면 after → 마지막 페이지에서 두 행동
 export const scopeScene = {
-  ask: { ko: "잠깐만. 내가 먼저 볼게.", en: "Wait. Let me look first." } as L,
-  first: [
-    { ko: "……! 저 아래, 뭔가 반짝였어.", en: "……! Down there, something glimmered." },
-    { ko: "너도 한번 봐.", en: "You take a look too." },
-  ] as L[],
+  // 방문자가 먼저 본다. 이산은 비켜서서 기다린다
+  ask: { ko: "너 먼저 봐. 난 그다음에 볼게.", en: "You look first. I'll go after you." } as L,
+  // 방문자가 눈을 떼면
+  mine: { ko: "나도 볼래.", en: "My turn." } as L,
+  first: { ko: "……! 저 아래, 뭔가 반짝였어.", en: "……! Down there, something glimmered." } as L,
   // 방문자가 망원경에서 눈을 뗀 뒤. 두 번째 페이지 앞의 정적 동안 둘은 아래를 내려다본다
   after: [
-    { ko: "지금은 안 보이지? 분명히 봤는데. 잠깐이었어.", en: "It's gone now, isn't it? I definitely saw it. Just for a moment." },
+    { ko: "너도 봤어? 지금은 구름뿐이야. 분명히 봤는데. 잠깐이었어.", en: "Did you see it? It's only clouds now. I definitely saw it. Just for a moment." },
     { ko: "저 그림을 그린 기억은 있는데… 그건 2026년에 살던 사람이 한 일이잖아.", en: "I remember painting that picture… but that was done by someone who lived in 2026.", pause: 1600 },
     { ko: "방금 본 건 내 기억이야. 여기서, 내가 본 거니까.", en: "What I just saw is my memory. Because I saw it, here." },
     { ko: "나도 나만의 경험을 하고 싶어. 내려가서 확인하고 싶어. 아까 그게 뭐였는지.", en: "I want an experience of my own, too. I want to go down and find out what that was." },
@@ -315,7 +319,6 @@ export const sanCue = {
   wait: { ko: "여기서 잠깐 기다려. 게이지가 내려가면 건너자.", en: "Wait here a moment. When the gauge drops, we cross." } as L,
   back: { ko: "돌아왔네.", en: "You're back." } as L,
   // 골목 입구에서 처음 (허공 너머로 남쪽 전망대의 망원경이 보인다)
-  plaza: { ko: "저 끝이 전망대야. 왼쪽 산책로로 돌아가자.", en: "That's the lookout at the far end. Let's go round by the walkway on the left." } as L,
   // 배송 대기소 처마 밑
   shelter: { ko: "여긴 지붕이 가려 줘. 잠깐 쉬자.", en: "The roof covers us here. Let's rest a moment." } as L,
   // 망원경 전에 큰길로 들어서면 (곁에 있을 때만. 막는 것이 아니라 부탁)
@@ -717,3 +720,16 @@ export const faceUi = {
   hintTouch: { ko: "원통을 눌러 돌립니다.", en: "Tap a drum to turn it." } as L,
 };
 
+
+// 골목을 나서 광장에 처음 들어설 때 뜨는 망원경 길 안내 팝업 (대자비 소개와 같은 꼴)
+export const routeUi = {
+  title: { ko: "드론을 피해 남쪽 망원경으로", en: "Reach the south scope, avoiding the drones" } as L,
+  body: { ko: "바닥의 푸른 네온을 따라가세요. 길 위를 드론 세 대가 훑습니다.", en: "Follow the blue neon on the ground. Three drones sweep the way." } as L,
+  rules: [
+    { ko: "드론의 빛 원에 들어가면 식별됩니다. 빛이 지나간 뒤에 건너세요.", en: "Step into a drone's circle of light and you're identified. Cross after it passes." },
+    { ko: "배송 대기소 처마 밑에는 빛이 닿지 않습니다.", en: "The light can't reach under the eaves of the delivery depot." },
+    { ko: "마지막 다리에서는 빛이 다리 전체를 오갑니다. 빈틈이 보이면 망원경까지 달리세요.", en: "On the last bridge the light sweeps the whole span. When there's a gap, run all the way to the scope." },
+  ] as L[],
+  caption: { ko: "푸른 선: 네온 길 · 주황: 드론의 빛", en: "Blue: neon path · Orange: drone light" } as L,
+  ok: { ko: "계속하기", en: "Continue" } as L,
+};

@@ -1010,11 +1010,22 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .choice-wrap.jabi-wrap { background: linear-gradient(to bottom, transparent 35%, #07030fcc); -webkit-backdrop-filter: none; backdrop-filter: none; align-items: flex-end; padding-bottom: 5vh; }
 .choice-wrap.jabi-wrap .jabi-intro { max-height: 100%; overflow: auto; }
 @media (max-width: 520px) { .choice-wrap.jabi-wrap { padding-bottom: 2vh; } .jabi-intro h2 { font-size: 17px; } }
-/* 넓은 화면: 팝업을 오른쪽으로 비켜 세워 가운데의 대자비 얼굴이 보이게 */
+/* 넓은 화면: 가운데에 (그림이 들어가 조금 넓게) */
 @media (min-width: 900px) and (min-aspect-ratio: 6/5) {
-  .choice-wrap.jabi-wrap { align-items: center; justify-content: flex-end; padding: 0 4vw 0 0; background: linear-gradient(to right, transparent 45%, #07030fcc); }
-  .choice-wrap.jabi-wrap .jabi-intro { width: min(440px, 38vw); max-height: 92vh; overflow: auto; }
+  .choice-wrap.jabi-wrap { align-items: center; justify-content: center; padding: 0; background: radial-gradient(ellipse at center, #07030f99, #07030fdd); }
+  .choice-wrap.jabi-wrap .jabi-intro { width: min(520px, 92vw); max-height: 92vh; overflow: auto; }
 }
+/* 팝업의 그림: 대자비 두 장면 / 망원경 가는 길 약도 */
+.jabi-shots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0 4px; }
+.jabi-shots figure, .route-sketch { margin: 0; }
+.jabi-shots img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid #ffc04055; }
+.jabi-shots figcaption, .route-sketch figcaption { margin-top: 5px; font-family: var(--mono); font-size: 11px; line-height: 1.4; color: #ffb36b; }
+.route-intro { border-color: #3ff0ff77; }
+.route-intro h2 { color: #8ff8ff; }
+.route-intro .jabi-rules li::marker { color: #3ff0ff; }
+.route-sketch { margin: 12px 0 4px; }
+.route-sketch svg { display: block; width: 100%; height: auto; border: 1px solid #3ff0ff44; background: #05060c; }
+.route-sketch figcaption { color: #8ff8ff; }
 
 /* 시·일기 본문: 모바일에서 본문 폭을 조금 넓힌다.
    글자 크기는 PC와 같은 17px을 유지하고, 모바일에서는 왼쪽 들여쓰기만 없앤다.

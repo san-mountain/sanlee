@@ -7,12 +7,12 @@ import { addRim } from "./rim";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
-import { ALLEYS, ALLEY_PEOPLE, AVENUE, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOTS, PAGODA, SCOPES } from "./zones";
+import { ALLEYS, ALLEY_PEOPLE, AVENUE, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOOKOUT_PATH, LOTS, PAGODA, SCOPES } from "./zones";
 import { citizenGeometry, roofGeometry } from "./models";
 import { chalkArrowTexture, concreteTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
-import { gaze } from "./gaze";
+import { gaze, route } from "./gaze";
 
 function rng(seed: number) {
   return () => {
@@ -40,6 +40,70 @@ export function ChalkMarks() {
           <planeGeometry args={[2.2, 2.2]} />
           <meshBasicMaterial map={m.turn ? tex.turn : tex.straight} transparent depthWrite={false} toneMapped={false} />
         </mesh>
+      ))}
+    </group>
+  );
+}
+
+/* ---------- 망원경 가는 길의 네온: 골목 입구에서 남쪽 망원경까지 바닥에 깔린 빛줄기 ---------- */
+// 망원경 단계(scope)에서만 켜진다. 화살표 무늬가 망원경 쪽으로 흘러간다. 경유점(LOOKOUT_PATH)을 그대로 잇는다
+function neonArrowTexture() {
+  const c = document.createElement("canvas");
+  c.width = 128;
+  c.height = 64;
+  const g = c.getContext("2d")!;
+  // 가운데 줄
+  g.fillStyle = "rgba(80,240,255,0.55)";
+  g.fillRect(0, 28, 128, 8);
+  // 화살촉 (오른쪽 = 나아가는 쪽)
+  g.strokeStyle = "#7ff6ff";
+  g.lineWidth = 9;
+  g.lineCap = "round";
+  g.lineJoin = "round";
+  g.shadowColor = "#3ff0ff";
+  g.shadowBlur = 10;
+  g.beginPath();
+  g.moveTo(50, 10);
+  g.lineTo(78, 32);
+  g.lineTo(50, 54);
+  g.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  return tex;
+}
+export function NeonRoute() {
+  const segs = useMemo(() => {
+    const base = neonArrowTexture();
+    return LOOKOUT_PATH.slice(1).map((b, i) => {
+      const a = LOOKOUT_PATH[i];
+      const len = Math.hypot(b.x - a.x, b.z - a.z);
+      const tex = base.clone();
+      tex.needsUpdate = true;
+      tex.repeat.set(Math.max(1, Math.round(len / 1.1)), 1);
+      return { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2, len, yaw: -Math.atan2(b.z - a.z, b.x - a.x), tex };
+    });
+  }, []);
+  useLayoutEffect(() => () => segs.forEach((s) => s.tex.dispose()), [segs]);
+  const group = useRef<THREE.Group>(null);
+  const mats = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
+  useFrame((st, dt) => {
+    const on = route.phase === "scope";
+    if (group.current) group.current.visible = on;
+    if (!on) return;
+    const t = st.clock.elapsedTime;
+    segs.forEach((s) => (s.tex.offset.x -= dt * 1.4));
+    mats.current.forEach((m) => m && (m.opacity = 0.75 + Math.sin(t * 3) * 0.15));
+  });
+  return (
+    <group ref={group} visible={false}>
+      {segs.map((s, i) => (
+        <group key={i} position={[s.x, 0.035, s.z]} rotation={[0, s.yaw, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+            <planeGeometry args={[s.len, 0.62]} />
+            <meshBasicMaterial ref={(m) => { mats.current[i] = m; }} map={s.tex} transparent depthWrite={false} toneMapped={false} />
+          </mesh>
+        </group>
       ))}
     </group>
   );

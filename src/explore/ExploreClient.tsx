@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, type Beat, type Line } from "./story";
+import { MUSIC_URL, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, type Beat, type Line } from "./story";
 import { AVENUE_EDGE_Z, BAY, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
 import { sanHold, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
@@ -25,6 +25,7 @@ import { autoWalk, gaze, resetGaze, route, stopWalk, walkArea, walkPath, type Re
 import { drone, laneClear, presetSweep, resetDrones } from "./Drones";
 import DroneHUD from "./DroneHUD";
 import ScopeView from "./ScopeView";
+import RouteSketch from "./RouteSketch";
 import { coverState, finalBeam, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
@@ -91,6 +92,7 @@ type Panel =
     }
   | { kind: "choice"; confirm?: number; game?: boolean }
   | { kind: "jabi" }
+  | { kind: "route" }
   | null;
 
 type EndKind = "accept" | "reject" | "ghost";
@@ -162,7 +164,8 @@ const SCOPE_EYE = { x: SCOPE_POS[0], z: SCOPE_POS[2] - 0.8, yaw: Math.PI };
 const SCOPE_ZOOM = 0.65;
 const SCOPE_CLAMP = { yaw: Math.PI, dy: 1.15, p0: -0.9, p1: 0.25 };
 const SCOPE_PITCH = -0.18;
-const TO_EYE: SanPath = { pts: [[LOOK_WAIT.x, LOOK_WAIT.z], EYE_SPOT], yaw: 0, speed: 1.3 };
+// 방문자가 먼저 본 뒤 이산이 비켜선 자리에서 접안렌즈로 다가간다
+const TO_EYE: SanPath = { pts: [[EYE_SPOT[0] + 0.9, EYE_SPOT[1] - 0.6], EYE_SPOT], yaw: 0, speed: 1.3 };
 const TO_ASIDE: SanPath = { pts: [[EYE_SPOT[0] + 0.9, EYE_SPOT[1] - 0.6], SAN_ASIDE], yaw: Math.atan2(SCOPE_EYE.x - SAN_ASIDE[0], SCOPE_EYE.z - SAN_ASIDE[1]), speed: 1.3 };
 const inBay = (x: number, z: number) => x > BAY.x0 - 0.5 && z > BAY.z0 - 0.5;
 // 도시 판 바깥(바깥 산책로·남쪽 다리)에 있는가: 여기서는 화살표가 다음 경유점을 가리킨다 (허공 너머 목표를 곧장 가리키지 않게)
@@ -430,9 +433,9 @@ export default function ExploreClient() {
   };
 
   // ---------- 남쪽 전망대의 망원경 장면 ----------
-  // idle → ask(방문자가 망원경이나 이산에게 말을 걸면: "잠깐만. 내가 먼저 볼게.", 이산이 접안렌즈로 걸어간다) →
-  // looking(도착하고 잠깐 뒤 첫 말) → offer(비켜서며 "너도 한번 봐.". 방문자가 '망원경 보기'를 고를 수 있다) →
-  // (방문자가 들여다봄: scopeMove) → after(눈을 떼고 돌아서면 이산이 묻는다. 대화 끝에 결정) → done.
+  // idle → offer(방문자가 먼저 들여다본다. 이산은 옆에 비켜서 기다린다: scopeMove) →
+  // ask(눈을 떼면 이산 "나도 볼래.", 접안렌즈로 걸어간다) → looking(도착하고 잠깐 뒤 첫 말) →
+  // after(이산이 눈을 떼고 묻는다. 대화 끝에 결정) → done.
   // 대화를 닫는 것은 어떤 행동도 대신하지 않는다. 장면의 움직임은 모두 도착을 기다린다
   type ScopeStage = "idle" | "ask" | "looking" | "offer" | "after" | "done";
   const scopeRef = useRef<{ stage: ScopeStage; step: number; at: number }>({ stage: "idle", step: 0, at: 0 });
@@ -505,11 +508,12 @@ export default function ExploreClient() {
     const san = CITY.items.find((i) => i.id === "san")!;
     return Math.hypot(san.pos.x - LOOK_WAIT.x, san.pos.z - LOOK_WAIT.z) < 1.6;
   };
+  // 방문자가 먼저 들여다본다 (이산은 비켜선 자리에서 기다린다)
   const startScene = () => {
     sanHold.at = null;
-    scopeRef.current = { stage: "ask", step: 0, at: 0 };
-    setScopeStageState("ask");
-    say(scopeScene.ask, 2800);
+    scopeRef.current = { stage: "offer", step: 0, at: 0 };
+    setScopeStageState("offer");
+    startScopeView();
   };
   // 망원경 들여다보기: 눈 자리로 두어 걸음 다가간 뒤(도착하면) 시야를 당긴다
   const startScopeView = () => {
@@ -679,14 +683,14 @@ export default function ExploreClient() {
           // 기억으로 깨어난 이산은 짧게만 말한다
           if (it.id === "san" && ghost) setPanel({ kind: "dialog", name: SAN, lines: [reunion.awakeLine], step: 0 });
           // 망원경 장면 도중: 이산은 하던 일을 계속한다 (비켜선 뒤에는 같은 말을 한 번 더). 눈을 뗀 뒤의 대화는 그 줄부터 다시
-          else if (it.id === "san" && (scopeRef.current.stage === "looking" || scopeRef.current.stage === "offer")) say(scopeScene.first[1], 2600);
+          else if (it.id === "san" && scopeRef.current.stage === "offer") say(scopeScene.ask, 2600);
           else if (it.id === "san" && scopeRef.current.stage === "after") setPanel(afterPanel());
-          else if (it.id === "san" && scopeRef.current.stage === "ask") break;
+          else if (it.id === "san" && (scopeRef.current.stage === "ask" || scopeRef.current.stage === "looking")) break;
           // 검문소 뒤: 대화를 다 들었으면 짧게 되짚기만, 물러났지만 끝까지 못 들었으면 그 대화를 다시
           else if (it.id === "san" && cpRef.current.talked) setPanel({ kind: "dialog", name: SAN, lines: sanReview, step: 0 });
           else if (it.id === "san" && cpRef.current.seen) setPanel(afterCheckpointPanel());
-          // 전망대에서 이산에게 말을 걸면 함께 보기가 시작된다 / 결정을 미뤘다면 결정으로
-          else if (it.id === "san" && phase === "scope" && inBay(player.pos.x, player.pos.z) && sanAtLookout()) startScene();
+          // 전망대에서 이산에게 말을 걸면 먼저 보라고 권한다 / 결정을 미뤘다면 결정으로
+          else if (it.id === "san" && phase === "scope" && inBay(player.pos.x, player.pos.z) && sanAtLookout()) say(scopeScene.ask, 2600);
           else if (it.id === "san" && phase === "decide") setPanel(afterPanel());
           else if (it.id === "san") {
             const base = phase === "scope" ? sanCity.scope : sanCity.descent;
@@ -746,7 +750,7 @@ export default function ExploreClient() {
             else if (sc === "after") setPanel(afterPanel());
             else if (sc === "ask" || sc === "looking") break;
             else if (phase !== "scope") startScopeView();
-            // 망원경 단계: 이산이 전망대에 와 있으면 이산이 먼저 본다. 아직 오는 중이면 기다린다
+            // 망원경 단계: 이산이 전망대에 와 있으면 방문자가 먼저 본다. 아직 오는 중이면 기다린다
             else if (sanAtLookout()) startScene();
             else say(sanCue.waitMe, 2600);
             break;
@@ -1378,11 +1382,10 @@ export default function ExploreClient() {
         m.back = null;
         gaze.still = false;
         if (m.looked && sc.stage === "offer") {
-          // 함께 보는 관측은 여기서 끝난다 (이 기기에 남는다). 돌아선 방문자에게 이산이 묻는다
-          if (!ghostRef.current) writeScope({ ...readScope(), seen: true });
-          sc.step = 0;
-          setScopeStage("after");
-          setPanel(afterPanel());
+          // 방문자가 눈을 뗐다: 이번엔 이산이 본다
+          sc.at = 0;
+          setScopeStage("ask");
+          say(scopeScene.mine, 2400);
           return;
         }
         if (m.looked && phaseRef.current !== "scope") say(scopeScene.again, 2600);
@@ -1399,9 +1402,12 @@ export default function ExploreClient() {
         c.plaza = true;
         presetSweep(0, 1.6);
         gaze.lookAt = { x: SCOPE_POS[0], y: 1.2, z: SCOPE_POS[2] };
-        say(sanCue.plaza, 4600);
         clearTimeout(frameTimer.current);
-        frameTimer.current = setTimeout(() => (gaze.lookAt = null), 2600);
+        // 허공 너머 망원경을 잠깐 바라본 뒤 길 안내 팝업 (이산의 말이 아니라 대자비 소개 같은 안내 창)
+        frameTimer.current = setTimeout(() => {
+          gaze.lookAt = null;
+          if (!panelRef.current && !endingRef.current) setPanel({ kind: "route" });
+        }, 2600);
       }
       if (ph === "scope" && withSan && !c.shelter && underRoof(px, pz)) {
         c.shelter = true;
@@ -1431,11 +1437,14 @@ export default function ExploreClient() {
         else if (now - sc.at > 1600) {
           sc.at = now;
           setScopeStage("looking");
-          say(scopeScene.first[0], 3200);
+          say(scopeScene.first, 3200);
         }
-      } else if (sc.stage === "looking" && now - sc.at > 3200) {
-        setScopeStage("offer");
-        say(scopeScene.first[1], 4200);
+      } else if (sc.stage === "looking" && now - sc.at > 3400) {
+        // 함께 보는 관측은 여기서 끝난다 (이 기기에 남는다). 이산이 눈을 떼고 묻는다
+        if (!ghostRef.current) writeScope({ ...readScope(), seen: true });
+        sc.step = 0;
+        setScopeStage("after");
+        setPanel(afterPanel());
       }
     }, 150);
     return () => clearInterval(iv);
@@ -1447,7 +1456,8 @@ export default function ExploreClient() {
   // 화면이 어두워진 동안 옮긴다. 이산도 그 자리에서 기다린다. 이미 지나친 만남과 망원경 장면은 되풀이하지 않는다
   const onDroneCaught = useCallback(() => {
     const out = phaseRef.current === "scope";
-    const k = drone.by === 1 ? (out ? OUT_HOLD.walk : OUT_HOLD.corner) : out ? OUT_HOLD.plaza : OUT_HOLD.depot;
+    // 드론 0 광장, 1 산책로, 6 남쪽 다리 (가는 길이면 건너기 전 자리, 돌아오는 길이면 돌아오기 전 자리)
+    const k = drone.by === 6 ? (out ? OUT_HOLD.corner : OUT_HOLD.look) : drone.by === 1 ? (out ? OUT_HOLD.walk : OUT_HOLD.corner) : out ? OUT_HOLD.plaza : OUT_HOLD.depot;
     const spot = OUT[k];
     const ahead = OUT[out ? k + 1 : k - 1];
     const len = Math.hypot(ahead.x - spot.x, ahead.z - spot.z) || 1;
@@ -1557,6 +1567,7 @@ export default function ExploreClient() {
     prevPanel.current = panel;
     if (!panel) return;
     if (panel.kind === "jabi") return sfx.gong();
+    if (panel.kind === "route") return sfx.chime();
     if (panel.kind === "dialog" && panel.locked && a?.kind !== "dialog") return sfx.denied();
     if (!a || a.kind !== panel.kind) return sfx.open();
     if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
@@ -1671,6 +1682,10 @@ export default function ExploreClient() {
       const san = find("san");
       return san ? { pos: san.pos, label: t(quest.decide) } : null;
     }
+    if (scopeRef.current.stage === "offer") {
+      const sc = find("scope-0");
+      return sc ? { pos: sc.pos, label: t(quest.scope) } : null;
+    }
     if (scopeRef.current.stage !== "idle" && scopeRef.current.stage !== "done") return null;
     // 길 위(광장·바깥 산책로)에서는 허공 너머 목표를 곧장 가리키지 않고 다음 경유점(드론 빛이 닿지 않는 자리)을 가리킨다
     const along = (list: RoutePt[], label: L): QuestTarget => {
@@ -1749,7 +1764,7 @@ export default function ExploreClient() {
     else if (scopeData.seen) evidence.push(t(checkpoint.evScopeDone));
   }
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || (phase !== "scope" && scopeStage !== "after")) ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
+  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || scopeStage === "idle" || scopeStage === "done") ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
   quietRef.current = !!panel || !!scopeView || !!sanSay || !!toast || !!beat || paused;
   const rootClass = [
     "explore-root",
@@ -1971,6 +1986,15 @@ export default function ExploreClient() {
           <div className="jabi-intro" role="dialog" aria-modal="true" aria-labelledby="jabi-intro-title">
             <h2 id="jabi-intro-title">{t(jabiUi.introTitle)}</h2>
             <p>{t(jabiUi.introBody)}</p>
+            <div className="jabi-shots">
+              {jabiUi.introShots.map((sh) => (
+                <figure key={sh.src}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={sh.src} alt={t(sh.cap)} width={480} height={360} />
+                  <figcaption>{t(sh.cap)}</figcaption>
+                </figure>
+              ))}
+            </div>
             <ol className="jabi-rules">
               {jabiUi.introRules.map((r, i) => (
                 <li key={i}>{t(r)}</li>
@@ -1979,6 +2003,30 @@ export default function ExploreClient() {
             <div className="panel-actions">
               <button className="btn primary" autoFocus onClick={closePanel}>
                 {t(jabiUi.introOk)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 골목을 나설 때: 망원경 가는 길 안내 (네온 길 약도) */}
+      {panel?.kind === "route" && (
+        <div className="choice-wrap jabi-wrap">
+          <div className="jabi-intro route-intro" role="dialog" aria-modal="true" aria-labelledby="route-intro-title">
+            <h2 id="route-intro-title">{t(routeUi.title)}</h2>
+            <p>{t(routeUi.body)}</p>
+            <figure className="route-sketch">
+              <RouteSketch lang={lang} />
+              <figcaption>{t(routeUi.caption)}</figcaption>
+            </figure>
+            <ol className="jabi-rules">
+              {routeUi.rules.map((r, i) => (
+                <li key={i}>{t(r)}</li>
+              ))}
+            </ol>
+            <div className="panel-actions">
+              <button className="btn primary" autoFocus onClick={closePanel}>
+                {t(routeUi.ok)}
               </button>
             </div>
           </div>

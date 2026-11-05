@@ -328,6 +328,9 @@ export const DRONE_RAILS: DroneRail[] = [
   { zone: "avenue", z: -58, c: 0, a: 8.6, y: 8, period: 9.5, phase: 2.1, dz: 3 },
   { zone: "avenue", z: -84, c: 0, a: 8.6, y: 8, period: 8, phase: 1.0, dz: 3 },
   { zone: "avenue", z: -108, c: 0, a: 8.6, y: 8, period: 9, phase: 2.8, dz: 3 },
+  // 남쪽 다리 C: 모퉁이에서 전망대까지 일직선 다리를 따라 오간다. 다리 폭 전체를 덮으므로 빈틈을 보고 끝까지 달려야 한다.
+  // 빛 원은 x −64.6…−37.4 (모퉁이 hold x −66.6, 전망대 BAY x −36 밖): 망원경 근처에는 닿지 않는다. 시험해 보지 않은 기하 계산이다
+  { zone: "plaza", z: 48.4, c: -51, a: 11, y: 6.4, period: 9, phase: 1.3, dz: 0.6, fx: [LOOK.x0, BAY.x0] },
 ];
 
 export const QUEUE_X = [-3.6, 3.6];
