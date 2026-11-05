@@ -7,9 +7,9 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
 import { billboards, ticker } from "./story";
-import { AVENUE, CAMERA_POLES, CITY, CITY_NPCS, CROSS, EDGE, ISLANDS, LOTS, OVERSEER_ISLAND, QUEUE_X, QUEUE_Z } from "./zones";
+import { AVENUE, CAMERA_POLES, CITY, CITY_NPCS, CROSS, DEPOT, EDGE, ISLANDS, LOTS, NS2_X, OVERSEER_ISLAND, QUEUE_X, QUEUE_Z, WALK } from "./zones";
 import { AirTraffic, Arks, Bridge, CloudSea, Islands, Platform, Sky, TwinBuddhas } from "./CityWorld";
-import { AlleyDecor, AlleyPeople, ChalkMarks, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
+import { AlleyDecor, AlleyPeople, AvenueHolo, ChalkMarks, NeonRoute, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
 import { citizenGeometry, roofGeometry, visorGeometry } from "./models";
 import { towerMaterial } from "./towerMaterial";
 import { useNeoPost } from "./neoPost";
@@ -17,10 +17,11 @@ import { NeonEnvironment, useBeam, useLightPool } from "./atmosphere";
 import { addRim } from "./rim";
 import { useQuality } from "./quality";
 import { MeshReflectorMaterial } from "@react-three/drei";
-import { concreteTexture, hazardTexture, signTexture } from "./textures";
+import { concreteTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
 import Jabi from "./Jabi";
+import Drones from "./Drones";
 
 function rng(seed: number) {
   return () => {
@@ -270,23 +271,63 @@ function Ground() {
 function Gate({ lang }: { lang: Lang }) {
   const gateSign = useSign(
     [
-      [lang === "ko" ? "통제 구역" : "RESTRICTED", 1.3],
-      [lang === "ko" ? "임시 방문자 출입 불가" : "TEMPORARY VISITORS MAY NOT PASS", 0.6],
+      [lang === "ko" ? "하층행 승강장" : "DESCENT PLATFORM", 1.3],
+      [lang === "ko" ? "검문소 · 승강장 대기열 등록" : "CHECKPOINT · PLATFORM QUEUE REGISTRATION", 0.55],
     ],
     { color: "#ff2a3d", glow: true, mono: true, w: 1024, h: 256, bg: "#0a0204" }
   );
+  // 성문의 붉은 빛은 벽이 아니라 열린 통로 위의 조준 장치다: 저장된 방문 기록을 따라 사람의 위치를 찾고, 찾으면 겨눈다.
+  // 성문 옆 표시가 지금 무엇을 겨누는지 알려 준다
+  // bound: 방문자·이산을 추적 중 / search: 기록 없는 둘 앞에서 겨눌 기록을 찾는 중 / free: 추적할 대상을 찾지 못해 조준을 거둠
+  const ko = lang === "ko";
+  const panelBound = useSign(
+    [
+      [ko ? "위치 추적 중" : "TRACKING LOCATION", 0.95],
+      [ko ? "방문자 · 동행인 이산" : "VISITOR · COMPANION SAN", 0.5],
+    ],
+    { color: "#ff6a7a", bg: "#140406", mono: true, w: 1024, h: 192 }
+  );
+  const panelSearch = useSign(
+    [
+      [ko ? "방문자 기록 조회 중" : "LOOKING UP VISITOR RECORD", 0.95],
+      [ko ? "조준할 방문 기록을 찾는 중" : "SEARCHING FOR A VISIT RECORD TO AIM AT", 0.5],
+    ],
+    { color: "#c8ccd4", bg: "#0c0d10", mono: true, w: 1024, h: 192 }
+  );
+  const panelFree = useSign(
+    [
+      [ko ? "방문자 기록 없음" : "NO VISITOR RECORD", 0.95],
+      [ko ? "추적할 대상 없음" : "NO ONE TO TRACK", 0.5],
+    ],
+    { color: "#9aa0a8", bg: "#0c0d10", mono: true, w: 1024, h: 192 }
+  );
   const lasers = useRef<THREE.Group>(null);
+  const panels = useRef<(THREE.Mesh | null)[]>([]);
+  const fade = useRef(1);
   const stone = useMemo(() => {
     const t = concreteTexture(17, 110);
     t.repeat.set(3, 3);
     return t;
   }, []);
-  useFrame((s) => {
-    // 숨은 결말: 기록 없는 사람 앞에서 문의 레이저가 꺼진다
-    if (lasers.current) lasers.current.visible = gaze.mood !== "blind";
-    lasers.current?.children.forEach((c, i) => {
-      ((c as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(s.clock.elapsedTime * 8 + i) * 0.3;
-    });
+  useFrame((s, rawDt) => {
+    const dt = Math.min(rawDt, 0.05);
+    const t = s.clock.elapsedTime;
+    const blind = gaze.mood === "blind";
+    // 空 결말: 겨눌 방문 기록을 찾지 못해 조준 빛을 거둔다 (천천히 꺼진다. 문이 열리는 것이 아니라, 통로는 처음부터 열려 있었다)
+    fade.current = gaze.gateOpen ? Math.max(0, fade.current - dt * 0.8) : 1;
+    const g = lasers.current;
+    if (g) {
+      g.visible = fade.current > 0.01;
+      g.children.forEach((c, i) => {
+        const m = c as THREE.Mesh;
+        const flick = gaze.gateOpen ? (Math.sin(t * 31 + i * 2.1) > 0.2 ? 1 : 0.25) : 1;
+        (m.material as THREE.MeshBasicMaterial).opacity = (0.55 + Math.sin(t * 8 + i) * 0.3) * fade.current * flick;
+        // 대상을 찾는 동안에는 띠가 위아래로 훑는다
+        m.position.y = 0.5 + i * 0.85 + (blind && !gaze.gateOpen ? Math.sin(t * 1.6 + i * 0.5) * 0.3 : 0);
+      });
+    }
+    const which = gaze.gateOpen ? 2 : blind ? 1 : 0;
+    panels.current.forEach((m, i) => m && (m.visible = i === which));
   });
   return (
     <group>
@@ -328,6 +369,13 @@ function Gate({ lang }: { lang: Lang }) {
           <planeGeometry args={[9, 1.6]} />
           <meshBasicMaterial map={gateSign} toneMapped={false} />
         </mesh>
+        {/* 장벽 표시: 홍예문 오른쪽 기단 앞면 */}
+        {[panelBound, panelSearch, panelFree].map((tex, i) => (
+          <mesh key={i} ref={(m) => { panels.current[i] = m; }} position={[6.2, 3.1, 3.02]} visible={i === 0}>
+            <planeGeometry args={[4.6, 0.86]} />
+            <meshBasicMaterial map={tex} toneMapped={false} />
+          </mesh>
+        ))}
         <group ref={lasers} position={[0, 0, 3.1]}>
           {Array.from({ length: 7 }, (_, i) => (
             <mesh key={i} position={[0, 0.5 + i * 0.85, 0]}>
@@ -342,8 +390,133 @@ function Gate({ lang }: { lang: Lang }) {
   );
 }
 
+/* ---------- 하층행 승강장: 광장의 표지와, 성문 너머 다리 옆으로 구름 속에 내려가는 계단 ---------- */
+// 이산이 가고 싶어 하는 곳. 아래가 어떤 곳인지는 보여 주지 않는다 (계단 끝은 구름에 묻힌다)
+const STAIR = { x0: 4.5, z: -153, w: 4.4 };
+function DescentRoute({ lang }: { lang: Lang }) {
+  const ko = lang === "ko";
+  const sign = useSign(
+    [
+      [ko ? "↑ 하층행 승강장" : "↑ DESCENT PLATFORM", 1.1],
+      [ko ? "검문소 경유" : "VIA CHECKPOINT", 0.6],
+    ],
+    { color: "#d8d2c0", bg: "#101418", mono: true, w: 768, h: 224 }
+  );
+  const plate = useSign([[ko ? "하층행 승강장 ↓" : "DESCENT ↓", 1]], { color: "#ffb02e", bg: "#0a0604", glow: true, mono: true, w: 512, h: 128 });
+  const steps = useMemo(() => Array.from({ length: 16 }, (_, i) => i), []);
+  return (
+    <group>
+      {/* 광장에서 큰길로 들어서는 자리의 낡은 표지판 (남쪽을 향한다). 감시 기둥(x -8.4, z 8)과 떨어진 제 기둥에 선다 */}
+      <group position={[-(AVENUE - 2.7), 0, 9.6]}>
+        <mesh position={[0, 1.75, -0.08]}>
+          <cylinderGeometry args={[0.06, 0.08, 3.5, 8]} />
+          <meshStandardMaterial color="#3a3d44" metalness={0.6} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, 3.9, 0]}>
+          <planeGeometry args={[3.2, 0.93]} />
+          <meshBasicMaterial map={sign} toneMapped={false} />
+        </mesh>
+      </group>
+      {/* 다리 오른쪽: 승강장 난간 틈과 구름 속으로 내려가는 계단 */}
+      <group position={[STAIR.x0, 0, STAIR.z]}>
+        <mesh position={[STAIR.w / 2, -0.3, 0]}>
+          <boxGeometry args={[STAIR.w, 0.6, 4]} />
+          <meshStandardMaterial color="#1c1a1e" roughness={0.7} metalness={0.5} />
+        </mesh>
+        {steps.map((i) => (
+          <mesh key={i} position={[STAIR.w + 0.45 + i * 0.9, -0.55 - i * 0.62, 0]}>
+            <boxGeometry args={[0.9, 0.5, 2.6]} />
+            <meshStandardMaterial color="#2a272c" roughness={0.9} />
+          </mesh>
+        ))}
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[0.05, 1.6, s * 1.9]}>
+            <boxGeometry args={[0.3, 3.2, 0.3]} />
+            <meshStandardMaterial color="#6d6a64" roughness={0.9} />
+          </mesh>
+        ))}
+        <mesh position={[0.05, 3.3, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[3.6, 0.9]} />
+          <meshBasicMaterial map={plate} toneMapped={false} side={THREE.DoubleSide} />
+        </mesh>
+        <pointLight position={[1.5, 2.6, 0]} intensity={8} distance={9} color="#ffb070" />
+        {/* 계단을 따라 내려가는 낮은 길 조명 (글로 계단을 설명하지 않는다). 그림자 없음 */}
+        <pointLight position={[STAIR.w + 2.4, -0.6, 0]} intensity={5} distance={7} color="#ffb070" />
+        <pointLight position={[STAIR.w + 6.4, -3.2, 0]} intensity={4} distance={7} color="#ff9a5a" />
+      </group>
+    </group>
+  );
+}
+
+/* ---------- 광장: 남쪽 전망대 표지, 배송 대기소 ---------- */
+// 배송 대기소: 서쪽 난간 틈 옆의 처마와 남쪽 벽. 처마는 머리 위 드론 빛을 가린다 (Drones의 ROOFS와 같은 상자)
+function Depot({ lang }: { lang: Lang }) {
+  const ko = lang === "ko";
+  const sign = useSign([[ko ? "배송 대기소 7-서" : "COURIER BAY 7-W", 1]], { color: "#cfd6dd", bg: "#14181c", mono: true, w: 512, h: 96 });
+  const { x, z, w, d, y0, y1 } = DEPOT;
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, (y0 + y1) / 2, 0]}>
+        <boxGeometry args={[w, y1 - y0, d]} />
+        <meshStandardMaterial color="#2c3036" metalness={0.6} roughness={0.5} />
+      </mesh>
+      {[-1, 1].flatMap((sx) =>
+        [-1, 1].map((sz) => (
+          <mesh key={`${sx}${sz}`} position={[sx * (w / 2 - 0.15), y0 / 2, sz * (d / 2 - 0.15)]}>
+            <boxGeometry args={[0.12, y0, 0.12]} />
+            <meshStandardMaterial color="#3a3d44" metalness={0.7} roughness={0.4} />
+          </mesh>
+        ))
+      )}
+      {/* 남쪽 벽 (충돌 DEPOT_WALL과 같은 자리) */}
+      <mesh position={[0, y0 / 2, d / 2 - 0.1]}>
+        <boxGeometry args={[w, y0, 0.2]} />
+        <meshStandardMaterial color="#24272c" roughness={0.85} metalness={0.3} />
+      </mesh>
+      {/* 광장 쪽(북쪽)을 향한 표지 */}
+      <mesh position={[0, y1 + 0.28, -d / 2 + 0.05]} rotation={[0, Math.PI, 0]}>
+        <planeGeometry args={[2.4, 0.45]} />
+        <meshBasicMaterial map={sign} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+// 남쪽 전망대 가는 길 표지: 골목 입구 앞(북쪽을 향함)과 서쪽 난간 틈 옆(동쪽 광장을 향함)
+function LookoutSigns({ lang }: { lang: Lang }) {
+  const ko = lang === "ko";
+  const sign = useSign(
+    [
+      [ko ? "남쪽 전망대 →" : "SOUTH LOOKOUT →", 0.9],
+      [ko ? "서쪽 산책로 경유" : "VIA THE WEST WALKWAY", 0.55],
+    ],
+    { color: "#d8d2c0", bg: "#101418", mono: true, w: 768, h: 224 }
+  );
+  return (
+    <group>
+      {(
+        [
+          [-NS2_X - 2.4, 15.0, Math.PI],
+          [-63.2, WALK.gate0 - 1.0, Math.PI / 2],
+        ] as [number, number, number][]
+      ).map(([px, pz, ry], i) => (
+        <group key={i} position={[px, 0, pz]}>
+          <mesh position={[0, 1.5, 0]}>
+            <cylinderGeometry args={[0.06, 0.08, 3, 8]} />
+            <meshStandardMaterial color="#3a3d44" metalness={0.6} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 3.3, 0]} rotation={[0, ry, 0]}>
+            <planeGeometry args={[2.6, 0.76]} />
+            <meshBasicMaterial map={sign} toneMapped={false} side={THREE.DoubleSide} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
 /* ---------- 세로 한글 간판: 건물 벽에서 길 쪽으로 튀어나옴 ---------- */
-const SIGN_WORDS = ["기억수리", "감정대여", "동의센터", "해장국", "등급상담", "꿈판매", "전당포", "로봇수리", "인력사무소", "만두", "여관", "신경칩", "노래방", "약국", "환불불가", "족발", "PC방", "부적"];
+const SIGN_WORDS = ["기억 수리", "감정 대여", "동의 센터", "해장국", "등급 상담", "꿈 판매", "전당포", "로봇 수리", "인력사무소", "만두", "여관", "신경칩", "노래방", "약국", "환불 불가", "족발", "PC방", "부적"];
 const SIGN_COLORS = ["#ff2a4d", "#22f0ff", "#ffe14d", "#7dff7a", "#ff2bd6", "#ff8a2a", "#a77bff", "#ffffff"];
 
 function VerticalSigns() {
@@ -687,78 +860,6 @@ function Lamps() {
   );
 }
 
-/* ---------- 순찰 드론: 탐조등으로 거리를 훑음 ---------- */
-function Drones() {
-  const glow = useGlowTexture();
-  const drones = useMemo(
-    () =>
-      // 거울처럼 짝지어 반대 방향으로 똑같이 돈다
-      Array.from({ length: 4 }, (_, i) => ({
-        cx: 4 + (i % 2) * 2,
-        cz: -8 - i * 19,
-        r: 5 + (i % 3) * 2,
-        y: 13 + (i % 3) * 4,
-        speed: 0.25 + (i % 4) * 0.08,
-        phase: i * 1.7,
-      })).flatMap((d) => [
-        { ...d, m: 1 },
-        { ...d, m: -1 },
-      ]),
-    []
-  );
-  const refs = useRef<(THREE.Group | null)[]>([]);
-  const spots = useRef<(THREE.Mesh | null)[]>([]);
-  useFrame((s) => {
-    const t = s.clock.elapsedTime;
-    drones.forEach((d, i) => {
-      const g = refs.current[i];
-      if (!g) return;
-      const a = t * d.speed + d.phase;
-      g.position.set(d.m * (d.cx + Math.cos(a) * d.r), d.y + Math.sin(t * 1.3 + (i >> 1)) * 0.4, d.cz + Math.sin(a) * d.r);
-      g.rotation.y = -a * d.m;
-      const sp = spots.current[i];
-      if (sp) sp.position.set(g.position.x, 0.03, g.position.z);
-    });
-  });
-  return (
-    <group>
-      {drones.map((d, i) => (
-        <group key={i}>
-          <group ref={(g) => { refs.current[i] = g; }}>
-            <mesh>
-              <boxGeometry args={[0.9, 0.25, 0.9]} />
-              <meshStandardMaterial color="#1c1e24" metalness={0.8} roughness={0.3} />
-            </mesh>
-            {[
-              [-0.65, -0.65],
-              [0.65, -0.65],
-              [-0.65, 0.65],
-              [0.65, 0.65],
-            ].map(([x, z], k) => (
-              <mesh key={k} position={[x, 0.12, z]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[0.2, 0.32, 16]} />
-                <meshBasicMaterial color="#444" side={THREE.DoubleSide} />
-              </mesh>
-            ))}
-            <mesh position={[0, -0.16, 0]}>
-              <sphereGeometry args={[0.12, 10, 8]} />
-              <meshBasicMaterial color="#ff2030" toneMapped={false} />
-            </mesh>
-            <mesh position={[0, -d.y / 2, 0]}>
-              <coneGeometry args={[2.2, d.y, 20, 1, true]} />
-              <meshBasicMaterial color="#ffdede" transparent opacity={0.008} depthWrite={false} side={THREE.DoubleSide} blending={THREE.AdditiveBlending} fog={false} />
-            </mesh>
-          </group>
-          <mesh ref={(m) => { spots.current[i] = m; }} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[5, 5]} />
-            <meshBasicMaterial map={glow} color="#ffd0d0" transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} fog={false} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
-}
-
 /* ---------- 줄 선 시민들 (모두 같은 박자로 흔들림) ---------- */
 function Queue() {
   const geo = citizenGeometry();
@@ -1069,6 +1170,9 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
       <Towers />
       <Ground />
       <Gate lang={lang} />
+      <DescentRoute lang={lang} />
+      <Depot lang={lang} />
+      <LookoutSigns lang={lang} />
       <Jabi lang={lang} />
       <Billboards lang={lang} />
       <VerticalSigns />
@@ -1085,10 +1189,12 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
       <Whisper onTap={onTap} />
       <AlleyDecor />
       <ChalkMarks />
+      <NeonRoute />
+      <AvenueHolo />
       <AlleyPeople />
       <Hatch lang={lang} onTap={onTap} />
       <Grandma lang={lang} onTap={onTap} />
-      <Courier onTap={onTap} />
+      <Courier lang={lang} onTap={onTap} />
       <EdgeKid onTap={onTap} />
       <RoboMonk onTap={onTap} />
       <BellPavilion />

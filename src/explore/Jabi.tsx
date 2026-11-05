@@ -84,9 +84,12 @@ const beam = {
 const scorch: { x: number; z: number; born: number }[] = [];
 let lockT = 0;
 const aimAt = new THREE.Vector3();
-// 레이저가 긁고 지나갈 길 (눈이 붉어질 때 정해진다). 발사 0.3초 전부터 바닥에 가늘게 미리 보인다
+const aimTip = new THREE.Vector3();
+// 발사 직전의 조준선: 눈에서 플레이어까지 얇은 붉은 실선이 TRACK초 동안 플레이어를 따라오다가,
+// 마지막 HOLD초 동안 그 자리에 고정된 뒤 발사된다. 고정된 동안 레이저가 긁고 갈 길이 바닥에도 비친다
 const path = { start: new THREE.Vector3(), end: new THREE.Vector3() };
-const PREVIEW = 0.3;
+const TRACK = 0.2;
+const HOLD = 0.35;
 function planPath(ax: number, az: number) {
   const dx = JABI.eye.x - ax;
   const dz = JABI.eye.z - az;
@@ -115,16 +118,22 @@ function GazeSystem() {
     // 줄 속에 가만히 서 있으면 시민으로 보인다
     const inLine = Math.abs(Math.abs(px) - 3.6) < 0.55 && pz < QUEUE_Z[0] + 1 && pz > QUEUE_Z[QUEUE_Z.length - 1] - 1 && moved < 0.004;
     const cover = blockedBy(px, pz, HEAD);
-    gaze.hiddenBy = inLine ? "line" : cover >= 0 ? "cover" : "";
-    // 방문 기록을 지운 사람은 도시의 기억에 없으므로 자비의 눈에도 보이지 않는다
-    gaze.seen = inZone && !inLine && cover < 0 && gaze.mood !== "blind" && !gaze.intro;
+    // 머리 위 드론의 빛 안에서는 줄에 섞여 있어도 드러난다 (드론이 대자비에게 위치를 알린다).
+    // 엄폐물이 드론 빛까지 가리면 Drones가 droneLit을 끄므로, 둘 다 가려야 숨은 것이다
+    const lit = gaze.droneLit;
+    gaze.hiddenBy = lit ? "" : inLine ? "line" : cover >= 0 ? "cover" : "";
+    // 저장된 방문 기록이 없는 방문자는 추적할 대상이 없으므로 조준하지 못한다 (대자비는 여전히 도시를 훑는다)
+    gaze.seen = inZone && gaze.mood !== "blind" && !gaze.intro && (lit || (!inLine && cover < 0));
 
     if (gaze.state === "fire") {
       runBeam(dt, now);
     } else if (gaze.state === "lock") {
       lockT -= dt;
-      // 길이 바닥에 비친 처음 절반(0.15초) 동안은 가는 선이 플레이어를 따라온다. 마지막 0.15초에 고정된다
-      if (lockT < PREVIEW && lockT > PREVIEW / 2) planPath(player.pos.x, player.pos.z);
+      // 고정되기 전까지는 조준점이 플레이어를 따라간다
+      if (lockT > HOLD) {
+        aimAt.set(player.pos.x, 0, player.pos.z);
+        planPath(aimAt.x, aimAt.z);
+      }
       gaze.shake = 0.1 + (0.9 - lockT) * 0.12;
       if (lockT <= 0) startBeam(aimAt);
     } else if (gaze.state === "cool") {
@@ -137,8 +146,8 @@ function GazeSystem() {
         const near = THREE.MathUtils.clamp(1 - (dist - 90) / 90, 0, 1);
         const run = moved / Math.max(dt, 1e-4) > 4.5 ? 1.25 : 1;
         if (!gaze.firstSeenAt) gaze.firstSeenAt = performance.now();
-        // 분노가 빨리 차오른다: 먼 곳에서 약 5초, 가까이 가면 약 2.6초면 가득 찬다
-        gaze.meter += 20 * (1 + 0.9 * near) * run * dt;
+        // 감시 게이지: 먼 곳에서 약 5.6초, 가까이 가면 약 2.9초면 가득 찬다 (예전 20에서 18로. 비우는 속도와 조준·레이저 시간은 그대로)
+        gaze.meter += 18 * (1 + 0.9 * near) * run * dt;
       } else {
         gaze.meter -= (inZone ? 20 : 30) * dt;
       }
@@ -147,7 +156,7 @@ function GazeSystem() {
       gaze.state = m >= 100 ? "lock" : m >= 70 ? "charge" : m >= 35 ? "suspect" : m > 2 ? "watch" : "idle";
       if (gaze.state === "lock") {
         lockT = 0.9;
-        // 눈이 붉어지는 순간의 자리를 겨눈다. 그래서 붉어지면 바로 옆으로 뛰어 피할 수 있다
+        // 눈이 붉어진 뒤 조준선이 플레이어를 따라오다 고정된다. 고정되면 바로 옆으로 뛰어 피할 수 있다
         aimAt.set(player.pos.x, 0, player.pos.z);
         planPath(aimAt.x, aimAt.z);
       }
@@ -161,18 +170,13 @@ function GazeSystem() {
   return null;
 }
 
-// 거부 결말: 대자비의 마지막 레이저
-export function finalBeam() {
-  startBeam();
-}
-
 function startBeam(at?: THREE.Vector3) {
   sfx.beam();
   gaze.state = "fire";
   beam.on = true;
   beam.t = 0;
-  // 레이저는 눈이 붉어진 순간 플레이어가 서 있던 자리 앞(눈 쪽으로 9m) 바닥에 떨어져, 그 자리를 지나 4m 더 긁고 간다.
-  // 플레이어를 따라오지 않으므로, 붉은 조준 신호를 보고 옆으로 뛰면 피할 수 있다
+  // 레이저는 조준선이 고정된 자리 앞(눈 쪽으로 9m) 바닥에 떨어져, 그 자리를 지나 4m 더 긁고 간다.
+  // 발사 뒤에는 플레이어를 따라오지 않으므로, 조준선이 고정되는 걸 보고 옆으로 뛰면 피할 수 있다
   if (!at) planPath(player.pos.x, player.pos.z);
   beam.p.copy(path.start);
   beam.target.copy(path.end);
@@ -268,25 +272,27 @@ function Beam() {
       place(glow.current, JABI.eye, beam.end, 1.6 + Math.sin(now * 50) * 0.3);
       hit.current!.position.copy(beam.end);
     }
-    // 발사 직전: 가는 조준선이 깜빡인다
+    // 발사 직전: 얇은 조준 실선. 따라오는 동안은 은은하게, 고정되면 밝게 깜빡인다
     if (aim.current) {
-      const show = gaze.state === "lock";
+      const show = gaze.state === "lock" && lockT <= TRACK + HOLD;
       aim.current.visible = show;
       if (show) {
-        place(aim.current, JABI.eye, path.start, 0.08);
-        (aim.current.material as THREE.MeshBasicMaterial).opacity = Math.sin(now * 30) > 0 ? 0.9 : 0.2;
+        aimTip.set(aimAt.x, 1.0, aimAt.z);
+        const held = lockT <= HOLD;
+        place(aim.current, JABI.eye, aimTip, held ? 0.06 : 0.035);
+        (aim.current.material as THREE.MeshBasicMaterial).opacity = held ? (Math.sin(now * 45) > 0 ? 1 : 0.45) : 0.55;
       }
     }
-    // 발사 0.3초 전: 레이저가 긁고 갈 길이 바닥에 가늘게 비친다
+    // 조준선이 고정된 동안: 레이저가 긁고 갈 길이 바닥에 가늘게 비친다
     if (lane.current) {
-      const show = gaze.state === "lock" && lockT < PREVIEW;
+      const show = gaze.state === "lock" && lockT <= HOLD;
       lane.current.visible = show;
       if (show) {
         const len = path.start.distanceTo(path.end);
         lane.current.position.copy(path.start).lerp(path.end, 0.5).setY(0.04);
         lane.current.rotation.set(-Math.PI / 2, 0, Math.atan2(path.end.x - path.start.x, path.end.z - path.start.z));
         lane.current.scale.set(0.14, len, 1);
-        const k = 1 - Math.max(0, lockT) / PREVIEW;
+        const k = 1 - Math.max(0, lockT) / HOLD;
         (lane.current.material as THREE.MeshBasicMaterial).opacity = (0.35 + 0.5 * k) * (Math.sin(now * 40) > -0.3 ? 1 : 0.5);
       }
     }
@@ -535,8 +541,8 @@ function Barriers({ lang }: { lang: Lang }) {
   }, []);
   const sign = useSign(
     [
-      [lang === "ko" ? "통제 구역" : "RESTRICTED", 1],
-      [lang === "ko" ? "큰길로 이동하십시오" : "PROCEED VIA THE AVENUE", 0.55],
+      [lang === "ko" ? "감시 구역" : "SURVEILLANCE ZONE", 1],
+      [lang === "ko" ? "검문소는 큰길 끝에 있습니다." : "THE CHECKPOINT IS AT THE END OF THE AVENUE.", 0.55],
     ],
     { color: "#ff2a3d", glow: true, mono: true, w: 512, h: 160, bg: "#0a0204" }
   );
@@ -801,7 +807,8 @@ function StandingBuddha() {
 
     // 결말: 수락하면 눈이 평온하게 감기고 붉은 빛이 금빛으로 돌아온다
     const ringMat = lensRing.current?.material as THREE.MeshBasicMaterial | undefined;
-    ringMat?.color.set(gaze.mood === "calm" ? "#ffc040" : gaze.mood === "blind" ? "#3a3a40" : "#ff2a3d");
+    // 기록 없는 방문자(blind)에게도 대자비는 평소처럼 도시를 훑는다. 그 방문자를 조준하지 못할 뿐이다 (gaze.seen)
+    ringMat?.color.set(gaze.mood === "calm" ? "#ffc040" : "#ff2a3d");
     if (gaze.mood === "calm") {
       eyeMat.color.setRGB(1.8, 1.25, 0.35);
       eyeGlowMat.color.set("#ffc040");
@@ -819,21 +826,6 @@ function StandingBuddha() {
       if (teeth.current) teeth.current.visible = false;
       bronze.emissive.set("#4a3008");
       if (faceLight.current) faceLight.current.intensity = 0;
-    } else if (gaze.mood === "blind") {
-      // 기록 없는 사람: 대자비는 눈을 뜬 채 멈춰 있다. 아무것도 찾지 못한다
-      eyeMat.color.setRGB(0.12, 0.1, 0.1);
-      eyeGlowMat.opacity = 0;
-      faceGlowMat.opacity = 0;
-      arcMat.opacity = 0;
-      leakMat.opacity = 0;
-      if (lens.current) lens.current.color.setRGB(0.18, 0.18, 0.2);
-      if (lids.current) lids.current.position.y = 0.8;
-      if (grin.current) grin.current.visible = false;
-      if (teeth.current) teeth.current.visible = false;
-      if (smile.current) smile.current.visible = true;
-      bronze.emissive.copy(calmEmissive);
-      if (faceLight.current) faceLight.current.intensity = 0;
-      if (halo.current) halo.current.rotation.z = 0;
     } else eyeGlowMat.color.set("#ff2020");
   });
 

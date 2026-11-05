@@ -5,8 +5,9 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
-import { autoWalk, gaze } from "./gaze";
-import type { Interactable, ZoneDef } from "./zones";
+import { autoWalk, gaze, route, walkArea, type Rect } from "./gaze";
+import { CITY, GATE_STOP, inAvenueStrip, type Interactable, type ZoneDef } from "./zones";
+import type { Box } from "./collide";
 
 const EYE = 1.65;
 const WALK = 3.4;
@@ -18,6 +19,11 @@ const GRAVITY = 19;
 export const player = { pos: new THREE.Vector3(), yaw: 0, pitch: 0, air: 0 };
 // 디버그(?debug)에서 순간이동할 때 쓰는 요청
 export const teleport: { req: { x: number; z: number; yaw: number } | null } = { req: null };
+
+const inRects = (rs: Rect[], x: number, z: number) => rs.some((r) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1);
+// 성문의 장벽이 빛을 거둔 뒤에는 장벽 자리의 보이지 않는 벽(GATE_STOP)만 빼고 피한다 (성문 기단은 walkArea 사각형이 막는다)
+let openBoxes: Box[] | null = null;
+const BIG = { x0: -1e4, x1: 1e4, z0: -1e4, z1: 1e4 };
 
 type Props = {
   zone: ZoneDef;
@@ -75,7 +81,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     // 시점. 소개 장면 중에는 입력을 버리고 대상 쪽으로 천천히 고개를 돌린다
     const la = gaze.lookAt;
     if (!la) lookDone.current = false;
-    const zt = gaze.intro ? 0.62 : 1;
+    const zt = gaze.intro ? 0.62 : gaze.zoom;
     if (Math.abs(zt - zoom.current) > 0.001) {
       zoom.current += (zt - zoom.current) * Math.min(1, dt * (gaze.intro ? 1.1 : 2));
       camera.fov = baseFov.current * zoom.current;
@@ -97,14 +103,23 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       }
     } else if (!gaze.intro) {
       // 소개 팝업이 떠 있는 동안에는 마우스가 움직여도 시선이 대자비에 머문다
-      s.yaw += input.look.yaw + turnKeys() * dt * 1.8;
-      s.pitch = Math.max(-1.1, Math.min(1.25, s.pitch + input.look.pitch));
+      // 망원경으로 볼 때는 배율만큼 천천히 돌고, 정해진 범위 안에서만 둘러본다
+      const z = gaze.zoom;
+      s.yaw += (input.look.yaw + turnKeys() * dt * 1.8) * z;
+      s.pitch = Math.max(-1.1, Math.min(1.25, s.pitch + input.look.pitch * z));
+      const c = gaze.clamp;
+      if (c) {
+        let d = s.yaw - c.yaw;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        s.yaw = c.yaw + Math.max(-c.dy, Math.min(c.dy, d));
+        s.pitch = Math.max(c.p0, Math.min(c.p1, s.pitch));
+      }
     }
     input.look.yaw = 0;
     input.look.pitch = 0;
 
     // 이동
-    const mv = input.enabled && !gaze.frozen ? moveVector() : { x: 0, y: 0, run: false };
+    const mv = input.enabled && !gaze.frozen && !gaze.still ? moveVector() : { x: 0, y: 0, run: false };
     const speed = mv.run ? RUN : WALK;
     const sin = Math.sin(s.yaw);
     const cos = Math.cos(s.yaw);
@@ -114,12 +129,12 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     const p = { x: s.x + dx, z: s.z + dz };
     const aw = autoWalk.to;
     if (aw) {
-      // 결말: 시점이 스스로 걸어간다. 길을 향해 고개를 돌리고, 다 오면 앞(북쪽)을 본다
+      // 시점이 스스로 걸어간다 (결말, 망원경에 다가가고 물러날 때). 길을 향해 고개를 돌리고, 다 오면 정해진 쪽을 본다
       const ax = aw.x - s.x;
       const az = aw.z - s.z;
       const ad = Math.hypot(ax, az);
       const k = Math.min(1, dt * 2.2);
-      const want = ad > 0.6 ? Math.atan2(-ax, -az) : 0;
+      const want = ad > 0.6 && !aw.faceYaw ? Math.atan2(-ax, -az) : (aw.yaw ?? 0);
       let dy = want - s.yaw;
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       s.yaw += dy * k;
@@ -127,7 +142,37 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       const st = Math.min(ad, aw.speed * dt);
       p.x = ad > 1e-4 ? s.x + (ax / ad) * st : s.x;
       p.z = ad > 1e-4 ? s.z + (az / ad) * st : s.z;
-    } else resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
+      // 다 왔으면 다음 점으로. 마지막 점이면 도착을 알린다 (그 점의 방향은 계속 맞춘다)
+      if (ad - st < 0.03) {
+        const next = autoWalk.queue.shift();
+        if (next) autoWalk.to = next;
+        else autoWalk.arrived = true;
+      }
+    } else if (walkArea.rects) {
+      // 결말의 다리 위: 평소처럼 걷되 장애물을 피하고, 보이는 난간·기단이 정한 사각형들 밖으로는 나가지 않는다
+      const rs = walkArea.rects;
+      if (!openBoxes) openBoxes = zone.boxes.filter((b) => b !== GATE_STOP);
+      resolve(p, RADIUS, BIG, gaze.gateOpen ? openBoxes : zone.boxes, zone.circles);
+      if (inRects(rs, s.x, s.z) && !inRects(rs, p.x, p.z)) {
+        if (inRects(rs, p.x, s.z)) p.z = s.z;
+        else if (inRects(rs, s.x, p.z)) p.x = s.x;
+        else {
+          p.x = s.x;
+          p.z = s.z;
+        }
+      }
+    } else {
+      resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
+      // 망원경 전: 큰길의 홀로그램 차단막을 넘지 못한다 (밖에서 안으로만 막는다)
+      if (route.avenueLocked && zone === CITY && !inAvenueStrip(s.x, s.z, RADIUS) && inAvenueStrip(p.x, p.z, RADIUS)) {
+        if (!inAvenueStrip(p.x, s.z, RADIUS)) p.z = s.z;
+        else if (!inAvenueStrip(s.x, p.z, RADIUS)) p.x = s.x;
+        else {
+          p.x = s.x;
+          p.z = s.z;
+        }
+      }
+    }
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
     s.x = p.x;
     s.z = p.z;
@@ -174,6 +219,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     let best: Interactable | null = null;
     let bestScore = Infinity;
     for (const it of zone.items) {
+      if (it.when && !it.when()) continue;
       tmp.current.set(it.pos.x - s.x, 0, it.pos.z - s.z);
       const d = tmp.current.length();
       if (d > it.radius) continue;

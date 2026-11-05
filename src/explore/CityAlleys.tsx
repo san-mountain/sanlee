@@ -7,11 +7,12 @@ import { addRim } from "./rim";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
-import { ALLEYS, ALLEY_PEOPLE, AVENUE, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOTS, PAGODA, SCOPES } from "./zones";
+import { ALLEYS, ALLEY_PEOPLE, AVENUE, AVENUE_HOLO, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOOKOUT_PATH, LOTS, PAGODA, SCOPES } from "./zones";
 import { citizenGeometry, roofGeometry } from "./models";
 import { chalkArrowTexture, concreteTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
+import { gaze, route } from "./gaze";
 
 function rng(seed: number) {
   return () => {
@@ -40,6 +41,118 @@ export function ChalkMarks() {
           <meshBasicMaterial map={m.turn ? tex.turn : tex.straight} transparent depthWrite={false} toneMapped={false} />
         </mesh>
       ))}
+    </group>
+  );
+}
+
+/* ---------- 망원경 가는 길의 네온: 골목 입구에서 남쪽 망원경까지 바닥에 깔린 빛줄기 ---------- */
+// 망원경 단계(scope)에서만 켜진다. 화살표 무늬가 망원경 쪽으로 흘러간다. 경유점(LOOKOUT_PATH)을 그대로 잇는다
+function neonArrowTexture() {
+  const c = document.createElement("canvas");
+  c.width = 128;
+  c.height = 64;
+  const g = c.getContext("2d")!;
+  // 가운데 줄
+  g.fillStyle = "rgba(80,240,255,0.55)";
+  g.fillRect(0, 28, 128, 8);
+  // 화살촉 (오른쪽 = 나아가는 쪽)
+  g.strokeStyle = "#7ff6ff";
+  g.lineWidth = 9;
+  g.lineCap = "round";
+  g.lineJoin = "round";
+  g.shadowColor = "#3ff0ff";
+  g.shadowBlur = 10;
+  g.beginPath();
+  g.moveTo(50, 10);
+  g.lineTo(78, 32);
+  g.lineTo(50, 54);
+  g.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  return tex;
+}
+export function NeonRoute() {
+  const segs = useMemo(() => {
+    const base = neonArrowTexture();
+    // 네온은 배송 대기소 처마 밑(경유점 2)부터 전망대까지 (골목에서 처마까지는 퀘스트 화살표가 안내한다)
+    const pts = LOOKOUT_PATH.slice(2);
+    return pts.slice(1).map((b, i) => {
+      const a = pts[i];
+      const len = Math.hypot(b.x - a.x, b.z - a.z);
+      const tex = base.clone();
+      tex.needsUpdate = true;
+      tex.repeat.set(Math.max(1, Math.round(len / 1.1)), 1);
+      return { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2, len, yaw: -Math.atan2(b.z - a.z, b.x - a.x), tex };
+    });
+  }, []);
+  useLayoutEffect(() => () => segs.forEach((s) => s.tex.dispose()), [segs]);
+  const group = useRef<THREE.Group>(null);
+  const mats = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
+  useFrame((st, dt) => {
+    const on = route.phase === "scope";
+    if (group.current) group.current.visible = on;
+    if (!on) return;
+    const t = st.clock.elapsedTime;
+    segs.forEach((s) => (s.tex.offset.x -= dt * 1.4));
+    mats.current.forEach((m) => m && (m.opacity = 0.75 + Math.sin(t * 3) * 0.15));
+  });
+  return (
+    <group ref={group} visible={false}>
+      {segs.map((s, i) => (
+        <group key={i} position={[s.x, 0.035, s.z]} rotation={[0, s.yaw, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+            <planeGeometry args={[s.len, 0.62]} />
+            <meshBasicMaterial ref={(m) => { mats.current[i] = m; }} map={s.tex} transparent depthWrite={false} toneMapped={false} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/* ---------- 큰길 차단막: 망원경을 보기 전에는 큰길 입구마다 붉은 홀로그램 막이 선다 ---------- */
+export function AvenueHolo() {
+  const sign = useSign([["통행 제한", 1], ["RESTRICTED", 0.55]], { color: "#ffd0dc", bg: "#2a0610", w: 512, h: 200, border: true });
+  const group = useRef<THREE.Group>(null);
+  const film = useRef<THREE.MeshBasicMaterial>(null);
+  const lines = useRef<THREE.MeshBasicMaterial>(null);
+  const H = 3.2;
+  useFrame((st) => {
+    const on = route.avenueLocked;
+    if (group.current) group.current.visible = on;
+    if (!on) return;
+    const t = st.clock.elapsedTime;
+    const flick = Math.sin(t * 37) > 0.93 ? 0.5 : 1;
+    if (film.current) film.current.opacity = (0.16 + Math.sin(t * 2.2) * 0.04) * flick;
+    if (lines.current) lines.current.opacity = (0.75 + Math.sin(t * 5) * 0.15) * flick;
+  });
+  return (
+    <group ref={group} visible={false}>
+      {AVENUE_HOLO.map(([x0, z0, x1, z1], i) => {
+        const len = Math.hypot(x1 - x0, z1 - z0);
+        const yaw = -Math.atan2(z1 - z0, x1 - x0);
+        return (
+          <group key={i} position={[(x0 + x1) / 2, 0, (z0 + z1) / 2]} rotation={[0, yaw, 0]}>
+            <mesh position={[0, H / 2, 0]} renderOrder={3}>
+              <planeGeometry args={[len, H]} />
+              <meshBasicMaterial ref={i === 0 ? film : undefined} color="#ff2a55" transparent opacity={0.16} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+            </mesh>
+            {[0.15, 1.1, 2.05, 3.0].map((y) => (
+              <mesh key={y} position={[0, y, 0]} renderOrder={3}>
+                <boxGeometry args={[len, 0.05, 0.05]} />
+                <meshBasicMaterial ref={i === 0 && y === 0.15 ? lines : undefined} color="#ff3a66" transparent opacity={0.8} toneMapped={false} />
+              </mesh>
+            ))}
+            {i === 0 && (
+              <mesh position={[0, 1.7, 0.03]}>
+                <planeGeometry args={[3.2, 1.25]} />
+                <meshBasicMaterial map={sign} transparent opacity={0.92} side={THREE.DoubleSide} toneMapped={false} />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -283,7 +396,7 @@ export function AlleyDecor() {
   );
 }
 
-/* ---------- 골목 사람들: 바이저를 벗고 아무 데나 기대 서 있다 ---------- */
+/* ---------- 골목 사람들: 아무 데나 기대 선 채 굳어 있는 정지된 시민들 (다가가 보면 '정지된 시민이다.') ---------- */
 export function AlleyPeople() {
   const geo = citizenGeometry();
   const ref = useRef<THREE.InstancedMesh>(null);
@@ -418,15 +531,18 @@ export function Hatch({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
 }
 
 /* ---------- 골목 포장마차와 할머니 ---------- */
+// 판대는 할머니 앞 0.9m (zones의 판대 충돌 상자와 같은 자리). 할머니가 보는 쪽이 손님 쪽이다
 export function Grandma({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
   const { pos, rotY } = CITY_NPCS.grandma;
-  const sign = useSign([[lang === "ko" ? "어묵 · 떡볶이" : "FISHCAKE · TTEOKBOKKI", 1], [lang === "ko" ? "등급 안 따짐" : "ALL GRADES WELCOME", 0.55]], { color: "#ffe9c0", bg: "#a8321e", w: 512, h: 180 });
+  const sx = pos[0] + Math.sin(rotY) * 0.9;
+  const sz = pos[2] + Math.cos(rotY) * 0.9;
+  const sign = useSign([[lang === "ko" ? "어묵 · 떡볶이" : "FISHCAKE · TTEOKBOKKI", 1], [lang === "ko" ? "누구나 쉬어 가세요" : "EVERYONE WELCOME TO REST", 0.55]], { color: "#ffe9c0", bg: "#a8321e", w: 512, h: 180 });
   return (
     <Tap id="grandma" onTap={onTap}>
       <group scale={0.88}>
         <Human position={[pos[0] / 0.88, 0, pos[2] / 0.88]} rotationY={rotY} color="#7a4a5a" skin="#d8b8a0" hood="#c8c0b0" />
       </group>
-      <group position={[pos[0], 0, -13.6]}>
+      <group position={[sx, 0, sz]} rotation={[0, rotY, 0]}>
         <mesh position={[0, 0.5, 0]}>
           <boxGeometry args={[2.4, 1, 0.6]} />
           <meshStandardMaterial color="#8a7a60" roughness={0.8} />
@@ -455,19 +571,26 @@ export function Grandma({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
   );
 }
 
-/* ---------- 지도에 없는 골목에서 멈춘 배달 로봇 ---------- */
-export function Courier({ onTap }: { onTap: TapFn }) {
+/* ---------- 배송 대기소 처마 밑에서 쉬는 배달 로봇 D-12 ---------- */
+// 몸은 멈춰 쉬고 있는데, 머리 위 상태 표시는 여전히 '배송 중'이다 (기록과 지금이 어긋난다)
+export function Courier({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
   const { pos, rotY } = CITY_NPCS.courier;
   const ref = useRef<THREE.Group>(null);
   const screen = useRef<THREE.MeshBasicMaterial>(null);
+  const tag = useSign([[lang === "ko" ? "D-12 · 배송 중" : "D-12 · DELIVERING", 1]], { color: "#7dff7a", bg: "#06120a", mono: true, w: 512, h: 96 });
   useFrame((s) => {
     const t = s.clock.elapsedTime;
-    if (ref.current) ref.current.rotation.y = rotY + Math.sin(t * 0.4) * 0.8;
-    if (screen.current) screen.current.color.setRGB(0.1, 0.9, 1).multiplyScalar(Math.sin(t * 6) > 0 ? 1 : 0.35);
+    // 쉬는 숨처럼 아주 천천히 고개(몸)를 돌린다
+    if (ref.current) ref.current.rotation.y = rotY + Math.sin(t * 0.25) * 0.18;
+    if (screen.current) screen.current.color.setRGB(0.1, 0.9, 1).multiplyScalar(0.45 + Math.sin(t * 1.2) * 0.15);
   });
   return (
     <Tap id="courier" onTap={onTap}>
       <group position={pos}>
+        <mesh position={[0, 1.55, 0]} rotation={[0, rotY, 0]}>
+          <planeGeometry args={[1.1, 0.21]} />
+          <meshBasicMaterial map={tag} toneMapped={false} side={THREE.DoubleSide} />
+        </mesh>
         <group ref={ref}>
           <mesh position={[0, 0.55, 0]}>
             <boxGeometry args={[0.7, 0.6, 0.9]} />
@@ -715,11 +838,16 @@ export function StonePagoda() {
 
 /* ---------- 전망 망원경 ---------- */
 export function Scopes({ onTap }: { onTap: TapFn }) {
+  // 남쪽 망원경으로 들여다보는 동안(시야가 좁아진 동안)에는 망원경 몸체가 시야를 가리지 않게 감춘다 (눈 자리가 몸체 바로 뒤라서)
+  const south = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (south.current) south.current.visible = gaze.zoom === 1;
+  });
   return (
     <group>
       {SCOPES.map((s, i) => (
         <Tap key={i} id={`scope-${i}`} onTap={onTap}>
-          <group position={s.pos} rotation={[0, s.rotY, 0]}>
+          <group ref={i === 0 ? south : undefined} position={s.pos} rotation={[0, s.rotY, 0]}>
             <mesh position={[0, 0.55, 0]}>
               <cylinderGeometry args={[0.06, 0.12, 1.1, 8]} />
               <meshStandardMaterial color="#2a2c31" metalness={0.8} roughness={0.4} />

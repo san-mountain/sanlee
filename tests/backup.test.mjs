@@ -34,6 +34,7 @@ test("same-tab game → portfolio deletion → game reentry clears warmed cache 
     "sanlee-san-talked": "1",
     "sanlee-last-login": "123",
     "sanlee-jabi-intro": "1",
+    "sanlee-scope": '{"uses":1,"done":true}',
     "sanlee-lang": "en",
     "sanlee-sfx": "0",
     "neo-settings": '{"bob":false}',

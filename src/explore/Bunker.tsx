@@ -15,6 +15,8 @@ import { player } from "./Player";
 import { BUNKER } from "./zones";
 import { LotusStrings } from "./CityAlleys";
 import { useLightPool } from "./atmosphere";
+import FaceMachine, { FaceConduit } from "./FaceMachine";
+import type { FaceView } from "./faceRuntime";
 
 const W = 12; // 방의 반폭
 const LEN = BUNKER_Z1 - BUNKER_Z0;
@@ -163,7 +165,7 @@ function Terminal({ id, pos, rotY, color, lang, visited, onTap }: { id: SectionI
     [
       [id.toUpperCase(), 2.2],
       [lang === "ko" ? ko : `ARCHIVE / ${id}`, 1],
-      [visited ? (lang === "ko" ? "✓ 복원 완료" : "✓ RESTORED") : lang === "ko" ? "▸ 기록 손상됨" : "▸ RECORD CORRUPTED", 0.9],
+      [visited ? (lang === "ko" ? "✓ 열람 완료" : "✓ VIEWED") : lang === "ko" ? "▸ 열람 전" : "▸ NOT YET VIEWED", 0.9],
     ],
     { color, bg: "#03060a", mono: true, glow: true, w: 512, h: 320 }
   );
@@ -785,7 +787,7 @@ function BackupRack({ lang, onTap }: { lang: Lang; onTap: TapFn }) {
   const screen = useSign(
     [
       ["BACKUP", 1.6],
-      [lang === "ko" ? "신호 끊김" : "SIGNAL LOST", 0.9],
+      [lang === "ko" ? "감시 신호 없음" : "NO SURVEILLANCE SIGNAL", 0.9],
     ],
     { color: "#ff4a5a", bg: "#0a0204", mono: true, glow: true, w: 512, h: 256 }
   );
@@ -890,13 +892,25 @@ function WallText({ lang }: { lang: Lang }) {
   const big = useSign([["B-7", 1]], { color: "#c9a227", w: 512, h: 256 });
   const warn = useSign(
     [
-      [lang === "ko" ? "비인가 신호 차단 구역" : "SIGNAL-FREE ZONE", 1],
-      [lang === "ko" ? "쿠키 · 추적 · 등급 없음" : "NO COOKIES · NO TRACKING · NO GRADES", 0.6],
+      [lang === "ko" ? "감시 신호가 닿지 않는 곳" : "BEYOND THE SURVEILLANCE SIGNAL", 1],
+      [lang === "ko" ? "방공호 B-7" : "SHELTER B-7", 0.6],
     ],
     { color: "#d8d2c0", w: 1024, h: 256 }
   );
+  // 방폭문 옆의 낡은 표지: 도시가 떠오르기 전부터 있던 길. 이산이 가고 싶어 하는 곳
+  const old = useSign(
+    [
+      [lang === "ko" ? "하층행 승강장" : "DESCENT PLATFORM", 1],
+      [lang === "ko" ? "지상 출구 → 큰길 → 검문소" : "SURFACE EXIT → AVENUE → CHECKPOINT", 0.6],
+    ],
+    { color: "#c9a227", w: 1024, h: 256 }
+  );
   return (
     <group>
+      <mesh position={[-6.6, 3.6, BUNKER_Z0 + 0.03]}>
+        <planeGeometry args={[4, 1]} />
+        <meshBasicMaterial map={old} transparent opacity={0.45} />
+      </mesh>
       <mesh position={[0, 4.6, BUNKER_Z1 - 0.02]} rotation={[0, Math.PI, 0]}>
         <planeGeometry args={[4, 2]} />
         <meshBasicMaterial map={big} transparent opacity={0.75} />
@@ -909,7 +923,28 @@ function WallText({ lang }: { lang: Lang }) {
   );
 }
 
-export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean }) {
+/* ---------- 거부 결말: 누군가 두 정지 시민 사이에 놓고 간 작은 등 ---------- */
+function SmallLamp() {
+  const light = useRef<THREE.PointLight>(null);
+  useFrame((s) => {
+    if (light.current) light.current.intensity = 3.2 + Math.sin(s.clock.elapsedTime * 7) * 0.25 + Math.sin(s.clock.elapsedTime * 2.3) * 0.35;
+  });
+  return (
+    <group position={[0, 0, 1.6]}>
+      <mesh position={[0, 0.12, 0]}>
+        <cylinderGeometry args={[0.13, 0.15, 0.24, 12]} />
+        <meshStandardMaterial color="#3a2a1e" roughness={0.8} />
+      </mesh>
+      <mesh position={[0, 0.3, 0]}>
+        <sphereGeometry args={[0.07, 10, 8]} />
+        <meshBasicMaterial color="#ffcf7a" toneMapped={false} />
+      </mesh>
+      <pointLight ref={light} position={[0, 0.45, 0]} intensity={3.2} distance={5} color="#ffb766" />
+    </group>
+  );
+}
+
+export default function Bunker({ lang, visited, onTap, secondStatue, awake, face }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean; face: FaceView }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -934,6 +969,13 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { 
       <Sleeper onTap={onTap} />
       <BackupRack lang={lang} onTap={onTap} />
       <BunkerLotus />
+      {/* 이산 곁의 얼굴 복원 장치: 터미널 셋을 연 뒤 어긋난 얼굴을 맞추면 이산이 깨어난다 */}
+      {!secondStatue && (
+        <>
+          <FaceMachine drums={face.drums} phase={face.phase} method={face.method} lang={lang} onTap={onTap} />
+          <FaceConduit />
+        </>
+      )}
       {secondStatue ? (
         <>
           {/* 거부 결말: 이산도 다시 보관 처리되어 굳었다. 그 곁에 두 번째 동상이 나란히 앉아 있다 */}
@@ -943,8 +985,9 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake }: { 
           <group position={[2.3, 0, 0]} rotation={[0, -0.12, 0]}>
             <Statue restored={0} lang={lang} second />
           </group>
+          <SmallLamp />
         </>
-      ) : awake || visited.length >= TERMINALS.length ? (
+      ) : awake ? (
         <>
           <Pedestal lang={lang} empty />
           <SanNPC mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[0, 3]} />

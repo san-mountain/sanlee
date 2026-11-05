@@ -12,14 +12,15 @@ import { getBackup } from "./backup";
 // Esc 설정창. 실제로 쓸 수 있는 설정 몇 개와, 시스템이 방문자에게 직접 말을 거는 문장들.
 export default function PauseMenu({
   onResume,
-  onReset,
+  onRestart,
   onBunker,
   since,
   inBunker,
   onLeave,
 }: {
   onResume: () => void;
-  onReset: () => void;
+  // 수락 결말 뒤 줄에서 빠져나오는 유일한 길 (진행을 처음으로 되돌린다). 그 밖에는 넘기지 않는다
+  onRestart?: () => void;
   onBunker?: () => void;
   since: number;
   inBunker: boolean;
@@ -32,6 +33,7 @@ export default function PauseMenu({
   const [note, setNote] = useState<string | null>(null);
   const [free, setFree] = useState(true);
   const [line, setLine] = useState(0);
+  const [ask, setAsk] = useState(false);
   const [, tick] = useState(0);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -158,19 +160,25 @@ export default function PauseMenu({
             </button>
           </div>
 
-          <div className="pause-row">
-            <span>{t(pause.reset)}</span>
-            <button
-              type="button"
-              className="switch danger"
-              onClick={() => {
-                onReset();
-                say(t(pause.resetNote));
-              }}
-            >
-              ⌫
-            </button>
-          </div>
+          {onRestart && (
+            <div className="pause-row">
+              <span>{ask ? t(pause.restartAsk) : t(pause.restart)}</span>
+              {ask ? (
+                <span className="pause-confirm">
+                  <button type="button" className="switch" onClick={() => setAsk(false)}>
+                    {t(pause.restartNo)}
+                  </button>
+                  <button type="button" className="switch danger" onClick={onRestart}>
+                    {t(pause.restartYes)}
+                  </button>
+                </span>
+              ) : (
+                <button type="button" className="switch danger" onClick={() => setAsk(true)}>
+                  ↺
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <p className="pause-wall" key={line}>

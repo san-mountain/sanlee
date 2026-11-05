@@ -1,7 +1,7 @@
 "use client";
 
 import { sfx } from "./sfx";
-import { duckBgm, playBgm, wakeBgm } from "./bgm";
+import { duckBgm, playBgm, wakeBgm, type Track } from "./bgm";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -10,8 +10,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, credits, announcements, checkpoint, jabiUi, whisper, keeperAfterDeath, npcs, plaque, quest, sanAfterDeath, sanCityLines, statueLines, ui, type Beat } from "./story";
-import { CITY, JABI, QUEUE_Z, ZONES, type Interactable, type Zone } from "./zones";
+import { MUSIC_URL, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
+import { AVENUE_EDGE_Z, BAY, EDGE, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
+import { sanHold, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
 import { input, loadSettings } from "./input";
@@ -20,10 +21,15 @@ import Minimap from "./Minimap";
 import QuestArrow, { type QuestTarget } from "./QuestArrow";
 import CookieGame from "./CookieGame";
 import GazeHUD from "./GazeHUD";
-import { autoWalk, gaze, resetGaze } from "./gaze";
-import { finalBeam, restoreCovers } from "./Jabi";
+import { autoWalk, gaze, resetGaze, route, stopWalk, walkArea, walkPath, type Rect, type RoutePhase, type WalkStep } from "./gaze";
+import { drone, laneClear, presetSweep, resetDrones } from "./Drones";
+import DroneHUD from "./DroneHUD";
+import ScopeView from "./ScopeView";
+import { coverState, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
+import { FACE_KEY, SOLUTION, emptyFace, faceFinished, loadFace, rotateDrum, saveFace, seamJoined, type Drums, type FaceMethod, type FaceState } from "./faceAuth";
+import { faceRt, setFacePhase, type FacePhase } from "./faceRuntime";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -35,6 +41,26 @@ const LOGIN_KEY = "sanlee-last-login";
 const PROMISE_KEY = "sanlee-promise";
 const FORGOT_KEY = "sanlee-forgotten";
 const FOUND_KEY = "sanlee-endings-found";
+// 남쪽 망원경 가는 길의 기록 (이 기기에만). 서로 다른 세 가지 사실을 따로 적는다:
+// uses 방문자가 직접 들여다본 횟수 / seen 이산과 함께 본 장면(관측)을 마쳤다 / agreed 승강장으로 더 가기로 했다
+// 예전 저장값 { done: true }는 둘 다 참으로 옮긴다. 예전의 open(통제선 천막)은 천막이 없어졌으므로 읽지 않는다
+const SCOPE_KEY = "sanlee-scope";
+type ScopeData = { uses: number; seen: boolean; agreed: boolean };
+const NO_SCOPE: ScopeData = { uses: 0, seen: false, agreed: false };
+function readScope(): ScopeData {
+  try {
+    const v = JSON.parse(localStorage.getItem(SCOPE_KEY) || "null");
+    if (v && typeof v === "object") {
+      const old = v.done === true;
+      const seen = old || v.seen === true;
+      const agreed = seen && (old || v.agreed === true);
+      return { uses: Math.max(0, Math.floor(Number(v.uses) || 0)), seen, agreed };
+    }
+  } catch {}
+  return { ...NO_SCOPE };
+}
+
+const SAN: L = { ko: "이산", en: "San" };
 
 function hasWebGL() {
   try {
@@ -48,22 +74,103 @@ function hasWebGL() {
 type Panel =
   | { kind: "section"; id: SectionId }
   | { kind: "painting"; work: number }
-  | { kind: "dialog"; name: L; lines: L[]; step: number; plaque?: boolean; locked?: boolean; whisper?: boolean; link?: { href: string; label: L } }
-  | { kind: "choice"; settings?: boolean; confirm?: number; game?: boolean }
+  | {
+      kind: "dialog";
+      name: L;
+      lines: Line[];
+      step: number;
+      plaque?: boolean;
+      locked?: boolean;
+      link?: { href: string; label: L };
+      // 망원경 장면 뒤의 대화 (닫았다가 다시 열면 그 줄부터 이어진다) / 미뤄 둔 결정 한 페이지
+      scene?: "after" | "decide";
+      // 그 줄에서 방문자가 할 수 있는 행동 (말이 아니라 몸짓: 고개 끄덕이기, 두 번 두드리기, 흉내 내기)
+      choices?: { at: number; label: L; go: () => void }[];
+    }
+  | { kind: "choice"; confirm?: number; game?: boolean }
   | { kind: "jabi" }
+  | { kind: "route" }
   | null;
 
 type EndKind = "accept" | "reject" | "ghost";
 type Ending = { kind: EndKind; step: number; a: number; r: number; slots: number[] } | null;
-// 결말 대본의 각 줄이 머무는 시간(ms). 마지막 줄 다음에 버튼이 나온다
+// 결말 대본의 각 줄이 머무는 시간(ms). 마지막 줄의 시간은 버튼이 나오기 전의 정적이다.
+// 걷는 줄은 시간이 아니라 도착으로 넘어간다 (ENDING_GATE가 참이 된 뒤에야 이 시간이 흐른다)
 const BEAT_MS: Record<EndKind, number[]> = {
-  accept: [2600, 3200, 3800, 3200],
-  reject: [2800, 3400, 3800, 4800, 3400],
-  ghost: [3000, 3600, 4600, 4600],
+  accept: [3000, 3600, 1200, 2400, 3000],
+  reject: [2800, 3400, 3800, 4800, 3200],
+  ghost: [3200, 3400, 700, 5200],
 };
+// 空 결말: 3번째 줄("…이번엔 우릴 막지 않네.", 다리를 걷는 줄)과 4번째 줄("여기부터는 나도 몰라.", 마지막 걸음)에서는 평소 조작으로 걷는다.
+// 계단을 설명하는 지문은 없다: 계단은 조명과 이산의 걸음으로 보인다
+const GHOST_WALK = 2;
+const GHOST_STEP = 3;
+// 처음 대자비의 시선 앞에서 이산이 기다리는 자리: 큰길 앞쪽의 방벽(가장 튼튼한 엄폐물) 뒤, 방문자가 설 자리를 비워 두고 오른쪽 끝에 선다
+const WALL_I = COVERS.findIndex((c) => c.kind === "wall");
+const WALL = COVERS[WALL_I];
+const COVER_SPOT = { x: WALL.x + WALL.w / 2 - 0.5, z: WALL.z + WALL.d / 2 + 0.7, cover: WALL_I };
+
+// 空 결말의 실제 길: 검문소 앞 → 성문 홍예(기단 사이 6m) → 다리(난간 ±4.4) → 오른쪽 난간이 끊긴 승강장 계단참.
+// 눈에 보이는 기단·난간·계단참과 같은 사각형들이다 (중심이 들어갈 수 있는 범위라 몸 반지름만큼 안쪽)
+const GHOST_RECTS: Rect[] = [
+  { x0: -9, x1: 9, z0: -126, z1: -112 },
+  { x0: -2.6, x1: 2.6, z0: -135.3, z1: -125 },
+  { x0: -4.0, x1: 4.0, z0: -178, z1: -134.9 },
+  { x0: 4.0, x1: 8.5, z0: -154.5, z1: -151.5 },
+];
+// 계단 앞 (다리 위, 난간 틈 앞)과 계단참 (마지막 걸음이 들어서는 곳)
+const STAIR_APPROACH: Rect = { x0: -4.0, x1: 8.5, z0: -156.5, z1: -148.5 };
+const LANDING: Rect = GHOST_RECTS[3];
+const inRect = (r: Rect, x: number, z: number) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
+// 이산: 성문을 지나 다리 가운데로 걸어 계단참에 먼저 서서 방문자를 돌아본다 → 방문자가 내디디면 계단 쪽으로 돌아선다
+const GHOST_SAN: SanPath = { pts: [[0, -127], [0, -132], [0.8, -141], [2.6, -150.4], [7.9, -153.4]], yaw: -Math.PI / 2, speed: 2.6 };
+const GHOST_TURN: SanPath = { pts: [[8.3, -152.9]], yaw: Math.PI / 2, speed: 1 };
 // 수락한 시민이 다시 들어오면 서게 되는 줄 속 자리
 // 줄 한가운데, 두 사람 사이. 여기서는 문 너머로 금빛이 된 대자비의 얼굴이 보인다
 const LINE_SPOT = { x: 3.6, z: (QUEUE_Z[44] + QUEUE_Z[45]) / 2 };
+// 수락 결말: 큰길 가운데(엄폐물 사이)를 따라 줄 옆까지 걸은 뒤 빈자리에 들어선다. 이산은 줄 밖, 그 자리가 보이는 곳에 남는다
+const ACCEPT_WALK = [
+  { x: 0.5, z: -124.4, speed: 3 },
+  { x: 0.5, z: -101.4, speed: 3.2, pitch: 0.2 },
+  { x: 2.3, z: LINE_SPOT.z, speed: 2, pitch: 0.2 },
+  { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.4, pitch: 0.42, yaw: 0 },
+];
+const ACCEPT_SAN: SanPath = { pts: [[-0.9, -121], [-0.9, -104.6]], yaw: Math.atan2(LINE_SPOT.x + 0.9, LINE_SPOT.z + 104.6), speed: 2.6 };
+
+// ---------- 남쪽 전망대 가는 길 (zones의 LOOKOUT_PATH) ----------
+// 가는 길(OUT)과 돌아오는 길(BACK). BACK은 OUT을 거꾸로 걷는다 (건너는 드론 길 표시도 한 칸씩 옮긴다). 광장에 닿으면 이산은 평소처럼 따라온다
+const OUT: RoutePt[] = LOOKOUT_PATH;
+const BACK: RoutePt[] = LOOKOUT_PATH.slice(1)
+  .map((p, i, a) => ({ x: p.x, z: p.z, hold: p.hold, lane: a[i + 1]?.lane }))
+  .reverse();
+const OUT_HOLD = { plaza: 1, depot: 2, walk: 5, corner: 6, look: 7 };
+// 드론 길을 지나는 자리의 x (그 길의 빛이 앞으로 몇 초 동안 오지 않는지 볼 때 쓴다)
+function laneX(a: RoutePt, b: RoutePt, lane: number) {
+  const z = DRONE_RAILS[lane].z;
+  const t = Math.abs(b.z - a.z) < 1e-3 ? 0.5 : Math.max(0, Math.min(1, (z - a.z) / (b.z - a.z)));
+  return a.x + (b.x - a.x) * t;
+}
+// 망원경 장면: 전망대(BAY) 안에서 장애물은 망원경 몸체 하나뿐이다
+const SCOPE_POS = SCOPES[0].pos;
+const LOOK_WAIT = OUT[OUT_HOLD.look];
+const EYE_SPOT: [number, number] = [SCOPE_POS[0], SCOPE_POS[2] - 0.75];
+const SAN_ASIDE: [number, number] = [SCOPE_POS[0] + 2.1, SCOPE_POS[2] - 1.6];
+// 방문자가 들여다볼 때의 눈 자리(남쪽을 본다)와 둘러볼 수 있는 범위
+const SCOPE_EYE = { x: SCOPE_POS[0], z: SCOPE_POS[2] - 0.8, yaw: Math.PI };
+// 시야: 배율 0.65(처음 값), 좌우 ±1.15rad, 위아래 −0.90…0.25 (제안값. 실행해 보지 않았다)
+const SCOPE_ZOOM = 0.65;
+const SCOPE_CLAMP = { yaw: Math.PI, dy: 1.15, p0: -0.9, p1: 0.25 };
+const SCOPE_PITCH = -0.18;
+// 방문자가 먼저 본 뒤 이산이 비켜선 자리에서 접안렌즈로 다가간다
+const TO_EYE: SanPath = { pts: [[EYE_SPOT[0] + 0.9, EYE_SPOT[1] - 0.6], EYE_SPOT], yaw: 0, speed: 1.3 };
+const TO_ASIDE: SanPath = { pts: [[EYE_SPOT[0] + 0.9, EYE_SPOT[1] - 0.6], SAN_ASIDE], yaw: Math.atan2(SCOPE_EYE.x - SAN_ASIDE[0], SCOPE_EYE.z - SAN_ASIDE[1]), speed: 1.3 };
+const inBay = (x: number, z: number) => x > BAY.x0 - 0.5 && z > BAY.z0 - 0.5;
+// 도시 판 바깥(바깥 산책로·남쪽 다리)에 있는가: 여기서는 화살표가 다음 경유점을 가리킨다 (허공 너머 목표를 곧장 가리키지 않게)
+const offDeck = (x: number, z: number) => x < WALK.x1 + 0.8 || z > 38.6;
+// 길 위의 만남 자리 (가까이 지나가면 한 번): 할머니 포장마차, 배송 대기소의 D-12, 망원경 앞 모퉁이의 아이
+const ENCOUNTER_SPOTS = (["grandma", "courier", "edgekid"] as const).map((id) => ({ id, x: CITY_NPCS[id].pos[0], z: CITY_NPCS[id].pos[2], r: id === "courier" ? 4 : 4.5 }));
+// 배송 대기소 처마 밑 (드론 빛이 닿지 않는 지붕)
+const underRoof = (x: number, z: number) => Math.abs(x - DEPOT.x) < DEPOT.w / 2 && Math.abs(z - DEPOT.z) < DEPOT.d / 2;
 
 export default function ExploreClient() {
   const { t, lang } = useLang();
@@ -89,16 +196,55 @@ export default function ExploreClient() {
   const [since] = useState(() => Date.now());
   // 수락 결말을 본 사람: 다시 오면 방공호가 아니라 줄 속에서 시작한다
   const [accepted, setAccepted] = useState(false);
+  // 수락한 뒤 다시 와서, 검문소 앞에 굳은 이산을 풀어 주었는가 (이번 방문 동안만. 그 뒤로는 검문소에 다시 도전한다)
+  const [replay, setReplay] = useState(false);
+  useEffect(() => {
+    route.frozenSan = accepted && zone === "city" && !ending;
+  }, [accepted, zone, ending]);
   // 입장 전 쿠키 창: ask → busy(처리 중…) → yes(수락됨) → done
   // 발견한 결말 (거부 결말은 기록을 지우므로 남지 않는다)
   const [found, setFound] = useState<string[]>([]);
+  // 남쪽 망원경 기록 (이 기기의 실제 값. 검문소가 그대로 읽는다)
+  const [scopeData, setScopeData] = useState<ScopeData>(NO_SCOPE);
+  // R-07과 친구가 되었는지: 이번 방문(이 페이지) 동안만. 어디에도 저장하지 않는다
+  const [friend, setFriend] = useState(false);
   const rootRef = useRef<HTMLElement>(null);
   const labelEls = useRef<Record<string, HTMLDivElement | null>>({});
-  // 기록 없이 돌아와 이산의 말을 건넨 사람: 이 상태는 어디에도 저장하지 않는다 (기록이 없다는 게 핵심)
+  // 기록을 지우고 돌아와 말없이 곁에 앉아 기다린 사람: 이 상태는 어디에도 저장하지 않는다 (기록이 없다는 게 핵심)
   const [ghost, setGhost] = useState(false);
+  // 空 결말에서 방문자가 계단 쪽으로 실제로 걸어 나갔는지
+  const [stepped, setStepped] = useState(false);
+  const steppedRef = useRef(false);
+  // 검문소에서 물러난 적이 있는지 / 물러난 뒤 이산과의 대화를 끝까지 들었는지 / 검문소의 '도시가 저장한 기록 보기'를 연 적이 있는지 (이번 방문 동안만)
+  const cpRef = useRef({ seen: false, talked: false });
   const ghostRef = useRef(false);
   ghostRef.current = ghost;
-  const complete = visited.length >= sections.length || ghost;
+  const endingRef = useRef<Ending>(null);
+  endingRef.current = ending;
+  // 터미널 셋 → 굳은 이산에게 말 걸기 → 이산 곁의 장치에서 얼굴 맞추기 → 표준 미소 선택. 그래야 이산이 깨어난다
+  const [face, setFace] = useState<FaceState>(emptyFace);
+  const faceRef = useRef(face);
+  faceRef.current = face;
+  // 고른 쪽을 장치가 실행하는 연출이 끝나야 깨어난다 (불러온 저장은 바로)
+  const [faceAwake, setFaceAwake] = useState(false);
+  // 3D 장치가 다시 그리는 단계 (faceRt.phase와 같은 값)
+  const [facePhase, setFacePhaseView] = useState<FacePhase>("locked");
+  const faceTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const restored = visited.length >= sections.length;
+  const complete = (restored && faceAwake) || ghost;
+  // 진행 단계는 이 값 하나로 정한다. 목표 문구·화살표·미니맵·검문소·재시작 자리·이산의 길이 모두 이 값을 따른다.
+  // 큰길은 어느 단계에서든 걸어 들어갈 수 있다 (막는 천막이 없다). 망원경 전에 검문소에서 멈추는 것은 도시의 금지가 아니라 이야기의 순서다
+  const phase: RoutePhase = ghost ? "descent" : !complete ? "restore" : !talked ? "talk" : !scopeData.seen ? "scope" : !scopeData.agreed ? "decide" : "descent";
+  const phaseRef = useRef(phase);
+  phaseRef.current = phase;
+  useEffect(() => {
+    route.phase = phase;
+  }, [phase]);
+  // 망원경을 함께 보기 전에는 큰길이 홀로그램 차단막으로 막힌다 (줄에서 다시 시작한 방문자와 결말 중에는 막지 않는다)
+  const avenueLocked = phase === "scope" && !accepted && !ending;
+  useEffect(() => {
+    route.avenueLocked = avenueLocked;
+  }, [avenueLocked]);
 
   // 로그아웃: 화면이 오래된 모니터처럼 한 줄로 접혀 꺼지고, 웹사이트에서는 지워졌던 글자가 다시 쓰인다
   const router = useRouter();
@@ -119,7 +265,12 @@ export default function ExploreClient() {
   // 배경음악: 방공호, 지상, 대자비 구역(처음 시선 구역에 들어선 뒤부터), 결말
   const [jabiStage, setJabiStage] = useState(false);
   // 방공호로 돌아가면 다시 지상 음악부터 (시선 구역은 도시에 다시 올라왔을 때 새로 들어선다)
-  const track = leaving || intro ? null : ending ? "ending" : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
+  // 결말 곡(空)은 마지막 결과(버튼)가 나올 때부터. 그 전까지는 지상에서는 듣던 곡을 잇고, 방공호로 넘어간 거부 결말은 조용히
+  const endShown = !!ending && ending.step >= (checkpoint[ending.kind] as Beat[]).length;
+  // 결말 곡은 결말마다 하나 (수락·거부·空). 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 f-ALL
+  const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "ending") : null;
+  const track: Track | null =
+    leaving || intro ? null : endShown ? endTrack : zone === "city" && ghost ? "fall" : ending ? (zone === "city" ? (jabiStage ? "jabi" : "ground") : null) : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
   useEffect(() => {
     playBgm(track);
   }, [track]);
@@ -137,6 +288,24 @@ export default function ExploreClient() {
   }, []);
   const onStage = useCallback(() => setJabiStage(true), []);
 
+  // 장면 연출용 전역 상태는 페이지를 떠날 때(로그아웃 등) 비운다. 다시 들어왔을 때 남아 있지 않도록
+  useEffect(
+    () => () => {
+      stopWalk();
+      walkArea.rects = null;
+      sanHold.at = null;
+      gaze.gateOpen = false;
+      gaze.mood = "";
+      gaze.still = false;
+      gaze.zoom = 1;
+      gaze.clamp = null;
+      gaze.lookAt = null;
+      route.phase = "restore";
+      resetDrones();
+    },
+    []
+  );
+
   // 일반 페이지에서 DELETE SEOUL로 지워지며 들어왔다면 그 흔적(그림 숨김 등)을 풀어 준다
   useEffect(() => {
     document.body.classList.remove("deleting");
@@ -150,6 +319,8 @@ export default function ExploreClient() {
       setMet(localStorage.getItem(MET_KEY) === "1");
       setTalked(localStorage.getItem(TALK_KEY) === "1");
       setAccepted(localStorage.getItem(END_KEY) === "accept");
+      // 예전의 '시 한 줄' 약속(값 "1")은 더 이상 쓰지 않는다. 지우고, 새 부탁(망원경 이야기)을 들으면 다시 켜진다
+      if (localStorage.getItem(PROMISE_KEY) === "1") localStorage.removeItem(PROMISE_KEY);
       const f = JSON.parse(localStorage.getItem(FOUND_KEY) || "[]");
       if (Array.isArray(f)) setFound(f);
     } catch {}
@@ -157,7 +328,52 @@ export default function ExploreClient() {
       const v = JSON.parse(localStorage.getItem(KEY) || "[]");
       if (Array.isArray(v)) setVisited(v.filter((x) => sections.some((s) => s.id === x)));
     } catch {}
+    setScopeData(readScope());
+    const f = loadFace();
+    setFace(f);
+    setFaceAwake(faceFinished(f));
   }, []);
+
+  // 지금 잡힌 상호작용 대상을 장치에 알려 준다 (분홍 버튼·나무 레버 강조)
+  useEffect(() => {
+    faceRt.focus = near?.id ?? null;
+  }, [near]);
+  const toFacePhase = useCallback((p: FacePhase) => {
+    setFacePhase(p);
+    setFacePhaseView(p);
+  }, []);
+  const faceLater = (ms: number, fn: () => void) => faceTimers.current.push(setTimeout(fn, ms));
+  const clearFaceTimers = () => {
+    faceTimers.current.forEach(clearTimeout);
+    faceTimers.current = [];
+  };
+  // 장치의 연출 단계는 진행 상태를 따른다 (잠김·도시의 끼어듦·실행 연출 도중에는 그대로 둔다)
+  useEffect(() => {
+    faceRt.drums = face.drums;
+    faceRt.method = face.method;
+    if (faceRt.phase === "restored" || faceRt.phase === "twist" || faceRt.phase === "applying") return;
+    const want: FacePhase = faceAwake ? "done" : restored && !ghost && face.asked ? (face.solved ? "choice" : "idle") : "locked";
+    if (faceRt.phase !== want) toFacePhase(want);
+  }, [face, faceAwake, restored, ghost, toFacePhase]);
+  useEffect(() => () => faceTimers.current.forEach(clearTimeout), []);
+
+  const updateFace = (f: FaceState) => {
+    faceRef.current = f;
+    faceRt.drums = f.drums;
+    faceRt.method = f.method;
+    setFace(f);
+    saveFace(f);
+  };
+  const resetFace = () => {
+    clearFaceTimers();
+    const f = emptyFace();
+    faceRef.current = f;
+    faceRt.method = null;
+    setFace(f);
+    setFaceAwake(false);
+    faceRt.wokeAt = 0;
+    toFacePhase("locked");
+  };
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -171,6 +387,12 @@ export default function ExploreClient() {
         const next = [...prev, id];
         try {
           localStorage.setItem(KEY, JSON.stringify(next));
+          // 기록을 지우고 돌아왔지만 재회 대신 터미널을 연 사람: 평범한 추적 경로로 돌아간다 (접속·만남 기록이 다시 생긴다)
+          if (localStorage.getItem(FORGOT_KEY) !== null) {
+            localStorage.removeItem(FORGOT_KEY);
+            localStorage.setItem(LOGIN_KEY, String(Date.now()));
+            localStorage.setItem(MET_KEY, "1");
+          }
         } catch {}
         showToast(`${t(ui.restored)} · ${next.length}/${sections.length}`);
         return next;
@@ -186,6 +408,11 @@ export default function ExploreClient() {
     setTimeout(() => {
       setZone(to);
       setJabiStage(false);
+      sanHold.at = null;
+      // 이산의 길은 지상에 다시 올라올 때 가까운 경유점에서 다시 이어진다. 끝나지 않은 망원경 장면은 처음으로 (기록에는 남지 않았다)
+      resetRoute();
+      if (scopeRef.current.stage !== "done") resetScopeScene();
+      resetDrones();
       setArrived(viaDoor);
       setTracked(false);
       // 배전실 문을 나서는 순간 도시가 위치를 기억한다. 첫 기억에는 '계속 걸으면 동의' 한 줄이 따라 나온다
@@ -196,10 +423,268 @@ export default function ExploreClient() {
       }
       setTimeout(() => setFade(null), 500);
     }, 900);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // 검문소에서 물러난 뒤의 이산 대화. 마지막 줄은 '그래도 다시 와 줄래?'라는 부탁 (꼬리말 조건)
+  const afterCheckpointPanel = (): Panel => ({
+    kind: "dialog",
+    name: SAN,
+    lines: [...sanAfterCheckpoint.lines, sanAfterCheckpoint.memory],
+    step: 0,
+  });
+
+  // ---------- 남쪽 전망대의 망원경 장면 ----------
+  // idle → offer(방문자가 먼저 들여다본다. 이산은 옆에 비켜서 기다린다: scopeMove) →
+  // ask(눈을 떼면 이산 "나도 볼래.", 접안렌즈로 걸어간다) → looking(도착하고 잠깐 뒤 첫 말) →
+  // after(이산이 눈을 떼고 묻는다. 대화 끝에 결정) → done.
+  // 대화를 닫는 것은 어떤 행동도 대신하지 않는다. 장면의 움직임은 모두 도착을 기다린다
+  type ScopeStage = "idle" | "ask" | "looking" | "offer" | "after" | "done";
+  const scopeRef = useRef<{ stage: ScopeStage; step: number; at: number }>({ stage: "idle", step: 0, at: 0 });
+  const [scopeStage, setScopeStageState] = useState<ScopeStage>("idle");
+  const setScopeStage = (st: ScopeStage) => {
+    scopeRef.current.stage = st;
+    setScopeStageState(st);
+  };
+  // 들여다보기의 움직임: in(눈 자리로 두어 걸음) → view(배율을 당김) → out(원래 자리·방향으로 물러남). 그동안 걷기는 멈춘다
+  const scopeMove = useRef<{ mode: "" | "in" | "view" | "out"; back: WalkStep | null; looked: boolean; exitAt: number }>({ mode: "", back: null, looked: false, exitAt: 0 });
+  // "in": 눈 자리로 다가가는 중 (조작 안내만 감춘다) / "view": 접안렌즈에 눈을 댐 (둥근 시야를 띄운다)
+  const [scopeView, setScopeView] = useState<"" | "in" | "view">("");
+  // 결정 대화를 이번 방문에 한 번 끝까지 들었는지 (그 뒤로는 결정 두 줄만). 저장하지 않는다
+  const heardRef = useRef(false);
+  const endScopeMove = () => {
+    if (scopeMove.current.mode) stopWalk();
+    scopeMove.current.mode = "";
+    scopeMove.current.back = null;
+    setScopeView("");
+    gaze.still = false;
+    gaze.zoom = 1;
+    gaze.clamp = null;
+  };
+  const resetScopeScene = () => {
+    scopeRef.current = { stage: "idle", step: 0, at: 0 };
+    setScopeStageState("idle");
+    endScopeMove();
+  };
+  const writeScope = (next: ScopeData) => {
+    setScopeData(next);
+    try {
+      localStorage.setItem(SCOPE_KEY, JSON.stringify(next));
+    } catch {}
+  };
+  // 눈을 뗀 뒤의 대화와 결정. 처음에는 전부(네 페이지 + 부탁), 결정을 미뤘다면 부탁 한 페이지만
+  // 함께 가기로 하면 이산은 돌아오는 길의 첫 자리(전망대)에서 다시 걷는다. 더 머물기로 하면 전망대에서 기다린다 (경유점 제어가 맡는다)
+  const agree = () => {
+    heardRef.current = true;
+    if (!ghostRef.current) writeScope({ ...readScope(), seen: true, agreed: true });
+    if (scopeRef.current.stage === "after") resetRoute(BACK, 0);
+    setScopeStage("done");
+    closePanelRef.current();
+    say(sanCue.agree, 4000);
+  };
+  const later = () => {
+    heardRef.current = true;
+    resetRoute();
+    setScopeStage("done");
+    closePanelRef.current();
+    say(sanCue.later, 2600);
+  };
+  const afterPanel = (): Panel => {
+    const full = !heardRef.current;
+    const lines = full ? [...scopeScene.after, ...scopeScene.decide] : scopeScene.decide;
+    const last = lines.length - 1;
+    return {
+      kind: "dialog",
+      name: SAN,
+      lines,
+      step: full && scopeRef.current.stage === "after" ? Math.min(scopeRef.current.step, last) : 0,
+      scene: full ? "after" : "decide",
+      choices: [
+        { at: last, label: scopeScene.go, go: agree },
+        { at: last, label: scopeScene.wait, go: later },
+      ],
+    };
+  };
+  // 방문자가 먼저 들여다본다. 이산은 어디에 있든 망원경 옆 비켜선 자리로 가서 기다린다 (방문자를 기다리게 하지 않는다)
+  const startScene = () => {
+    sanHold.at = null;
+    scopeRef.current = { stage: "offer", step: 0, at: 0 };
+    setScopeStageState("offer");
+    startScopeView();
+  };
+  // 망원경 들여다보기: 눈 자리로 두어 걸음 다가간 뒤(도착하면) 시야를 당긴다
+  const startScopeView = () => {
+    const m = scopeMove.current;
+    if (m.mode || performance.now() - m.exitAt < 700) return;
+    const px = player.pos.x;
+    const pz = player.pos.z;
+    // 물러날 자리와 방향: 다가오기 전 그대로 (눈 자리에 거의 붙어 있었으면 한 걸음 뒤)
+    const close = Math.hypot(px - SCOPE_EYE.x, pz - SCOPE_EYE.z) < 0.6;
+    m.back = { x: close ? SCOPE_EYE.x : px, z: close ? SCOPE_EYE.z - 1.2 : pz, speed: 2, yaw: player.yaw, pitch: player.pitch, faceYaw: true };
+    m.mode = "in";
+    m.looked = false;
+    gaze.still = true;
+    setScopeView("in");
+    walkPath([{ x: SCOPE_EYE.x, z: SCOPE_EYE.z, speed: 2, yaw: SCOPE_EYE.yaw, pitch: SCOPE_PITCH }]);
+    lock();
+  };
+  // 눈 떼기 (버튼, E·클릭, Esc, 마우스 잠금 풀림, 설정창): 원래 자리와 방향으로 물러난다
+  const exitScopeView = () => {
+    const m = scopeMove.current;
+    if (m.mode !== "in" && m.mode !== "view") return;
+    m.exitAt = performance.now();
+    m.looked = m.mode === "view";
+    m.mode = "out";
+    setScopeView("");
+    gaze.zoom = 1;
+    gaze.clamp = null;
+    if (m.back) walkPath([m.back]);
+    else stopWalk();
+  };
+  const exitScopeRef = useRef(exitScopeView);
+  exitScopeRef.current = exitScopeView;
+  const scopeBusy = () => scopeMove.current.mode === "in" || scopeMove.current.mode === "view";
+
+  // ---------- 기록을 지우고 돌아온 방문자와의 재회 ----------
+  // 방문자는 세 구절 중 하나를 들려준다 (검문소 뒤 이산이 들려준 구절이 정답). 맞으면 이산이 묻고,
+  // '곁에 앉아 기다린다'를 고르면 화면이 잠깐 가라앉은 채 실제로 기다린 뒤(약 3초) 이산이 일어난다 (Bunker의 awake).
+  // 기기는 그 일을 모른다: 기억하는 사람만 고른다
+  const [beat, setBeat] = useState<"" | "sit">("");
+  const beatTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(beatTimer.current), []);
+  const sitBeside = () => {
+    setPanel(null);
+    setBeat("sit");
+    gaze.still = true;
+    clearTimeout(beatTimer.current);
+    beatTimer.current = setTimeout(() => {
+      // 기억으로 깨어난다: 방금 남은 '만남' 기록이 있다면 그것마저 지운다. 이 상태는 어디에도 저장하지 않는다
+      try {
+        localStorage.removeItem(MET_KEY);
+      } catch {}
+      sfx.restore();
+      setGhost(true);
+      setTalked(true);
+      beatTimer.current = setTimeout(() => {
+        setBeat("");
+        gaze.still = false;
+        setPanel({ kind: "dialog", name: SAN, lines: [reunion.stay], step: 0 });
+      }, 1800);
+    }, 3000);
+  };
+  // 구절을 들려준다: 이산이 부탁한 구절이면 이산이 묻고, 아니면 모르는 구절이라고 한다 (다시 말을 걸면 또 고를 수 있다)
+  const tellVerse = (right: boolean) => {
+    if (right) setPanel({ kind: "dialog", name: SAN, lines: [reunion.asked], step: 0, choices: [{ at: 0, label: reunion.sit, go: sitBeside }] });
+    else setPanel({ kind: "dialog", name: SAN, lines: [reunion.wrong], step: 0 });
+  };
+  // R-07: 소개 뒤 친구를 묻는다. 친구는 이번 방문 동안만 기억하고, 아무것도 열거나 바꾸지 않는다.
+  // 방문자는 말하지 않는다: 고개를 끄덕이거나, 손을 흔들고 돌아서거나, (기록을 지우고 돌아온 사람은) 실제로 두 번 두드린다
+  const r07Panel = (): Panel => {
+    const n = npcs.r07;
+    if (friend) return { kind: "dialog", name: n.name, lines: [r07Friend.again], step: 0 };
+    let forgot = false;
+    try {
+      forgot = localStorage.getItem(FORGOT_KEY) !== null;
+    } catch {}
+    const befriend = (lines: Line[]) => {
+      setFriend(true);
+      setPanel({ kind: "dialog", name: n.name, lines, step: 0 });
+    };
+    const choices: { at: number; label: L; go: () => void }[] = [
+      { at: n.lines.length - 1, label: r07Friend.yes, go: () => befriend([r07Friend.knock]) },
+      { at: n.lines.length - 1, label: r07Friend.no, go: () => closePanelRef.current() },
+    ];
+    if (forgot)
+      choices.unshift({
+        at: 0,
+        label: r07Friend.you,
+        go: () => {
+          sfx.knock();
+          befriend([r07Friend.answer]);
+        },
+      });
+    return { kind: "dialog", name: n.name, lines: n.lines, step: 0, choices };
+  };
+
+  // 얼굴 복원 장치의 원통 하나를 한 칸 돌린다. 세 부분이 다 맞으면 장치가 잠기고, 도시가 표준 미소를 내민다
+  const turnDrum = (i: number) => {
+    if (faceRt.phase !== "idle" || endingRef.current) return;
+    const prev = faceRef.current;
+    const next = rotateDrum(prev, i);
+    if (next === prev) return;
+    updateFace(next);
+    sfx.ratchet();
+    if (([0, 1] as const).some((k) => !seamJoined(prev.drums, k) && seamJoined(next.drums, k))) setTimeout(() => sfx.seam(), 300);
+    if (!next.solved) return;
+    // 잠김 → 장치의 말 → 도시의 끼어듦 → 두 조작부
+    toFacePhase("restored");
+    faceLater(450, () => sfx.faceLock());
+    speak([{ who: faceUi.machine, line: faceUi.restored, ms: 2600 }]);
+    faceLater(2600, () => {
+      toFacePhase("twist");
+      sfx.cityVoice();
+      speak([{ who: faceUi.city, line: faceUi.smileMissing, ms: 3400 }]);
+      faceLater(3400, () => toFacePhase("choice"));
+    });
+  };
+  // 표준 미소 적용(분홍 버튼) 또는 원본 얼굴 보존(나무 레버). 어느 쪽이든 이산이 깨어난다
+  const chooseFace = (method: FaceMethod) => {
+    if (faceRt.phase !== "choice" || endingRef.current) return;
+    updateFace({ ...faceRef.current, method });
+    toFacePhase("applying");
+    if (method === "standard") sfx.press();
+    else sfx.lever();
+    speak([{ who: method === "standard" ? faceUi.city : faceUi.machine, line: faceUi[method], ms: 2600 }]);
+    faceLater(2600, () => {
+      toFacePhase("done");
+      sfx.restore();
+      setFaceAwake(true);
+      showNotice(ui.exitTalk);
+    });
+  };
+  const faceAct = (id: string) => {
+    if (id === "face-std") chooseFace("standard");
+    else if (id === "face-keep") chooseFace("exception");
+    else turnDrum(faceRt.aim);
+  };
+  const faceActRef = useRef(faceAct);
+  faceActRef.current = faceAct;
+
+  // 줄에서 다시 시작한 방문자가 굳은 이산을 풀어 준다: 곧바로 승강장 단계(descent)로, 검문소에 다시 도전한다
+  const thaw = () => {
+    closePanelRef.current();
+    sfx.restore();
+    writeScope({ ...readScope(), seen: true, agreed: true });
+    setTalked(true);
+    try {
+      localStorage.setItem(TALK_KEY, "1");
+      // 대자비 재가동: 소개 팝업은 다시 띄우지 않는다 (곡만 바뀐다)
+      sessionStorage.setItem("sanlee-jabi-intro", "1");
+    } catch {}
+    // 이미 끝낸 길이다: 예전 버전의 저장(표준 미소 선택이 없는 얼굴, 빠진 열람 기록)이 검문소를 막지 않게 채운다
+    if (visited.length < sections.length) {
+      const all = sections.map((x) => x.id);
+      setVisited(all);
+      try {
+        localStorage.setItem(KEY, JSON.stringify(all));
+      } catch {}
+    }
+    const f = faceRef.current;
+    if (!faceFinished(f)) updateFace({ drums: [...SOLUTION] as Drums, solved: true, method: f.method ?? "exception", asked: true });
+    setFaceAwake(true);
+    setReplay(true);
+    setAccepted(false);
+    gaze.mood = "";
+    sanHold.at = null;
+    setTimeout(() => say(replayUi.woke, 3600), 600);
+  };
+  const thawRef = useRef(thaw);
+  thawRef.current = thaw;
 
   const interact = useCallback(
     (it: Interactable) => {
+      // 결말 중(空 결말의 마지막 걸음 포함)에는 아무것도 열지 않는다
+      if (endingRef.current) return;
       switch (it.kind) {
         case "section":
           // 동상과 먼저 이야기해야 기록 터미널이 열린다
@@ -214,14 +699,52 @@ export default function ExploreClient() {
         case "painting":
           setPanel({ kind: "painting", work: it.work! });
           break;
+        case "face":
+          // PC: 바라보는 원통 / 휴대폰: 상호작용 버튼은 마지막으로 바라본 원통 (원통을 직접 누를 수도 있다)
+          faceActRef.current(it.id);
+          break;
         case "statue":
-          // 기억으로 깨어난 이산은 약속을 되풀이하지 않는다 (이미 지키고 돌아온 사람이니까)
-          if (it.id === "san" && ghost) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: [whisper.awakeLine], step: 0 });
-          else if (it.id === "san")
-            setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: getBackup().deaths > 0 ? [...sanCityLines, sanAfterDeath] : sanCityLines, step: 0 });
-          else if (ghost) setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: [whisper.awakeLine], step: 0 });
+          // 수락한 뒤 다시 온 방문자: 줄 밖에 굳은 이산. 기록을 다시 열어 보이면 풀려난다
+          if (it.id === "frozen-san") {
+            setPanel({
+              kind: "dialog",
+              name: plaque[0],
+              lines: replayUi.frozen,
+              step: 0,
+              plaque: true,
+              choices: [
+                { at: 0, label: replayUi.thaw, go: () => thawRef.current() },
+                { at: 0, label: replayUi.leave, go: () => closePanelRef.current() },
+              ],
+            });
+            break;
+          }
+          // 기억으로 깨어난 이산은 짧게만 말한다
+          if (it.id === "san" && ghost) setPanel({ kind: "dialog", name: SAN, lines: [reunion.awakeLine], step: 0 });
+          // 망원경 장면 도중: 이산은 하던 일을 계속한다 (비켜선 뒤에는 같은 말을 한 번 더). 눈을 뗀 뒤의 대화는 그 줄부터 다시
+          else if (it.id === "san" && scopeRef.current.stage === "offer") say(scopeScene.ask, 2600);
+          else if (it.id === "san" && scopeRef.current.stage === "after") setPanel(afterPanel());
+          else if (it.id === "san" && (scopeRef.current.stage === "ask" || scopeRef.current.stage === "looking")) break;
+          // 검문소 뒤: 대화를 다 들었으면 짧게 되짚기만, 물러났지만 끝까지 못 들었으면 그 대화를 다시
+          else if (it.id === "san" && cpRef.current.talked) setPanel({ kind: "dialog", name: SAN, lines: sanReview, step: 0 });
+          else if (it.id === "san" && cpRef.current.seen) setPanel(afterCheckpointPanel());
+          // 전망대에서 이산에게 말을 걸면 먼저 보라고 권한다 / 결정을 미뤘다면 결정으로
+          else if (it.id === "san" && phase === "scope" && inBay(player.pos.x, player.pos.z) && scopeRef.current.stage === "idle") say(scopeScene.ask, 2600);
+          else if (it.id === "san" && phase === "decide") setPanel(afterPanel());
+          else if (it.id === "san") {
+            const base = phase === "scope" ? sanCity.scope : sanCity.descent;
+            setPanel({ kind: "dialog", name: SAN, lines: getBackup().deaths > 0 ? [...base, sanAfterDeath] : base, step: 0 });
+          } else if (ghost) setPanel({ kind: "dialog", name: SAN, lines: [reunion.stay], step: 0 });
+          // 기록은 다 열었지만 얼굴을 아직 맞추지 않았다: 이산은 굳어 있고, 곁의 장치를 가리킨다
+          // 기록은 다 열었지만 아직 얼굴이 굳어 있다: 처음 말을 걸면 이산이 곁의 장치를 부탁하고, 그 뒤로는 장치를 가리킨다
+          else if (restored && !complete) {
+            if (!faceRef.current.asked) {
+              setPanel({ kind: "dialog", name: plaque[0], lines: faceUi.ask, step: 0, plaque: true });
+              updateFace({ ...faceRef.current, asked: true });
+            } else setPanel({ kind: "dialog", name: plaque[0], lines: [{ ...faceUi.frozen, who: "narr" }], step: 0, plaque: true });
+          }
           else if (complete) {
-            setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: statueLines[statueLines.length - 1], step: 0 });
+            setPanel({ kind: "dialog", name: SAN, lines: statueLines[statueLines.length - 1], step: 0 });
             setTalked(true);
             try {
               localStorage.setItem(TALK_KEY, "1");
@@ -235,15 +758,46 @@ export default function ExploreClient() {
               forgot = localStorage.getItem(FORGOT_KEY) !== null;
             } catch {}
             const blank = forgot && visited.length === 0 && found.length === 0 && getBackup().n === 0;
-            setPanel({ kind: "dialog", name: plaque[0], lines: statueLines[Math.min(visited.length, statueLines.length - 2)], step: 0, plaque: true, whisper: blank });
+            // 기록을 지우고 온 사람에게 이산은 처음 보는 사람처럼 짧게 답한다. 마지막 줄에서 방문자는 세 구절 중 하나를 들려준다
+            setPanel({
+              kind: "dialog",
+              name: plaque[0],
+              lines: blank ? statueForgot : statueLines[Math.min(visited.length, statueLines.length - 2)],
+              step: 0,
+              plaque: true,
+              choices: blank ? reunion.verses.map((v) => ({ at: statueForgot.length - 1, label: v, go: () => tellVerse(v.right) })) : undefined,
+            });
             setMet(true);
-            try {
-              localStorage.setItem(MET_KEY, "1");
-            } catch {}
+            // 기록을 지우고 온 사람에게는 '만남' 기록도 새로 남기지 않는다 (터미널을 열어 평범한 길로 돌아가면 그때 남는다: markVisited)
+            if (!blank)
+              try {
+                localStorage.setItem(MET_KEY, "1");
+              } catch {}
           }
           break;
         case "npc": {
+          if (it.npc === "r07") {
+            setPanel(r07Panel());
+            break;
+          }
+          // 남쪽 망원경: 망원경 단계에서는 이산과 함께 보는 장면, 그 뒤로는 방문자가 언제든 직접 들여다본다
+          // (기억으로 깨어난 사람은 글로만 본다. 그 길에는 망원경 장면이 없다)
+          if (it.id === "scope-0" && !ghost && !accepted) {
+            const sc = scopeRef.current.stage;
+            if (sc === "offer") startScopeView();
+            else if (sc === "after") setPanel(afterPanel());
+            else if (sc === "ask" || sc === "looking") break;
+            else if (phase !== "scope") startScopeView();
+            // 망원경 단계: 방문자가 먼저 본다 (이산은 곁에서 비켜서 기다리다가, 방문자가 눈을 떼면 따라 본다)
+            else startScene();
+            break;
+          }
           const n = npcs[it.npc!];
+          // 순찰 기계: 저장된 방문 기록이 없는 방문자에게는 '기록됩니다' 대신 조회 실패 두 줄
+          if (ghost && (it.npc === "patrol" || it.npc === "patrol2")) {
+            setPanel({ kind: "dialog", name: n.name, lines: patrolNoRecord, step: 0 });
+            break;
+          }
           const base = complete && n.after ? n.after : n.lines;
           // 한 번이라도 보관 처리됐다면 관리인은 알아본다
           const bk = getBackup();
@@ -259,7 +813,7 @@ export default function ExploreClient() {
               kind: "dialog",
               name: it.label,
               locked: true,
-              lines: complete ? [ui.exitLocked[0], ui.exitTalk] : ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
+              lines: complete ? [ui.exitLocked[0], ui.exitTalk] : restored ? [ui.exitLocked[0], faceUi.frozen] : ui.exitLocked.map((l) => ({ ko: l.ko.replace("{n}", String(visited.length)), en: l.en.replace("{n}", String(visited.length)) })),
               step: 0,
             });
             break;
@@ -267,12 +821,18 @@ export default function ExploreClient() {
           goTo(it.to!);
           break;
         case "checkpoint":
-          // 이산을 깨운 뒤에만 선택지가 열린다. 아직이면 무엇을 하면 되는지 그대로 알려 준다
+          // 이야기의 순서: 함께 망원경을 보고 승강장으로 가기로 한 뒤에만 등록 창이 뜬다 (도시가 망원경을 아는 것이 아니다).
+          // 그 전에는 곁에 있는 이산의 부탁으로 멈춘다. 이산이 들리지 않는 곳에 있으면 중립적인 길 안내만 (이산을 순간 이동시키지 않는다)
           if (ghost) {
             sfx.ghost();
             startEndingRef.current("ghost");
-          } else if (complete || talked) setPanel({ kind: "choice" });
-          else
+          } else if (phase === "descent") setPanel({ kind: "choice" });
+          else if (complete) {
+            const sp = sanPos();
+            if (Math.hypot(sp.x - player.pos.x, sp.z - player.pos.z) > 8) showNotice(ui.findSan);
+            else if (phase === "decide") setPanel({ kind: "dialog", name: SAN, lines: checkpoint.lockedDecide, step: 0, choices: [{ at: 0, label: scopeScene.go, go: agree }] });
+            else setPanel({ kind: "dialog", name: SAN, lines: checkpoint.lockedScope, step: 0 });
+          } else
             setPanel({
               kind: "dialog",
               name: it.label,
@@ -283,7 +843,8 @@ export default function ExploreClient() {
           break;
       }
     },
-    [complete, talked, goTo, markVisited, visited.length, met, ghost, found.length]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [complete, restored, talked, goTo, markVisited, visited.length, met, ghost, found.length, phase, accepted, friend]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -292,14 +853,22 @@ export default function ExploreClient() {
   const onTap = useCallback(
     (id: string) => {
       // PC에서는 클릭이 마우스 잠금·상호작용(E)으로 쓰이므로 물체 직접 탭은 터치 화면에서만
-      if (!touch || panel || intro || fade || ending || paused) return;
+      if (!touch || panel || intro || fade || ending || paused || beat) return;
+      // 얼굴 복원 장치의 원통: 장치 가까이에서 맞추는 동안만
+      if (id.startsWith("face-")) {
+        const m = ZONES.bunker.items.find((i) => i.id === "face-machine")!;
+        if (zone !== "bunker" || Math.hypot(m.pos.x - player.pos.x, m.pos.z - player.pos.z) > 4) return;
+        if (id.startsWith("face-drum-")) faceRt.aim = Number(id.slice(10));
+        faceActRef.current(id);
+        return;
+      }
       const it = ZONES[zone].items.find((i) => i.id === id);
       if (!it) return;
       const d = Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z);
       if (d > 10) return;
       interact(it);
     },
-    [touch, panel, intro, fade, ending, paused, zone, interact]
+    [touch, panel, intro, fade, ending, paused, beat, zone, interact]
   );
 
   // 테스트용: 주소 끝에 ?debug 를 붙이면 콘솔에서 이동·복원을 조작할 수 있다
@@ -309,6 +878,7 @@ export default function ExploreClient() {
       goTo,
       tp: (x: number, z: number, yaw = 0) => (teleport.req = { x, z, yaw }),
       restore: () => setVisited(sections.map((s) => s.id)),
+      face: (id = "face-machine") => faceActRef.current(id),
       pos: () => [player.pos.x, player.pos.z, player.yaw, player.air, player.pitch],
       input,
       look: (pitch: number) => (input.look.pitch += pitch),
@@ -317,7 +887,10 @@ export default function ExploreClient() {
     };
   }, [goTo]);
 
-  const active = !intro && !panel && !fade && !ending && !paused;
+  // 空 결말의 마지막 걸음 동안만 결말 중에도 평소 조작(이동·시점·조이스틱)을 돌려준다
+  const walkable = ending?.kind === "ghost" && (ending.step === GHOST_WALK || ending.step === GHOST_STEP) && !stepped;
+  // 재회의 몸짓과 기다림 동안에도 조작을 멈춘다 (대화창은 닫혀 있다)
+  const active = !intro && !panel && !fade && (!ending || walkable) && !paused && !beat;
   const activeRef = useRef(active);
   activeRef.current = active;
   const touchRef = useRef(touch);
@@ -330,13 +903,16 @@ export default function ExploreClient() {
     setLocked(l);
     if (!l) {
       unlockAt.current = performance.now();
-      if (activeRef.current && !touchRef.current) setPaused(true);
+      // 망원경을 보던 중의 Esc는 설정창이 아니라 눈 떼기
+      if (scopeBusy()) exitScopeRef.current();
+      else if (activeRef.current && !touchRef.current) setPaused(true);
     }
   }, []);
   useLookAndKeys(
     rootRef,
     () => {
-      if (nearRef.current) interact(nearRef.current);
+      if (scopeBusy()) exitScopeRef.current();
+      else if (nearRef.current) interact(nearRef.current);
     },
     active,
     onLockChange,
@@ -351,6 +927,17 @@ export default function ExploreClient() {
     setPanel(null);
     lock();
   }, [lock]);
+  const closePanelRef = useRef(closePanel);
+  closePanelRef.current = closePanel;
+  // 검문소에서 결정하지 않고 물러난다 (어느 단계에서든: 선택·확인·쿠키 끄기·설정). 수락도 거부도 아니고 결말도 열리지 않는다.
+  // 읽는 동안 쌓인 시선은 비워 준다. 처음 물러나면 이산이 말을 건다
+  const withdraw = useCallback(() => {
+    resetGaze();
+    cpRef.current.seen = true;
+    if (!cpRef.current.talked && !ghostRef.current) setPanel(afterCheckpointPanel());
+    else closePanel();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [closePanel]);
   // Esc로 설정창을 닫고 돌아오면 브라우저가 Esc 입력으로는 마우스 잠금을 허락하지 않는다.
   // 그래서 돌아온 뒤 처음 누르는 키(이동 키 등)에서 바로 다시 화면 가운데에 마우스를 잠근다.
   useEffect(() => {
@@ -384,11 +971,36 @@ export default function ExploreClient() {
   }, [hasPanel]);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
+  // 대화 페이지의 정적(line.pause): 그 시간 동안은 글을 감추고 넘기지 못한다. 망원경 뒤의 대화에서는 둘이 함께 구름 아래를 내려다본다
+  const [hush, setHush] = useState(false);
+  const hushRef = useRef(false);
+  hushRef.current = hush;
+  const hushLine = panel?.kind === "dialog" ? panel.lines[Math.min(panel.step, panel.lines.length - 1)] : null;
+  const hushAfter = panel?.kind === "dialog" && panel.scene === "after";
+  useEffect(() => {
+    const ms = hushLine?.pause;
+    if (!ms) {
+      setHush(false);
+      return;
+    }
+    setHush(true);
+    if (hushAfter) gaze.lookAt = { x: SCOPE_POS[0], y: -24, z: SCOPE_POS[2] + 34 };
+    const tm = setTimeout(() => {
+      setHush(false);
+      if (hushAfter) gaze.lookAt = null;
+    }, ms);
+    return () => {
+      clearTimeout(tm);
+      if (hushAfter) gaze.lookAt = null;
+    };
+  }, [hushLine, hushAfter]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (performance.now() - unlockAt.current < 250) return; // 잠금 해제와 같은 Esc
-        if (panelRef.current) setPanel(null);
+        if (scopeBusy()) exitScopeRef.current();
+        else if (panelRef.current?.kind === "choice") withdraw();
+        else if (panelRef.current) setPanel(null);
         else if (pausedRef.current) resume();
         else if (activeRef.current) setPaused(true);
         return;
@@ -396,6 +1008,7 @@ export default function ExploreClient() {
       const p = panelRef.current;
       if (e.code === "KeyE" && !e.repeat && p?.kind === "dialog" && performance.now() - panelAt.current > 250) {
         e.preventDefault();
+        if (hushRef.current) return;
         if (p.step < p.lines.length - 1) setPanel({ ...p, step: p.step + 1 });
         else closePanel();
         return;
@@ -408,14 +1021,25 @@ export default function ExploreClient() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [resume, closePanel]);
+  }, [resume, closePanel, withdraw]);
 
-  // 지상에서는 관리 AI 방송이 주기적으로 흘러나옴
+  // 한 번에 한 메시지만: 위험(HUD) → 대화·상호작용 → 길 안내(이산의 말) → 방송. 짧은 안내는 showNotice로 (방송 자리를 잠깐 빌린다)
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const showNotice = useCallback((l: L, ms = 3200) => {
+    clearTimeout(noticeTimer.current);
+    setNotice(l);
+    noticeTimer.current = setTimeout(() => setNotice(null), ms);
+  }, []);
+  useEffect(() => () => clearTimeout(noticeTimer.current), []);
+  // 지상에서는 관리 AI 방송이 주기적으로 흘러나옴. 대화·망원경·검문소·결말·이산의 말·다른 안내가 떠 있는 동안에는 건너뛴다
+  const quietRef = useRef(false);
   useEffect(() => {
     if (zone !== "city" || ending) return;
     let i = 0;
     let hide: ReturnType<typeof setTimeout>;
     const show = () => {
+      if (quietRef.current || drone.lit >= 0 || drone.caught) return;
+      clearTimeout(noticeTimer.current);
       setNotice(announcements[i++ % announcements.length]);
       hide = setTimeout(() => setNotice(null), 6500);
     };
@@ -431,45 +1055,68 @@ export default function ExploreClient() {
 
   // 결말 문장이 차례로 나타남
   const endStep = ending ? `${ending.kind}:${ending.step}` : "";
+  // 걷는 줄은 도착해야 다음으로: 수락은 줄 옆에 닿은 뒤 이산의 말, 빈자리에 들어선 뒤 마지막 줄.
+  // 空은 둘 다 계단 앞에 온 뒤 이산의 말, 방문자가 계단참에 들어선 뒤 정적. 그다음의 시간(BEAT_MS)은 도착 뒤의 멈춤이다
+  const ghostBase = useRef(0);
+  const endGate = (kind: EndKind, step: number) => {
+    if (kind === "accept" && step === 2) return autoWalk.queue.length === 0;
+    if (kind === "accept" && step === 3) return autoWalk.arrived;
+    if (kind === "ghost" && step === GHOST_WALK) return sanWalk.path === GHOST_SAN && sanWalk.arrived && inRect(STAIR_APPROACH, player.pos.x, player.pos.z);
+    if (kind === "ghost" && step === GHOST_STEP) return steppedRef.current;
+    return true;
+  };
   useEffect(() => {
     if (!ending) return;
-    const ms = BEAT_MS[ending.kind][ending.step];
+    const { kind, step } = ending;
+    const ms = BEAT_MS[kind][step];
     if (ms === undefined) return;
-    const id = setTimeout(() => setEnding((e) => (e ? { ...e, step: e.step + 1 } : e)), ms);
-    return () => clearTimeout(id);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const next = () => (timer = setTimeout(() => setEnding((e) => (e && e.kind === kind && e.step === step ? { ...e, step: step + 1 } : e)), ms));
+    if (endGate(kind, step)) {
+      next();
+      return () => clearTimeout(timer);
+    }
+    const iv = setInterval(() => {
+      if (!endGate(kind, step)) return;
+      clearInterval(iv);
+      next();
+    }, 120);
+    return () => {
+      clearInterval(iv);
+      clearTimeout(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
 
   // 결말 연출: 줄마다 장면이 바뀐다
   const [secondStatue, setSecondStatue] = useState(false);
-  const [whisperMiss, setWhisperMiss] = useState(false);
-  // 이산이 '그 문장'을 남긴 순간: 웹사이트 꼬리말의 delete seoul 간판이 이때부터 켜진다
-  const promiseLine = sanCityLines[sanCityLines.length - 1];
-  // 처음 들었을 때는 대화가 끝난 뒤 '숨은 결말이 열렸다'는 알림을 띄운다
-  const [unlock, setUnlock] = useState<"pending" | "show" | null>(null);
+  // 검문소 뒤 이산의 부탁("오늘 망원경에서 있었던 얘길 해 줘")이 화면에 뜬 순간부터 웹사이트 꼬리말의 delete seoul이 켜진다 (따로 알리지 않는다).
+  // 값 "2" = 망원경 이야기 부탁. 예전 값 "1"(시 한 줄)은 읽을 때 지운다
   useEffect(() => {
-    if (panel?.kind === "dialog" && panel.lines[panel.step] === promiseLine)
+    if (panel?.kind !== "dialog") return;
+    const line = panel.lines[panel.step];
+    if (line === sanAfterCheckpoint.memory) {
+      cpRef.current.talked = true;
       try {
-        if (localStorage.getItem(PROMISE_KEY) === null) setUnlock("pending");
-        localStorage.setItem(PROMISE_KEY, "1");
+        localStorage.setItem(PROMISE_KEY, "2");
       } catch {}
-    if (!panel && unlock === "pending") {
-      sfx.chime();
-      setUnlock("show");
     }
-  }, [panel, promiseLine, unlock]);
+  }, [panel]);
+  // 눈을 뗀 뒤의 대화: 지금 줄을 기억해 둔다 (닫아도 그 줄부터). 결정 줄에 닿으면 이번 방문 동안은 결정 두 줄만 다시 묻는다.
+  // 대화를 닫는 것만으로는 아무것도 정해지지 않는다 (고르는 말만 진행을 바꾼다)
   useEffect(() => {
-    if (unlock !== "show") return;
-    const h = setTimeout(() => setUnlock(null), 9000);
-    return () => clearTimeout(h);
-  }, [unlock]);
+    if (panel?.kind !== "dialog" || panel.scene !== "after") return;
+    scopeRef.current.step = panel.step;
+    if (panel.step >= scopeScene.after.length) heardRef.current = true;
+  }, [panel]);
   const [flash, setFlash] = useState(false);
   const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     if (!ending) return;
     const { kind, step } = ending;
-    // 마지막 줄에 닿으면 발견한 결말로 남긴다 (거부 결말은 기록을 지우므로 제외)
-    if (kind === "accept" && step === BEAT_MS[kind].length) {
+    const end = step === BEAT_MS[kind].length;
+    // 마지막 줄 뒤 정적까지 지나면 발견한 결말로 남긴다 (거부와 空은 남기지 않는다)
+    if (kind === "accept" && end) {
       setFound((f) => {
         const next = f.includes(kind) ? f : [...f, kind];
         try {
@@ -480,48 +1127,395 @@ export default function ExploreClient() {
     }
     if (kind === "accept") {
       if (step === 0) {
-        gaze.mood = "calm";
-        // 줄 옆을 따라 걸어가 빈자리에 들어선다
-        autoWalk.to = { x: 2.3, z: LINE_SPOT.z, speed: 3.6, pitch: 0.2 };
-        sceneTimer.current = setTimeout(() => (autoWalk.to = { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.6, pitch: 0.42 }), 6800);
-      }
-      if (step === 4)
+        // 동의는 첫 줄에서 이미 처리된다: 도중에 나가도 다음 입장은 줄 속에서 시작한다
         try {
           localStorage.setItem(END_KEY, "accept");
         } catch {}
+        gaze.mood = "calm";
+        // 플레이 중 몸을 숨기던 그 줄로: 큰길 가운데를 따라 줄 옆까지 걸어가 빈자리에 들어서서 가만히 선다.
+        // 점마다 도착하면 다음 점으로 (Player가 autoWalk.queue를 차례로 꺼낸다). 이산은 줄 밖에 남는다
+        walkPath(ACCEPT_WALK);
+      }
     } else if (kind === "reject") {
       if (step === 0) {
-        finalBeam();
+        // 레이저 없이: 화면이 하얗게 멎는 것으로 정지를 보여 준다
         sceneTimer.current = setTimeout(() => setFlash(true), 1500);
       }
       if (step === 3) {
-        // 장면이 방공호로: 사람들이 두 번째 동상을 옮겨 놓았다
+        // 장면이 방공호로: 사람들이 두 번째 정지 시민을 옮겨 와 나란히 앉혔다
         setFlash(false);
         setSecondStatue(true);
         goTo("bunker", false);
       }
-      if (step === 5) {
-        // 이 결말은 저장되지 않는다: 진행 기록을 실제로 지운다
+      if (end) {
+        // 도시가 둘을 다시 정지시켰다: 열람·만남·대화·결말·위치 백업이 처음 상태로 돌아간다 (약속과 발견한 결말은 남는다)
         try {
-          [KEY, END_KEY, MET_KEY, TALK_KEY].forEach((k) => localStorage.removeItem(k));
+          [KEY, END_KEY, MET_KEY, TALK_KEY, SCOPE_KEY, FACE_KEY].forEach((k) => localStorage.removeItem(k));
         } catch {}
         wipeBackup();
       }
     } else if (kind === "ghost") {
       if (step === 0) {
-        // 쿠키 설정에서 방문 기록을 전부 지웠다: 도시도 자비도 이 사람을 알아보지 못한다
-        // 기록을 지운다. 다음 방문까지 남기지 않도록 '삭제됨' 표시도 남기지 않고 깨끗이 비운다
+        // 이 기기에 둘을 잇는 기록이 없다: 새로 남기지도 않는다
         wipeBackup();
         gaze.mood = "blind";
         try {
           localStorage.removeItem(FORGOT_KEY);
         } catch {}
       }
-      // 3번째 줄(이산의 말)에서 굳어 가던 화면이 풀리고, 다음 줄에서 둘이 문을 지나 걸어 나간다
-      if (step === 3) autoWalk.to = { x: 0, z: -177, speed: 4.6, pitch: 0.78 };
+      // 성문의 조준 빛이 겨눌 방문 기록을 찾지 못해 빛을 거둔다 (성문 옆 표시도 바뀐다). 문이 열리는 것이 아니다: 통로는 처음부터 열려 있다
+      if (step === 1) {
+        gaze.gateOpen = true;
+        sfx.hidden();
+      }
+      // 조작을 돌려준다: 성문 홍예와 다리, 계단참만 걸을 수 있다 (보이는 기단·난간과 같은 자리). 이산은 앞서 계단참으로 간다
+      if (step === GHOST_WALK) walkArea.rects = GHOST_RECTS;
+      // 계단 앞: 마지막 걸음은 지금 서 있는 곳에서 계단참 쪽으로 실제로 한 걸음 더 들어서는 것 (ghostBase)
+      if (step === GHOST_STEP) ghostBase.current = Math.max(LANDING.x0, player.pos.x);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
+
+  // 空 결말의 마지막 걸음: 이산의 말 뒤, 평소 조작으로 계단참(난간이 끊긴 자리 너머)에 들어서서 1m 더 나아가면 끝난다.
+  // 시점 회전만으로는 끝나지 않는다. 내디디면 조작을 거두고, 이산이 계단 쪽으로 돌아서고, 정적 뒤에 버튼이 나온다 (endGate)
+  useEffect(() => {
+    if (!walkable || ending?.step !== GHOST_STEP) return;
+    const iv = setInterval(() => {
+      if (steppedRef.current) return;
+      const x = player.pos.x;
+      if (!inRect(LANDING, x, player.pos.z) || x < Math.max(LANDING.x0 + 1.2, ghostBase.current + 1.0)) return;
+      steppedRef.current = true;
+      setStepped(true);
+      walkArea.rects = null;
+    }, 100);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walkable, ending?.step]);
+
+  // 지상에서 직접 오가는 짧은 말 (자막 한 줄. 말하는 사람 이름과 함께). 대화창을 열지 않고, 조작을 막지 않는다.
+  // 한 번에 한 줄만 뜨고, 그동안 방송(.notice)은 비켜 준다. speak는 여러 줄을 차례로 (길 위의 짧은 만남)
+  const [sanSay, setSanSay] = useState<{ who: L; line: L } | null>(null);
+  const sayTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const speakUntil = useRef(0);
+  const speak = useCallback((seq: { who: L; line: L; ms?: number }[]) => {
+    clearTimeout(sayTimer.current);
+    const run = (i: number) => {
+      if (i >= seq.length) {
+        setSanSay(null);
+        speakUntil.current = 0;
+        return;
+      }
+      const ms = seq[i].ms ?? 3600;
+      setSanSay({ who: seq[i].who, line: seq[i].line });
+      speakUntil.current = performance.now() + ms;
+      sayTimer.current = setTimeout(() => run(i + 1), ms);
+    };
+    run(0);
+  }, []);
+  const say = useCallback((l: L, ms = 3600) => speak([{ who: SAN, line: l, ms }]), [speak]);
+  const speaking = () => performance.now() < speakUntil.current;
+  useEffect(() => () => clearTimeout(sayTimer.current), []);
+  // 처음 시선 구역: 대자비 소개가 닫힌 뒤 이산이 첫 엄폐물 뒤로 가서 기다린다 (탭마다 한 번 말하고, 재시도 때는 말없이 다시 기다린다)
+  const cueRef = useRef({ cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0, passed: false, lead: false });
+  const sanWithYou = zone === "city" && complete && talked && !ghost && !accepted && !ending;
+  const sanWithYouRef = useRef(sanWithYou);
+  sanWithYouRef.current = sanWithYou;
+  // 소개 장면(카메라가 대자비를 바라보는 동안)과 팝업이 끝난 뒤에야 움직인다
+  useEffect(() => {
+    if (!sanWithYou || !jabiStage || cueRef.current.cover) return;
+    const iv = setInterval(() => {
+      if (gaze.intro || panelRef.current || pausedRef.current || cueRef.current.cover) return;
+      cueRef.current.cover = true;
+      // 방벽이 이미 부서졌다면 이끌지 않는다 (부서진 엄폐물 앞에서 기다리지 않도록)
+      if (coverState[COVER_SPOT.cover]?.alive) {
+        sanHold.at = { ...COVER_SPOT };
+        say(sanCue.cover);
+      }
+    }, 300);
+    return () => clearInterval(iv);
+  }, [sanWithYou, jabiStage, say]);
+  // 이산 곁에 와서 처음 숨었을 때 한 줄
+  useEffect(() => {
+    if (!sanWithYou) return;
+    const iv = setInterval(() => {
+      const h = sanHold.at;
+      if (!h || cueRef.current.wait || !gaze.hiddenBy) return;
+      if (Math.hypot(player.pos.x - h.x, player.pos.z - h.z) > 2.6) return;
+      cueRef.current.wait = true;
+      say(sanCue.wait);
+    }, 300);
+    return () => clearInterval(iv);
+  }, [sanWithYou, say]);
+  // 쓰러졌다가 큰길 입구로 돌아오면: 이산은 다시 그 엄폐물 곁에서 기다린다. "돌아왔네."는 처음 한 번만
+  useEffect(() => {
+    if (!sanWithYou) return;
+    const onBackup = (e: Event) => {
+      if ((e as CustomEvent).detail !== "restore") return;
+      // 복원 직전에 엄폐물도 되살아난다 (GazeHUD: restoreCovers → recordRestore)
+      sanHold.at = { ...COVER_SPOT };
+      if (cueRef.current.back) return;
+      cueRef.current.back = true;
+      say(sanCue.back, 2600);
+    };
+    window.addEventListener("sanlee-backup", onBackup);
+    return () => window.removeEventListener("sanlee-backup", onBackup);
+  }, [sanWithYou, say]);
+
+  // 기록 없는 방문자와 다시 일어난 이산: 방공호를 나서면 한 줄. 드론의 표적 고리가 실제로 붙지 못하고 빛이 지나간 뒤에만 "…그냥 지나갔어."
+  // (미리 '도시가 우릴 못 본다'고 말하지 않는다. 빛이 닿아도 고리가 붙지 않는 것은 Drones/DroneHUD가 보여 준다)
+  const ghostCity = zone === "city" && ghost && !ending;
+  useEffect(() => {
+    if (!ghostCity) return;
+    const lead = setTimeout(() => {
+      if (cueRef.current.lead) return;
+      cueRef.current.lead = true;
+      say(sanCue.lead, 3400);
+    }, 1400);
+    const iv = setInterval(() => {
+      const c = cueRef.current;
+      if (c.passed || !drone.shapeSeen || drone.shape || panelRef.current) return;
+      c.passed = true;
+      say(sanCue.passed, 2800);
+    }, 250);
+    return () => {
+      clearTimeout(lead);
+      clearInterval(iv);
+    };
+  }, [ghostCity, say]);
+
+  // ---------- 남쪽 전망대 가는 길과 돌아오는 길: 이산의 경유점 ----------
+  // 이산은 hold(드론 빛이 닿지 않는 자리)에서 기다리다, 방문자가 다음 hold 쪽으로 앞서 나가면 그 hold까지 경유점을 차례로 걷는다
+  // (경유점 사이는 장애물과 허공이 없는 직선이다). 그 사이에 드론 길이 있으면 앞으로 몇 초 동안 그 길의 빛이 건너는 자리에
+  // 오지 않을 때만 건넌다. 이산은 들키지 않는다 (호위 실패 없음).
+  // 길은 둘: 가는 길(OUT) / 승강장으로 가기로 한 뒤의 돌아오는 길(BACK: 전망대 → 광장). 기억으로 깨어난 둘에게는 정해진 길이 없다
+  type RouteRun = { list: RoutePt[] | null; hold: number; i: number; target: number };
+  const routeRef = useRef<RouteRun>({ list: null, hold: -1, i: -1, target: -1 });
+  function resetRoute(list: RoutePt[] | null = null, hold = -1) {
+    routeRef.current = { list, hold, i: hold, target: hold };
+  }
+  const sanPos = () => CITY.items.find((i) => i.id === "san")!.pos;
+  const nearestHold = (list: RoutePt[], x: number, z: number) => {
+    let k = -1;
+    let d = Infinity;
+    list.forEach((p, j) => {
+      if (!p.hold) return;
+      const dd = Math.hypot(p.x - x, p.z - z);
+      if (dd < d) {
+        d = dd;
+        k = j;
+      }
+    });
+    return { k, d };
+  };
+  const nextHold = (list: RoutePt[], k: number) => {
+    for (let j = k + 1; j < list.length; j++) if (list[j].hold) return j;
+    return -1;
+  };
+  const holdSan = (p: { x: number; z: number }, speed = 3.6, snap = false) => {
+    const h = sanHold.at;
+    if (h && h.manual && Math.abs(h.x - p.x) < 0.01 && Math.abs(h.z - p.z) < 0.01 && Math.abs((h.speed ?? 0) - speed) < 0.01 && !snap) return;
+    sanHold.at = { x: p.x, z: p.z, cover: -1, manual: true, speed, snap };
+  };
+  const sanLeads = zone === "city" && complete && talked && !accepted && !ending;
+  useEffect(() => {
+    if (!sanLeads) return;
+    const iv = setInterval(() => {
+      if (pausedRef.current || panelRef.current || drone.caught) return;
+      // 망원경 장면 동안은 장면이 이산을 움직인다 (정해진 길)
+      const sc = scopeRef.current.stage;
+      if (sc !== "idle" && sc !== "done") return;
+      const ph = phaseRef.current;
+      const px = player.pos.x;
+      const pz = player.pos.z;
+      const sp = sanPos();
+      // 길: 망원경 가는 길(OUT) / 승강장으로 가기로 한 뒤 전망대에서 돌아오는 길(BACK) / 그 밖에는 평소처럼 따라온다.
+      // 결정을 미뤘다면('전망대에 더 머문다') 이산은 전망대에서 기다린다 (전망대 밖에 있으면 평소처럼 따라온다)
+      // 기억으로 깨어난 둘에게는 정해진 길이 없다: 방문자가 앞장선다
+      if (!ghostRef.current && ph === "decide" && inBay(sp.x, sp.z)) {
+        if (routeRef.current.list) resetRoute();
+        holdSan(LOOK_WAIT);
+        return;
+      }
+      const backing = ph === "descent" && routeRef.current.list === BACK;
+      // 망원경 가는 길에서는 경유점마다 멈춰 기다리지 않고 방문자 바로 뒤에서 따라온다 (사용자 요청)
+      const want: RoutePt[] | null = ghostRef.current ? null : backing ? BACK : null;
+      if (routeRef.current.list !== want) resetRoute(want);
+      const run = routeRef.current;
+      const list = run.list;
+      if (!list) {
+        if (sanHold.at?.manual) sanHold.at = null;
+        return;
+      }
+      const me = nearestHold(list, px, pz);
+      if (run.hold < 0) {
+        // 아직 길 위에 있지 않다: 따라오다가 방문자가 지나온(또는 서 있는) hold 가까이 오면 그 자리에 선다
+        const at = nearestHold(list, sp.x, sp.z);
+        if (at.k >= 0 && at.d < 2.5 && at.k <= me.k) run.hold = run.i = run.target = at.k;
+        else {
+          if (sanHold.at?.manual) sanHold.at = null;
+          return;
+        }
+      }
+      // 방문자가 길을 벗어나 멀리 갔으면 (다른 데를 둘러보러) 기다림을 풀고 평소처럼 따라간다. 가는 길이면 길로 돌아올 때 다시 붙는다
+      if (me.d > 14 && Math.hypot(px - sp.x, pz - sp.z) > 24) {
+        resetRoute(list === BACK ? null : list);
+        if (sanHold.at?.manual) sanHold.at = null;
+        return;
+      }
+      if (run.target === run.hold) {
+        const nh = nextHold(list, run.hold);
+        // 돌아오는 길의 끝(광장)에 닿으면 정해진 길을 놓고 평소처럼 따라온다
+        if (nh < 0 && list === BACK) {
+          resetRoute(null);
+          if (sanHold.at?.manual) sanHold.at = null;
+          return;
+        }
+        if (nh >= 0 && me.k >= nh) {
+          let clear = true;
+          for (let j = run.hold + 1; j <= nh; j++) {
+            const L = list[j].lane;
+            if (L !== undefined && !laneClear(L, laneX(list[j - 1], list[j], L), 2.6)) clear = false;
+          }
+          if (clear) {
+            run.target = nh;
+            run.i = run.hold + 1;
+          }
+        }
+      }
+      const p = list[run.i];
+      let crossing = false;
+      for (let j = run.hold + 1; j <= run.target; j++) if (list[j].lane !== undefined) crossing = true;
+      holdSan(p, crossing ? 5.2 : 3.6);
+      if (run.i !== run.hold && Math.hypot(sp.x - p.x, sp.z - p.z) < 0.5) {
+        if (run.i < run.target) run.i++;
+        else run.hold = run.target;
+      }
+    }, 200);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sanLeads]);
+
+  // 길 위의 짧은 말과 장면 신호: 골목 입구(처음 한 번, 허공 너머 망원경과 드론 한 번 훑기) / 배송 대기소 처마 밑 /
+  // 길 위의 만남(할머니·D-12·아이, 각각 한 번) / 큰길 입구의 부탁 / 망원경 장면의 진행 / 들여다보기의 다가감·물러남
+  const frameTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // 이번 방문에 이미 지나친 만남 (드론에 들켜 다시 가도 되풀이하지 않는다). 저장하지 않는다
+  const metRef = useRef<Record<string, boolean>>({});
+  useEffect(() => {
+    if (zone !== "city" || ending || accepted) return;
+    const iv = setInterval(() => {
+      const m = scopeMove.current;
+      const sc = scopeRef.current;
+      // 들여다보기: 눈 자리에 다 오면 시야를 당기고, 원래 자리에 다 물러나면 걷기를 돌려준다 (설정창이 떠 있어도 마저 걷는다)
+      if (m.mode === "in" && autoWalk.arrived) {
+        stopWalk();
+        gaze.zoom = SCOPE_ZOOM;
+        gaze.clamp = { ...SCOPE_CLAMP };
+        m.mode = "view";
+        setScopeView("view");
+        // 들여다본 횟수만 센다 (기억으로 깨어난 사람은 기록을 남기지 않는다)
+        if (!ghostRef.current) writeScope({ ...readScope(), uses: readScope().uses + 1 });
+      } else if (m.mode === "out" && autoWalk.arrived) {
+        stopWalk();
+        m.mode = "";
+        m.back = null;
+        gaze.still = false;
+        if (m.looked && sc.stage === "offer") {
+          // 방문자가 눈을 뗐다: 이번엔 이산이 본다
+          sc.at = 0;
+          setScopeStage("ask");
+          say(scopeScene.mine, 2400);
+          return;
+        }
+        if (m.looked && phaseRef.current !== "scope") say(scopeScene.again, 2600);
+      }
+      if (pausedRef.current || panelRef.current || drone.caught || gaze.intro) return;
+      const now = performance.now();
+      const px = player.pos.x;
+      const pz = player.pos.z;
+      const ph = phaseRef.current;
+      const c = cueRef.current;
+      const withSan = sanWithYouRef.current;
+      // 골목 입구에서 처음: 허공 너머 남쪽 전망대의 망원경을 잠깐 바라보게 하고, 앞줄 드론이 그 앞을 한 번 훑는다 (걷기는 막지 않는다)
+      if (ph === "scope" && withSan && !c.plaza && Math.abs(px - OUT[0].x) < 2.2 && pz > OUT[0].z - 1.6 && pz < AVENUE_EDGE_Z + 2) {
+        c.plaza = true;
+        presetSweep(0, 1.6);
+        // 길 안내 팝업 (시야는 붙잡지 않는다. 이산의 말이 아니라 대자비 소개 같은 안내 창)
+        if (!panelRef.current && !endingRef.current) setPanel({ kind: "route" });
+      }
+      if (ph === "scope" && withSan && !c.shelter && underRoof(px, pz)) {
+        c.shelter = true;
+        if (!speaking()) say(sanCue.shelter, 3000);
+      }
+      // 길 위의 만남: 망원경 가는 길에서 한 번씩, 다른 말이 떠 있지 않을 때 (긴 이야기는 말을 걸면 대화로)
+      if (ph === "scope" && withSan && !speaking()) {
+        for (const e of ENCOUNTER_SPOTS) {
+          if (metRef.current[e.id]) continue;
+          if (Math.hypot(px - e.x, pz - e.z) > e.r) continue;
+          metRef.current[e.id] = true;
+          speak(encounters[e.id].map((l) => ({ who: l.who === "san" ? SAN : npcs[e.id].name, line: l, ms: 3800 })));
+          break;
+        }
+      }
+      // 큰길 입구에서 (이산이 곁에 있을 때만 한 줄): 망원경 전에는 차단막 앞에서 망원경부터, 결정을 미뤘다면 갈지 묻는다
+      if (withSan && (ph === "scope" || ph === "decide") && Math.abs(px) < 12 && pz < AVENUE_EDGE_Z + 2.5 && pz > AVENUE_EDGE_Z - 4 && now - c.avenueAt > 12000 && !speaking()) {
+        const sp = sanPos();
+        if (Math.hypot(sp.x - px, sp.z - pz) < 8) {
+          c.avenueAt = now;
+          say(ph === "decide" ? sanCue.avenueDecide : sanCue.avenue, 3400);
+        }
+      }
+      // 망원경 장면: 이산이 접안렌즈 앞에 다 온 뒤 잠깐의 정적, 첫 말. 그다음 비켜서며 권한다 (도착을 기다리고, 그 뒤만 시간으로)
+      if (sc.stage === "ask" && sanWalk.path === TO_EYE && sanWalk.arrived) {
+        if (!sc.at) sc.at = now;
+        else if (now - sc.at > 1600) {
+          sc.at = now;
+          setScopeStage("looking");
+          say(scopeScene.first, 3200);
+        }
+      } else if (sc.stage === "looking" && now - sc.at > 3400) {
+        // 함께 보는 관측은 여기서 끝난다 (이 기기에 남는다). 이산이 눈을 떼고 묻는다
+        if (!ghostRef.current) writeScope({ ...readScope(), seen: true });
+        sc.step = 0;
+        setScopeStage("after");
+        setPanel(afterPanel());
+      }
+    }, 150);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zone, ending, accepted, say, speak]);
+  useEffect(() => () => clearTimeout(frameTimer.current), []);
+
+  // 광장·바깥 산책로에서 드론에 식별되면: 그 드론 길 바로 앞의 안전한 자리로 (가는 길이면 건너기 전, 돌아오는 길이면 돌아오기 전).
+  // 화면이 어두워진 동안 옮긴다. 이산도 그 자리에서 기다린다. 이미 지나친 만남과 망원경 장면은 되풀이하지 않는다
+  const onDroneCaught = useCallback(() => {
+    const out = phaseRef.current === "scope";
+    // 드론 0 광장, 1 산책로, 6 남쪽 다리 (가는 길이면 건너기 전 자리, 돌아오는 길이면 돌아오기 전 자리)
+    const k = drone.by === 6 ? (out ? OUT_HOLD.corner : OUT_HOLD.look) : drone.by === 1 ? (out ? OUT_HOLD.walk : OUT_HOLD.corner) : out ? OUT_HOLD.plaza : OUT_HOLD.depot;
+    const spot = OUT[k];
+    const ahead = OUT[out ? k + 1 : k - 1];
+    const len = Math.hypot(ahead.x - spot.x, ahead.z - spot.z) || 1;
+    const ux = (ahead.x - spot.x) / len;
+    const uz = (ahead.z - spot.z) / len;
+    teleport.req = { x: spot.x + ux * 1.2, z: spot.z + uz * 1.2, yaw: Math.atan2(-ux, -uz) };
+    const sceneFree = scopeRef.current.stage === "idle" || scopeRef.current.stage === "done";
+    if (sanWithYouRef.current && sceneFree) {
+      const list = out ? OUT : BACK;
+      resetRoute(list, out ? k : BACK.findIndex((p) => p.x === spot.x && p.z === spot.z));
+      holdSan(spot, 3.6, true);
+    }
+    resetDrones();
+    gaze.still = false;
+    sfx.restore();
+    if (sanWithYouRef.current && !cueRef.current.back) {
+      cueRef.current.back = true;
+      say(sanCue.back, 2600);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [say]);
+  // 설정창을 열면 망원경에서 눈을 뗀다 (장면은 다음 대화로 이어진다)
+  useEffect(() => {
+    if (paused && scopeBusy()) exitScopeRef.current();
+  }, [paused]);
 
   const onGameWin = useCallback(() => setPanel({ kind: "choice", confirm: 1 }), []);
   const onGameLose = useCallback(() => setPanel({ kind: "choice" }), []);
@@ -544,15 +1538,37 @@ export default function ExploreClient() {
       localStorage.removeItem(END_KEY);
       localStorage.removeItem(MET_KEY);
       localStorage.removeItem(TALK_KEY);
+      localStorage.removeItem(SCOPE_KEY);
+      localStorage.removeItem(FACE_KEY);
     } catch {}
     setVisited([]);
     setMet(false);
     setTalked(false);
+    setScopeData({ ...NO_SCOPE });
+    resetFace();
   };
   const clearScene = () => {
     clearTimeout(sceneTimer.current);
-    autoWalk.to = null;
+    stopWalk();
+    sanHold.at = null;
+    walkArea.rects = null;
+    gaze.gateOpen = false;
+    cueRef.current = { cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0, passed: false, lead: false };
+    cpRef.current = { seen: false, talked: false };
+    metRef.current = {};
+    clearTimeout(beatTimer.current);
+    setBeat("");
+    gaze.still = false;
+    drone.shapeSeen = false;
+    heardRef.current = false;
+    resetRoute();
+    resetScopeScene();
+    resetDrones();
+    clearTimeout(frameTimer.current);
+    gaze.lookAt = null;
     gaze.mood = "";
+    steppedRef.current = false;
+    setStepped(false);
     setSecondStatue(false);
     setFlash(false);
   };
@@ -568,15 +1584,11 @@ export default function ExploreClient() {
     goTo("bunker", false);
     lock();
   };
-  // 설정창의 '방문 기록 지우기': 수락한 시민에게는 줄 밖으로 돌아가는 유일한 길
-  // 설정창의 '방문 기록 지우기'는 농담일 뿐 진행을 지우지 않는다 (실수로 눌러 3/3이 사라지던 문제).
-  // 수락 결말 뒤에 줄에서 빠져나오는 용도로만 실제로 초기화한다
-  const onReset = () => {
-    if (accepted) {
-      resetProgress();
-      setPaused(false);
-      restart();
-    }
+  // 설정창의 '처음부터 다시' (확인 뒤): 수락한 시민에게만 보인다. 줄 밖으로 돌아가는 유일한 길이고, 숨은 길을 열지 않는다
+  // (꼬리말 삭제 표시 FORGOT_KEY를 만들지 않는다). 그 밖의 '기록 삭제 안내'는 안내만 한다
+  const onRestart = () => {
+    setPaused(false);
+    restart();
   };
   // 대자비 소개: 멈춤 → 카메라가 대자비 쪽으로 → 설명 팝업. 닫으면 게임이 이어진다
   const introTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -588,6 +1600,7 @@ export default function ExploreClient() {
     prevPanel.current = panel;
     if (!panel) return;
     if (panel.kind === "jabi") return sfx.gong();
+    if (panel.kind === "route") return sfx.chime();
     if (panel.kind === "dialog" && panel.locked && a?.kind !== "dialog") return sfx.denied();
     if (!a || a.kind !== panel.kind) return sfx.open();
     if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
@@ -614,6 +1627,8 @@ export default function ExploreClient() {
     gaze.intro = false;
     gaze.frozen = false;
     gaze.lookAt = null;
+    // 소개 팝업을 닫는 순간부터 대자비 곡
+    setJabiStage(true);
   }, []);
   // 팝업이 어떤 식으로 닫히든(Esc 포함) 소개 상태를 풀어 준다
   useEffect(() => {
@@ -624,12 +1639,14 @@ export default function ExploreClient() {
   // 백업이 없는 사람이 레이저에 맞으면: 처음부터 다시
   const onGone = useCallback(() => {
     try {
-      [KEY, MET_KEY, TALK_KEY].forEach((k) => localStorage.removeItem(k));
+      [KEY, MET_KEY, TALK_KEY, SCOPE_KEY, FACE_KEY].forEach((k) => localStorage.removeItem(k));
     } catch {}
     wipeBackup();
     setVisited([]);
     setMet(false);
     setTalked(false);
+    setScopeData({ ...NO_SCOPE });
+    resetFace();
     resetGaze();
     restoreCovers();
     goTo("bunker", false);
@@ -639,9 +1656,10 @@ export default function ExploreClient() {
   // 입장: 수락한 시민은 곧장 줄 속에서 깨어난다
   const enter = () => {
     setIntro(false);
-    // 접속 기록: 들어오기만 해도 남는다. 웹사이트 꼬리말의 'delete seoul'은 이 기록이 있는 기기에만 나타난다
+    // 접속 기록: 들어오기만 해도 남는다. 웹사이트 꼬리말의 'delete seoul'은 이 기록이 있는 기기에만 나타난다.
+    // 꼬리말에서 일부러 기록을 지우고 돌아온 사람에게는 새 접속 기록을 만들지 않는다 (재회 전까지 추적할 방문자가 없다)
     try {
-      localStorage.setItem(LOGIN_KEY, String(Date.now()));
+      if (localStorage.getItem(FORGOT_KEY) === null) localStorage.setItem(LOGIN_KEY, String(Date.now()));
     } catch {}
     if (accepted) {
       gaze.mood = "calm";
@@ -657,8 +1675,11 @@ export default function ExploreClient() {
 
   // 퀘스트 화살표의 목표: 매 프레임 플레이어 위치에 따라 고른다
   const questRef = useRef<() => QuestTarget>(() => null);
+  const neonReached = useRef(false);
   questRef.current = () => {
-    if (ending || accepted) return null;
+    if (ending) return null;
+    // 줄에서 다시 시작했다면: 검문소 앞의 굳은 이산에게
+    if (accepted) return zone === "city" ? { pos: ZONES.city.items.find((i) => i.id === "frozen-san")!.pos, label: t(replayUi.quest) } : null;
     const items = ZONES[zone].items;
     const find = (id: string) => items.find((i) => i.id === id);
     const px = player.pos.x;
@@ -667,6 +1688,10 @@ export default function ExploreClient() {
       if (!complete && !met && visited.length === 0) {
         const it = find("statue");
         return it ? { pos: it.pos, label: t(quest.statue) } : null;
+      }
+      if (restored && !complete) {
+        const it = items.find((i) => i.id === (face.asked ? "face-machine" : "statue"));
+        return it ? { pos: it.pos, label: t(face.asked ? faceUi.quest : faceUi.questAsk) } : null;
       }
       if (!complete) {
         const left = items.filter((i) => i.kind === "section" && !visited.includes(i.section!));
@@ -681,13 +1706,52 @@ export default function ExploreClient() {
       const ex = find("exit");
       return ex ? { pos: ex.pos, label: t(quest.exit) } : null;
     }
-    if (!complete || !talked) {
+    if (phase === "restore" || phase === "talk") {
       const h = find("hatch");
       return h ? { pos: h.pos, label: t(quest.back) } : null;
     }
-    // 골목(띠 A)에 있으면 먼저 남쪽 광장으로 나가는 길을 가리킨다
-    // 골목(띠 A)에서는 화살표를 감춘다: 바닥의 분필 화살표가 광장까지 길을 안내한다
+    // 골목(띠 A)에서는 화살표를 감춘다: 바닥의 분필 화살표가 광장(골목 입구, 정면에 남쪽 전망대)까지 길을 안내한다
     if (Math.abs(px) > 11.5 && pz < 14) return null;
+    // 망원경을 들여다보는 동안과 장면 도중에는 감춘다. 눈을 뗀 뒤의 대화를 닫고 돌아섰다면 이산을 가리킨다
+    if (scopeView) return null;
+    if (scopeRef.current.stage === "after") {
+      const san = find("san");
+      return san ? { pos: san.pos, label: t(quest.decide) } : null;
+    }
+    if (scopeRef.current.stage === "offer") {
+      const sc = find("scope-0");
+      return sc ? { pos: sc.pos, label: t(quest.scope) } : null;
+    }
+    if (scopeRef.current.stage !== "idle" && scopeRef.current.stage !== "done") return null;
+    // 길 위(광장·바깥 산책로)에서는 허공 너머 목표를 곧장 가리키지 않고 다음 경유점(드론 빛이 닿지 않는 자리)을 가리킨다
+    const along = (list: RoutePt[], label: L): QuestTarget => {
+      const nh = nextHold(list, nearestHold(list, px, pz).k);
+      return nh >= 0 ? { pos: list[nh], label: t(label) } : null;
+    };
+    // 망원경 가는 길: 먼저 바닥 네온이 시작되는 처마 밑을 가리키고, 거기서부터는 바깥 다리 입구를,
+    // 다리(판 가장자리 바깥의 산책로·남쪽 다리)에 들어선 순간부터는 망원경을 곧장 가리킨다
+    if (phase === "scope") {
+      const sc = find("scope-0");
+      if (!sc) return null;
+      const onBridge = px < -EDGE.x || pz > EDGE.z1;
+      if (onBridge || inBay(px, pz)) return { pos: sc.pos, label: t(quest.scope) };
+      const start = OUT[OUT_HOLD.depot];
+      if (Math.hypot(px - start.x, pz - start.z) < 3) neonReached.current = true;
+      const p = neonReached.current ? OUT[OUT_HOLD.depot + 2] : start;
+      return { pos: { x: p.x, z: p.z }, label: t(quest.scope) };
+    }
+    // 기억으로 깨어난 둘: 방문자가 앞장서 검문소로
+    if (ghost) {
+      const cp = find("checkpoint");
+      return cp ? { pos: cp.pos, label: t(quest.checkpoint) } : null;
+    }
+    // 승강장으로 갈지 아직 정하지 않았다: 어디서든 이산에게 (이산은 전망대에서 기다리거나 곁에 있다)
+    if (phase === "decide") {
+      const san = find("san");
+      return san ? { pos: san.pos, label: t(quest.decide) } : null;
+    }
+    // 정했다: 길 위(바깥 산책로)에서는 돌아오는 길의 다음 경유점, 도시 판 위에서는 검문소
+    if (offDeck(px, pz)) return along(BACK, quest.checkpoint);
     const cp = find("checkpoint");
     return cp ? { pos: cp.pos, label: t(quest.checkpoint) } : null;
   };
@@ -717,16 +1781,43 @@ export default function ExploreClient() {
   }
 
   const sectionMeta = panel?.kind === "section" ? sections.find((s) => s.id === panel.id)! : null;
+  // 이산이 걸을 정해진 길: 망원경 장면(접안렌즈로 → 비켜선 자리), 수락 결말(줄 밖), 空 결말(계단참 → 돌아섬).
+  // 그 밖에는 평소처럼 따라오거나 경유점에서 기다린다
+  const sanPath: SanPath | undefined =
+    ending?.kind === "accept"
+      ? ACCEPT_SAN
+      : ending?.kind === "ghost"
+        ? ending.step >= GHOST_WALK
+          ? stepped
+            ? GHOST_TURN
+            : GHOST_SAN
+          : undefined
+        : scopeStage === "ask" || scopeStage === "looking"
+          ? TO_EYE
+          : scopeStage === "offer" || scopeStage === "after"
+            ? TO_ASIDE
+            : undefined;
+  // 검문소가 가진 기록: 실제로 연 순서와 횟수, 망원경 이용 횟수 (있는 값만)
+  const evidence: string[] = [];
+  if (panel?.kind === "choice") {
+    // 실제로 연 순서 그대로. 한국어 화면에서는 소개·작업·글로 (영문 섹션 이름을 쓰지 않는다)
+    const order = visited.map((id) => (lang === "ko" ? checkpoint.sectionKo[id] : sections.find((x) => x.id === id)?.label) ?? id).join(" → ");
+    evidence.push(t(checkpoint.evOrder).replace("{order}", order).replace("{n}", String(visited.length)));
+    if (scopeData.uses > 0) evidence.push(t(checkpoint.evScope).replace("{n}", String(scopeData.uses)));
+    else if (scopeData.seen) evidence.push(t(checkpoint.evScopeDone));
+  }
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  const verb = near ? (near.id.startsWith("scope") || near.kind === "painting" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : ui.open) : null;
+  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || scopeStage === "idle" || scopeStage === "done") ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" || near.npc === "frozen" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
+  quietRef.current = !!panel || !!scopeView || !!sanSay || !!toast || !!beat || paused;
   const rootClass = [
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
     ending?.kind === "reject" && ending.step >= 3 ? "thaw" : "",
     ending?.kind === "ghost" && ending.step === 1 ? "ghost-freeze" : "",
     flash ? "final-flash" : "",
-    tracked && !ending ? "is-tracked" : "",
+    tracked && !ending && !ghost ? "is-tracked" : "",
     leaving ? "logging-out" : "",
+    beat === "sit" ? "reunion-sit" : "",
   ].join(" ");
 
   return (
@@ -741,10 +1832,13 @@ export default function ExploreClient() {
             onNear={setNear}
             onTracked={setTracked}
             labelEls={labelEls}
-            sanMode={ending?.kind === "accept" ? "stay" : ending?.kind === "ghost" && ending.step >= 2 ? "beside" : undefined}
+            sanPath={sanPath}
             hideSan={accepted}
+            frozenSan={accepted && zone === "city" && !ending}
+            sanStart={replay ? [FROZEN_SAN.x, FROZEN_SAN.z] : undefined}
             secondStatue={secondStatue}
-            awake={ghost}
+            awake={complete}
+            face={{ drums: face.drums, phase: facePhase, method: face.method }}
             arrived={arrived}
           />
         </div>
@@ -767,7 +1861,7 @@ export default function ExploreClient() {
       {leaving && (
         <div className="logout-crt" aria-live="polite">
           <span className="logout-line" />
-          <span className="logout-text">{lang === "ko" ? "세션 종료 · 웹사이트로 돌아갑니다" : "SESSION CLOSED · BACK TO THE WEBSITE"}</span>
+          <span className="logout-text">{lang === "ko" ? "웹사이트로 돌아갑니다." : "Back to the website."}</span>
         </div>
       )}
       <div className="hud">
@@ -785,20 +1879,19 @@ export default function ExploreClient() {
       </div>
       <div className="hud-zone">
         {t(zone === "bunker" ? ui.zoneBunker : ui.zoneCity)}
-        {tracked && !ending && <span className="tracked">{t(ui.tracked)}</span>}
+        {tracked && !ending && <span className="tracked">{t(ghost ? ui.unresolved : ui.tracked)}</span>}
       </div>
 
       {toast && <div className="toast">{toast}</div>}
       {!intro && !ending && !accepted && <SaveToast />}
-      {notice && !panel && <div className="notice">{t(notice)}</div>}
-      {unlock === "show" && !panel && (
-        <div className="unlock-toast" role="status" onClick={() => setUnlock(null)}>
-          <b>{t(ui.unlockTitle)}</b>
-          <span>{t(ui.unlockBody)}</span>
+      {notice && !panel && !sanSay && !scopeView && !beat && <div className="notice">{t(notice)}</div>}
+      {sanSay && !panel && !ending && (
+        <div className="notice san-say" role="status">
+          <b>{t(sanSay.who)}</b> {t(sanSay.line)}
         </div>
       )}
 
-      {active && near && verb && !touch && (
+      {active && !ending && !scopeView && near && verb && !touch && (
         <button type="button" className="prompt" onClick={() => interact(near)} style={{ borderColor: near.color, color: near.color }}>
           {!touch && <kbd>{locked ? "E / Click" : "E"}</kbd>}
           <span>
@@ -807,16 +1900,23 @@ export default function ExploreClient() {
         </button>
       )}
 
-      {active && !near && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
-      {active && locked && <div className="crosshair" aria-hidden />}
-      {active && <QuestArrow get={getQuest} />}
+      {active && walkable && <div className="hint">{t(ui.stepHint)}</div>}
+      {active && !walkable && near?.id === "face-machine" && !scopeView && <div className="hint">{t(touch ? faceUi.hintTouch : faceUi.hintPc)}</div>}
+      {/* 휴대폰: 장치 앞에서는 화면 가운데에 조준점을 띄운다 (조준점이 가리키는 원통이 빛나고, 행동 버튼이 그 원통을 돌린다) */}
+      {active && touch && near?.kind === "face" && !scopeView && <div className="crosshair crosshair-face" aria-hidden />}
+      {active && !walkable && !near && !scopeView && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
+      {active && locked && !scopeView && <div className="crosshair" aria-hidden />}
+      {active && !scopeView && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
       {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
-      {active && touch && <Joystick />}
-      {active && touch && (
+      {zone === "city" && !ending && !accepted && <DroneHUD onCaught={onDroneCaught} />}
+      {/* 남쪽 망원경: 둥근 시야와 그 앞을 흐르는 구름. 방문자에게 보이는 것은 구름뿐이다 (빛은 어디에도 그리지 않는다) */}
+      {scopeView === "view" && <ScopeView sees={t(ui.scopeSees)} exitLabel={t(ui.scopeExit)} hint={t(touch ? ui.scopeHintTouch : ui.scopeHintPc)} onExit={exitScopeView} yaw0={SCOPE_CLAMP.yaw} pitch0={SCOPE_PITCH} />}
+      {active && touch && !scopeView && <Joystick />}
+      {active && touch && !scopeView && (
         <JumpButton
           action={
-            near && verb
+            near && verb && !ending
               ? {
                   label: `${t(near.id === "statue" && complete ? { ko: "이산", en: "San" } : near.label)} · ${t(verb)}`,
                   color: near.color,
@@ -829,7 +1929,7 @@ export default function ExploreClient() {
       {paused && (
         <PauseMenu
           onResume={resume}
-          onReset={onReset}
+          onRestart={accepted ? onRestart : undefined}
           onBunker={zone === "city" && !ending && !accepted ? backToBunker : undefined}
           since={since}
           inBunker={zone === "bunker"}
@@ -844,6 +1944,7 @@ export default function ExploreClient() {
               <h2>{sectionMeta.label.toUpperCase()}</h2>
               <small>{sectionMeta.labelKo}</small>
             </div>
+            <p className="record-source">{t(ui.recordSource)}</p>
             <SectionBody id={panel.id} inExplore />
             <div className="panel-actions">
               <button className="btn" onClick={closePanel}>
@@ -860,6 +1961,7 @@ export default function ExploreClient() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={painting.image} alt={t(painting.title)} width={painting.width} height={painting.height} />
             <p className="caption">
+              {lang === "ko" ? "이산, " : "San Lee, "}
               <strong>{lang === "ko" ? `〈${painting.title.ko}〉` : <em>{painting.title.en}</em>}</strong>, {painting.date.slice(0, 4)}
               <br />
               {t(painting.medium)}, {t(painting.size)}
@@ -873,8 +1975,8 @@ export default function ExploreClient() {
         </div>
       )}
 
-      {panel?.kind === "dialog" && (
-        <div className="panel-wrap">
+      {panel?.kind === "dialog" && !hush && (
+        <div className="panel-wrap dialog-wrap">
           <div className="panel pink dialog">
             {panel.plaque ? (
               <div className="plaque">
@@ -882,37 +1984,28 @@ export default function ExploreClient() {
                   <div key={i}>{t(p)}</div>
                 ))}
               </div>
-            ) : (
-              <div className="speaker">{t(panel.name)}</div>
-            )}
-            <p className="line">“{t(panel.lines[Math.min(panel.step, panel.lines.length - 1)])}”</p>
-            {panel.whisper && panel.step === panel.lines.length - 1 && (
-              <form
-                className="whisper"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const v = (new FormData(e.currentTarget).get("w") as string) || "";
-                  const norm = v.toLowerCase().replace(/[^0-9a-z가-힣]/g, "");
-                  if (!whisper.accept.includes(norm)) {
-                    setWhisperMiss(true);
-                    return;
-                  }
-                  // 기억으로 깨어난다: 방금 남은 '만남' 기록마저 지운다
-                  try {
-                    localStorage.removeItem(MET_KEY);
-                  } catch {}
-                  sfx.restore();
-                  setGhost(true);
-                  setTalked(true);
-                  setPanel({ kind: "dialog", name: { ko: "이산", en: "San" }, lines: whisper.wake, step: 0 });
-                }}
-              >
-                <input name="w" autoComplete="off" placeholder={t(whisper.prompt)} onChange={() => setWhisperMiss(false)} onKeyDown={(e) => e.stopPropagation()} />
-                <button className="btn" type="submit">
-                  {t(whisper.say)}
-                </button>
-                {whisperMiss && <small>{t(whisper.silent)}</small>}
-              </form>
+            ) : null}
+            {(() => {
+              const line = panel.lines[Math.min(panel.step, panel.lines.length - 1)];
+              // 지문(따옴표 없음, 말하는 이 없음) / 그 밖에는 대화창의 이름으로 한 번. 방문자는 말하지 않는다
+              if (line.who === "narr") return <p className="line narr">{t(line)}</p>;
+              return (
+                <>
+                  {!panel.plaque && <div className="speaker">{t(panel.name)}</div>}
+                  <p className="line">“{t(line)}”</p>
+                </>
+              );
+            })()}
+            {panel.choices?.some((c) => c.at === panel.step) && (
+              <div className="dialog-choices">
+                {panel.choices
+                  .filter((c) => c.at === panel.step)
+                  .map((c, i) => (
+                    <button key={i} type="button" className="btn dialog-choice" onClick={c.go}>
+                      {t(c.label)}
+                    </button>
+                  ))}
+              </div>
             )}
             <div className="panel-actions">
               <button className="btn" onClick={closePanel}>
@@ -923,7 +2016,7 @@ export default function ExploreClient() {
                   {t(panel.link.label)}
                 </a>
               )}
-              {panel.step < panel.lines.length - 1 && (
+              {panel.step < panel.lines.length - 1 && !hush && (
                 <button className="btn primary" autoFocus onClick={() => setPanel({ ...panel, step: panel.step + 1 })}>
                   {t(ui.next)}
                 </button>
@@ -935,9 +2028,8 @@ export default function ExploreClient() {
 
       {panel?.kind === "jabi" && (
         <div className="choice-wrap jabi-wrap">
-          <div className="choice jabi-intro" role="dialog" aria-modal="true">
-            <span className="choice-sys">{t(jabiUi.name)}</span>
-            <h2>{t(jabiUi.introTitle)}</h2>
+          <div className="jabi-intro" role="dialog" aria-modal="true" aria-labelledby="jabi-intro-title">
+            <h2 id="jabi-intro-title">{t(jabiUi.introTitle)}</h2>
             <p>{t(jabiUi.introBody)}</p>
             <div className="jabi-shots">
               {jabiUi.introShots.map((sh) => (
@@ -948,11 +2040,11 @@ export default function ExploreClient() {
                 </figure>
               ))}
             </div>
-            <ul className="jabi-rules">
+            <ol className="jabi-rules">
               {jabiUi.introRules.map((r, i) => (
                 <li key={i}>{t(r)}</li>
               ))}
-            </ul>
+            </ol>
             <div className="panel-actions">
               <button className="btn primary" autoFocus onClick={closePanel}>
                 {t(jabiUi.introOk)}
@@ -962,11 +2054,34 @@ export default function ExploreClient() {
         </div>
       )}
 
+      {/* 골목을 나설 때: 망원경 가는 길 안내 (실제 플레이 화면 두 장) */}
+      {panel?.kind === "route" && (
+        <div className="choice-wrap jabi-wrap">
+          <div className="jabi-intro route-intro" role="dialog" aria-modal="true" aria-labelledby="route-intro-title">
+            <h2 id="route-intro-title">{t(routeUi.title)}</h2>
+            <p>{t(routeUi.body)}</p>
+            <div className="jabi-shots">
+              {routeUi.shots.map((sh) => (
+                <figure key={sh.src}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={sh.src} alt={t(sh.cap)} width={480} height={360} />
+                  <figcaption>{t(sh.cap)}</figcaption>
+                </figure>
+              ))}
+            </div>
+            <div className="panel-actions">
+              <button className="btn primary" autoFocus onClick={closePanel}>
+                {t(routeUi.ok)}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 검문소: 첫 화면은 제목·한 줄·두 결과·두 버튼. 실제 기록은 접어 둔 상세에. 물러나기와 삭제 안내는 어느 화면에서든 보인다 */}
       {panel?.kind === "choice" && (
         <div className="choice-wrap">
-          <div className="choice" role="dialog" aria-modal="true">
-            <span className="choice-sys">SYS://SEOUL/CHECKPOINT · GATE-01</span>
-            <span className="choice-alert">{lang === "ko" ? "▲ 응답 필요 · 미응답 시 통과 불가" : "▲ RESPONSE REQUIRED · NO PASSAGE UNTIL ANSWERED"}</span>
+          <div className="choice cp" role="dialog" aria-modal="true">
             {panel.game ? (
               <CookieGame t={t} onWin={onGameWin} onLose={onGameLose} />
             ) : panel.confirm !== undefined ? (
@@ -992,17 +2107,23 @@ export default function ExploreClient() {
               </>
             ) : (
               <>
-            <h2>{t(checkpoint.title)}</h2>
-            <p>{t(checkpoint.body)}</p>
-            {!panel.settings ? (
-              <>
-                <p className="choice-san">
-                  <span>{lang === "ko" ? "이산" : "San"}</span>“{t(checkpoint.sanWarn)}”
-                </p>
+                <h2>{t(checkpoint.title)}</h2>
+                <p>{t(checkpoint.body)}</p>
+                <div className="cp-outcomes">
+                  <div>
+                    <b>{t(checkpoint.ifAccept)}</b>
+                    {checkpoint.acceptWhat.map((l, i) => (
+                      <span key={i}>{t(l)}</span>
+                    ))}
+                  </div>
+                  <div>
+                    <b>{t(checkpoint.ifReject)}</b>
+                    <span>{t(checkpoint.rejectWhat)}</span>
+                  </div>
+                </div>
                 <div className="choice-actions">
                   <button className="choice-accept" onClick={() => choose("accept")}>
-                    {t(ui.accept)}
-                    <small>{t(checkpoint.acceptSub)}</small>
+                    {t(checkpoint.acceptBtn)}
                   </button>
                   <button
                     className="choice-reject"
@@ -1011,49 +2132,40 @@ export default function ExploreClient() {
                       setPanel({ kind: "choice", confirm: 0 });
                     }}
                   >
-                    {t(ui.reject)}
-                    <small>{t(checkpoint.rejectSub)}</small>
+                    {t(checkpoint.rejectBtn)}
                   </button>
                 </div>
-                <p className="choice-notice">{t(checkpoint.rejectNotice)}</p>
-                {/* 현실의 쿠키 창처럼 세 번째 선택지는 작고 흐리게. 숨은 결말로 가는 길 */}
-                <button className="choice-settings" onClick={() => setPanel({ kind: "choice", settings: true })}>
-                  {t(checkpoint.settings)}
-                </button>
-              </>
-            ) : (
-              <div className="cookie-prefs">
-                <ul>
-                  {checkpoint.prefs.map((x, i) => (
-                    <li key={i}>
-                      <span>{t(x)}</span>
-                      <b>{t(checkpoint.prefOn)}</b>
-                    </li>
-                  ))}
-                </ul>
-                <p className="cookie-prefs-note">{t(checkpoint.prefsNote)}</p>
-                <div className="cookie-prefs-actions">
-                  <button className="btn" onClick={() => setPanel({ kind: "choice" })}>
-                    {t(checkpoint.prefsBack)}
-                  </button>
-                  <span className="cookie-clear">{t(checkpoint.clearOutside)}</span>
-                </div>
-              </div>
-            )}
+                <details className="cp-details">
+                  <summary>{t(checkpoint.evidenceTitle)}</summary>
+                  <ul>
+                    {evidence.map((l, i) => (
+                      <li key={`e${i}`}>{l}</li>
+                    ))}
+                    {checkpoint.status.map((l, i) => (
+                      <li key={`s${i}`}>{t(l)}</li>
+                    ))}
+                  </ul>
+                </details>
               </>
             )}
+            {/* 어느 단계에서든 결정하지 않고 물러날 수 있다 (Esc와 같다). 쿠키 끄기 화면이 닫히면 그 타이머도 멈춘다 */}
+            <button type="button" className="choice-withdraw" onClick={withdraw}>
+              {t(checkpoint.withdraw)}
+            </button>
+            <p className="cp-delete-note">{t(checkpoint.deleteNote)}</p>
           </div>
         </div>
       )}
 
       {ending && (
-        <div className={`ending ending-${ending.kind}`}>
+        <div className={`ending ending-${ending.kind}${walkable ? " walking" : ""}`}>
           <div className="ending-inner">
             {(checkpoint[ending.kind] as Beat[]).slice(0, ending.step + 1).map((l, i, arr) => {
               // 거부 결말이 방공호로 넘어가면 앞 장면의 글은 거둔다
               if (ending.kind === "reject" && ending.step >= 3 && i < 3) return null;
-              // 숨은 결말은 대자비의 얼굴을 가리지 않도록 마지막 두 줄만 아래에
+              // 空 결말은 앞을 가리지 않도록 마지막 두 줄만 아래에. 수락 결말은 최근 세 줄만 (숫자는 감정 장면 전에 지나간다)
               if (ending.kind === "ghost" && i < ending.step - 1) return null;
+              if (ending.kind === "accept" && i < ending.step - 2) return null;
               const last = i === (checkpoint[ending.kind] as Beat[]).length - 1;
               const cls = [last ? "final" : "", l.say ? "say" : "", l.plaque ? "plaque-line" : "", i < arr.length - 1 && !last ? "past" : ""].join(" ");
               if (l.slots)
@@ -1077,14 +2189,16 @@ export default function ExploreClient() {
                 </p>
               );
             })}
-            {ending.step >= (checkpoint[ending.kind] as Beat[]).length - 1 && (
+            {ending.step >= (checkpoint[ending.kind] as Beat[]).length && (
               <div className="ending-actions">
                 <small>{t(ending.kind === "accept" ? checkpoint.endingAccept : ending.kind === "reject" ? checkpoint.endingReject : checkpoint.endingGhost)}</small>
-                <small className="ending-found">
-                  {ending.kind !== "accept" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}
-                </small>
+                {ending.kind !== "ghost" && (
+                  <small className="ending-found">
+                    {ending.kind === "reject" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}
+                  </small>
+                )}
                 <small className="ending-credit">
-                  ♪ 空 · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
+                  ♪ {ending.kind === "accept" ? "Habitual Suffering" : ending.kind === "reject" ? "an open ended promise" : "空"} · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
                 </small>
                 <div>
                   {ending.kind === "accept" ? (

@@ -6,7 +6,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { NEO_POST_GLSL, useNeoPost } from "./neoPost";
 import { useFrame } from "@react-three/fiber";
-import { BUDDHAS, EDGE, ISLANDS, OVERSEER_ISLAND } from "./zones";
+import { BAY, BUDDHAS, EDGE, ISLANDS, LOOK, OVERSEER_ISLAND, WALK } from "./zones";
 import { roofGeometry } from "./models";
 
 const tmpM = new THREE.Matrix4();
@@ -137,15 +137,27 @@ export function Platform() {
   const W = EDGE.x * 2 + 2;
   const D = EDGE.z1 - EDGE.z0 + 2;
   const cz = (EDGE.z1 + EDGE.z0) / 2;
-  // 난간 구간: 북쪽은 성문 자리(|x|<13)를 비운다
+  // 난간 구간: 북쪽은 성문 자리(|x|<13)를 비운다. 서쪽은 바깥 산책로로 나가는 틈(WALK.gate0~gate1)을 비운다.
+  // 바깥 산책로와 남쪽 전망대에도 바깥쪽·안쪽(허공 쪽) 난간을 두른다. 선은 zones의 충돌 상자 가장자리와 같다
   const segs = useMemo(() => {
     const x = EDGE.x;
     return [
       { a: [-x, EDGE.z1], b: [x, EDGE.z1] },
       { a: [-x, EDGE.z0], b: [-13, EDGE.z0] },
       { a: [13, EDGE.z0], b: [x, EDGE.z0] },
-      { a: [-x, EDGE.z0], b: [-x, EDGE.z1] },
+      { a: [-x, EDGE.z0], b: [-x, WALK.gate0] },
+      { a: [-x, WALK.gate1], b: [-x, EDGE.z1] },
       { a: [x, EDGE.z0], b: [x, EDGE.z1] },
+      // 바깥 산책로: 바깥(서쪽) 난간, 북쪽 끝, 판과 떨어진 구간의 안쪽 난간
+      { a: [WALK.x0, WALK.z0], b: [WALK.x0, LOOK.z1] },
+      { a: [WALK.x0, WALK.z0], b: [-x, WALK.z0] },
+      { a: [WALK.x1, EDGE.z1 + 1], b: [WALK.x1, LOOK.z0] },
+      // 남쪽 다리와 전망대
+      { a: [WALK.x0, LOOK.z1], b: [LOOK.x1, LOOK.z1] },
+      { a: [WALK.x1, LOOK.z0], b: [BAY.x0, LOOK.z0] },
+      { a: [BAY.x0, LOOK.z0], b: [BAY.x0, BAY.z0] },
+      { a: [BAY.x0, BAY.z0], b: [BAY.x1, BAY.z0] },
+      { a: [BAY.x1, BAY.z0], b: [BAY.x1, BAY.z1] },
     ] as { a: [number, number]; b: [number, number] }[];
   }, []);
   const posts = useMemo(() => {
@@ -172,6 +184,60 @@ export function Platform() {
         <boxGeometry args={[W, 6, D]} />
         <meshStandardMaterial color="#121216" roughness={0.6} metalness={0.7} />
       </mesh>
+      {/* 서쪽 바깥 산책로와 남쪽 다리·전망대: 판 옆에 매달린 얇은 바닥과 그 아래 받침대 (판과 같은 재질) */}
+      {(
+        [
+          [WALK.x0, WALK.x1, WALK.z0, LOOK.z0],
+          [LOOK.x0, BAY.x0, LOOK.z0, LOOK.z1],
+          [BAY.x0, BAY.x1, BAY.z0, BAY.z1],
+        ] as [number, number, number, number][]
+      ).map(([x0, x1, z0, z1], i) => (
+        <mesh key={`deck${i}`} position={[(x0 + x1) / 2, -0.2, (z0 + z1) / 2]}>
+          <boxGeometry args={[x1 - x0, 0.36, z1 - z0]} />
+          {/* 바깥 산책로·다리·전망대 바닥만 조금 밝게 (#1b1c21 → #2a2c34). 도시 전체 노출은 그대로 */}
+          <meshStandardMaterial color="#2a2c34" roughness={0.75} metalness={0.4} />
+        </mesh>
+      ))}
+      {/* 길 조명: 따뜻한 낮은 빛. 그림자 없음 (드론의 흰·주황 빛, 대자비의 붉은 빛과 구별된다). 후처리 없이도 길이 보이게
+          산책로 입구 틈 → 산책로 가운데 → 모퉁이(아이) → 다리 둘 → 망원경. 할머니 포장마차와 배송 대기소는 원래 조명이 있다 */}
+      {(
+        [
+          [-66.4, 1.3, 30.4, 5, 8],
+          [-66.8, 1.3, 40.6, 4, 8],
+          [-67, 1.6, 48.2, 6, 8],
+          [-55, 1.3, 48.6, 4, 8],
+          [-43, 1.3, 48.6, 4, 8],
+          [-30.4, 1.9, 48.9, 8, 7],
+        ] as [number, number, number, number, number][]
+      ).map(([x, y, z, intensity, distance], i) => (
+        <pointLight key={`route${i}`} position={[x, y, z]} intensity={intensity} distance={distance} decay={2} color="#ffb877" />
+      ))}
+      {/* 바닥 가장자리의 낮은 띠 (길의 꺾임을 미리 읽게): 산책로 안쪽, 다리 북쪽, 전망대 둘레 */}
+      {(
+        [
+          [WALK.x1 - 0.12, WALK.z0, WALK.x1 - 0.12, LOOK.z0],
+          [WALK.x1, LOOK.z0 + 0.12, BAY.x0, LOOK.z0 + 0.12],
+          [BAY.x0 + 0.12, BAY.z0, BAY.x0 + 0.12, LOOK.z0],
+          [BAY.x0, BAY.z0 + 0.12, BAY.x1, BAY.z0 + 0.12],
+        ] as [number, number, number, number][]
+      ).map(([x0, z0, x1, z1], i) => (
+        <mesh key={`edge${i}`} position={[(x0 + x1) / 2, 0.0, (z0 + z1) / 2]}>
+          <boxGeometry args={[Math.max(0.06, Math.abs(x1 - x0)), 0.04, Math.max(0.06, Math.abs(z1 - z0))]} />
+          <meshBasicMaterial color="#c9874a" toneMapped={false} />
+        </mesh>
+      ))}
+      {[WALK.z0 + 2, 36, 44, LOOK.z1 - 1].map((z) => (
+        <mesh key={`wz${z}`} position={[WALK.x0 + 1.4, -2.0, z]} rotation={[0, 0, -0.5]}>
+          <boxGeometry args={[0.25, 4.2, 0.25]} />
+          <meshStandardMaterial color="#121216" roughness={0.6} metalness={0.7} />
+        </mesh>
+      ))}
+      {[-58, -48, -38, -30].map((x) => (
+        <mesh key={`lx${x}`} position={[x, -2.6, LOOK.z0 + 1]} rotation={[0.42, 0, 0]}>
+          <boxGeometry args={[0.25, 0.25, 12]} />
+          <meshStandardMaterial color="#121216" roughness={0.6} metalness={0.7} />
+        </mesh>
+      ))}
       {/* 판 옆면의 띠 조명 */}
       {[
         [0, EDGE.z1 + 1, W, 0.2],
@@ -242,6 +308,8 @@ export function Islands() {
 }
 
 /* ---------- 검문소 너머 관리 탑의 섬으로 이어지는 다리 ---------- */
+// 다리 오른쪽 난간이 끊긴 자리: 하층행 승강장 계단 입구 (City.tsx의 DescentRoute와 같은 z)
+const GAP: [number, number] = [-151, -155];
 export function Bridge() {
   const z0 = EDGE.z0 - 1;
   const z1 = OVERSEER_ISLAND.z + OVERSEER_ISLAND.r - 2;
@@ -257,14 +325,22 @@ export function Bridge() {
         <boxGeometry args={[9, 1.2, len]} />
         <meshStandardMaterial color="#1c1a1e" roughness={0.6} metalness={0.6} />
       </mesh>
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * 4.4, 0.5, (z0 + z1) / 2]}>
-          <boxGeometry args={[0.15, 1, len]} />
+      {/* 난간. 오른쪽은 하층행 승강장(z -151 ~ -155) 자리만 비운다 */}
+      {(
+        [
+          [-1, z0, z1],
+          [1, z0, GAP[0]],
+          [1, GAP[1], z1],
+        ] as [number, number, number][]
+      ).map(([s, a, b]) => (
+        <mesh key={`${s}${a}`} position={[s * 4.4, 0.5, (a + b) / 2]}>
+          <boxGeometry args={[0.15, 1, a - b]} />
           <meshStandardMaterial color="#5a1418" roughness={0.6} />
         </mesh>
       ))}
       {lamps.flatMap((z) =>
-        [-1, 1].map((s) => (
+        // 승강장 입구 기둥과 겹치지 않도록, 오른쪽 난간 틈 근처의 가로등은 세우지 않는다
+        (z < GAP[0] + 1 && z > GAP[1] - 1 ? [-1] : [-1, 1]).map((s) => (
           <group key={`${z}${s}`} position={[s * 4.4, 0, z]}>
             <mesh position={[0, 1.6, 0]}>
               <boxGeometry args={[0.35, 3.2, 0.35]} />
