@@ -84,9 +84,12 @@ const beam = {
 const scorch: { x: number; z: number; born: number }[] = [];
 let lockT = 0;
 const aimAt = new THREE.Vector3();
-// 레이저가 긁고 지나갈 길 (눈이 붉어질 때 정해진다). 발사 0.3초 전부터 바닥에 가늘게 미리 보인다
+const aimTip = new THREE.Vector3();
+// 발사 직전의 조준선: 눈에서 플레이어까지 얇은 붉은 실선이 TRACK초 동안 플레이어를 따라오다가,
+// 마지막 HOLD초 동안 그 자리에 고정된 뒤 발사된다. 고정된 동안 레이저가 긁고 갈 길이 바닥에도 비친다
 const path = { start: new THREE.Vector3(), end: new THREE.Vector3() };
-const PREVIEW = 0.3;
+const TRACK = 0.2;
+const HOLD = 0.35;
 function planPath(ax: number, az: number) {
   const dx = JABI.eye.x - ax;
   const dz = JABI.eye.z - az;
@@ -126,8 +129,11 @@ function GazeSystem() {
       runBeam(dt, now);
     } else if (gaze.state === "lock") {
       lockT -= dt;
-      // 길이 바닥에 비친 처음 절반(0.15초) 동안은 가는 선이 플레이어를 따라온다. 마지막 0.15초에 고정된다
-      if (lockT < PREVIEW && lockT > PREVIEW / 2) planPath(player.pos.x, player.pos.z);
+      // 고정되기 전까지는 조준점이 플레이어를 따라간다
+      if (lockT > HOLD) {
+        aimAt.set(player.pos.x, 0, player.pos.z);
+        planPath(aimAt.x, aimAt.z);
+      }
       gaze.shake = 0.1 + (0.9 - lockT) * 0.12;
       if (lockT <= 0) startBeam(aimAt);
     } else if (gaze.state === "cool") {
@@ -150,7 +156,7 @@ function GazeSystem() {
       gaze.state = m >= 100 ? "lock" : m >= 70 ? "charge" : m >= 35 ? "suspect" : m > 2 ? "watch" : "idle";
       if (gaze.state === "lock") {
         lockT = 0.9;
-        // 눈이 붉어지는 순간의 자리를 겨눈다. 그래서 붉어지면 바로 옆으로 뛰어 피할 수 있다
+        // 눈이 붉어진 뒤 조준선이 플레이어를 따라오다 고정된다. 고정되면 바로 옆으로 뛰어 피할 수 있다
         aimAt.set(player.pos.x, 0, player.pos.z);
         planPath(aimAt.x, aimAt.z);
       }
@@ -169,8 +175,8 @@ function startBeam(at?: THREE.Vector3) {
   gaze.state = "fire";
   beam.on = true;
   beam.t = 0;
-  // 레이저는 눈이 붉어진 순간 플레이어가 서 있던 자리 앞(눈 쪽으로 9m) 바닥에 떨어져, 그 자리를 지나 4m 더 긁고 간다.
-  // 플레이어를 따라오지 않으므로, 붉은 조준 신호를 보고 옆으로 뛰면 피할 수 있다
+  // 레이저는 조준선이 고정된 자리 앞(눈 쪽으로 9m) 바닥에 떨어져, 그 자리를 지나 4m 더 긁고 간다.
+  // 발사 뒤에는 플레이어를 따라오지 않으므로, 조준선이 고정되는 걸 보고 옆으로 뛰면 피할 수 있다
   if (!at) planPath(player.pos.x, player.pos.z);
   beam.p.copy(path.start);
   beam.target.copy(path.end);
@@ -266,25 +272,27 @@ function Beam() {
       place(glow.current, JABI.eye, beam.end, 1.6 + Math.sin(now * 50) * 0.3);
       hit.current!.position.copy(beam.end);
     }
-    // 발사 직전: 가는 조준선이 깜빡인다
+    // 발사 직전: 얇은 조준 실선. 따라오는 동안은 은은하게, 고정되면 밝게 깜빡인다
     if (aim.current) {
-      const show = gaze.state === "lock";
+      const show = gaze.state === "lock" && lockT <= TRACK + HOLD;
       aim.current.visible = show;
       if (show) {
-        place(aim.current, JABI.eye, path.start, 0.08);
-        (aim.current.material as THREE.MeshBasicMaterial).opacity = Math.sin(now * 30) > 0 ? 0.9 : 0.2;
+        aimTip.set(aimAt.x, 1.0, aimAt.z);
+        const held = lockT <= HOLD;
+        place(aim.current, JABI.eye, aimTip, held ? 0.06 : 0.035);
+        (aim.current.material as THREE.MeshBasicMaterial).opacity = held ? (Math.sin(now * 45) > 0 ? 1 : 0.45) : 0.55;
       }
     }
-    // 발사 0.3초 전: 레이저가 긁고 갈 길이 바닥에 가늘게 비친다
+    // 조준선이 고정된 동안: 레이저가 긁고 갈 길이 바닥에 가늘게 비친다
     if (lane.current) {
-      const show = gaze.state === "lock" && lockT < PREVIEW;
+      const show = gaze.state === "lock" && lockT <= HOLD;
       lane.current.visible = show;
       if (show) {
         const len = path.start.distanceTo(path.end);
         lane.current.position.copy(path.start).lerp(path.end, 0.5).setY(0.04);
         lane.current.rotation.set(-Math.PI / 2, 0, Math.atan2(path.end.x - path.start.x, path.end.z - path.start.z));
         lane.current.scale.set(0.14, len, 1);
-        const k = 1 - Math.max(0, lockT) / PREVIEW;
+        const k = 1 - Math.max(0, lockT) / HOLD;
         (lane.current.material as THREE.MeshBasicMaterial).opacity = (0.35 + 0.5 * k) * (Math.sin(now * 40) > -0.3 ? 1 : 0.5);
       }
     }
