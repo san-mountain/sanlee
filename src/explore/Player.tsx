@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
-import { autoWalk, gaze, walkArea } from "./gaze";
+import { autoWalk, gaze, walkArea, walkBlock } from "./gaze";
 import type { Interactable, ZoneDef } from "./zones";
 
 const EYE = 1.65;
@@ -75,7 +75,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     // 시점. 소개 장면 중에는 입력을 버리고 대상 쪽으로 천천히 고개를 돌린다
     const la = gaze.lookAt;
     if (!la) lookDone.current = false;
-    const zt = gaze.intro ? 0.62 : 1;
+    const zt = gaze.intro ? 0.62 : gaze.zoom;
     if (Math.abs(zt - zoom.current) > 0.001) {
       zoom.current += (zt - zoom.current) * Math.min(1, dt * (gaze.intro ? 1.1 : 2));
       camera.fov = baseFov.current * zoom.current;
@@ -97,14 +97,23 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       }
     } else if (!gaze.intro) {
       // 소개 팝업이 떠 있는 동안에는 마우스가 움직여도 시선이 대자비에 머문다
-      s.yaw += input.look.yaw + turnKeys() * dt * 1.8;
-      s.pitch = Math.max(-1.1, Math.min(1.25, s.pitch + input.look.pitch));
+      // 망원경으로 볼 때는 배율만큼 천천히 돌고, 정해진 범위 안에서만 둘러본다
+      const z = gaze.zoom;
+      s.yaw += (input.look.yaw + turnKeys() * dt * 1.8) * z;
+      s.pitch = Math.max(-1.1, Math.min(1.25, s.pitch + input.look.pitch * z));
+      const c = gaze.clamp;
+      if (c) {
+        let d = s.yaw - c.yaw;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        s.yaw = c.yaw + Math.max(-c.dy, Math.min(c.dy, d));
+        s.pitch = Math.max(c.p0, Math.min(c.p1, s.pitch));
+      }
     }
     input.look.yaw = 0;
     input.look.pitch = 0;
 
     // 이동
-    const mv = input.enabled && !gaze.frozen ? moveVector() : { x: 0, y: 0, run: false };
+    const mv = input.enabled && !gaze.frozen && !gaze.still ? moveVector() : { x: 0, y: 0, run: false };
     const speed = mv.run ? RUN : WALK;
     const sin = Math.sin(s.yaw);
     const cos = Math.cos(s.yaw);
@@ -128,7 +137,10 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       p.x = ad > 1e-4 ? s.x + (ax / ad) * st : s.x;
       p.z = ad > 1e-4 ? s.z + (az / ad) * st : s.z;
     } else if (walkArea.box) resolve(p, RADIUS, walkArea.box, [], []);
-    else resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
+    else {
+      resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
+      if (walkBlock.boxes.length && zoneKey === "city") resolve(p, RADIUS, zone.bounds, walkBlock.boxes, []);
+    }
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
     s.x = p.x;
     s.z = p.z;

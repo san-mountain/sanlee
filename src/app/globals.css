@@ -933,12 +933,6 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .cookie-clear { all: unset; cursor: pointer; font-family: var(--mono); font-size: 10.5px; color: #6f6888; text-decoration: underline; text-underline-offset: 3px; }
 .cookie-clear:hover, .cookie-clear:focus-visible { color: #ff8a96; }
 span.cookie-clear { cursor: default; text-decoration: none; }
-/* 동상에게 말 건네기: 기록이 없는 방문자에게만 보인다 */
-.whisper { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 4px; }
-.whisper input { flex: 1 1 180px; min-width: 0; font: inherit; font-size: 14px; color: var(--fg); background: #0000004d; border: 0; border-bottom: 1px solid #ff2bd666; padding: 8px 2px; outline: none; }
-.whisper input:focus { border-bottom-color: var(--pink); }
-.whisper input::placeholder { color: #8d7fae; font-style: italic; }
-.whisper small { flex-basis: 100%; color: var(--dim); font-family: var(--mono); font-size: 11px; }
 /* 좁은 폰(380px 미만): 메뉴와 DELETE SEOUL을 한 줄에 두기 위해 간격을 줄이고 空 글자는 뺀다.
 */
 @media (max-width: 379px) {
@@ -1122,3 +1116,46 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 /* 음악 크레딧 */
 .ending-credit { display: block; margin-top: 6px; opacity: .6; letter-spacing: .06em; }
 .ending-credit a, .pause-note a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- 순찰 드론 경고: 대자비(붉은 게이지)와 구별되는 차가운 흰빛, 따라올 때 주황 ---------- */
+.drone-hud { position: absolute; top: 112px; left: 50%; transform: translateX(-50%); z-index: 31; pointer-events: none; width: min(260px, 64vw);
+  display: grid; gap: 3px; font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: #dff4ff; text-align: center;
+  text-shadow: 0 0 6px #000; transition: opacity .3s; opacity: 0; }
+.drone-bar { height: 4px; background: #0a1418aa; border: 1px solid #dff4ff66; overflow: hidden; }
+.drone-fill { height: 100%; width: 0; background: linear-gradient(90deg, #dff4ff, #ffb02e); box-shadow: 0 0 8px #ffb02e; transition: width .1s linear; }
+.drone-state { color: #ffcf7a; }
+.drone-hud[data-state="lost"] .drone-state { color: #9fb4c0; }
+.drone-hud[data-state="caught"] .drone-state, .drone-hud[data-state="sent"] .drone-state { color: #fff; animation: gazeBlink .25s steps(1) infinite; }
+.drone-out { position: absolute; inset: 0; z-index: 58; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  pointer-events: none; font-family: var(--mono); color: #0a1418; background: #dff4ff; animation: droneOut 1.9s ease-out forwards; text-align: center; }
+.drone-out p { margin: 0; font-size: clamp(16px, 3.4vw, 26px); letter-spacing: .16em; }
+.drone-out small { font-size: 12px; opacity: .8; }
+@keyframes droneOut { 0% { background: #fff; color: #0a1418; } 30% { background: #dff4ff; } 100% { background: #000; color: #dff4ff; } }
+@media (orientation: landscape) and (max-height: 520px) { .drone-hud { top: 86px; } }
+
+/* ---------- 남쪽 망원경으로 들여다보기: 둥근 시야, 그 앞을 흐르는 구름 ---------- */
+.scope-view { position: absolute; inset: 0; z-index: 32; pointer-events: none; }
+.scope-mask { position: absolute; inset: 0; background: radial-gradient(circle at 50% 46%, transparent 0 min(36vmin, 300px), #000 calc(min(36vmin, 300px) + 2px)); }
+.scope-cloud { position: absolute; inset: -20%; opacity: .78;
+  background:
+    radial-gradient(ellipse 38% 22% at 30% 52%, #d9dbe4cc, transparent 70%),
+    radial-gradient(ellipse 42% 26% at 62% 44%, #c9ccd8bb, transparent 72%),
+    radial-gradient(ellipse 30% 18% at 48% 62%, #e6e7eecc, transparent 70%);
+  animation: scopeCloud 18s linear infinite alternate; }
+@keyframes scopeCloud { from { transform: translateX(-6%); } to { transform: translateX(6%); } }
+.scope-sees { position: absolute; left: 50%; bottom: calc(50% - min(36vmin, 300px) - 40px); transform: translateX(-50%); width: min(520px, 90vw); margin: 0;
+  text-align: center; font-family: var(--mono); font-size: 12px; color: #d8dce6; text-shadow: 0 0 6px #000; }
+.scope-actions { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: auto; }
+.scope-actions small { font-family: var(--mono); font-size: 11px; color: #9aa0b0; }
+@media (prefers-reduced-motion: reduce) { .scope-cloud { animation: none; } }
+
+/* 대화: 방문자의 말, 지문, 고를 수 있는 말 */
+.dialog .line.you { color: #cfe9ff; }
+.dialog .line.narr { font-style: italic; color: #b9b2c8; }
+.dialog-choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+.dialog-choice { border-color: #22f0ff88; color: #bff8ff; }
+
+/* 검문소가 가진 기록 (실제 열람 순서와 망원경 이용) */
+.choice-evidence { margin: 8px 0 0; padding: 8px 10px; border-left: 2px solid #22f0ff66; font-family: var(--mono); font-size: 11px; line-height: 1.6; color: #bff8ff; word-break: keep-all; }
+.choice-evidence span { display: block; color: #7fd8e6; letter-spacing: .06em; }
+.choice-evidence ul { list-style: none; margin: 2px 0 0; padding: 0; }

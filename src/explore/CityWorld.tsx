@@ -6,7 +6,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { NEO_POST_GLSL, useNeoPost } from "./neoPost";
 import { useFrame } from "@react-three/fiber";
-import { BUDDHAS, EDGE, ISLANDS, OVERSEER_ISLAND } from "./zones";
+import { BUDDHAS, DECK, EDGE, ISLANDS, OVERSEER_ISLAND } from "./zones";
 import { roofGeometry } from "./models";
 
 const tmpM = new THREE.Matrix4();
@@ -140,8 +140,15 @@ export function Platform() {
   // 난간 구간: 북쪽은 성문 자리(|x|<13)를 비운다
   const segs = useMemo(() => {
     const x = EDGE.x;
+    // 남쪽은 전망대 데크 자리를 비우고, 데크 양옆과 끝에 난간을 두른다
+    const d0 = DECK.x - DECK.w / 2;
+    const d1 = DECK.x + DECK.w / 2;
     return [
-      { a: [-x, EDGE.z1], b: [x, EDGE.z1] },
+      { a: [-x, EDGE.z1], b: [d0, EDGE.z1] },
+      { a: [d1, EDGE.z1], b: [x, EDGE.z1] },
+      { a: [d0, EDGE.z1], b: [d0, DECK.z1] },
+      { a: [d1, EDGE.z1], b: [d1, DECK.z1] },
+      { a: [d0, DECK.z1], b: [d1, DECK.z1] },
       { a: [-x, EDGE.z0], b: [-13, EDGE.z0] },
       { a: [13, EDGE.z0], b: [x, EDGE.z0] },
       { a: [-x, EDGE.z0], b: [-x, EDGE.z1] },
@@ -172,6 +179,17 @@ export function Platform() {
         <boxGeometry args={[W, 6, D]} />
         <meshStandardMaterial color="#121216" roughness={0.6} metalness={0.7} />
       </mesh>
+      {/* 남쪽 전망대: 구름 위로 튀어나온 좁은 데크와 그 아래 받침 */}
+      <mesh position={[DECK.x, -0.18, (DECK.z0 + DECK.z1) / 2 + 0.5]}>
+        <boxGeometry args={[DECK.w, 0.36, DECK.z1 - DECK.z0 + 1]} />
+        <meshStandardMaterial color="#1b1c21" roughness={0.75} metalness={0.5} />
+      </mesh>
+      {[-1, 1].map((sx) => (
+        <mesh key={sx} position={[DECK.x + sx * (DECK.w / 2 - 0.3), -2.2, (DECK.z0 + DECK.z1) / 2 - 1]} rotation={[0.42, 0, 0]}>
+          <boxGeometry args={[0.25, 0.25, DECK.z1 - DECK.z0]} />
+          <meshStandardMaterial color="#121216" roughness={0.6} metalness={0.7} />
+        </mesh>
+      ))}
       {/* 판 옆면의 띠 조명 */}
       {[
         [0, EDGE.z1 + 1, W, 0.2],

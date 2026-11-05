@@ -86,6 +86,7 @@ export function forgetCityRecords() {
       "sanlee-ending",
       "sanlee-endings-found",
       "sanlee-jabi-intro",
+      "sanlee-scope",
     ].forEach((k) => localStorage.removeItem(k));
     localStorage.setItem("sanlee-forgotten", "1");
   } catch {}

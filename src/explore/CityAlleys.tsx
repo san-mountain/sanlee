@@ -12,6 +12,7 @@ import { citizenGeometry, roofGeometry } from "./models";
 import { chalkArrowTexture, concreteTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
+import { gaze } from "./gaze";
 
 function rng(seed: number) {
   return () => {
@@ -715,11 +716,16 @@ export function StonePagoda() {
 
 /* ---------- 전망 망원경 ---------- */
 export function Scopes({ onTap }: { onTap: TapFn }) {
+  // 남쪽 망원경으로 들여다보는 동안(시야가 좁아진 동안)에는 망원경 몸체가 시야를 가리지 않게 감춘다
+  const south = useRef<THREE.Group>(null);
+  useFrame(() => {
+    if (south.current) south.current.visible = gaze.zoom === 1;
+  });
   return (
     <group>
       {SCOPES.map((s, i) => (
         <Tap key={i} id={`scope-${i}`} onTap={onTap}>
-          <group position={s.pos} rotation={[0, s.rotY, 0]}>
+          <group ref={i === 0 ? south : undefined} position={s.pos} rotation={[0, s.rotY, 0]}>
             <mesh position={[0, 0.55, 0]}>
               <cylinderGeometry args={[0.06, 0.12, 1.1, 8]} />
               <meshStandardMaterial color="#2a2c31" metalness={0.8} roughness={0.4} />

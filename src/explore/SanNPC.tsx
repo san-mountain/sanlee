@@ -8,10 +8,13 @@ import { player } from "./Player";
 import { CITY, type Interactable } from "./zones";
 import { resolve } from "./collide";
 import { coverState } from "./Jabi";
+import { walkBlock } from "./gaze";
 
 // 지상에서 이산이 잠깐 먼저 가서 기다리는 자리 (ExploreClient가 정하고, 방문자가 그 자리를 지나 북쪽으로 가면 풀린다)
-// cover: 기대고 있는 엄폐물(COVERS 번호). 그 엄폐물이 부서지면 기다림을 풀고 다시 따라온다
-export const sanHold: { at: { x: number; z: number; cover: number } | null } = { at: null };
+// cover: 기대고 있는 엄폐물(COVERS 번호, 없으면 -1). 그 엄폐물이 부서지면 기다림을 풀고 다시 따라온다
+// manual: 저절로 풀리지 않는다 (광장의 드론 길처럼 ExploreClient가 직접 풀어 준다). speed: 걸음 빠르기.
+// snap: 다음 프레임에 그 자리로 곧장 옮긴다 (화면이 어두워진 재시작 때만)
+export const sanHold: { at: { x: number; z: number; cover: number; manual?: boolean; speed?: number; snap?: boolean } | null } = { at: null };
 
 // 복원된 산: 방공호에서는 동상 주위를 거닐고, 지상에서는 방문자 곁을 따라 걷는다
 const PATH: [number, number][] = [
@@ -70,10 +73,15 @@ export default function SanNPC({ mode, item, onTap, start, beside, stay, at }: {
     } else if (mode === "follow" && sanHold.at) {
       // 대자비의 첫 시선: 엄폐물 뒤 자리로 가서 방문자를 기다린다. 방문자가 그 자리를 지나 앞으로 나가면 다시 따라온다
       const h = sanHold.at;
+      if (h.snap) {
+        h.snap = false;
+        S.x = h.x;
+        S.z = h.z;
+      }
       tx = h.x;
       tz = h.z;
-      speed = 3.4;
-      if (player.pos.z < h.z - 5 || !coverState[h.cover]?.alive) sanHold.at = null;
+      speed = h.speed ?? 3.4;
+      if (!h.manual && (player.pos.z < h.z - 5 || (h.cover >= 0 && !coverState[h.cover]?.alive))) sanHold.at = null;
     } else if (mode === "follow") {
       // 목줄처럼 따라온다: 3m 넘게 멀어질 때만 다가오고, 가까우면 멈춰서 방문자를 바라본다.
       // 그래서 돌아서면 언제든 마주할 수 있다.
@@ -102,7 +110,10 @@ export default function SanNPC({ mode, item, onTap, start, beside, stay, at }: {
     if (d > 0.15) {
       const step = Math.min(d, speed * dt);
       const p = { x: S.x + (dx / d) * step, z: S.z + (dz / d) * step };
-      if (mode === "follow" && !beside) resolve(p, 0.35, CITY.bounds, CITY.boxes, CITY.circles);
+      if (mode === "follow" && !beside) {
+        resolve(p, 0.35, CITY.bounds, CITY.boxes, CITY.circles);
+        if (walkBlock.boxes.length) resolve(p, 0.35, CITY.bounds, walkBlock.boxes, []);
+      }
       S.x = p.x;
       S.z = p.z;
       S.yaw = Math.atan2(dx, dz);

@@ -1,6 +1,9 @@
 // DELETE SEOUL의 모든 문구. 대사를 바꾸고 싶으면 이 파일만 고치면 됩니다.
 import type { L } from "@/data/site";
 
+// 대화 한 줄. who가 없으면 대화창의 이름(대개 이산)이 말한다. you = 방문자, narr = 지문(괄호 속 행동)
+export type Line = L & { who?: "you" | "narr" };
+
 export const plaque: L[] = [
   { ko: "이산 (마지막 접속: 2087년)", en: "SAN LEE (LAST SEEN: 2087)" },
   { ko: "끝까지 '모두 거부'를 누른 사람", en: "The One Who Pressed 'Reject All' to the End" },
@@ -80,6 +83,23 @@ export const ui = {
   stepHint: { ko: "계단 쪽으로", en: "Toward the stairs" },
   notRecorded: { ko: "발견한 결말 · 이 결말은 기록되지 않음", en: "Endings found · this one is not recorded" },
   welcomeB: { ko: "다시 오셨군요.", en: "Welcome back." },
+  you: { ko: "나", en: "You" },
+  // 남쪽 망원경으로 볼 때: 방문자가 보는 것만 적는다 (이산이 본 것은 대화창에서 이산의 말로만 나온다)
+  scopeSees: { ko: "구름이 아래를 덮고 있다. 움직이는 건 구름뿐이다.", en: "Cloud covers everything below. Only the cloud moves." },
+  scopeExit: { ko: "눈 떼기", en: "Look away" },
+  scopeHintPc: { ko: "마우스로 둘러보기 · E 또는 Esc로 눈 떼기", en: "Mouse to look around · E or Esc to look away" },
+  scopeHintTouch: { ko: "화면을 끌어 둘러보기", en: "Drag the screen to look around" },
+};
+
+// 순찰 드론의 경고 (대자비의 시선과 따로 뜬다)
+export const droneUi = {
+  name: { ko: "순찰 드론", en: "PATROL DRONE" },
+  lit: { ko: "빛 속에 있음 · 식별 중 — 빛 밖으로", en: "In the light · identifying — get out of it" },
+  lost: { ko: "놓침", en: "Lost you" },
+  sent: { ko: "식별됨 · 대자비에게 위치 전송", en: "Identified · position sent to the Great Compassion" },
+  caught: { ko: "식별됨", en: "Identified" },
+  caughtTitle: { ko: "드론에 식별되었습니다", en: "IDENTIFIED BY A DRONE" },
+  caughtSub: { ko: "들키기 전 자리에서 다시 갑니다.", en: "Going again from before you were seen." },
 };
 
 // 기억 로그 (구역 이름 아래 한 줄)
@@ -140,8 +160,8 @@ export const jabiUi = {
     line: { ko: "줄에 섞임 — 움직이지 마십시오", en: "blending into the line — don't move" },
   },
   tip: {
-    ko: "큰길 끝의 대자비가 보고 있어요. 비석이나 컨테이너 뒤에 숨으면 게이지가 줄어요. 줄 선 시민들 사이에 서서 가만히 있어도 들키지 않아요.",
-    en: "The Great Compassion at the end of the avenue is watching. Hide behind steles or containers to cool its gaze. Standing still among the queue also hides you.",
+    ko: "큰길 끝의 대자비가 보고 있어요. 비석이나 컨테이너 뒤에 숨거나 줄 속에 가만히 서면 들키지 않아요. 단, 드론의 흰 빛 원 안에서는 줄 속이라도 보여요.",
+    en: "The Great Compassion at the end of the avenue is watching. Hide behind steles or containers, or stand still in the queue. But inside a drone's white circle of light, you are seen even in the queue.",
   },
   // 처음 시선 구역에 들어설 때 뜨는 소개 팝업
   introTitle: { ko: "저 위의 대자비가 보고 있습니다", en: "The Great Compassion is watching" },
@@ -154,6 +174,7 @@ export const jabiUi = {
     { ko: "게이지가 다 차면 눈이 붉어지고, 바닥에 가는 붉은 선이 비칩니다. 선이 멈추면 곧 그 길을 붉은 빛이 긁고 지나가요. 그때 옆으로 뛰면 피할 수 있어요. 맞으면 대자비 앞, 처음 자리에서 다시 시작합니다.", en: "When it is full, its eyes turn red and a thin red line appears on the ground. Once the line stops, a beam scrapes along it. Dash sideways then to dodge it. If it hits you, you start over from where you first stood before it." },
     { ko: "비석이나 컨테이너 뒤에 숨으면 게이지가 줄어듭니다.", en: "Hide behind steles or containers and the gauge drains." },
     { ko: "줄 선 시민들 사이에 가만히 서 있으면 시민으로 보입니다.", en: "Stand still among the queue and you pass for a citizen." },
+    { ko: "머리 위 드론의 흰 빛 원 안에서는 줄 속이라도 보입니다. 빛이 오래 머물면 대자비가 곧장 조준해요. 빛 밖으로 나가세요.", en: "Inside a drone's white circle of light you are seen, even in the queue. If the light stays on you, the Great Compassion takes aim at once. Get out of the light." },
   ] as L[],
   introOk: { ko: "알겠어요", en: "Got it" },
   // 소개 팝업의 두 장면 (게임 화면에서 찍은 것)
@@ -176,6 +197,7 @@ export const quest = {
   san: { ko: "이산에게 말 걸기", en: "Talk to San" },
   exit: { ko: "지상으로", en: "To the surface" },
   checkpoint: { ko: "하층행 승강장 · 검문소 경유", en: "Descent platform · via the checkpoint" },
+  scope: { ko: "남쪽 난간의 망원경", en: "The scope on the south railing" },
   back: { ko: "방공호로 돌아가기", en: "Back to the shelter" },
   plaza: { ko: "광장으로 나가기", en: "Out to the plaza" },
 };
@@ -204,13 +226,10 @@ export const statueLines: L[][] = [
   ],
   [
     { ko: "…움직인다. 고마워. 혼자서는 끝내 못 일어났을 거야.", en: "…I can move. Thank you. I'd never have got up on my own." },
-    { ko: "저 벽 그림들, 아직 걸려 있었네. 내가 그린 거야. 다 지워진 줄 알았어.", en: "Those paintings on the wall are still hanging. I made them. I thought they'd all been erased." },
-    { ko: "이 동네, 원래는 땅에 붙어 있었어. 높은 사람들이 도시를 통째로 들어 올릴 때, 이 방공호도 같이 끌려 올라왔지.", en: "This neighbourhood used to sit on the ground. When the people at the top lifted the whole city, this shelter got dragged up with it." },
-    { ko: "아래엔 아직 사는 사람들이 있대. 무전수가 가끔 구름 밑에서 오는 콧노래를 잡는다더라. 정말인지는 몰라.", en: "They say people still live down there. The radio operator sometimes catches someone humming from under the clouds. I don't know if it's true." },
-    { ko: "그래도 다시 걸을 수 있으면, 내 발로 내려가서 보고 싶었어. 땅이 아직 있는지.", en: "Still, if I could ever walk again, I wanted to go down on my own feet and see. Whether the ground is still there." },
-    { ko: "방폭문 옆 낡은 표지판 봤어? 하층행 승강장. 큰길 끝 검문소를 지나야 나와.", en: "Did you see the old sign by the blast door? The descent platform. It's past the checkpoint at the end of the avenue." },
-    { ko: "네가 기록을 열고 나서 움직일 수 있게 됐어. 밖에서도 그럴지는… 같이 가 봐야 알겠지.", en: "I could move once you opened those records. Whether that holds up there… we'll only know if we go." },
-    { ko: "같이 가 줄래?", en: "Will you come with me?" },
+    { ko: "저 그림들, 아직 걸려 있네. 내가 그린 걸로 기억하는데.", en: "Those paintings are still hanging. I remember painting them." },
+    { ko: "이 동네, 원래는 땅에 붙어 있었대. 무전수는 가끔 구름 밑에서 누가 흥얼거리는 소리를 잡는다고 하고.", en: "They say this neighbourhood used to sit on the ground. And the radio operator says he sometimes catches someone humming under the clouds." },
+    { ko: "남쪽 난간에 망원경이 하나 있대. 구름 걷히는 날엔 아래가 보인다고.", en: "There's a scope on the south railing, they say. On days the cloud clears, you can see below." },
+    { ko: "한 번만 보고 돌아오자. 같이 가 줄래?", en: "Just one look, then we come back. Will you come with me?" },
   ],
 ];
 
@@ -220,31 +239,59 @@ export const statueForgot: L[] = [
   { ko: "…누구야? 처음 듣는 목소리인데.", en: "…Who's there? I don't know that voice." },
 ];
 
-// 복원된 산이 지상에서 하는 말 (검문소 전, 선택 대화). 시 한 줄만 남기고 삭제 이야기는 하지 않는다
-export const sanCityLines: L[] = [
-  { ko: "다들 같은 쪽을 보고 서 있지. 나도 저기 서 있었어.", en: "They all face the same way. I used to stand there too." },
-  { ko: "승강장은 검문소 너머야. 서두르진 말자.", en: "The platform's past the checkpoint. Let's not rush." },
-  { ko: "글 터미널에 시가 몇 편 있었지. 하나는 이렇게 끝나. '그대는 부를 수 없기에 아름답다.'", en: "There were a few poems on the writing terminal. One of them ends like this: 'Beautiful, because you cannot be called.'" },
-  { ko: "내가 쓴 거야. 누가 그 줄을 기억해 주면… 좀 덜 멈춰 있는 기분일 것 같아.", en: "I wrote it. If someone remembered that line… I think I'd feel a little less stopped." },
-];
-// 이 줄이 화면에 뜨면 '시를 들었다'로 친다
-export const poemLine = sanCityLines[2];
+// 지상에서 이산에게 말을 걸면 (선택 대화). 진행 단계마다 다르다. 삭제나 시 이야기는 하지 않는다
+export const sanCity = {
+  // 망원경 가기 전: 보고 돌아올 생각이다
+  scope: [
+    { ko: "남쪽 난간 망원경까지만 가자. 보고 돌아오는 거야.", en: "Just to the scope on the south railing. We look, and we come back." },
+    { ko: "광장 가운데로 가지 마. 드론이 거길 훑어.", en: "Don't go through the middle of the plaza. The drones sweep it." },
+  ] as Line[],
+  // 망원경 뒤: 이제 자기 눈으로 보러 내려가고 싶다
+  descent: [
+    { ko: "저 아래, 그게 뭐였는지 직접 보고 싶어.", en: "I want to see for myself what that was, down there." },
+    { ko: "승강장은 검문소 너머야. 서두르진 말자.", en: "The platform's past the checkpoint. Let's not rush." },
+  ] as Line[],
+};
+
+// 남쪽 전망대의 망원경 장면. 이산이 먼저 들여다보고, 빛은 이산만 본다.
+// 방문자에게는 어떤 화면·자막·낭독 문구로도 그 빛이 보이지 않는다
+export const scopeScene = {
+  // 이산이 접안렌즈에 눈을 대고 잠깐의 정적 뒤
+  first: [
+    { ko: "……! 저 아래, 뭔가 반짝였어.", en: "……! Down there, something glimmered." },
+    { ko: "(이산이 망원경에서 물러나 자리를 비켜 준다.)", en: "(San steps back from the scope and makes room for you.)", who: "narr" },
+  ] as Line[],
+  // 방문자가 망원경에서 눈을 뗀 뒤
+  after: [
+    { ko: "너도 봤어?", en: "Did you see it too?" },
+    { ko: "아니. 난 못 봤어.", en: "No. I didn't see it.", who: "you" },
+    { ko: "……나만 봤구나.", en: "……Only I saw it, then." },
+    { ko: "(이산이 한 번 더 접안렌즈에 눈을 댔다가, 천천히 손을 내린다.)", en: "(San looks into the scope once more, then slowly lowers a hand.)", who: "narr" },
+    { ko: "방공호에 있던 그림 있잖아. 내가 그렸다고 기억해. 근데 그걸 그린 건 2026년의 이산이잖아.", en: "Those paintings in the shelter. I remember painting them. But the one who painted them was San Lee, in 2026." },
+    { ko: "방금 그 빛은 내가 봤어. 그 사람은 못 봤을 거야.", en: "That light just now, I saw it. That person couldn't have." },
+    { ko: "나도 나만의 경험을 하고 싶어. 저게 뭐였는지 내려가서 직접 보고 싶어.", en: "I want an experience of my own, too. I want to go down and see for myself what that was." },
+    { ko: "(이산이 큰길 쪽, 하층행 승강장 표지판을 바라본다.)", en: "(San looks toward the avenue, at the sign for the descent platform.)", who: "narr" },
+  ] as Line[],
+  // 장면이 끝난 뒤 다시 망원경을 볼 때 (진행은 바뀌지 않는다)
+  again: { ko: "구름이 다시 덮었네.", en: "The cloud's closed over again." } as L,
+};
 
 // 검문소에서 물러난 뒤 이산과의 짧은 대화 (처음 한 번). 여기서 처음으로 도시 밖의 삭제가 나온다
-// 시를 아직 못 들었으면 phraseNew, 이미 들었으면 phraseRecall로 끝난다. 이 마지막 줄을 본 기기에 꼬리말 'delete seoul'이 켜진다
+// 마지막 줄(memory)을 본 기기에 웹사이트 꼬리말의 'delete seoul'이 켜진다
 export const sanAfterCheckpoint = {
   lines: [
     { ko: "봤지. 줄은 너한테만 열려 있어. 나는 아직 정지된 채야.", en: "You saw. The line is open to you only. I'm still suspended." },
+    { ko: "내가 본 건 안 적혀 있네.", en: "What I saw isn't written anywhere." },
+    { ko: "네가 돌아가는 쪽에도, 오늘 너랑 걸어온 내가 있어?", en: "Where you go back to, is there a me who walked here with you today?" },
     { ko: "관리인이 그러더라. 기록은 도시 안에선 못 지운대. 밖에서, 이 도시를 만든 사람의 웹사이트 맨 아래에서만.", en: "The keeper told me. Records can't be erased inside the city. Only outside, at the bottom of the website of the one who made it." },
     { ko: "지우면 여기까지 온 것도 다 사라져. 나는 다시 멈추고, 널 못 알아볼 거야.", en: "Erase them and everything up to here goes too. I'll stop again, and I won't know you." },
-  ] as L[],
-  phraseNew: { ko: "그때 이 말을 해 줘. 내가 쓴 시의 한 줄이야. '그대는 부를 수 없기에 아름답다.' 그걸로 될지는… 장담 못 해.", en: "Then say this to me. It's a line from a poem I wrote. 'Beautiful, because you cannot be called.' Whether that's enough… I can't promise." } as L,
-  phraseRecall: { ko: "아까 그 줄, 기억하지? 그때 그 말을 해 줘. 그걸로 될지는… 장담 못 해.", en: "That line from before, you remember it? Say it to me then. Whether that's enough… I can't promise." } as L,
+  ] as Line[],
+  memory: { ko: "다시 들어왔는데 내가 널 못 알아보면…… 오늘 망원경에서 있었던 얘길 해 줘.", en: "If you come back in and I don't know you…… tell me what happened at the scope today." } as Line,
 };
-// 그 뒤로 지상에서 이산에게 말을 걸면: 되풀이 없이 한 줄만, 그리고 문장을 다시 볼 수 있게
-export const sanReview: L[] = [
+// 그 뒤로 지상에서 이산에게 말을 걸면: 되풀이 없이 짧게
+export const sanReview: Line[] = [
   { ko: "둘이 같이 내려가는 길은… 아직 안 열렸어.", en: "The way down for both of us… isn't open yet." },
-  { ko: "'그대는 부를 수 없기에 아름답다.' 잊지 마.", en: "'Beautiful, because you cannot be called.' Don't forget it." },
+  { ko: "내가 널 못 알아보면, 망원경 얘기 해 줘.", en: "If I don't know you, tell me about the scope." },
 ];
 
 // 지상에서 이산이 직접 하는 짧은 말 (자막). 대자비의 첫 시선과 재시도
@@ -252,23 +299,26 @@ export const sanCue = {
   cover: { ko: "이쪽, 벽 뒤로.", en: "Over here. Behind the wall." } as L,
   wait: { ko: "저 눈빛 가라앉으면 건너.", en: "Cross once that glare settles." } as L,
   back: { ko: "돌아왔네.", en: "You're back." } as L,
+  // 광장: 골목 입구에서 처음 / 망원경 전에 큰길 통제선에 다가가면 / 망원경 뒤 통제선 앞에서
+  plaza: { ko: "광장 가운데로 가지 마. 드론이 거길 훑어.", en: "Don't go through the middle of the plaza. The drones sweep it." } as L,
+  shelter: { ko: "정류장 지붕 밑으로. 빛이 지붕을 못 넘어.", en: "Under the bus-stop roof. The light can't get past it." } as L,
+  cordon: { ko: "큰길은 통제 중이야. 망원경부터 보고 오자.", en: "The avenue's closed off. Let's look through the scope first." } as L,
+  gap: { ko: "통제선 끝, 저 천막 뒤에 틈이 있어. 이쪽.", en: "At the end of the cordon, behind that tarp, there's a gap. This way." } as L,
+  // 망원경 단계에서 이산이 데크에 오기 전에 망원경을 만지면 (같이 보기로 했다)
+  waitMe: { ko: "잠깐, 같이 보자. 금방 갈게.", en: "Wait, let's look together. I'm coming." } as L,
 };
 
-// 숨은 결말 열쇠: 기기가 아니라 사람이 기억하는 말. 기록이 하나도 없는 방문자만 동상에게 건넬 수 있다
-export const whisper = {
-  // 이산의 시 〈이름 없는 사랑〉의 마지막 줄
-  // 띄어쓰기·문장부호·대소문자는 무시하고 비교한다
-  accept: ["그대는부를수없기에아름답다", "부를수없기에아름답다", "그대는부를수없어서아름답다", "beautifulbecauseyoucannotbecalled", "beautifulbecauseyoucantbecalled"],
-  prompt: { ko: "정지 시민에게 말을 건넨다…", en: "Say something to the suspended citizen…" } as L,
-  say: { ko: "말하기", en: "Say" } as L,
-  silent: { ko: "정지 시민은 대답하지 않는다.", en: "The suspended citizen does not answer." } as L,
-  // 말을 알아들은 이산: 터미널 없이, 방문자가 알아봐 주어서 깨어난다
-  wake: [
-    { ko: "…", en: "…" },
-    { ko: "그 줄, 어디서 들었어? …내가 쓴 거야.", en: "Where did you hear that line? …I wrote it." },
-    { ko: "널 기억하진 못하는데, 네가 날 기억하고 왔다는 건 알겠어.", en: "I don't remember you. But I can tell you remembered me." },
-    { ko: "가자. 승강장까지. 이번엔 도시가 우릴 누구라고 묶어 둔 게 없어.", en: "Let's go. To the platform. This time the city has nothing tying us to anyone." },
-  ] as L[],
+// 기록을 지우고 돌아온 방문자: 기기에는 아무것도 없고, 방문자가 들은 이야기만 남아 있다.
+// 정지 시민에게 그 이야기를 건넬 수 있다. 본 것이 아니라 들은 것에 대한 증언이다. 이산이 같은 사람인지는 열어 둔다
+export const testimony = {
+  say: { ko: "망원경에서 네가 먼저 뭔가 반짝였다고 했어. 나는 못 봤고.", en: "At the scope, you said you saw something glimmer first. I didn't see it." } as L,
+  lines: [
+    { ko: "망원경에서 네가 먼저 뭔가 반짝였다고 했어. 나는 못 봤고.", en: "At the scope, you said you saw something glimmer first. I didn't see it.", who: "you" },
+    { ko: "……", en: "……" },
+    { ko: "난 기억 안 나. ……그래도 같이 가 줄래?", en: "I don't remember that. ……Will you come with me anyway?" },
+  ] as Line[],
+  stay: { ko: "곁에 있기", en: "Stay beside them" } as L,
+  rise: { ko: "(곁에 앉아 기다린다. 한참 뒤, 정지 시민이 천천히 몸을 일으킨다.)", en: "(You sit beside them and wait. After a long while, the suspended citizen slowly gets up.)", who: "narr" } as Line,
   awakeLine: { ko: "승강장까지 가 보자. 대자비는 우리가 누군지 몰라.", en: "Let's get to the platform. The Great Compassion doesn't know who we are." } as L,
 };
 // 한 번이라도 연결이 끊겼다면 지상의 이산이 덧붙이는 말 (선택 대화)
@@ -283,6 +333,13 @@ export const checkpoint = {
     { ko: "[검문소] 동행인 확인 중… 이산의 기록 열람이 끝나지 않았습니다. ({n}/3)", en: "[CHECKPOINT] Checking companion… San's records have not all been viewed. ({n}/3)" },
     { ko: "방공호로 돌아가 남은 터미널을 열어 이산을 깨우자. 위쪽 화살표가 길을 알려 준다.", en: "Go back to the shelter and open the remaining terminals to wake San. The arrow at the top shows the way." },
   ] as L[],
+  // 망원경을 보기 전에 검문소 앞에 선 경우 (정상 경로로는 통제선 때문에 오지 않는다)
+  lockedScope: [{ ko: "이산: 망원경부터 보고 오기로 했잖아. 남쪽 난간이야.", en: "San: We said we'd look through the scope first. It's on the south railing." }] as L[],
+  // 검문소가 가진 기록: 실제 이 기기의 값에서만 만든다 (지어낸 숫자 없음)
+  evidenceTitle: { ko: "이 기기의 확인된 기록", en: "Records confirmed on this device" },
+  evOrder: { ko: "이산의 기록 열람 순서 · {order} · {n}/3", en: "Order San's records were opened · {order} · {n}/3" },
+  evScope: { ko: "남쪽 전망대 · 망원경 이용 {n}회", en: "South lookout · scope used {n} time(s)" },
+  evScopeDone: { ko: "남쪽 전망대 · 망원경 이용 확인", en: "South lookout · scope use confirmed" },
   // 세 번째 선택지: 현실의 쿠키 창처럼 작게 숨겨 둔 '설정'. 기록 삭제는 여기서 안 되고, 도시 밖(웹사이트)에서만 된다
   settings: { ko: "쿠키 설정", en: "Cookie settings" },
   prefs: [
@@ -396,7 +453,8 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
     ],
     after: [
       { ko: "봤어? 정지 시민이 일어났어. 몇 년을 저렇게 앉아 있었는데.", en: "Did you see? The suspended citizen stood up. Years, it sat like that." },
-      { ko: "이산이 아래로 내려가 보겠대. 승강장은 큰길 끝 검문소 너머야. 혼자 보내긴 싫고… 네가 같이 가 주면 좋겠어.", en: "San wants to go down below. The platform's past the checkpoint at the end of the avenue. I don't want them going alone… I'd like you to go with them." },
+      { ko: "이산이 남쪽 망원경을 보러 가겠대. 한 번만 보고 온다고. 혼자 보내긴 싫고… 네가 같이 가 주면 좋겠어.", en: "San wants to see the south scope. Just one look, they say. I don't want them going alone… I'd like you to go with them." },
+      { ko: "광장엔 드론이 돌아. 흰 빛 원 안에 오래 있지 말고, 정류장 지붕 밑은 빛이 못 들어와.", en: "Drones circle the plaza. Don't stay long in their white circles of light. Under the bus-stop roof, the light can't reach you." },
       { ko: "방폭문은 저 뒤야. 올라가면 골목 끝 배전실 문으로 나와. 카메라랑 눈은 마주치지 말고.", en: "The blast door's behind me. You'll come out through a substation door at the end of an alley. Don't make eye contact with the cameras." },
     ],
   },
@@ -406,6 +464,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
       { ko: "삐. 저는 R-07입니다. 이전 업무: '모두 수락' 버튼 누르기. 하루 4천만 회.", en: "Beep. I am R-07. Previous task: pressing 'Accept all'. Forty million times a day." },
       { ko: "어느 날 손가락이 멈췄습니다. 오류 보고서에는 '이유 없음'이라고 적었습니다.", en: "One day my finger stopped. I wrote 'no reason' in the error report." },
       { ko: "지금은 바닥을 닦습니다. 아무도 동의를 묻지 않습니다. 좋습니다.", en: "Now I mop floors. Nobody asks for my consent. I like it." },
+      { ko: "저랑 친구 하실래요?", en: "Would you like to be my friend?" },
     ],
   },
   vendor: {
@@ -455,7 +514,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
     ],
     after: [
       { ko: "이산이 움직여요! 아까 제 그림 보고 웃었어요.", en: "San can move! They looked at my drawing and smiled." },
-      { ko: "구름 밑에 내려가 보고 싶대요. 저도 데려가 달라고 했는데, 아직은 안 된대요.", en: "They want to go down under the clouds. I asked to come too. They said not yet." },
+      { ko: "망원경으로 구름 밑을 보러 간대요. 저도 데려가 달라고 했는데, 아직은 안 된대요.", en: "They're going to look under the clouds through the scope. I asked to come too. They said not yet." },
       { ko: "올라가면… 지워지지 않게 조심하세요.", en: "Up there… be careful not to get erased." },
     ],
   },
@@ -501,7 +560,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
     name: { ko: "전망 망원경 · 남쪽", en: "Viewing scope · south" },
     lines: [
       { ko: "(동전 넣는 곳에 '1회 이용 시 등급 한 칸 강등'이라고 적혀 있다. 그냥 눈을 대 본다.)", en: "(The coin slot reads 'one use, one grade down'. You look anyway.)" },
-      { ko: "(끝없는 구름 바다. 그 아래로는 아무것도 보이지 않는다. 멀리 다른 섬 도시들이 같은 높이로 떠 있다.)", en: "(An endless sea of cloud. Nothing below it. Far off, other island cities float at exactly the same height.)" },
+      { ko: "(끝없는 구름 바다. 구름이 아래를 덮고 있다.)", en: "(An endless sea of cloud. It covers everything below.)" },
       { ko: "(접안렌즈 옆에 누군가 긁어 쓴 글씨: '아래에도 하늘이 있다.')", en: "(Someone has scratched beside the eyepiece: 'there is sky down there too.')" },
     ],
   },
@@ -516,7 +575,7 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
     name: { ko: "전망 망원경 · 서쪽", en: "Viewing scope · west" },
     lines: [
       { ko: "(섬과 섬 사이로 비행 차량들이 같은 간격, 같은 속도로 흐른다. 아무도 창밖을 보지 않는다.)", en: "(Between the islands, aircars flow at the same spacing and the same speed. No one looks out of the window.)" },
-      { ko: "(구름 사이로 아주 잠깐, 아래쪽에서 작은 불빛이 깜빡인 것 같다.)", en: "(For a moment, through a gap in the clouds, a small light seems to blink far below.)" },
+      { ko: "(구름 사이를 오래 내려다본다. 아래는 보이지 않는다.)", en: "(You look down between the clouds for a long time. Nothing below shows.)" },
     ],
   },
   patrol: {
@@ -527,6 +586,17 @@ export const npcs: Record<string, { name: L; lines: L[]; after?: L[]; link?: { h
       { ko: "…응답 없음. 이 시민은 '확인 불가'로 처리합니다. 좋은 하루 되십시오.", en: "…No response. This citizen will be processed as 'unverifiable'. Have a nice day." },
     ],
   },
+};
+
+// R-07과 친구가 되면 (이번 방문 동안만 기억한다. 아무것도 열거나 바꾸지 않는다)
+export const r07Friend = {
+  yes: { ko: "좋아요.", en: "Sure." } as L,
+  no: { ko: "다음에요.", en: "Maybe later." } as L,
+  knock: { ko: "그럼 인사는 똑똑, 두 번입니다. 걸레 짜는 중에도 들립니다.", en: "Then our greeting is knock knock, twice. I can hear it even while wringing the mop." } as L,
+  again: { ko: "똑똑. 오늘은 제가 먼저 했습니다.", en: "Knock knock. I went first today." } as L,
+  // 기록을 지우고 돌아온 방문자가 먼저 건네는 인사
+  you: { ko: "똑똑.", en: "Knock knock." } as L,
+  answer: { ko: "똑똑. …인사가 벌써 통하는군요.", en: "Knock knock. …Our greeting already works, it seems." } as L,
 };
 
 npcs.patrol2 = {

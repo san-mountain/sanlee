@@ -115,9 +115,12 @@ function GazeSystem() {
     // 줄 속에 가만히 서 있으면 시민으로 보인다
     const inLine = Math.abs(Math.abs(px) - 3.6) < 0.55 && pz < QUEUE_Z[0] + 1 && pz > QUEUE_Z[QUEUE_Z.length - 1] - 1 && moved < 0.004;
     const cover = blockedBy(px, pz, HEAD);
-    gaze.hiddenBy = inLine ? "line" : cover >= 0 ? "cover" : "";
+    // 머리 위 드론의 빛 안에서는 줄에 섞여 있어도 드러난다 (드론이 대자비에게 위치를 알린다).
+    // 엄폐물이 드론 빛까지 가리면 Drones가 droneLit을 끄므로, 둘 다 가려야 숨은 것이다
+    const lit = gaze.droneLit;
+    gaze.hiddenBy = lit ? "" : inLine ? "line" : cover >= 0 ? "cover" : "";
     // 방문 기록을 지운 사람은 도시의 기억에 없으므로 자비의 눈에도 보이지 않는다
-    gaze.seen = inZone && !inLine && cover < 0 && gaze.mood !== "blind" && !gaze.intro;
+    gaze.seen = inZone && gaze.mood !== "blind" && !gaze.intro && (lit || (!inLine && cover < 0));
 
     if (gaze.state === "fire") {
       runBeam(dt, now);

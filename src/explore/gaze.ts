@@ -20,7 +20,21 @@ export const gaze = {
   lookAt: null as { x: number; y: number; z: number } | null,
   // 空 결말: 검문소가 정지할 대상을 찾지 못해 성문의 레이저가 꺼진다
   gateOpen: false,
+  // 큰길 드론의 빛이 지금 방문자를 비추는가 (줄 속에 서 있어도 보인다). Drones가 쓰고 GazeSystem이 읽는다
+  droneLit: false,
+  // 장면 연출: 걷기만 멈춘다 (고개는 돌릴 수 있다)
+  still: false,
+  // 망원경: 시야 배율(1 = 보통)과 고개를 돌릴 수 있는 범위
+  zoom: 1,
+  clamp: null as { yaw: number; dy: number; p0: number; p1: number } | null,
 };
+
+// 진행 단계 하나: ExploreClient가 정하고 3D 쪽(통제선 천막, 드론 재시작)이 읽는다
+// restore 기록 복원 중 → talk 풀려난 이산과 대화 전 → scope 남쪽 망원경으로 → descent 하층행 승강장으로
+export type RoutePhase = "restore" | "talk" | "scope" | "descent";
+export const route: { phase: RoutePhase } = { phase: "restore" };
+// 진행에 따라 생기고 사라지는 막힘 (통제선 끝 천막). Player와 SanNPC가 zone.boxes 다음에 함께 피한다
+export const walkBlock: { boxes: { x0: number; x1: number; z0: number; z1: number }[] } = { boxes: [] };
 
 // 결말 연출에서 시점을 스스로 걷게 한다 (충돌 무시). Player가 읽는다
 // yaw: 다 왔을 때 바라볼 방향 (없으면 북쪽)
@@ -35,4 +49,5 @@ export function resetGaze() {
   gaze.shake = 0;
   gaze.dead = 0;
   gaze.frozen = false;
+  gaze.droneLit = false;
 }

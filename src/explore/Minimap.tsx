@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import { player } from "./Player";
-import { BARRIERS, COVERS, GAZE_ZONE, ZONES, type Zone } from "./zones";
+import { BARRIERS, COVERS, DRONE_R, DRONE_RAILS, GAZE_ZONE, SHELTER, ZONES, type Zone } from "./zones";
+import { droneAt } from "./Drones";
+import { walkBlock } from "./gaze";
 import { coverState } from "./Jabi";
 import type { QuestTarget } from "./QuestArrow";
 
@@ -88,6 +90,19 @@ export default function Minimap({ zone, get }: { zone: Zone; get: () => QuestTar
         COVERS.forEach((c, i) => {
           ctx.fillStyle = coverState[i].alive ? "#ffb347" : "#3a2a20";
           ctx.fillRect(c.x - c.w / 2, c.z - c.d / 2, c.w, c.d);
+        });
+        for (const o of walkBlock.boxes) ctx.fillRect(o.x0, o.z0, o.x1 - o.x0, o.z1 - o.z0);
+        // 정류장 지붕 (드론 빛을 가리는 곳)
+        ctx.fillStyle = "#8fa6b8";
+        ctx.fillRect(SHELTER.x - SHELTER.w / 2, SHELTER.z - SHELTER.d / 2, SHELTER.w, SHELTER.d);
+        // 드론 빛 원: 지금 있는 자리
+        ctx.strokeStyle = "#dff4ffcc";
+        ctx.lineWidth = lw * 1.4;
+        DRONE_RAILS.forEach((_, i) => {
+          const d = droneAt(i);
+          ctx.beginPath();
+          ctx.arc(d.x, d.z, DRONE_R, 0, Math.PI * 2);
+          ctx.stroke();
         });
       }
 

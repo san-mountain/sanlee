@@ -189,4 +189,15 @@ export const sfx = {
   },
   reject: () => tone(110, 1.2, { type: "sawtooth", f2: 55, vol: 0.15 }),
   ghost: () => noise(2.2, { vol: 0.18, from: 200, to: 2400, q: 0.5 }),
+  // 드론: 대자비(낮은 사인·징)와 섞이지 않도록 높고 짧은 전자음
+  droneSpot: () => {
+    tone(1560, 0.06, { type: "square", vol: 0.06 });
+    tone(2080, 0.08, { type: "square", vol: 0.06, at: 0.08 });
+  },
+  droneLost: () => tone(1800, 0.18, { type: "triangle", f2: 900, vol: 0.05 }),
+  droneId: () => {
+    tone(2400, 0.08, { type: "square", vol: 0.07 });
+    tone(2400, 0.08, { type: "square", vol: 0.07, at: 0.12 });
+    tone(2400, 0.22, { type: "square", f2: 1200, vol: 0.07, at: 0.24 });
+  },
 };
