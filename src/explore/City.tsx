@@ -9,7 +9,7 @@ import type { Lang } from "@/data/site";
 import { billboards, ticker } from "./story";
 import { AVENUE, CAMERA_POLES, CITY, CITY_NPCS, CROSS, DEPOT, EDGE, ISLANDS, LOTS, NS2_X, OVERSEER_ISLAND, QUEUE_X, QUEUE_Z, WALK } from "./zones";
 import { AirTraffic, Arks, Bridge, CloudSea, Islands, Platform, Sky, TwinBuddhas } from "./CityWorld";
-import { AlleyDecor, AlleyPeople, ChalkMarks, NeonRoute, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
+import { AlleyDecor, AlleyPeople, AvenueHolo, ChalkMarks, NeonRoute, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
 import { citizenGeometry, roofGeometry, visorGeometry } from "./models";
 import { towerMaterial } from "./towerMaterial";
 import { useNeoPost } from "./neoPost";
@@ -1190,6 +1190,7 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
       <AlleyDecor />
       <ChalkMarks />
       <NeonRoute />
+      <AvenueHolo />
       <AlleyPeople />
       <Hatch lang={lang} onTap={onTap} />
       <Grandma lang={lang} onTap={onTap} />

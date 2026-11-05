@@ -5,8 +5,8 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
-import { autoWalk, gaze, walkArea, type Rect } from "./gaze";
-import { GATE_STOP, type Interactable, type ZoneDef } from "./zones";
+import { autoWalk, gaze, route, walkArea, type Rect } from "./gaze";
+import { CITY, GATE_STOP, inAvenueStrip, type Interactable, type ZoneDef } from "./zones";
 import type { Box } from "./collide";
 
 const EYE = 1.65;
@@ -163,6 +163,15 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       }
     } else {
       resolve(p, RADIUS, zone.bounds, zone.boxes, zone.circles);
+      // 망원경 전: 큰길의 홀로그램 차단막을 넘지 못한다 (밖에서 안으로만 막는다)
+      if (route.avenueLocked && zone === CITY && !inAvenueStrip(s.x, s.z, RADIUS) && inAvenueStrip(p.x, p.z, RADIUS)) {
+        if (!inAvenueStrip(p.x, s.z, RADIUS)) p.z = s.z;
+        else if (!inAvenueStrip(s.x, p.z, RADIUS)) p.x = s.x;
+        else {
+          p.x = s.x;
+          p.z = s.z;
+        }
+      }
     }
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
     s.x = p.x;

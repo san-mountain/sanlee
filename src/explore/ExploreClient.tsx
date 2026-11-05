@@ -240,6 +240,11 @@ export default function ExploreClient() {
   useEffect(() => {
     route.phase = phase;
   }, [phase]);
+  // 망원경을 함께 보기 전에는 큰길이 홀로그램 차단막으로 막힌다 (줄에서 다시 시작한 방문자와 결말 중에는 막지 않는다)
+  const avenueLocked = phase === "scope" && !accepted && !ending;
+  useEffect(() => {
+    route.avenueLocked = avenueLocked;
+  }, [avenueLocked]);
 
   // 로그아웃: 화면이 오래된 모니터처럼 한 줄로 접혀 꺼지고, 웹사이트에서는 지워졌던 글자가 다시 쓰인다
   const router = useRouter();
@@ -500,12 +505,7 @@ export default function ExploreClient() {
       ],
     };
   };
-  // 방문자가 같이 보자고 하면: 이산이 먼저 본다 (전망대에 이산이 와 있을 때만)
-  const sanAtLookout = () => {
-    const san = CITY.items.find((i) => i.id === "san")!;
-    return Math.hypot(san.pos.x - LOOK_WAIT.x, san.pos.z - LOOK_WAIT.z) < 1.6;
-  };
-  // 방문자가 먼저 들여다본다 (이산은 비켜선 자리에서 기다린다)
+  // 방문자가 먼저 들여다본다. 이산은 어디에 있든 망원경 옆 비켜선 자리로 가서 기다린다 (방문자를 기다리게 하지 않는다)
   const startScene = () => {
     sanHold.at = null;
     scopeRef.current = { stage: "offer", step: 0, at: 0 };
@@ -729,7 +729,7 @@ export default function ExploreClient() {
           else if (it.id === "san" && cpRef.current.talked) setPanel({ kind: "dialog", name: SAN, lines: sanReview, step: 0 });
           else if (it.id === "san" && cpRef.current.seen) setPanel(afterCheckpointPanel());
           // 전망대에서 이산에게 말을 걸면 먼저 보라고 권한다 / 결정을 미뤘다면 결정으로
-          else if (it.id === "san" && phase === "scope" && inBay(player.pos.x, player.pos.z) && sanAtLookout()) say(scopeScene.ask, 2600);
+          else if (it.id === "san" && phase === "scope" && inBay(player.pos.x, player.pos.z) && scopeRef.current.stage === "idle") say(scopeScene.ask, 2600);
           else if (it.id === "san" && phase === "decide") setPanel(afterPanel());
           else if (it.id === "san") {
             const base = phase === "scope" ? sanCity.scope : sanCity.descent;
@@ -788,9 +788,8 @@ export default function ExploreClient() {
             else if (sc === "after") setPanel(afterPanel());
             else if (sc === "ask" || sc === "looking") break;
             else if (phase !== "scope") startScopeView();
-            // 망원경 단계: 이산이 전망대에 와 있으면 방문자가 먼저 본다. 아직 오는 중이면 기다린다
-            else if (sanAtLookout()) startScene();
-            else say(sanCue.waitMe, 2600);
+            // 망원경 단계: 방문자가 먼저 본다 (이산은 곁에서 비켜서 기다리다가, 방문자가 눈을 떼면 따라 본다)
+            else startScene();
             break;
           }
           const n = npcs[it.npc!];
@@ -1457,8 +1456,8 @@ export default function ExploreClient() {
           break;
         }
       }
-      // 큰길로 들어서면 (막지 않는다. 이산이 곁에 있을 때만 부탁 한 줄): 망원경 전에는 망원경부터, 결정을 미뤘다면 갈지 묻는다
-      if (withSan && (ph === "scope" || ph === "decide") && Math.abs(px) < 12 && pz < AVENUE_EDGE_Z && pz > AVENUE_EDGE_Z - 4 && now - c.avenueAt > 12000 && !speaking()) {
+      // 큰길 입구에서 (이산이 곁에 있을 때만 한 줄): 망원경 전에는 차단막 앞에서 망원경부터, 결정을 미뤘다면 갈지 묻는다
+      if (withSan && (ph === "scope" || ph === "decide") && Math.abs(px) < 12 && pz < AVENUE_EDGE_Z + 2.5 && pz > AVENUE_EDGE_Z - 4 && now - c.avenueAt > 12000 && !speaking()) {
         const sp = sanPos();
         if (Math.hypot(sp.x - px, sp.z - pz) < 8) {
           c.avenueAt = now;

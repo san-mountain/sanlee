@@ -7,7 +7,7 @@ import { addRim } from "./rim";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
-import { ALLEYS, ALLEY_PEOPLE, AVENUE, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOOKOUT_PATH, LOTS, PAGODA, SCOPES } from "./zones";
+import { ALLEYS, ALLEY_PEOPLE, AVENUE, AVENUE_HOLO, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOOKOUT_PATH, LOTS, PAGODA, SCOPES } from "./zones";
 import { citizenGeometry, roofGeometry } from "./models";
 import { chalkArrowTexture, concreteTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
@@ -107,6 +107,52 @@ export function NeonRoute() {
           </mesh>
         </group>
       ))}
+    </group>
+  );
+}
+
+/* ---------- 큰길 차단막: 망원경을 보기 전에는 큰길 입구마다 붉은 홀로그램 막이 선다 ---------- */
+export function AvenueHolo() {
+  const sign = useSign([["통행 제한", 1], ["RESTRICTED", 0.55]], { color: "#ffd0dc", bg: "#2a0610", w: 512, h: 200, border: true });
+  const group = useRef<THREE.Group>(null);
+  const film = useRef<THREE.MeshBasicMaterial>(null);
+  const lines = useRef<THREE.MeshBasicMaterial>(null);
+  const H = 3.2;
+  useFrame((st) => {
+    const on = route.avenueLocked;
+    if (group.current) group.current.visible = on;
+    if (!on) return;
+    const t = st.clock.elapsedTime;
+    const flick = Math.sin(t * 37) > 0.93 ? 0.5 : 1;
+    if (film.current) film.current.opacity = (0.16 + Math.sin(t * 2.2) * 0.04) * flick;
+    if (lines.current) lines.current.opacity = (0.75 + Math.sin(t * 5) * 0.15) * flick;
+  });
+  return (
+    <group ref={group} visible={false}>
+      {AVENUE_HOLO.map(([x0, z0, x1, z1], i) => {
+        const len = Math.hypot(x1 - x0, z1 - z0);
+        const yaw = -Math.atan2(z1 - z0, x1 - x0);
+        return (
+          <group key={i} position={[(x0 + x1) / 2, 0, (z0 + z1) / 2]} rotation={[0, yaw, 0]}>
+            <mesh position={[0, H / 2, 0]} renderOrder={3}>
+              <planeGeometry args={[len, H]} />
+              <meshBasicMaterial ref={i === 0 ? film : undefined} color="#ff2a55" transparent opacity={0.16} side={THREE.DoubleSide} depthWrite={false} toneMapped={false} />
+            </mesh>
+            {[0.15, 1.1, 2.05, 3.0].map((y) => (
+              <mesh key={y} position={[0, y, 0]} renderOrder={3}>
+                <boxGeometry args={[len, 0.05, 0.05]} />
+                <meshBasicMaterial ref={i === 0 && y === 0.15 ? lines : undefined} color="#ff3a66" transparent opacity={0.8} toneMapped={false} />
+              </mesh>
+            ))}
+            {i === 0 && (
+              <mesh position={[0, 1.7, 0.03]}>
+                <planeGeometry args={[3.2, 1.25]} />
+                <meshBasicMaterial map={sign} transparent opacity={0.92} side={THREE.DoubleSide} toneMapped={false} />
+              </mesh>
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }

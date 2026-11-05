@@ -334,14 +334,12 @@ export const sanCue = {
   // 골목 입구에서 처음 (허공 너머로 남쪽 전망대의 망원경이 보인다)
   // 배송 대기소 처마 밑
   shelter: { ko: "여긴 지붕이 가려 줘. 잠깐 쉬자.", en: "The roof covers us here. Let's rest a moment." } as L,
-  // 망원경 전에 큰길로 들어서면 (곁에 있을 때만. 막는 것이 아니라 부탁)
-  avenue: { ko: "망원경부터 보고 가면 안 될까? 여기까지 왔는데.", en: "Can we see the scope first? We've come this far." } as L,
+  // 망원경 전에 큰길 차단막 앞에 서면 (곁에 있을 때만)
+  avenue: { ko: "이쪽은 막혀 있네. 망원경부터 보러 가자.", en: "This way's blocked. Let's go see the scope first." } as L,
   // 망원경 뒤 결정을 미룬 채 큰길로 들어서면
   avenueDecide: { ko: "난 아래로 가 보고 싶어. 같이 갈 거면 이쪽이야.", en: "I want to go down. If you're coming, it's this way." } as L,
   agree: { ko: "고마워. 검문소까지 같이 가자.", en: "Thank you. Let's go to the checkpoint together." } as L,
   later: { ko: "응. 여기서 기다릴게.", en: "Okay. I'll wait here." } as L,
-  // 망원경 단계에서 이산이 오기 전에 망원경을 만지면 (같이 보기로 했다)
-  waitMe: { ko: "잠깐만. 나도 같이 보자.", en: "Wait. Let me look with you." } as L,
   // 기록 없는 방문자: 드론 빛이 둘을 지나간 뒤 (실제로 표적이 붙지 못한 다음에만)
   passed: { ko: "…그냥 지나갔어.", en: "…It just went past." } as L,
   // 기록 없는 방문자와 다시 일어난 이산: 방공호를 나설 때

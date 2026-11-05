@@ -295,8 +295,27 @@ export const DEPOT = { x: -53.6, z: 30.4, w: 4.8, d: 3.6, y0: 2.45, y1: 2.7 };
 export const DEPOT_WALL = box(DEPOT.x, DEPOT.z + DEPOT.d / 2 - 0.1, DEPOT.w, 0.2);
 // 드론 빛을 가리는 지붕들 (광장 드론). Drones의 가림 판정과 바닥 빛 원 셰이더가 같은 상자를 쓴다
 export const ROOFS = [DEPOT];
-// 광장과 큰길의 경계 (z가 이보다 작으면 큰길). 막는 것은 없다: 큰길은 언제든 걸어 들어갈 수 있다
+// 광장과 큰길의 경계 (z가 이보다 작으면 큰길). 망원경을 보기 전에는 홀로그램 차단막이 막는다 (AVENUE_HOLO)
 export const AVENUE_EDGE_Z = 13.4;
+// 큰길 띠: 건물 첫 줄 안쪽(|x| < 11.5), 광장 경계 남쪽. 망원경 전에는 이 띠 안으로 들어갈 수 없다 (이미 안에 있으면 나갈 수는 있다)
+export const AVENUE_STRIP = { x: COLS[0][0], z1: AVENUE_EDGE_Z };
+export function inAvenueStrip(x: number, z: number, pad = 0) {
+  return Math.abs(x) < AVENUE_STRIP.x + pad && z < AVENUE_STRIP.z1 + pad;
+}
+// 차단막이 서는 자리: 광장 쪽 입구 하나 + 큰길 양옆의 골목·건널목 입구들 (건물 첫 줄 사이의 빈틈). [x0, z0, x1, z1]
+export const AVENUE_HOLO: [number, number, number, number][] = (() => {
+  const out: [number, number, number, number][] = [[-AVENUE_STRIP.x, AVENUE_STRIP.z1, AVENUE_STRIP.x, AVENUE_STRIP.z1]];
+  const zs = LOTS.filter((l) => l.col === 0 && l.side > 0)
+    .map((l) => [l.z0, l.z1] as [number, number])
+    .sort((a, b) => b[1] - a[1]);
+  let top = AVENUE_STRIP.z1;
+  for (const [z0, z1] of zs) {
+    if (top - z1 > 0.2) for (const sd of [-1, 1]) out.push([sd * AVENUE_STRIP.x, z1, sd * AVENUE_STRIP.x, Math.min(top, AVENUE_STRIP.z1)]);
+    top = Math.min(top, z0);
+  }
+  if (top - EDGE.z0 > 0.2) for (const sd of [-1, 1]) out.push([sd * AVENUE_STRIP.x, EDGE.z0, sd * AVENUE_STRIP.x, top]);
+  return out;
+})();
 // 수락 결말에서 이산이 남은 자리 (줄 밖, 검문소 앞). 다시 오면 여기 굳어 서 있다
 export const FROZEN_SAN = { x: -0.9, z: -104.6 };
 

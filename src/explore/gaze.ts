@@ -32,10 +32,10 @@ export const gaze = {
 // 진행 단계 하나: ExploreClient가 정하고 3D 쪽이 읽는다
 // restore 기록 복원 중 → talk 풀려난 이산과 대화 전 → scope 남쪽 망원경으로(함께 보기 전) →
 // decide 함께 봤고, 승강장으로 갈지 아직 답하지 않음 → descent 승강장으로 가기로 함
-// 큰길은 단계와 상관없이 걸어 들어갈 수 있다 (진행에 따라 생기는 막힘은 없다)
+// 망원경을 함께 보기 전(scope까지)에는 큰길이 홀로그램 차단막으로 막힌다 (avenueLocked, ExploreClient가 정한다)
 export type RoutePhase = "restore" | "talk" | "scope" | "decide" | "descent";
 // frozenSan: 수락한 뒤 다시 온 방문자의 큰길에 정지 처분된 이산이 서 있는가 (풀어 주면 다시 검문소에 도전한다)
-export const route: { phase: RoutePhase; frozenSan: boolean } = { phase: "restore", frozenSan: false };
+export const route: { phase: RoutePhase; frozenSan: boolean; avenueLocked: boolean } = { phase: "restore", frozenSan: false, avenueLocked: false };
 
 // 시점을 스스로 걷게 한다 (충돌 무시: 미리 확인한 빈 자리 사이만 잇는다). Player가 읽는다
 // to: 지금 가는 점, queue: 그다음 점들 (도착할 때마다 하나씩 꺼낸다), arrived: 마지막 점에 도착했는가
