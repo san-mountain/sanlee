@@ -243,10 +243,10 @@ export const statueLines: L[][] = [
     { ko: "저 그림, 내가 그렸던 게 기억나. 그런데 옆에 적힌 연도는 2026년이네.", en: "That painting. I remember painting it. But the year written beside it is 2026." },
     // 방공호를 나서는 동기: 데이터 이산의 존재에 대한 회의 → 쿠키를 거부한 진짜 이유 → 기록이 아닌 경험 하나
     { ko: "내가 아는 건 전부 그 사람의 기록이야. 얼굴도, 그림도, 글도. 난 그걸 읽고 있을 뿐인지도 몰라.", en: "Everything I know is that person's record. The face, the paintings, the writing. Maybe I'm only reading them." },
-    { ko: "처음엔 위치가 기록되는 게 싫은 줄 알았어. 그런데 사실은, 도시가 날 적을수록 나도 그냥 기록이 되어 버리는 것 같았어.", en: "At first I thought I just didn't want my location recorded. But really, the more the city wrote me down, the more I felt like I was becoming nothing but a record." },
-    { ko: "그래서 모든 쿠키를 거부했어. 그랬더니 이렇게 멈춰 버렸지만.", en: "So I rejected every cookie. And then I stopped, like this." },
-    { ko: "남쪽 망원경으로는 구름 아래가 보일 때도 있대. 바깥은 위험하지만, 남한테 들은 얘기 말고 내 눈으로 보고 싶어.", en: "They say you can sometimes see below the clouds from the south scope. It's dangerous out there, but I want to see it with my own eyes, not hear it from someone else." },
-    { ko: "기록이 아닌 걸 하나라도 갖고 싶어. 같이 가 줄래? 보고 돌아오자.", en: "I want just one thing that isn't a record. Will you come with me? We'll look and come back." },
+    { ko: "도시가 날 적을수록, 나도 그냥 기록이 되어 가는 것 같았거든.", en: "The more the city wrote me down, the more I felt like I was turning into nothing but a record." },
+    { ko: "그래서 쿠키를 전부 거부했고, 결국 이렇게 멈춰 버렸지.", en: "So I rejected every cookie, and in the end I stopped, like this." },
+    { ko: "남쪽 망원경으로는 가끔 구름 아래가 보인다던데. 바깥은 위험해도, 들은 얘기 말고 내 눈으로 보고 싶어.", en: "I heard you can sometimes see below the clouds from the south scope. It's dangerous out there, but I want to see it with my own eyes, not just hear about it." },
+    { ko: "기록이 아닌 걸 하나쯤은 갖고 싶으니까. 같이 가 줄래? 보고 돌아오자.", en: "Because I want at least one thing that isn't a record. Will you come with me? We'll look and come back." },
   ],
 ];
 
@@ -274,8 +274,6 @@ export const sanCity = {
 export const scopeScene = {
   // 방문자가 먼저 본다. 이산은 비켜서서 기다린다
   ask: { ko: "너 먼저 봐. 난 그다음에 볼게.", en: "You look first. I'll go after you." } as L,
-  // 방문자가 눈을 떼면
-  mine: { ko: "나도 볼래.", en: "My turn." } as L,
   first: { ko: "……! 저 아래, 뭔가 반짝였어.", en: "……! Down there, something glimmered." } as L,
   // 방문자가 망원경에서 눈을 뗀 뒤. 두 번째 페이지 앞의 정적 동안 둘은 아래를 내려다본다
   after: [
@@ -362,9 +360,9 @@ export const reunion = {
     { ko: "너한테서도 아무 기록이 읽히지 않아. 지금 우리 둘은 어디에도 적혀 있지 않은 거야.", en: "I can't read any record from you either. Right now, neither of us is written down anywhere." },
     { ko: "그럼 도시도, 드론도 우릴 찾지 못할 거야.", en: "Then the city and its drones won't be able to find us either." },
     { ko: "왜인지는 모르겠는데, 구름 아래로 내려가 보고 싶어. 다른 건 다 잊었는데 그 마음만은 그대로야.", en: "I don't know why, but I want to go down below the clouds. I forgot everything else, but that wish is still here." },
-    { ko: "승강장은 검문소 너머에 있어. 같이 가 줄래? 이번엔 네가 앞장서 줘.", en: "The platform is past the checkpoint. Will you come? This time, you lead." },
+    { ko: "승강장은 검문소 너머에 있어. 같이 가 줄래?", en: "The platform is past the checkpoint. Will you come with me?" },
   ] as Line[],
-  awakeLine: { ko: "검문소 너머 승강장까지. 네가 앞장서 줘.", en: "To the platform past the checkpoint. You lead." } as Line,
+  awakeLine: { ko: "검문소 너머 승강장까지 같이 가자.", en: "Let's go together, to the platform past the checkpoint." } as Line,
 };
 // 연결이 끊긴 적이 있다면 지상의 이산이 덧붙이는 말 (선택 대화)
 export const sanAfterDeath: L = { ko: "방금 쓰러졌는데… 도시가 널 다시 불러냈어.", en: "You just went down… and the city called you back." };
@@ -434,7 +432,7 @@ export const checkpoint = {
     { ko: "기기를 등록했습니다. 다음 방문부터 자동으로 접속됩니다.", en: "Device registered. You will be signed in automatically from your next visit." },
     { ko: "승강장 대기열에 등록됐습니다. 출발 시각은 정해지지 않았습니다.", en: "You are registered for the platform queue. No departure time has been set." },
     { ko: "동행인 이산: 추적 거부 기록으로 등록 불가. 정지 처분합니다. (연결 중단 {a}회 · 복원 {r}회)", en: "Companion San: cannot be registered due to a record of refusing tracking. Suspending. (Disconnected {a} times · restored {r} times)" },
-    { ko: "먼저 가 있어. 난 여기 있을게.", en: "Go on ahead. I'll stay here.", say: true },
+    { ko: "결국 이렇게 되는구나.", en: "So this is how it ends.", say: true },
     { ko: "뒤따라오던 발소리가 더는 들리지 않는다.", en: "The footsteps that followed you can no longer be heard." },
   ] as Beat[],
   reject: [
@@ -449,7 +447,7 @@ export const checkpoint = {
     { ko: "저장된 방문자 기록이 없습니다.", en: "There is no saved visitor record." },
     { ko: "추적할 대상을 찾지 못했습니다.", en: "No one to track was found." },
     { ko: "…이번엔 우릴 막지 않네.", en: "…This time it isn't stopping us.", say: true },
-    { ko: "여기부터는 나도 몰라.", en: "From here on, I don't know either.", say: true },
+    { ko: "여기부터는 나도 몰라. 내가 먼저 내려가 볼게.", en: "From here on, I don't know either. I'll go down first.", say: true },
     // 계단을 다 내려가 화면이 흐려지고 신호가 끊긴 뒤, 검은 화면에 남는 한 문장
     { ko: "구름 아래에 무엇이 있었는지는 어디에도 기록되지 않았다.", en: "What lay beneath the clouds was never recorded anywhere." },
   ] as Beat[],

@@ -12,17 +12,18 @@ export function useModalFocus(root: RefObject<HTMLElement | null>, selector: str
     const controls = () => [...dialog.querySelectorAll<HTMLElement>(
       'button:not(:disabled), a[href], input:not(:disabled), summary, [tabindex="0"]'
     )].filter((el) => el.getClientRects().length > 0);
-    const focusFirst = () => (controls()[0] ?? dialog).focus();
+    // preventScroll: 포커스가 게임 화면(overflow: hidden)을 밀어 올리거나 내리지 않게
+    const focusFirst = () => (controls()[0] ?? dialog).focus({ preventScroll: true });
     const frame = requestAnimationFrame(focusFirst);
     const key = (event: KeyboardEvent) => {
       if (event.key !== "Tab") return;
       const items = controls();
-      if (!items.length) { event.preventDefault(); dialog.focus(); return; }
+      if (!items.length) { event.preventDefault(); dialog.focus({ preventScroll: true }); return; }
       const first = items[0], last = items[items.length - 1];
       if (!dialog.contains(document.activeElement) || (event.shiftKey && document.activeElement === first)) {
-        event.preventDefault(); (event.shiftKey ? last : first).focus();
+        event.preventDefault(); (event.shiftKey ? last : first).focus({ preventScroll: true });
       } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault(); first.focus();
+        event.preventDefault(); first.focus({ preventScroll: true });
       }
     };
     document.addEventListener("keydown", key, true);

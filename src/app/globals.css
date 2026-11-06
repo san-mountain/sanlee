@@ -183,7 +183,7 @@ img { max-width: 100%; height: auto; display: block; }
   color: var(--dim); text-align: center; width: 92%; pointer-events: none; text-shadow: 0 0 6px #000; }
 .panel-wrap { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center;
   padding: 16px; pointer-events: none; }
-.panel { pointer-events: auto; width: min(560px, 100%); max-height: 62vh; overflow: auto;
+.panel { pointer-events: auto; width: min(560px, 100%); max-height: 62vh; max-height: 62dvh; overflow: auto;
   background: linear-gradient(180deg, #120a24ee, #07030fee); border: 1px solid var(--cyan);
   box-shadow: 0 0 24px #22f0ff44, inset 0 0 40px #22f0ff11; padding: 20px 20px 16px; line-height: 1.65;
   animation: panelIn .35s ease-out; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
@@ -284,7 +284,8 @@ img { max-width: 100%; height: auto; display: block; }
 }
 .contact-title { font-size: var(--fs-body); font-weight: 600; letter-spacing: .02em; margin: var(--s4) 0 var(--s1); padding-top: 0; scroll-margin-top: 90px; }
 /* ---------- DELETE SEOUL v2: 1인칭 이동 ---------- */
-.explore-root { height: 100dvh; overscroll-behavior: none; }
+/* 높이는 position: fixed; inset: 0이 정한다 (100dvh는 안드로이드 전체화면 전환 뒤 늦게 바뀌어 화면보다 길어질 때가 있어 아래가 잘렸다) */
+.explore-root { overscroll-behavior: none; }
 .canvas-wrap { position: absolute; inset: 0; transition: filter 2.4s ease; }
 .hud-right { display: flex; gap: 10px; align-items: center; }
 .hud-zone { position: absolute; top: 44px; left: 16px; z-index: 30; pointer-events: none; font-family: var(--mono);

@@ -258,11 +258,23 @@ export default function ExploreClient() {
   // R-07과 친구가 되었는지: 이번 방문(이 페이지) 동안만. 어디에도 저장하지 않는다
   const [friend, setFriend] = useState(false);
   const rootRef = useRef<HTMLElement>(null);
+  // 게임 화면은 스크롤되지 않는다: 포커스나 브라우저가 overflow: hidden인 화면을 밀어도 곧바로 제자리로 (대화창이 화면 밖으로 밀려나지 않게)
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const pin = () => {
+      if (root.scrollTop || root.scrollLeft) root.scrollTo(0, 0);
+    };
+    root.addEventListener("scroll", pin);
+    return () => root.removeEventListener("scroll", pin);
+  }, []);
   const labelEls = useRef<Record<string, HTMLDivElement | null>>({});
   // 기록을 지우고 돌아와 말없이 곁에 앉아 기다린 사람: 이 상태는 어디에도 저장하지 않는다 (기록이 없다는 게 핵심)
   const [ghost, setGhost] = useState(false);
   // 空 결말에서 방문자가 계단 쪽으로 실제로 걸어 나갔는지
   const [stepped, setStepped] = useState(false);
+  // 空 결말: 이산이 먼저 계단을 내려가기 시작했는가
+  const [sanGoes, setSanGoes] = useState(false);
   const steppedRef = useRef(false);
   // 검문소에서 물러난 적이 있는지 / 물러난 뒤 이산과의 대화를 끝까지 들었는지 / 검문소의 '도시가 저장한 기록 보기'를 연 적이 있는지 (이번 방문 동안만)
   const cpRef = useRef({ seen: false, talked: false });
@@ -326,7 +338,7 @@ export default function ExploreClient() {
   const endShown = !!ending && ending.step >= (checkpoint[ending.kind] as Beat[]).length;
   // 결말 곡은 결말마다 하나 (수락·거부·空). 고르는 순간 음악을 끊지도, 곧바로 결말 곡을 틀지도 않는다:
   // 듣던 지상 곡이 결말의 처음 몇 줄을 받쳐 주다가, 이야기가 꺾이는 줄에서 결말 곡으로 겹쳐 넘어간다 (곡 파일은 결말이 시작될 때 미리 받아 둔다).
-  // 수락: 이산의 작별("먼저 가 있어…")에서. 거부: 장면이 방공호로 넘어가는 순간(두 번째 정지 시민)에서.
+  // 수락: 이산의 마지막 말("결국 이렇게 되는구나.")에서. 거부: 장면이 방공호로 넘어가는 순간(두 번째 정지 시민)에서.
   // 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 올라서자마자 f-ALL이 아주 작게 시작해 서서히 커지고, 空 결말도 그 곡을 끝까지 잇는다
   const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "fall") : null;
   const END_CUE: Record<EndKind, number> = { accept: 3, reject: 3, ghost: 0 };
@@ -524,7 +536,7 @@ export default function ExploreClient() {
 
   // ---------- 남쪽 전망대의 망원경 장면 ----------
   // idle → offer(방문자가 먼저 들여다본다. 이산은 옆에 비켜서 기다린다: scopeMove) →
-  // ask(눈을 떼면 이산 "나도 볼래.", 접안렌즈로 걸어간다) → looking(도착하고 잠깐 뒤 첫 말) →
+  // ask(눈을 떼면 이산이 말없이 접안렌즈로 걸어간다) → looking(도착하고 잠깐 뒤 첫 말) →
   // after(이산이 눈을 떼고 묻는다. 대화 끝에 결정) → done.
   // 대화를 닫는 것은 어떤 행동도 대신하지 않는다. 장면의 움직임은 모두 도착을 기다린다
   type ScopeStage = "idle" | "ask" | "looking" | "offer" | "after" | "done";
@@ -1072,17 +1084,11 @@ export default function ExploreClient() {
       setHush(false);
       return;
     }
+    // 시선은 움직이지 않는다 (함께 내려다볼지는 방문자가 정한다)
     setHush(true);
-    if (hushAfter) gaze.lookAt = { x: SCOPE_POS[0], y: -24, z: SCOPE_POS[2] + 34 };
-    const tm = setTimeout(() => {
-      setHush(false);
-      if (hushAfter) gaze.lookAt = null;
-    }, ms);
-    return () => {
-      clearTimeout(tm);
-      if (hushAfter) gaze.lookAt = null;
-    };
-  }, [hushLine, hushAfter]);
+    const tm = setTimeout(() => setHush(false), ms);
+    return () => clearTimeout(tm);
+  }, [hushLine]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -1262,11 +1268,10 @@ export default function ExploreClient() {
         walkArea.rects = GHOST_RECTS;
         walkArea.floor = stairFloor;
       }
-      // 이산의 마지막 말과 함께 시선을 잠깐 계단 쪽으로 내려 준다 (이산이 내려가는 모습이 보이게). 걷기는 막지 않는다
+      // 이산의 마지막 말("…먼저 내려가 볼게.")이 뜨고 잠깐 뒤에 이산이 계단으로 걸어간다. 시선은 움직이지 않는다
       if (step === GHOST_STEP) {
-        gaze.lookAt = { x: STAIR_TOP + 2.5, y: -1.2, z: -153 };
         clearTimeout(sceneTimer.current);
-        sceneTimer.current = setTimeout(() => (gaze.lookAt = null), 2200);
+        sceneTimer.current = setTimeout(() => setSanGoes(true), 1600);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1544,10 +1549,9 @@ export default function ExploreClient() {
         m.back = null;
         gaze.still = false;
         if (m.looked && sc.stage === "offer") {
-          // 방문자가 눈을 뗐다: 이번엔 이산이 본다
+          // 방문자가 눈을 뗐다: 이번엔 이산이 말없이 접안렌즈로 간다
           sc.at = 0;
           setScopeStage("ask");
-          say(scopeScene.mine, 2400);
           return;
         }
         if (m.looked && phaseRef.current !== "scope") say(scopeScene.again, 2600);
@@ -1693,6 +1697,7 @@ export default function ExploreClient() {
     gaze.mood = "";
     steppedRef.current = false;
     setStepped(false);
+    setSanGoes(false);
     walkArea.floor = null;
     setSecondStatue(false);
     setFlash(false);
@@ -1932,7 +1937,7 @@ export default function ExploreClient() {
       ? ACCEPT_SAN
       : ending?.kind === "ghost"
         ? ending.step >= GHOST_WALK
-          ? ending.step >= GHOST_STEP
+          ? ending.step >= GHOST_STEP && sanGoes
             ? GHOST_DOWN
             : GHOST_SAN
           : undefined

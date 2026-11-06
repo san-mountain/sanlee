@@ -19,9 +19,9 @@ const VOL = 0.3;
 // (새 세 곡은 평균 음량(accept −8.0, reject −9.5, fall −8.4 dB)을 기존 곡과 같은 비율로 맞춘 값. 들어 보고 정하지 않았다)
 const LEVEL: Record<Track, number> = { bunker: 1, ground: 0.83, jabi: 0.68, ending: 0.87, accept: 0.61, reject: 0.73, fall: 0.64 };
 const FADE = 1.6;
-// 처음 시작할 때 아주 작게 들어와 천천히 커지는 곡 (f-ALL: 공 경로의 지상에 올라서자마자 약 24초에 걸쳐). 줄어들 때나 설정창을 닫아 되돌릴 때는 다른 곡과 같다
+// 처음 시작할 때 아주 작게 들어와 천천히 커지는 곡 (f-ALL: 공 경로의 지상에 올라서자마자 약 12초에 걸쳐). 줄어들 때나 설정창을 닫아 되돌릴 때는 다른 곡과 같다
 // 수락·거부 결말 곡은 듣던 곡과 몇 초 겹치며 들어온다
-const FADE_IN: Partial<Record<Track, number>> = { fall: 24, accept: 5, reject: 5 };
+const FADE_IN: Partial<Record<Track, number>> = { fall: 12, accept: 5, reject: 5 };
 
 let ctx: AudioContext | null = null;
 const chans: Partial<Record<Track, { el: HTMLAudioElement; gain: GainNode }>> = {};
