@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RESTORE_KEY } from "@/components/RestoreCrossing";
+import { FORGET_HINT_KEY } from "@/components/ForgetCity";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
@@ -91,6 +92,8 @@ type Panel =
       plaque?: boolean;
       locked?: boolean;
       link?: { href: string; label: L };
+      // 마지막 줄에서 로그아웃 버튼을 보인다 (검문소에서 물러난 뒤 이산과의 대화: 기록을 지우러 웹사이트로 나가는 길)
+      logout?: boolean;
       // 망원경 장면 뒤의 대화 (닫았다가 다시 열면 그 줄부터 이어진다) / 미뤄 둔 결정 한 페이지
       scene?: "after" | "decide";
       // 그 줄에서 방문자가 할 수 있는 행동 (말이 아니라 몸짓: 고개 끄덕이기, 두 번 두드리기, 흉내 내기)
@@ -324,6 +327,8 @@ export default function ExploreClient() {
     if (leaving) return;
     try {
       sessionStorage.setItem(RESTORE_KEY, "1");
+      // 이산의 부탁을 들은 뒤 나간다면: 웹사이트에서 맨 아래(꼬리말의 delete seoul)로 내려가 보도록 한 번 안내한다 (ForgetCity)
+      if (localStorage.getItem(PROMISE_KEY) === "2") sessionStorage.setItem(FORGET_HINT_KEY, "1");
     } catch {}
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return router.push("/");
     setLeaving(true);
@@ -532,6 +537,7 @@ export default function ExploreClient() {
     name: SAN,
     lines: [...sanAfterCheckpoint.lines, sanAfterCheckpoint.memory],
     step: 0,
+    logout: true,
   });
 
   // ---------- 남쪽 전망대의 망원경 장면 ----------
@@ -826,7 +832,7 @@ export default function ExploreClient() {
           else if (it.id === "san" && scopeRef.current.stage === "after") setPanel(afterPanel());
           else if (it.id === "san" && (scopeRef.current.stage === "ask" || scopeRef.current.stage === "looking")) break;
           // 검문소 뒤: 대화를 다 들었으면 짧게 되짚기만, 물러났지만 끝까지 못 들었으면 그 대화를 다시
-          else if (it.id === "san" && cpRef.current.talked) setPanel({ kind: "dialog", name: SAN, lines: sanReview, step: 0 });
+          else if (it.id === "san" && cpRef.current.talked) setPanel({ kind: "dialog", name: SAN, lines: sanReview, step: 0, logout: true });
           else if (it.id === "san" && cpRef.current.seen) setPanel(afterCheckpointPanel());
           // 전망대에서 이산에게 말을 걸면 먼저 보라고 권한다 / 결정을 미뤘다면 결정으로
           else if (it.id === "san" && phase === "scope" && inBay(player.pos.x, player.pos.z) && scopeRef.current.stage === "idle") say(scopeScene.ask, 2600);
@@ -2162,6 +2168,11 @@ export default function ExploreClient() {
               <button className="btn" onClick={closePanel}>
                 {t(ui.close)}
               </button>
+              {panel.logout && panel.step === panel.lines.length - 1 && (
+                <Link className="btn primary" href="/" onClick={logout}>
+                  {t(ui.logout)}
+                </Link>
+              )}
               {panel.link && panel.step === panel.lines.length - 1 && (
                 <a className="btn primary" href={panel.link.href} target="_blank" rel="noopener noreferrer">
                   {t(panel.link.label)}

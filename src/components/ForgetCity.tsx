@@ -50,6 +50,10 @@ function describe(ko: boolean): Line[] {
 
 const STEP_MS = 520;
 
+// 게임에서 이산의 부탁을 듣고 로그아웃해 나왔을 때 한 번: 웹사이트 맨 아래(이 간판)로 내려가 보도록 화면 아래에 작은 안내를 띄운다.
+// 간판이 화면에 들어오면 안내는 사라지고 간판이 잠깐 깜빡인다
+export const FORGET_HINT_KEY = "sanlee-forget-hint";
+
 export default function ForgetCity() {
   const { lang } = useLang();
   const ko = lang === "ko";
@@ -60,13 +64,51 @@ export default function ForgetCity() {
   // 서버에서는 알 수 없으므로 마운트 뒤에 기록이 있는지 확인한다 (없으면 아무것도 그리지 않는다)
   const [has, setHas] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [hint, setHint] = useState(false);
+  const [lit, setLit] = useState(false);
+  const signRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
+    let on = false;
     try {
-      setHas(localStorage.getItem(PROMISE_KEY) === PROMISE_NOW);
+      on = localStorage.getItem(PROMISE_KEY) === PROMISE_NOW;
+      setHas(on);
+      if (on && sessionStorage.getItem(FORGET_HINT_KEY)) {
+        // 웹사이트 글자가 다시 쓰이는 장면(RestoreCrossing)이 끝난 뒤에. 한 번만 (띄우는 순간 표시를 지운다)
+        timers.current.push(
+          setTimeout(() => {
+            try {
+              sessionStorage.removeItem(FORGET_HINT_KEY);
+            } catch {}
+            setHint(true);
+          }, 2200)
+        );
+      }
     } catch {}
     const ts = timers.current;
     return () => ts.forEach(clearTimeout);
   }, []);
+  // 간판이 화면에 들어오면 안내를 거두고 간판을 잠깐 밝힌다
+  useEffect(() => {
+    const el = signRef.current;
+    if (!hint || !el) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      setHint(false);
+      setLit(true);
+      timers.current.push(setTimeout(() => setLit(false), 2400));
+    }, { threshold: 1 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hint]);
+  const hintEl = hint && (
+    <button
+      type="button"
+      className="forget-hint"
+      onClick={() => signRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })}
+    >
+      <span aria-hidden="true">↓</span> {ko ? "맨 아래의 delete seoul" : "delete seoul, at the very bottom"}
+    </button>
+  );
 
   const onClick = () => {
     if (phase === "idle") return setPhase("confirm");
@@ -107,9 +149,12 @@ export default function ForgetCity() {
     );
   if (phase === "idle" || phase === "dying")
     return (
-      <button type="button" className={`forget-city${phase === "dying" ? " dying" : ""}`} onClick={onClick} title={ko ? "이 기기의 DELETE SEOUL 기록 지우기" : "Delete this device's DELETE SEOUL records"} aria-label={ko ? "이 기기의 DELETE SEOUL 기록 지우기" : "Delete this device's DELETE SEOUL records"}>
+      <>
+      {hintEl}
+      <button ref={signRef} type="button" className={`forget-city${phase === "dying" ? " dying" : ""}${lit ? " lit" : ""}`} onClick={onClick} title={ko ? "이 기기의 DELETE SEOUL 기록 지우기" : "Delete this device's DELETE SEOUL records"} aria-label={ko ? "이 기기의 DELETE SEOUL 기록 지우기" : "Delete this device's DELETE SEOUL records"}>
         delete seoul
       </button>
+      </>
     );
   return (
     <span className={`forget-log${phase === "done" ? " done" : ""}`} role="status">

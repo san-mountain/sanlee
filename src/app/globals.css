@@ -1202,3 +1202,17 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
     repeating-linear-gradient(0deg, rgba(255, 255, 255, .07) 0 1px, transparent 1px 3px),
     repeating-linear-gradient(90deg, rgba(150, 215, 255, .05) 0 2px, transparent 2px 7px),
     #000000b8; }
+
+/* 게임에서 로그아웃해 나왔을 때 한 번: 맨 아래의 delete seoul로 내려가 보라는 작은 안내 (ForgetCity) */
+/* 오른쪽 아래의 DELETE SEOUL 봉인(NeonSeal)과 겹치지 않게 그 위에 */
+.forget-hint { all: unset; position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); width: max-content; max-width: calc(100vw - 40px); box-sizing: border-box; text-align: center; transform: translateX(-50%); z-index: 90;
+  cursor: pointer; padding: 8px 14px; border: 1px solid #7ff6ff; border-radius: 999px; background: #0d0716e6; color: #c9fbff;
+  font-family: var(--mono, ui-monospace, monospace); font-size: 12px; letter-spacing: .06em; white-space: normal;
+  box-shadow: 0 0 10px #22f0ff66; animation: forgetHintIn .6s ease-out, forgetHintBob 1.6s ease-in-out .6s infinite; }
+.forget-hint span { display: inline-block; margin-right: 4px; color: #ff6fe0; }
+.forget-hint:focus-visible { outline: 2px solid #ff2bd6; outline-offset: 2px; }
+@keyframes forgetHintIn { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes forgetHintBob { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 4px); } }
+.forget-city.lit { animation: forgetLit .4s steps(1) 6; }
+@keyframes forgetLit { 0% { box-shadow: 0 0 6px #22f0ff, 0 0 22px #ff2bd6; color: #fff; } 50% { box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { .forget-hint { animation: none; } }

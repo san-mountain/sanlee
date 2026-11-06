@@ -63,6 +63,8 @@ export const ui = {
     { ko: "먼저 방 한가운데 앉아 있는 사람에게 다가가세요.", en: "First, go to the person sitting in the middle of the room." },
   ] as L[],
   toPortfolio: { ko: "웹사이트로 돌아가기", en: "Back to the website" },
+  // 검문소에서 물러난 뒤 이산과의 대화 끝 (기록을 지우러 웹사이트로 나가는 길)
+  logout: { ko: "로그아웃", en: "Log out" },
   exitLocked: [
     { ko: "아직 이산이 움직이지 못합니다.", en: "San can't move yet." },
     { ko: "터미널 세 대에서 이산의 기록을 열어 보세요. ({n}/3)", en: "Open San's records on the three terminals. ({n}/3)" },
@@ -243,7 +245,7 @@ export const statueLines: L[][] = [
     { ko: "저 그림, 내가 그렸던 게 기억나. 그런데 옆에 적힌 연도는 2026년이네.", en: "That painting. I remember painting it. But the year written beside it is 2026." },
     // 방공호를 나서는 동기: 데이터 이산의 존재에 대한 회의 → 쿠키를 거부한 진짜 이유 → 기록이 아닌 경험 하나
     { ko: "내가 아는 건 전부 그 사람의 기록이야. 얼굴도, 그림도, 글도. 난 그걸 읽고 있을 뿐인지도 몰라.", en: "Everything I know is that person's record. The face, the paintings, the writing. Maybe I'm only reading them." },
-    { ko: "도시가 날 적을수록, 나도 그냥 기록이 되어 가는 것 같았거든.", en: "The more the city wrote me down, the more I felt like I was turning into nothing but a record." },
+    { ko: "도시가 날 감시할수록, 나도 그냥 기록이 되어 가는 것 같았거든.", en: "The more the city watched me, the more I felt like I was turning into nothing but a record." },
     { ko: "그래서 쿠키를 전부 거부했고, 결국 이렇게 멈춰 버렸지.", en: "So I rejected every cookie, and in the end I stopped, like this." },
     { ko: "남쪽 망원경으로는 가끔 구름 아래가 보인다던데. 바깥은 위험해도, 들은 얘기 말고 내 눈으로 보고 싶어.", en: "I heard you can sometimes see below the clouds from the south scope. It's dangerous out there, but I want to see it with my own eyes, not just hear about it." },
     { ko: "기록이 아닌 걸 하나쯤은 갖고 싶으니까. 같이 가 줄래? 보고 돌아오자.", en: "Because I want at least one thing that isn't a record. Will you come with me? We'll look and come back." },
@@ -311,8 +313,9 @@ export const encounters: Record<"grandma" | "courier" | "edgekid", { who: "san" 
 export const sanAfterCheckpoint = {
   lines: [
     { ko: "너만 줄에 설 수 있나 봐. 난 이렇게 움직이는데도, 저기엔 아직 정지된 사람으로 나와.", en: "Looks like only you can join the line. I'm moving, but it still lists me as suspended." },
-    { ko: "저 명단도 결국 그 웹사이트에 남아. 터미널의 내 기록처럼, 오늘 네가 지나온 길까지 전부.", en: "That list ends up on the website too. Like my records in the terminals, down to every step you took today." },
-    { ko: "아까 화면에 쓰여 있었지. 기록은 웹사이트로 돌아가야 지울 수 있다고.", en: "It said so on the screen. The records can only be deleted back on the website." },
+    // 이산은 게임 속 사람이라 웹사이트를 잘 모른다: 두루뭉술하게 '이 도시 바깥'이라고만 말한다 (대화 끝의 로그아웃 버튼이 길을 대신 알려 준다)
+    { ko: "이 도시는 뭐든 다 적어 둬. 내 기록도, 오늘 네가 지나온 길도.", en: "This city writes everything down. My records, and every step you took today." },
+    { ko: "그걸 지울 수 있는 곳은 여기가 아니라 이 도시 바깥인가 봐.", en: "I think the place to erase them isn't here, but somewhere outside this city." },
     { ko: "지우면 난 다시 멈출 거야. 오늘 일도 잊어버릴 테고.", en: "If you delete them, I'll stop again. I'll forget today, too." },
     // 시 구절로 넘어가는 다리: 기록은 지워져도 마음에 새긴 것은 남을지 모른다
     { ko: "그래도 하나쯤은 남을지 몰라. 기록이 아니라 마음에 새긴 거라면.", en: "But maybe one thing would stay. If it's carved into my heart, not into a record." },
