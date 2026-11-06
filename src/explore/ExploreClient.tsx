@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
+import { MUSIC_URL, faceTalk, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
 import { AVENUE_EDGE_Z, BAY, EDGE, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
 import { sanHold, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
@@ -850,7 +850,11 @@ export default function ExploreClient() {
             } else setPanel({ kind: "dialog", name: plaque[0], lines: [{ ...faceUi.frozen, who: "narr" }], step: 0, plaque: true });
           }
           else if (complete) {
-            setPanel({ kind: "dialog", name: SAN, lines: statueLines[statueLines.length - 1], step: 0 });
+            // 얼굴 맞추기에서 고른 것에 따라 가벼운 말 한 줄이 끼어든다 (표준 미소면 의구심 줄도 그 얼굴에 맞게)
+            const [first, doubt, ...rest] = statueLines[statueLines.length - 1];
+            const m = faceRef.current.method;
+            const lines = m === "standard" ? [first, faceTalk.standard.joke, faceTalk.standard.doubt, ...rest] : m === "exception" ? [first, faceTalk.exception.joke, doubt, ...rest] : [first, doubt, ...rest];
+            setPanel({ kind: "dialog", name: SAN, lines, step: 0 });
             setTalked(true);
             try {
               localStorage.setItem(TALK_KEY, "1");

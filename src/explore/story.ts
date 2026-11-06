@@ -240,7 +240,7 @@ export const statueLines: L[][] = [
   ],
   [
     { ko: "……움직인다. 고마워.", en: "……I can move. Thank you." },
-    // 되찾은 얼굴에 대한 의구심 (표준 미소를 골랐든 원본을 지켰든 같은 말)
+    // 되찾은 얼굴에 대한 의구심 (원본을 지켰을 때. 표준 미소를 골랐다면 이 줄 앞뒤가 faceTalk.standard로 바뀐다)
     { ko: "얼굴이 돌아왔는데, 이상하게 낯설어. 장치는 ‘원본’이라고 했지만… 그 원본은 누구 얼굴일까.", en: "My face is back, but it feels strangely unfamiliar. The machine called it 'original'… but whose face was the original?" },
     { ko: "저 그림, 내가 그렸던 게 기억나. 그런데 옆에 적힌 연도는 2026년이네.", en: "That painting. I remember painting it. But the year written beside it is 2026." },
     // 방공호를 나서는 동기: 데이터 이산의 존재에 대한 회의 → 쿠키를 거부한 진짜 이유 → 기록이 아닌 경험 하나
@@ -251,6 +251,18 @@ export const statueLines: L[][] = [
     { ko: "기록이 아닌 걸 하나쯤은 갖고 싶으니까. 같이 가 줄래? 보고 돌아오자.", en: "Because I want at least one thing that isn't a record. Will you come with me? We'll look and come back." },
   ],
 ];
+
+// 얼굴 맞추기에서 고른 것에 따라 깨어난 뒤 첫 대화에 끼어드는 가벼운 말 (이야기에는 영향이 없다).
+// joke는 "……움직인다. 고마워." 바로 뒤에, doubt는 얼굴에 대한 의구심 줄을 대신한다
+export const faceTalk = {
+  standard: {
+    joke: { ko: "…근데 입꼬리가 안 내려가. 웃을 일도 없는데 계속 웃고 있어. 이러다 볼에 쥐 나겠다.", en: "…But the corners of my mouth won't come down. Nothing's funny and I keep smiling. My cheeks are going to cramp." } as Line,
+    doubt: { ko: "얼굴은 돌아왔는데, 이상하게 낯설어. 도시는 ‘더 나은 나’라고 했지만… 원래 내 얼굴은 어땠을까.", en: "My face is back, but it feels strangely unfamiliar. The city called it 'a better me'… but what did my real face look like?" } as Line,
+  },
+  exception: {
+    joke: { ko: "비표준 얼굴로 등록됐네. 뭐, 표준이었던 적도 없으니까.", en: "Registered as a non-standard face, huh. Well, I was never standard anyway." } as Line,
+  },
+};
 
 // 기록을 지우고 돌아온 방문자: 이산은 처음 보는 사람처럼 대한다
 export const statueForgot: L[] = [

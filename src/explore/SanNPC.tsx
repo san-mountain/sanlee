@@ -33,7 +33,36 @@ const PATH: [number, number][] = [
   [-4.2, -6.5],
 ];
 
-export default function SanNPC({ mode, item, onTap, start, path }: { mode: "wander" | "follow"; item: Interactable; onTap: TapFn; start: [number, number]; path?: SanPath }) {
+// 얼굴 맞추기에서 '표준 미소 적용'을 골랐다면: 이산의 얼굴에 도시의 표준 미소가 붙어 있다 (반달 눈, 크게 올라간 입꼬리, 분홍 볼).
+// 장치가 띄우던 분홍 홀로그램 미소와 같은 색이다
+function StandardSmile() {
+  const ink = "#ff5fb0";
+  return (
+    <group position={[0, 1.62, 0.004]}>
+      {/* 반달 눈 (∩) */}
+      {[-1, 1].map((k) => (
+        <mesh key={`e${k}`} position={[k * 0.04, 0.03, 0.112]} rotation={[0, k * 0.32, 0]}>
+          <torusGeometry args={[0.017, 0.0045, 6, 14, Math.PI]} />
+          <meshBasicMaterial color={ink} toneMapped={false} />
+        </mesh>
+      ))}
+      {/* 볼 */}
+      {[-1, 1].map((k) => (
+        <mesh key={`c${k}`} position={[k * 0.062, -0.012, 0.098]} rotation={[0, k * 0.55, 0]}>
+          <circleGeometry args={[0.018, 14]} />
+          <meshBasicMaterial color={ink} transparent opacity={0.45} toneMapped={false} depthWrite={false} />
+        </mesh>
+      ))}
+      {/* 입: 귀에 걸릴 듯한 대칭 미소 (∪) */}
+      <mesh position={[0, -0.028, 0.113]} rotation={[0.25, 0, Math.PI]}>
+        <torusGeometry args={[0.042, 0.006, 6, 18, Math.PI]} />
+        <meshBasicMaterial color={ink} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+export default function SanNPC({ mode, item, onTap, start, path, smile }: { mode: "wander" | "follow"; item: Interactable; onTap: TapFn; start: [number, number]; path?: SanPath; smile?: boolean }) {
   const ref = useRef<THREE.Group>(null);
   const st = useRef({ x: start[0], z: start[1], wp: 0, yaw: 0, bob: 0 });
   // 이산이 사라지면(다시 시작 등) 상호작용 위치를 원래 자리로 되돌린다. 안 그러면 동상에게 말을 걸 수 없다.
@@ -161,6 +190,7 @@ export default function SanNPC({ mode, item, onTap, start, path }: { mode: "wand
     <Tap id={item.id} onTap={onTap}>
       <group ref={ref}>
         <Human position={[0, 0, 0]} color="#22303f" skin="#d9b9a0" hood="#16161a">
+          {smile && <StandardSmile />}
           {/* 동상에서 돌아온 네 가지 색 */}
           <mesh position={[0, 1.45, 0]} rotation={[Math.PI / 2, 0, 0]}>
             <torusGeometry args={[0.1, 0.04, 8, 18]} />
