@@ -56,7 +56,8 @@ export function stopWalk() {
 // 결말에서 평소 구역 밖(성문 너머 다리)을 걷게 할 때: 걸을 수 있는 직사각형들의 합. 눈에 보이는 난간·기단과 같은 자리다.
 // 이 안에서는 평소처럼 걷고(구역의 장애물도 피한다), 밖으로는 나가지 못한다. Player가 읽는다
 export type Rect = { x0: number; x1: number; z0: number; z1: number };
-export const walkArea: { rects: Rect[] | null } = { rects: null };
+// floor: 바닥 높이 (空 결말의 계단처럼 내려가는 곳). 없으면 0. Player와 SanNPC가 읽는다
+export const walkArea: { rects: Rect[] | null; floor: ((x: number, z: number) => number) | null } = { rects: null, floor: null };
 
 export function resetGaze() {
   gaze.meter = 0;

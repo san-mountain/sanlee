@@ -424,10 +424,17 @@ function DescentRoute({ lang }: { lang: Lang }) {
           <meshStandardMaterial color="#1c1a1e" roughness={0.7} metalness={0.5} />
         </mesh>
         {steps.map((i) => (
-          <mesh key={i} position={[STAIR.w + 0.45 + i * 0.9, -0.55 - i * 0.62, 0]}>
-            <boxGeometry args={[0.9, 0.5, 2.6]} />
-            <meshStandardMaterial color="#2a272c" roughness={0.9} />
-          </mesh>
+          <group key={i} position={[STAIR.w + 0.45 + i * 0.9, -0.55 - i * 0.62, 0]}>
+            <mesh>
+              <boxGeometry args={[0.9, 0.5, 2.6]} />
+              <meshStandardMaterial color="#3a3540" roughness={0.85} />
+            </mesh>
+            {/* 단마다 내려서는 쪽 모서리(위에서 내려다볼 때 보이는 끝)에 호박색 띠: 어두운 구름 속에서도 계단이 보이도록 (아래로 갈수록 흐려진다) */}
+            <mesh position={[0.42, 0.26, 0]}>
+              <boxGeometry args={[0.07, 0.04, 2.5]} />
+              <meshBasicMaterial color="#ffb070" transparent opacity={Math.max(0.15, 1 - i * 0.07)} toneMapped={false} />
+            </mesh>
+          </group>
         ))}
         {[-1, 1].map((s) => (
           <mesh key={s} position={[0.05, 1.6, s * 1.9]}>
@@ -441,8 +448,8 @@ function DescentRoute({ lang }: { lang: Lang }) {
         </mesh>
         <pointLight position={[1.5, 2.6, 0]} intensity={8} distance={9} color="#ffb070" />
         {/* 계단을 따라 내려가는 낮은 길 조명 (글로 계단을 설명하지 않는다). 그림자 없음 */}
-        <pointLight position={[STAIR.w + 2.4, -0.6, 0]} intensity={5} distance={7} color="#ffb070" />
-        <pointLight position={[STAIR.w + 6.4, -3.2, 0]} intensity={4} distance={7} color="#ff9a5a" />
+        <pointLight position={[STAIR.w + 2.4, -0.2, 0]} intensity={9} distance={8} color="#ffb070" />
+        <pointLight position={[STAIR.w + 6.4, -2.8, 0]} intensity={7} distance={8} color="#ff9a5a" />
       </group>
     </group>
   );

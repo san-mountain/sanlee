@@ -121,10 +121,18 @@ const GHOST_RECTS: Rect[] = [
 // 계단 앞 (다리 위, 난간 틈 앞)과 계단참 (마지막 걸음이 들어서는 곳)
 const STAIR_APPROACH: Rect = { x0: -4.0, x1: 8.5, z0: -156.5, z1: -148.5 };
 const LANDING: Rect = GHOST_RECTS[3];
+// 계단참 너머 구름 속으로 내려가는 계단 (City.tsx DescentRoute: 첫 단 x 8.9부터 0.9m마다 0.62m씩 내려간다). 폭 2.6m
+const STAIR_TOP = 8.9;
+const STAIR_RECT: Rect = { x0: LANDING.x1 - 0.1, x1: STAIR_TOP + 0.9 * 6, z0: -153.95, z1: -152.05 };
+// 계단 위의 바닥 높이: 단을 매끄럽게 이은 경사 (단 하나 0.9m에 0.62m)
+const stairFloor = (x: number, z: number) => (x > STAIR_TOP && z > -154.6 && z < -151.4 ? -(x - STAIR_TOP) * (0.62 / 0.9) : 0);
+// 이만큼(네 단) 내려가면 결말의 마지막 정적으로
+const STAIR_END = STAIR_TOP + 0.9 * 4;
 const inRect = (r: Rect, x: number, z: number) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 // 이산: 성문을 지나 다리 가운데로 걸어 계단참에 먼저 서서 방문자를 돌아본다 → 방문자가 내디디면 계단 쪽으로 돌아선다
-const GHOST_SAN: SanPath = { pts: [[0, -127], [0, -132], [0.8, -141], [2.6, -150.4], [7.9, -153.4]], yaw: -Math.PI / 2, speed: 2.6 };
-const GHOST_TURN: SanPath = { pts: [[8.3, -152.9]], yaw: Math.PI / 2, speed: 1 };
+const GHOST_SAN: SanPath = { pts: [[0, -127], [0, -132], [0.8, -141], [2.6, -150.4], [7.5, -154.1]], yaw: -Math.PI / 2, speed: 2.6 };
+// 방문자가 몇 단 내려가면 이산도 뒤따라 두어 단 내려선다
+const GHOST_TURN: SanPath = { pts: [[9.4, -153.1], [11.0, -153.1]], yaw: Math.PI / 2, speed: 1.2 };
 // 수락한 시민이 다시 들어오면 서게 되는 줄 속 자리
 // 줄 한가운데, 두 사람 사이. 여기서는 문 너머로 금빛이 된 대자비의 얼굴이 보인다
 const LINE_SPOT = { x: 3.6, z: (QUEUE_Z[44] + QUEUE_Z[45]) / 2 };
@@ -268,9 +276,12 @@ export default function ExploreClient() {
   // 결말 곡(空)은 마지막 결과(버튼)가 나올 때부터. 그 전까지는 지상에서는 듣던 곡을 잇고, 방공호로 넘어간 거부 결말은 조용히
   const endShown = !!ending && ending.step >= (checkpoint[ending.kind] as Beat[]).length;
   // 결말 곡은 결말마다 하나 (수락·거부·空). 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 f-ALL
-  const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "ending") : null;
+  // 空 결말은 따로 곡을 두지 않고 지상의 f-ALL을 끝까지 잇는다
+  const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "fall") : null;
+  // 空 경로의 지상: 드론이 둘을 찾지 못하고 지나간 뒤(감시가 닿지 않는다는 걸 안 순간)부터 f-ALL이 서서히 들어온다. 그 전에는 조용하다
+  const [fallOn, setFallOn] = useState(false);
   const track: Track | null =
-    leaving || intro ? null : endShown ? endTrack : zone === "city" && ghost ? "fall" : ending ? (zone === "city" ? (jabiStage ? "jabi" : "ground") : null) : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
+    leaving || intro ? null : endShown ? endTrack : zone === "city" && ghost ? (fallOn || ending ? "fall" : null) : ending ? (zone === "city" ? (jabiStage ? "jabi" : "ground") : null) : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
   useEffect(() => {
     playBgm(track);
   }, [track]);
@@ -293,6 +304,7 @@ export default function ExploreClient() {
     () => () => {
       stopWalk();
       walkArea.rects = null;
+      walkArea.floor = null;
       sanHold.at = null;
       gaze.gateOpen = false;
       gaze.mood = "";
@@ -568,7 +580,7 @@ export default function ExploreClient() {
       beatTimer.current = setTimeout(() => {
         setBeat("");
         gaze.still = false;
-        setPanel({ kind: "dialog", name: SAN, lines: [reunion.stay], step: 0 });
+        setPanel({ kind: "dialog", name: SAN, lines: reunion.woke, step: 0 });
       }, 1800);
     }, 3000);
   };
@@ -734,7 +746,7 @@ export default function ExploreClient() {
           else if (it.id === "san") {
             const base = phase === "scope" ? sanCity.scope : sanCity.descent;
             setPanel({ kind: "dialog", name: SAN, lines: getBackup().deaths > 0 ? [...base, sanAfterDeath] : base, step: 0 });
-          } else if (ghost) setPanel({ kind: "dialog", name: SAN, lines: [reunion.stay], step: 0 });
+          } else if (ghost) setPanel({ kind: "dialog", name: SAN, lines: [reunion.awakeLine], step: 0 });
           // 기록은 다 열었지만 얼굴을 아직 맞추지 않았다: 이산은 굳어 있고, 곁의 장치를 가리킨다
           // 기록은 다 열었지만 아직 얼굴이 굳어 있다: 처음 말을 걸면 이산이 곁의 장치를 부탁하고, 그 뒤로는 장치를 가리킨다
           else if (restored && !complete) {
@@ -1057,7 +1069,6 @@ export default function ExploreClient() {
   const endStep = ending ? `${ending.kind}:${ending.step}` : "";
   // 걷는 줄은 도착해야 다음으로: 수락은 줄 옆에 닿은 뒤 이산의 말, 빈자리에 들어선 뒤 마지막 줄.
   // 空은 둘 다 계단 앞에 온 뒤 이산의 말, 방문자가 계단참에 들어선 뒤 정적. 그다음의 시간(BEAT_MS)은 도착 뒤의 멈춤이다
-  const ghostBase = useRef(0);
   const endGate = (kind: EndKind, step: number) => {
     if (kind === "accept" && step === 2) return autoWalk.queue.length === 0;
     if (kind === "accept" && step === 3) return autoWalk.arrived;
@@ -1168,25 +1179,32 @@ export default function ExploreClient() {
         gaze.gateOpen = true;
         sfx.hidden();
       }
-      // 조작을 돌려준다: 성문 홍예와 다리, 계단참만 걸을 수 있다 (보이는 기단·난간과 같은 자리). 이산은 앞서 계단참으로 간다
-      if (step === GHOST_WALK) walkArea.rects = GHOST_RECTS;
-      // 계단 앞: 마지막 걸음은 지금 서 있는 곳에서 계단참 쪽으로 실제로 한 걸음 더 들어서는 것 (ghostBase)
-      if (step === GHOST_STEP) ghostBase.current = Math.max(LANDING.x0, player.pos.x);
+      // 조작을 돌려준다: 성문 홍예와 다리, 계단참과 그 아래 계단만 걸을 수 있다 (보이는 기단·난간과 같은 자리). 이산은 앞서 계단참으로 간다
+      if (step === GHOST_WALK) {
+        walkArea.rects = [...GHOST_RECTS, STAIR_RECT];
+        walkArea.floor = stairFloor;
+      }
+      // 이산의 마지막 말과 함께 시선을 잠깐 계단 쪽으로 내려 준다 (어두운 구름 속 계단을 놓치지 않게). 걷기는 막지 않는다
+      if (step === GHOST_STEP) {
+        gaze.lookAt = { x: STAIR_TOP + 2.5, y: -1.2, z: -153 };
+        clearTimeout(sceneTimer.current);
+        sceneTimer.current = setTimeout(() => (gaze.lookAt = null), 1800);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
 
-  // 空 결말의 마지막 걸음: 이산의 말 뒤, 평소 조작으로 계단참(난간이 끊긴 자리 너머)에 들어서서 1m 더 나아가면 끝난다.
-  // 시점 회전만으로는 끝나지 않는다. 내디디면 조작을 거두고, 이산이 계단 쪽으로 돌아서고, 정적 뒤에 버튼이 나온다 (endGate)
+  // 空 결말의 마지막 걸음: 이산의 말 뒤, 평소 조작으로 계단참을 지나 계단을 네 단쯤 실제로 걸어 내려가면 끝난다.
+  // 시점 회전만으로는 끝나지 않는다. 다 내려서면 조작을 거두고, 이산이 뒤따라 두어 단 내려서고, 정적 뒤에 버튼이 나온다 (endGate)
   useEffect(() => {
     if (!walkable || ending?.step !== GHOST_STEP) return;
     const iv = setInterval(() => {
       if (steppedRef.current) return;
       const x = player.pos.x;
-      if (!inRect(LANDING, x, player.pos.z) || x < Math.max(LANDING.x0 + 1.2, ghostBase.current + 1.0)) return;
+      if (!inRect(STAIR_RECT, x, player.pos.z) || x < STAIR_END) return;
       steppedRef.current = true;
       setStepped(true);
-      walkArea.rects = null;
+      // 걷기 범위(walkArea.rects)는 그대로 둔다: 풀면 계단 위의 몸이 도시 경계 안으로 밀려난다 (조작은 walkable이 거둔다)
     }, 100);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1275,13 +1293,20 @@ export default function ExploreClient() {
       const c = cueRef.current;
       if (c.passed || !drone.shapeSeen || drone.shape || panelRef.current) return;
       c.passed = true;
-      say(sanCue.passed, 2800);
+      say(sanCue.passed, 3400);
+      setFallOn(true);
     }, 250);
+    // 드론을 만나지 않고 대자비 구역에 닿았거나 오래 걸었다면 그때 곡을 연다
+    const late = setTimeout(() => setFallOn(true), 45000);
     return () => {
       clearTimeout(lead);
+      clearTimeout(late);
       clearInterval(iv);
     };
   }, [ghostCity, say]);
+  useEffect(() => {
+    if (ghostCity && jabiStage) setFallOn(true);
+  }, [ghostCity, jabiStage]);
 
   // ---------- 남쪽 전망대 가는 길과 돌아오는 길: 이산의 경유점 ----------
   // 이산은 hold(드론 빛이 닿지 않는 자리)에서 기다리다, 방문자가 다음 hold 쪽으로 앞서 나가면 그 hold까지 경유점을 차례로 걷는다
@@ -1569,6 +1594,7 @@ export default function ExploreClient() {
     gaze.mood = "";
     steppedRef.current = false;
     setStepped(false);
+    walkArea.floor = null;
     setSecondStatue(false);
     setFlash(false);
   };
@@ -2198,7 +2224,7 @@ export default function ExploreClient() {
                   </small>
                 )}
                 <small className="ending-credit">
-                  ♪ {ending.kind === "accept" ? "Habitual Suffering" : ending.kind === "reject" ? "an open ended promise" : "空"} · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
+                  ♪ {ending.kind === "accept" ? "Habitual Suffering" : ending.kind === "reject" ? "an open ended promise" : "f-ALL"} · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
                 </small>
                 <div>
                   {ending.kind === "accept" ? (
