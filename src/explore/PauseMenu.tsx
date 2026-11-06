@@ -62,7 +62,7 @@ export default function PauseMenu({
 
   return (
     <div className="pause-wrap">
-      <div className="pause" role="dialog" aria-label={t(pause.title)}>
+      <div className="pause" role="dialog" aria-modal="true" aria-label={t(pause.title)}>
         <div className="pause-head">
           <h2 className="glitch">{t(pause.title)}</h2>
           <p>{t(pause.sub)}</p>

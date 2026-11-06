@@ -1,5 +1,8 @@
 "use client";
 
+import { runtime } from "./runtime";
+import { useGameTimers } from "./useGameTimers";
+
 import { tension, sfx } from "./sfx";
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
@@ -12,6 +15,7 @@ import { jabiUi } from "./story";
 // 대자비의 시선 게이지, 붉은 화면 가장자리, 보관 처리(죽음) 연출과 되살리기
 // 한 글자씩 타자되듯 찍히는 줄
 function TypeLine({ text, delay = 0, className }: { text: string; delay?: number; className?: string }) {
+  const { setTimeout, setInterval, clearTimeout, clearInterval } = useGameTimers();
   const [n, setN] = useState(0);
   useEffect(() => {
     let iv: ReturnType<typeof setInterval>;
@@ -44,6 +48,7 @@ export default function GazeHUD({
   onIntro?: () => void;
   onStage?: () => void;
 }) {
+  const { setTimeout } = useGameTimers();
   const introRef = useRef(onIntro);
   introRef.current = onIntro;
   const stageRef = useRef(onStage);
@@ -67,6 +72,7 @@ export default function GazeHUD({
     let prevHidden = "";
     const loop = () => {
       raf = requestAnimationFrame(loop);
+      if (runtime.paused) { tension(0); return; }
       // 시선 단계가 올라갈 때, 그리고 숨는 데 성공했을 때 효과음
       if (gaze.state !== prevState) {
         const up = ["idle", "watch", "suspect", "charge", "lock"];

@@ -121,3 +121,36 @@ test("unavailable storage does not prevent clearing the in-memory backup", async
   assert.doesNotThrow(() => b.forgetCityRecords());
   assert.deepEqual(b.getBackup(), empty);
 });
+
+test("corrupt slots and counts recover without blocking the next save", async () => {
+  for (const list of [null, {}, "wrong", [null, { n: 1, x: "bad" }]]) {
+    const b = await setup({ "sanlee-backup": JSON.stringify({ n: -3, deaths: "x", restores: -2, list }) });
+    assert.deepEqual(b.getBackup(), empty);
+    assert.equal(b.saveBackup(3, 4).n, 1);
+  }
+});
+
+test("valid slots survive malformed neighbors and numbering never moves backwards", async () => {
+  const slot = { n: 8, t: 123, x: 3, z: -4 };
+  const b = await setup({ "sanlee-backup": JSON.stringify({ n: 2, list: [null, slot, { ...slot, x: '3' }], deaths: 3 }) });
+  assert.deepEqual(b.getBackup().list, [slot]);
+  assert.equal(b.saveBackup(5, 6).n, 9);
+  assert.equal(JSON.parse(b.values.get(b.BACKUP_KEY)).version, 1);
+  assert.equal(b.saveBackup(Infinity, 0), null);
+});
+
+test("warm cache notices external deletion and malformed replacement", async () => {
+  const b = await setup();
+  b.saveBackup(1, 2);
+  b.values.delete(b.BACKUP_KEY);
+  assert.deepEqual(b.getBackup(), empty);
+  b.saveBackup(3, 4);
+  b.values.set(b.BACKUP_KEY, '{broken');
+  assert.deepEqual(b.getBackup(), empty);
+  assert.equal(b.saveBackup(5, 6).n, 1);
+});
+
+test("unknown future schemas are not interpreted as current backup data", async () => {
+  const b = await setup({ "sanlee-backup": JSON.stringify({ version: 99, n: 20, list: [] }) });
+  assert.deepEqual(b.getBackup(), empty);
+});

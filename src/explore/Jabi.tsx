@@ -1,5 +1,7 @@
 "use client";
 
+import { runtime } from "./runtime";
+
 // 대자비(大慈悲): 큰길 끝 섬에 선 거대한 입불. 이마의 렌즈로 큰길을 내려다보고,
 // 시선에 오래 노출되면 눈이 붉어지고 입꼬리가 올라가다가, 레이저로 바닥을 긁으며 쏜다.
 import { sfx } from "./sfx";
@@ -23,6 +25,10 @@ const UP = new THREE.Vector3(0, 1, 0);
 /* ---------- 엄폐물 상태 (파괴되면 alive=false) ---------- */
 export const coverState = COVERS.map((c) => ({ alive: true, hp: COVER_HP[c.kind], burn: 0 }));
 export function restoreCovers() {
+  beam.on = false;
+  beam.t = 0;
+  scorch.length = 0;
+  lockT = coolT = 0;
   coverState.forEach((c, i) => {
     c.alive = true;
     c.hp = COVER_HP[COVERS[i].kind];
@@ -106,6 +112,7 @@ const last = { x: 0, z: 0 };
 
 function GazeSystem() {
   useFrame((s, rawDt) => {
+    if (runtime.paused) return;
     const dt = Math.min(rawDt, 0.05);
     const now = s.clock.elapsedTime;
     const px = player.pos.x;

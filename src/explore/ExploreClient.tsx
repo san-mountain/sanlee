@@ -15,7 +15,7 @@ import { AVENUE_EDGE_Z, BAY, EDGE, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, D
 import { sanHold, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
-import { input, loadSettings } from "./input";
+import { input, loadSettings, resetInput } from "./input";
 import PauseMenu from "./PauseMenu";
 import Minimap from "./Minimap";
 import QuestArrow, { type QuestTarget } from "./QuestArrow";
@@ -29,7 +29,13 @@ import { coverState, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
 import { FACE_KEY, SOLUTION, emptyFace, faceFinished, loadFace, rotateDrum, saveFace, seamJoined, type Drums, type FaceMethod, type FaceState } from "./faceAuth";
-import { faceRt, setFacePhase, type FacePhase } from "./faceRuntime";
+import { faceRt, resetFaceRuntime, setFacePhase, type FacePhase } from "./faceRuntime";
+
+import { runtime } from "./runtime";
+import { useGameTimers } from "./useGameTimers";
+import { useModalFocus } from "./useModalFocus";
+import WorldBoundary from "./WorldBoundary";
+import { finalStepTarget, uniqueIds } from "./progress";
 
 const World = dynamic(() => import("./World"), { ssr: false });
 
@@ -54,7 +60,7 @@ function readScope(): ScopeData {
       const old = v.done === true;
       const seen = old || v.seen === true;
       const agreed = seen && (old || v.agreed === true);
-      return { uses: Math.max(0, Math.floor(Number(v.uses) || 0)), seen, agreed };
+      return { uses: (Number.isSafeInteger(v.uses) && v.uses >= 0 ? v.uses : 0), seen, agreed };
     }
   } catch {}
   return { ...NO_SCOPE };
@@ -65,7 +71,10 @@ const SAN: L = { ko: "이산", en: "San" };
 function hasWebGL() {
   try {
     const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl"));
+    const gl = c.getContext("webgl2");
+    if (!gl) return false;
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    return true;
   } catch {
     return false;
   }
@@ -188,6 +197,36 @@ export default function ExploreClient() {
   const [ending, setEnding] = useState<Ending>(null);
   const [locked, setLocked] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [recordsChanged, setRecordsChanged] = useState(false);
+  const { setTimeout, clearTimeout, setInterval, clearInterval } = useGameTimers();
+  useEffect(() => { runtime.setPaused(paused || recordsChanged); }, [paused, recordsChanged]);
+  useEffect(() => {
+    runtime.reset();
+    const suspend = () => {
+      resetInput();
+      runtime.setPaused(true);
+      setPaused(true);
+    };
+    const visibility = () => { if (document.hidden) suspend(); };
+    const storage = (event: StorageEvent) => {
+      if (event.storageArea !== localStorage) return;
+      if (event.key === null || event.key === FORGOT_KEY ||
+          (event.key === "sanlee-backup" && event.newValue === null)) {
+        suspend();
+        setRecordsChanged(true);
+      }
+    };
+    window.addEventListener("storage", storage);
+    window.addEventListener("blur", suspend);
+    document.addEventListener("visibilitychange", visibility);
+    return () => {
+      window.removeEventListener("blur", suspend);
+      window.removeEventListener("storage", storage);
+      document.removeEventListener("visibilitychange", visibility);
+      runtime.reset();
+      resetInput();
+    };
+  }, []);
   // 문을 지나 다른 구역에서 넘어왔는지 (처음 시작·다시 시작이면 false)
   const [arrived, setArrived] = useState(false);
   const [met, setMet] = useState(false);
@@ -230,7 +269,7 @@ export default function ExploreClient() {
   // 3D 장치가 다시 그리는 단계 (faceRt.phase와 같은 값)
   const [facePhase, setFacePhaseView] = useState<FacePhase>("locked");
   const faceTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const restored = visited.length >= sections.length;
+  const restored = sections.every((section) => visited.includes(section.id));
   const complete = (restored && faceAwake) || ghost;
   // 진행 단계는 이 값 하나로 정한다. 목표 문구·화살표·미니맵·검문소·재시작 자리·이산의 길이 모두 이 값을 따른다.
   // 큰길은 어느 단계에서든 걸어 들어갈 수 있다 (막는 천막이 없다). 망원경 전에 검문소에서 멈추는 것은 도시의 금지가 아니라 이야기의 순서다
@@ -248,6 +287,14 @@ export default function ExploreClient() {
 
   // 로그아웃: 화면이 오래된 모니터처럼 한 줄로 접혀 꺼지고, 웹사이트에서는 지워졌던 글자가 다시 쓰인다
   const router = useRouter();
+  const leaveTimer = useRef<number | undefined>(undefined);
+  const ownedFullscreen = useRef(false);
+  useEffect(() => () => {
+    window.clearTimeout(leaveTimer.current);
+    if (ownedFullscreen.current && document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+    }
+  }, []);
   const [leaving, setLeaving] = useState(false);
   const logout = (e: React.MouseEvent) => {
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
@@ -259,7 +306,8 @@ export default function ExploreClient() {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return router.push("/");
     setLeaving(true);
     sfx.glitch();
-    setTimeout(() => router.push("/"), 1100);
+    // Leaving must also work from a paused game; this is UI time, not game time.
+    leaveTimer.current = window.setTimeout(() => router.push("/"), 1100);
   };
 
   // 배경음악: 방공호, 지상, 대자비 구역(처음 시선 구역에 들어선 뒤부터), 결말
@@ -302,6 +350,15 @@ export default function ExploreClient() {
       gaze.lookAt = null;
       route.phase = "restore";
       resetDrones();
+      resetFaceRuntime();
+      resetGaze();
+      restoreCovers();
+      gaze.intro = false;
+      route.frozenSan = false;
+      route.avenueLocked = false;
+      sanWalk.path = null;
+      sanWalk.arrived = false;
+      teleport.req = null;
     },
     []
   );
@@ -322,13 +379,14 @@ export default function ExploreClient() {
       // 예전의 '시 한 줄' 약속(값 "1")은 더 이상 쓰지 않는다. 지우고, 새 부탁(망원경 이야기)을 들으면 다시 켜진다
       if (localStorage.getItem(PROMISE_KEY) === "1") localStorage.removeItem(PROMISE_KEY);
       const f = JSON.parse(localStorage.getItem(FOUND_KEY) || "[]");
-      if (Array.isArray(f)) setFound(f);
+      setFound(uniqueIds(f, ["accept", "reject", "ghost"]));
     } catch {}
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || "[]");
-      if (Array.isArray(v)) setVisited(v.filter((x) => sections.some((s) => s.id === x)));
+      setVisited(uniqueIds(v, sections.map((s) => s.id)));
     } catch {}
     setScopeData(readScope());
+    resetFaceRuntime();
     const f = loadFace();
     setFace(f);
     setFaceAwake(faceFinished(f));
@@ -401,11 +459,18 @@ export default function ExploreClient() {
     [showToast, t]
   );
 
+  const transitionTimers = useRef<number[]>([]);
   const goTo = useCallback((to: Zone, viaDoor = true) => {
+    transitionTimers.current.forEach(clearTimeout);
+    transitionTimers.current = [];
+    const later = (ms: number, run: () => void) => transitionTimers.current.push(setTimeout(run, ms));
+    cancelIntro.current?.();
+    gaze.intro = false;
+    gaze.lookAt = null;
     setPanel(null);
     setFade(to === "city" ? "up" : "down");
     if (viaDoor) sfx.door();
-    setTimeout(() => {
+    later(900, () => {
       setZone(to);
       setJabiStage(false);
       sanHold.at = null;
@@ -419,10 +484,10 @@ export default function ExploreClient() {
       // 방공호에서 방문 기록을 지웠다면 도시는 아무것도 기억하지 않고, 자비도 플레이어를 보지 못한다
       if (to === "city") {
         if (ghostRef.current) gaze.mood = "blind";
-        else if (viaDoor) setTimeout(() => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]), 700);
+        else if (viaDoor) later(700, () => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]));
       }
-      setTimeout(() => setFade(null), 500);
-    }, 900);
+      later(500, () => setFade(null));
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -890,7 +955,7 @@ export default function ExploreClient() {
   // 空 결말의 마지막 걸음 동안만 결말 중에도 평소 조작(이동·시점·조이스틱)을 돌려준다
   const walkable = ending?.kind === "ghost" && (ending.step === GHOST_WALK || ending.step === GHOST_STEP) && !stepped;
   // 재회의 몸짓과 기다림 동안에도 조작을 멈춘다 (대화창은 닫혀 있다)
-  const active = !intro && !panel && !fade && (!ending || walkable) && !paused && !beat;
+  const active = !intro && !panel && !fade && (!ending || walkable) && !paused && !recordsChanged && !beat;
   const activeRef = useRef(active);
   activeRef.current = active;
   const touchRef = useRef(touch);
@@ -1058,6 +1123,7 @@ export default function ExploreClient() {
   // 걷는 줄은 도착해야 다음으로: 수락은 줄 옆에 닿은 뒤 이산의 말, 빈자리에 들어선 뒤 마지막 줄.
   // 空은 둘 다 계단 앞에 온 뒤 이산의 말, 방문자가 계단참에 들어선 뒤 정적. 그다음의 시간(BEAT_MS)은 도착 뒤의 멈춤이다
   const ghostBase = useRef(0);
+  const ghostStart = useRef({ x: 0, z: 0 });
   const endGate = (kind: EndKind, step: number) => {
     if (kind === "accept" && step === 2) return autoWalk.queue.length === 0;
     if (kind === "accept" && step === 3) return autoWalk.arrived;
@@ -1169,9 +1235,13 @@ export default function ExploreClient() {
         sfx.hidden();
       }
       // 조작을 돌려준다: 성문 홍예와 다리, 계단참만 걸을 수 있다 (보이는 기단·난간과 같은 자리). 이산은 앞서 계단참으로 간다
-      if (step === GHOST_WALK) walkArea.rects = GHOST_RECTS;
+      if (step === GHOST_WALK) walkArea.rects = GHOST_RECTS.map((r) => r === LANDING ? { ...r, x1: LANDING.x1 - 1.2 } : r);
       // 계단 앞: 마지막 걸음은 지금 서 있는 곳에서 계단참 쪽으로 실제로 한 걸음 더 들어서는 것 (ghostBase)
-      if (step === GHOST_STEP) ghostBase.current = Math.max(LANDING.x0, player.pos.x);
+      if (step === GHOST_STEP) {
+        walkArea.rects = GHOST_RECTS;
+        ghostStart.current = { x: player.pos.x, z: player.pos.z };
+        ghostBase.current = finalStepTarget(player.pos.x, LANDING.x0, LANDING.x1);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
@@ -1183,7 +1253,7 @@ export default function ExploreClient() {
     const iv = setInterval(() => {
       if (steppedRef.current) return;
       const x = player.pos.x;
-      if (!inRect(LANDING, x, player.pos.z) || x < Math.max(LANDING.x0 + 1.2, ghostBase.current + 1.0)) return;
+      if (!inRect(LANDING, x, player.pos.z) || x < ghostBase.current || Math.hypot(x - ghostStart.current.x, player.pos.z - ghostStart.current.z) < 0.1) return;
       steppedRef.current = true;
       setStepped(true);
       walkArea.rects = null;
@@ -1207,13 +1277,13 @@ export default function ExploreClient() {
       }
       const ms = seq[i].ms ?? 3600;
       setSanSay({ who: seq[i].who, line: seq[i].line });
-      speakUntil.current = performance.now() + ms;
+      speakUntil.current = runtime.now() + ms;
       sayTimer.current = setTimeout(() => run(i + 1), ms);
     };
     run(0);
   }, []);
   const say = useCallback((l: L, ms = 3600) => speak([{ who: SAN, line: l, ms }]), [speak]);
-  const speaking = () => performance.now() < speakUntil.current;
+  const speaking = () => runtime.now() < speakUntil.current;
   useEffect(() => () => clearTimeout(sayTimer.current), []);
   // 처음 시선 구역: 대자비 소개가 닫힌 뒤 이산이 첫 엄폐물 뒤로 가서 기다린다 (탭마다 한 번 말하고, 재시도 때는 말없이 다시 기다린다)
   const cueRef = useRef({ cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0, passed: false, lead: false });
@@ -1429,7 +1499,7 @@ export default function ExploreClient() {
         if (m.looked && phaseRef.current !== "scope") say(scopeScene.again, 2600);
       }
       if (pausedRef.current || panelRef.current || drone.caught || gaze.intro) return;
-      const now = performance.now();
+      const now = runtime.now();
       const px = player.pos.x;
       const pz = player.pos.z;
       const ph = phaseRef.current;
@@ -1593,6 +1663,8 @@ export default function ExploreClient() {
   // 대자비 소개: 멈춤 → 카메라가 대자비 쪽으로 → 설명 팝업. 닫으면 게임이 이어진다
   const introTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const hadJabi = useRef(false);
+  const cancelIntro = useRef<(() => void) | null>(null);
+  useEffect(() => () => cancelIntro.current?.(), []);
   // 패널 효과음: 열릴 때, 대화가 한 줄 넘어갈 때, 잠긴 곳에 부딪혔을 때, 대자비 소개
   const prevPanel = useRef<Panel>(null);
   useEffect(() => {
@@ -1606,6 +1678,7 @@ export default function ExploreClient() {
     if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
   }, [panel]);
   const startJabiIntro = useCallback(() => {
+    cancelIntro.current?.();
     gaze.intro = true;
     gaze.frozen = true;
     gaze.lookAt = { x: JABI.eye.x, y: JABI.eye.y, z: JABI.eye.z };
@@ -1617,10 +1690,15 @@ export default function ExploreClient() {
     };
     const onDone = () => open();
     window.addEventListener("sanlee-look-done", onDone);
+    cancelIntro.current = () => {
+      window.removeEventListener("sanlee-look-done", onDone);
+      clearTimeout(introTimer.current);
+    };
     clearTimeout(introTimer.current);
     introTimer.current = setTimeout(open, 5000);
   }, []);
   const endJabiIntro = useCallback(() => {
+    cancelIntro.current?.();
     try {
       sessionStorage.setItem("sanlee-jabi-intro", "1");
     } catch {}
@@ -1766,6 +1844,17 @@ export default function ExploreClient() {
     }
   }, [zone, active, accepted]);
 
+  useModalFocus(rootRef, recordsChanged ? null : paused ? ".pause" : intro ? ".intro .panel" : panel ? ".panel-wrap .panel, .choice-wrap [role=dialog]" : endShown ? ".ending-inner" : null);
+
+  if (recordsChanged) {
+    return <main className="fallback-root"><div className="fallback" role="alert">
+      <h1>{lang === "ko" ? "다른 탭에서 기록이 변경됐습니다." : "Records changed in another tab."}</h1>
+      <p>{lang === "ko" ? "이전 기록을 다시 저장하지 않도록 플레이를 멈췄습니다. 새 기록으로 다시 접속해 주세요." : "Play has stopped to avoid saving old records. Reconnect to use the updated records."}</p>
+      <button className="btn primary" onClick={() => location.reload()}>{lang === "ko" ? "다시 접속" : "Reconnect"}</button>
+      <Link href="/" className="btn">{t(ui.toPortfolio)}</Link>
+    </div></main>;
+  }
+
   if (webgl === false) {
     return (
       <main className="fallback-root">
@@ -1824,7 +1913,8 @@ export default function ExploreClient() {
     <main className={rootClass} ref={rootRef}>
       {webgl && (
         <div className="canvas-wrap">
-          <World
+          <WorldBoundary onUnavailable={() => setWebgl(false)}>
+            <World
             zone={zone}
             lang={lang}
             visited={visited}
@@ -1840,7 +1930,8 @@ export default function ExploreClient() {
             awake={complete}
             face={{ drums: face.drums, phase: facePhase, method: face.method }}
             arrived={arrived}
-          />
+            />
+          </WorldBoundary>
         </div>
       )}
 
@@ -1939,7 +2030,7 @@ export default function ExploreClient() {
 
       {panel?.kind === "section" && sectionMeta && (
         <div className="panel-wrap">
-          <div className="panel">
+          <div className="panel" role="dialog" aria-modal="true" aria-label={t(ui.title)} tabIndex={-1}>
             <div className="panel-head">
               <h2>{sectionMeta.label.toUpperCase()}</h2>
               <small>{sectionMeta.labelKo}</small>
@@ -1957,7 +2048,7 @@ export default function ExploreClient() {
 
       {painting && (
         <div className="panel-wrap">
-          <div className="panel painting-panel">
+          <div className="panel painting-panel" role="dialog" aria-modal="true" aria-label={t(ui.title)} tabIndex={-1}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={painting.image} alt={t(painting.title)} width={painting.width} height={painting.height} />
             <p className="caption">
@@ -1977,7 +2068,7 @@ export default function ExploreClient() {
 
       {panel?.kind === "dialog" && !hush && (
         <div className="panel-wrap dialog-wrap">
-          <div className="panel pink dialog">
+          <div className="panel pink dialog" role="dialog" aria-modal="true" aria-label={t(panel.name)} tabIndex={-1}>
             {panel.plaque ? (
               <div className="plaque">
                 {plaque.map((p, i) => (
@@ -2224,7 +2315,7 @@ export default function ExploreClient() {
 
       {intro && (
         <div className="intro">
-          <div className="panel pink">
+          <div className="panel pink" role="dialog" aria-modal="true" aria-label={t(ui.title)} tabIndex={-1}>
             <div className="panel-head">
               <h2 className="glitch">{t(ui.title)}</h2>
               <LangToggle />
@@ -2244,7 +2335,7 @@ export default function ExploreClient() {
                   enter();
                   // 휴대폰: 시작 버튼을 누르는 순간 전체화면으로 (안드로이드 크롬 등에서 주소창이 사라진다)
                   if (touch && !document.fullscreenElement) {
-                    document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {});
+                    document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).then(() => { ownedFullscreen.current = true; }).catch(() => {});
                   }
                   lock();
                 }}
