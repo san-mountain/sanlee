@@ -49,7 +49,7 @@ export default function World({ zone, lang, visited, onTap, onNear, onTracked, l
           <>
             <City lang={lang} onTap={onTap} onTracked={onTracked} />
             {complete && !hideSan && (
-              <SanNPC mode="follow" item={CITY.items.find((i) => i.id === "san")!} onTap={onTap} start={sanStart ?? [CITY.spawn.pos[0], CITY.spawn.pos[2] + 2.2]} path={sanPath} />
+              <SanNPC smile={face.method === "standard"} mode="follow" item={CITY.items.find((i) => i.id === "san")!} onTap={onTap} start={sanStart ?? [CITY.spawn.pos[0], CITY.spawn.pos[2] + 2.2]} path={sanPath} />
             )}
             {frozenSan && (
               <group position={[FROZEN_SAN.x, 0, FROZEN_SAN.z]}>

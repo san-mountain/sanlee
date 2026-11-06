@@ -990,7 +990,7 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake, face
       ) : awake ? (
         <>
           <Pedestal lang={lang} empty />
-          <SanNPC mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[0, 3]} />
+          <SanNPC smile={face.method === "standard"} mode="wander" item={BUNKER.items.find((i) => i.id === "statue")!} onTap={onTap} start={[0, 3]} />
         </>
       ) : (
         <Tap id="statue" onTap={onTap}>
