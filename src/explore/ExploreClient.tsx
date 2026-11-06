@@ -1,7 +1,7 @@
 "use client";
 
 import { sfx } from "./sfx";
-import { duckBgm, playBgm, wakeBgm, type Track } from "./bgm";
+import { duckBgm, playBgm, preloadBgm, wakeBgm, type Track } from "./bgm";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -108,10 +108,11 @@ type Ending = { kind: EndKind; step: number; a: number; r: number; slots: number
 const BEAT_MS: Record<EndKind, number[]> = {
   accept: [3000, 3600, 1200, 2400, 3000],
   reject: [2800, 3400, 3800, 4800, 3200],
-  ghost: [3200, 3400, 700, 5200],
+  ghost: [3200, 3400, 700, 1800, 5200],
 };
 // 空 결말: 3번째 줄("…이번엔 우릴 막지 않네.", 다리를 걷는 줄)과 4번째 줄("여기부터는 나도 몰라.", 마지막 걸음)에서는 평소 조작으로 걷는다.
-// 계단을 설명하는 지문은 없다: 계단은 조명과 이산의 걸음으로 보인다
+// 4번째 줄에서 이산이 먼저 계단을 내려가 구름 속에서 신호처럼 끊기며 사라지고, 그 뒤에야 방문자가 내려갈 수 있다.
+// 내려갈수록 화면이 흐려지고 지직대다 끊기면, 검은 화면에 마지막 문장 하나가 남는다. 계단을 설명하는 지문은 없다
 const GHOST_WALK = 2;
 const GHOST_STEP = 3;
 // 처음 대자비의 시선 앞에서 이산이 기다리는 자리: 큰길 앞쪽의 방벽(가장 튼튼한 엄폐물) 뒤, 방문자가 설 자리를 비워 두고 오른쪽 끝에 선다
@@ -132,16 +133,17 @@ const STAIR_APPROACH: Rect = { x0: -4.0, x1: 8.5, z0: -156.5, z1: -148.5 };
 const LANDING: Rect = GHOST_RECTS[3];
 // 계단참 너머 구름 속으로 내려가는 계단 (City.tsx DescentRoute: 첫 단 x 8.9부터 0.9m마다 0.62m씩 내려간다). 폭 2.6m
 const STAIR_TOP = 8.9;
-const STAIR_RECT: Rect = { x0: LANDING.x1 - 0.1, x1: STAIR_TOP + 0.9 * 6, z0: -153.95, z1: -152.05 };
+const STAIR_RECT: Rect = { x0: LANDING.x1 - 0.1, x1: STAIR_TOP + 0.9 * 26, z0: -153.95, z1: -152.05 };
 // 계단 위의 바닥 높이: 단을 매끄럽게 이은 경사 (단 하나 0.9m에 0.62m)
 const stairFloor = (x: number, z: number) => (x > STAIR_TOP && z > -154.6 && z < -151.4 ? -(x - STAIR_TOP) * (0.62 / 0.9) : 0);
-// 이만큼(네 단) 내려가면 결말의 마지막 정적으로
-const STAIR_END = STAIR_TOP + 0.9 * 4;
+// 흐려지기 시작하는 단과, 신호가 끊기는 단 (스무 단쯤 내려간 곳)
+const STAIR_FADE = STAIR_TOP + 0.9 * 2;
+const STAIR_END = STAIR_TOP + 0.9 * 20;
 const inRect = (r: Rect, x: number, z: number) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 // 이산: 성문을 지나 다리 가운데로 걸어 계단참에 먼저 서서 방문자를 돌아본다 → 방문자가 내디디면 계단 쪽으로 돌아선다
 const GHOST_SAN: SanPath = { pts: [[0, -127], [0, -132], [0.8, -141], [2.6, -150.4], [7.5, -154.1]], yaw: -Math.PI / 2, speed: 2.6 };
-// 방문자가 몇 단 내려가면 이산도 뒤따라 두어 단 내려선다
-const GHOST_TURN: SanPath = { pts: [[9.4, -153.1], [11.0, -153.1]], yaw: Math.PI / 2, speed: 1.2 };
+// 이산의 마지막 말 뒤: 이산이 먼저 계단을 걸어 내려가다 구름 속에서 끊기듯 사라진다 (vanish)
+const GHOST_DOWN: SanPath = { pts: [[8.6, -153], [STAIR_TOP + 0.9 * 14, -153]], yaw: Math.PI / 2, speed: 1.9, vanish: true };
 // 수락한 시민이 다시 들어오면 서게 되는 줄 속 자리
 // 줄 한가운데, 두 사람 사이. 여기서는 문 너머로 금빛이 된 대자비의 얼굴이 보인다
 const LINE_SPOT = { x: 3.6, z: (QUEUE_Z[44] + QUEUE_Z[45]) / 2 };
@@ -321,17 +323,26 @@ export default function ExploreClient() {
   // 배경음악: 방공호, 지상, 대자비 구역(처음 시선 구역에 들어선 뒤부터), 결말
   const [jabiStage, setJabiStage] = useState(false);
   // 방공호로 돌아가면 다시 지상 음악부터 (시선 구역은 도시에 다시 올라왔을 때 새로 들어선다)
-  // 결말 곡(空)은 마지막 결과(버튼)가 나올 때부터. 그 전까지는 지상에서는 듣던 곡을 잇고, 방공호로 넘어간 거부 결말은 조용히
   const endShown = !!ending && ending.step >= (checkpoint[ending.kind] as Beat[]).length;
-  // 결말 곡은 결말마다 하나 (수락·거부·空). 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 f-ALL
-  // 空 결말은 따로 곡을 두지 않고 지상의 f-ALL을 끝까지 잇는다
+  // 결말 곡은 결말마다 하나 (수락·거부·空). 고르는 순간 음악을 끊지도, 곧바로 결말 곡을 틀지도 않는다:
+  // 듣던 지상 곡이 결말의 처음 몇 줄을 받쳐 주다가, 이야기가 꺾이는 줄에서 결말 곡으로 겹쳐 넘어간다 (곡 파일은 결말이 시작될 때 미리 받아 둔다).
+  // 수락: 이산의 작별("먼저 가 있어…")에서. 거부: 장면이 방공호로 넘어가는 순간(두 번째 정지 시민)에서.
+  // 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 올라서자마자 f-ALL이 아주 작게 시작해 서서히 커지고, 空 결말도 그 곡을 끝까지 잇는다
   const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "fall") : null;
-  // 空 경로의 지상: 드론이 둘을 찾지 못하고 지나간 뒤(감시가 닿지 않는다는 걸 안 순간)부터 f-ALL이 서서히 들어온다. 그 전에는 조용하다
-  const [fallOn, setFallOn] = useState(false);
+  const END_CUE: Record<EndKind, number> = { accept: 3, reject: 3, ghost: 0 };
+  const cityTrack: Track = jabiStage ? "jabi" : "ground";
   const track: Track | null =
-    leaving || intro ? null : endShown ? endTrack : zone === "city" && ghost ? (fallOn || ending ? "fall" : null) : ending ? (zone === "city" ? (jabiStage ? "jabi" : "ground") : null) : zone === "bunker" ? "bunker" : jabiStage ? "jabi" : "ground";
+    leaving || intro
+      ? null
+      : ending
+        ? ending.step >= END_CUE[ending.kind] ? endTrack : zone === "city" ? cityTrack : null
+        : zone === "city" && ghost ? "fall" : zone === "bunker" ? "bunker" : cityTrack;
   useEffect(() => {
-    playBgm(track);
+    if (endTrack) preloadBgm(endTrack);
+  }, [endTrack]);
+  useEffect(() => {
+    // 결말 곡으로 넘어갈 때는 듣던 곡을 길게 줄이며 겹친다 (결말 곡도 천천히 들어온다: bgm FADE_IN)
+    playBgm(track, track && ["accept", "reject"].includes(track) ? 5 : undefined);
   }, [track]);
   useEffect(() => {
     duckBgm(paused);
@@ -960,6 +971,7 @@ export default function ExploreClient() {
       input,
       look: (pitch: number) => (input.look.pitch += pitch),
       gaze,
+      sanWalk,
       end: (k: EndKind) => startEndingRef.current(k),
     };
   }, [goTo]);
@@ -1244,36 +1256,87 @@ export default function ExploreClient() {
         gaze.gateOpen = true;
         sfx.hidden();
       }
-      // 조작을 돌려준다: 성문 홍예와 다리, 계단참과 그 아래 계단만 걸을 수 있다 (보이는 기단·난간과 같은 자리). 이산은 앞서 계단참으로 간다
+      // 조작을 돌려준다: 성문 홍예와 다리, 계단참까지만 걸을 수 있다 (보이는 기단·난간과 같은 자리). 이산은 앞서 계단참으로 간다.
+      // 계단은 이산이 먼저 내려가 사라진 뒤에 열린다 (아래 효과)
       if (step === GHOST_WALK) {
-        walkArea.rects = [...GHOST_RECTS, STAIR_RECT];
+        walkArea.rects = GHOST_RECTS;
         walkArea.floor = stairFloor;
       }
-      // 이산의 마지막 말과 함께 시선을 잠깐 계단 쪽으로 내려 준다 (어두운 구름 속 계단을 놓치지 않게). 걷기는 막지 않는다
+      // 이산의 마지막 말과 함께 시선을 잠깐 계단 쪽으로 내려 준다 (이산이 내려가는 모습이 보이게). 걷기는 막지 않는다
       if (step === GHOST_STEP) {
         gaze.lookAt = { x: STAIR_TOP + 2.5, y: -1.2, z: -153 };
         clearTimeout(sceneTimer.current);
-        sceneTimer.current = setTimeout(() => (gaze.lookAt = null), 1800);
+        sceneTimer.current = setTimeout(() => (gaze.lookAt = null), 2200);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
 
-  // 空 결말의 마지막 걸음: 이산의 말 뒤, 평소 조작으로 계단참을 지나 계단을 네 단쯤 실제로 걸어 내려가면 끝난다.
-  // 시점 회전만으로는 끝나지 않는다. 다 내려서면 조작을 거두고, 이산이 뒤따라 두어 단 내려서고, 정적 뒤에 버튼이 나온다 (endGate)
+  // 空 결말의 마지막 걸음: 이산이 먼저 계단을 내려가 사라지면 계단이 열리고, 방문자가 평소 조작으로 스무 단쯤 걸어 내려가면 끝난다.
+  // 다 내려서면 조작을 거두고, 신호가 끊긴 검은 화면에 마지막 문장이 남은 뒤 버튼이 나온다 (endGate)
   useEffect(() => {
     if (!walkable || ending?.step !== GHOST_STEP) return;
     const iv = setInterval(() => {
       if (steppedRef.current) return;
+      if (walkArea.rects === GHOST_RECTS && sanWalk.path === GHOST_DOWN && sanWalk.arrived) walkArea.rects = [...GHOST_RECTS, STAIR_RECT];
       const x = player.pos.x;
       if (!inRect(STAIR_RECT, x, player.pos.z) || x < STAIR_END) return;
       steppedRef.current = true;
       setStepped(true);
+      sfx.ghost();
       // 걷기 범위(walkArea.rects)는 그대로 둔다: 풀면 계단 위의 몸이 도시 경계 안으로 밀려난다 (조작은 walkable이 거둔다)
     }, 100);
     return () => clearInterval(iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [walkable, ending?.step]);
+
+  // 空 결말의 계단: 내려갈수록 화면이 흐려지고 어두워지며, 신호가 끊기듯 지직댄다 (가끔 화면이 옆으로 찢기고 잡음이 낀다).
+  // 다 내려서면 끝까지 끊겨 검은 화면이 된다. 걸음과 함께 변하므로 매 프레임 직접 스타일을 바꾼다
+  const canvasWrapRef = useRef<HTMLDivElement>(null);
+  const signalRef = useRef<HTMLDivElement>(null);
+  const descending = ending?.kind === "ghost" && ending.step >= GHOST_STEP;
+  useEffect(() => {
+    if (!descending) return;
+    const wrap = canvasWrapRef.current;
+    const sig = signalRef.current;
+    let raf = 0;
+    let k = 0;
+    let tear = 0;
+    let lastGlitch = 0;
+    const frame = () => {
+      raf = requestAnimationFrame(frame);
+      if (runtime.paused) return;
+      const now = performance.now();
+      const depth = Math.min(1, Math.max(0, (player.pos.x - STAIR_FADE) / (STAIR_END - STAIR_FADE)));
+      // 다 내려선 뒤에는 남은 신호가 1초 남짓에 걸쳐 끊긴다
+      const want = steppedRef.current ? 1 : depth * 0.82;
+      k += (want - k) * (steppedRef.current ? 0.05 : 0.15);
+      // 찢김: 깊어질수록 자주, 길게
+      if (tear <= now && Math.random() < k * k * 0.12) tear = now + 60 + Math.random() * 160 * k;
+      const torn = tear > now;
+      if (torn && now - lastGlitch > 900 && k > 0.25 && k < 0.98) {
+        lastGlitch = now;
+        sfx.glitch();
+      }
+      if (wrap) {
+        wrap.style.filter = k < 0.005 ? "" : `blur(${(k * 9).toFixed(2)}px) brightness(${(1 - k * 0.92).toFixed(3)}) saturate(${(1 - k * 0.7).toFixed(3)})`;
+        wrap.style.transform = torn ? `translateX(${((Math.random() - 0.5) * 40 * k).toFixed(1)}px)` : "";
+      }
+      if (sig) {
+        sig.style.opacity = String(Math.min(1, k * 0.9 + (torn ? 0.15 : 0)));
+        sig.style.backgroundPosition = `0 ${Math.floor(Math.random() * 400)}px, ${Math.floor(Math.random() * 200)}px 0`;
+      }
+    };
+    raf = requestAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (wrap) {
+        wrap.style.filter = "";
+        wrap.style.transform = "";
+      }
+      if (sig) sig.style.opacity = "0";
+    };
+  }, [descending]);
 
   // 지상에서 직접 오가는 짧은 말 (자막 한 줄. 말하는 사람 이름과 함께). 대화창을 열지 않고, 조작을 막지 않는다.
   // 한 번에 한 줄만 뜨고, 그동안 방송(.notice)은 비켜 준다. speak는 여러 줄을 차례로 (길 위의 짧은 만남)
@@ -1299,7 +1362,7 @@ export default function ExploreClient() {
   const speaking = () => runtime.now() < speakUntil.current;
   useEffect(() => () => clearTimeout(sayTimer.current), []);
   // 처음 시선 구역: 대자비 소개가 닫힌 뒤 이산이 첫 엄폐물 뒤로 가서 기다린다 (탭마다 한 번 말하고, 재시도 때는 말없이 다시 기다린다)
-  const cueRef = useRef({ cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0, passed: false, lead: false });
+  const cueRef = useRef({ cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0 });
   const sanWithYou = zone === "city" && complete && talked && !ghost && !accepted && !ending;
   const sanWithYouRef = useRef(sanWithYou);
   sanWithYouRef.current = sanWithYou;
@@ -1343,35 +1406,6 @@ export default function ExploreClient() {
     window.addEventListener("sanlee-backup", onBackup);
     return () => window.removeEventListener("sanlee-backup", onBackup);
   }, [sanWithYou, say]);
-
-  // 기록 없는 방문자와 다시 일어난 이산: 방공호를 나서면 한 줄. 드론의 표적 고리가 실제로 붙지 못하고 빛이 지나간 뒤에만 "…그냥 지나갔어."
-  // (미리 '도시가 우릴 못 본다'고 말하지 않는다. 빛이 닿아도 고리가 붙지 않는 것은 Drones/DroneHUD가 보여 준다)
-  const ghostCity = zone === "city" && ghost && !ending;
-  useEffect(() => {
-    if (!ghostCity) return;
-    const lead = setTimeout(() => {
-      if (cueRef.current.lead) return;
-      cueRef.current.lead = true;
-      say(sanCue.lead, 3400);
-    }, 1400);
-    const iv = setInterval(() => {
-      const c = cueRef.current;
-      if (c.passed || !drone.shapeSeen || drone.shape || panelRef.current) return;
-      c.passed = true;
-      say(sanCue.passed, 3400);
-      setFallOn(true);
-    }, 250);
-    // 드론을 만나지 않고 대자비 구역에 닿았거나 오래 걸었다면 그때 곡을 연다
-    const late = setTimeout(() => setFallOn(true), 45000);
-    return () => {
-      clearTimeout(lead);
-      clearTimeout(late);
-      clearInterval(iv);
-    };
-  }, [ghostCity, say]);
-  useEffect(() => {
-    if (ghostCity && jabiStage) setFallOn(true);
-  }, [ghostCity, jabiStage]);
 
   // ---------- 남쪽 전망대 가는 길과 돌아오는 길: 이산의 경유점 ----------
   // 이산은 hold(드론 빛이 닿지 않는 자리)에서 기다리다, 방문자가 다음 hold 쪽으로 앞서 나가면 그 hold까지 경유점을 차례로 걷는다
@@ -1643,7 +1677,7 @@ export default function ExploreClient() {
     sanHold.at = null;
     walkArea.rects = null;
     gaze.gateOpen = false;
-    cueRef.current = { cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0, passed: false, lead: false };
+    cueRef.current = { cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0 };
     cpRef.current = { seen: false, talked: false };
     metRef.current = {};
     clearTimeout(beatTimer.current);
@@ -1898,8 +1932,8 @@ export default function ExploreClient() {
       ? ACCEPT_SAN
       : ending?.kind === "ghost"
         ? ending.step >= GHOST_WALK
-          ? stepped
-            ? GHOST_TURN
+          ? ending.step >= GHOST_STEP
+            ? GHOST_DOWN
             : GHOST_SAN
           : undefined
         : scopeStage === "ask" || scopeStage === "looking"
@@ -1933,7 +1967,7 @@ export default function ExploreClient() {
   return (
     <main className={rootClass} ref={rootRef}>
       {webgl && (
-        <div className="canvas-wrap">
+        <div className="canvas-wrap" ref={canvasWrapRef}>
           <WorldBoundary onUnavailable={() => setWebgl(false)}>
             <World
             zone={zone}
@@ -2269,6 +2303,8 @@ export default function ExploreClient() {
         </div>
       )}
 
+      {descending && <div className="ghost-signal" ref={signalRef} aria-hidden="true" />}
+
       {ending && (
         <div className={`ending ending-${ending.kind}${walkable ? " walking" : ""}`}>
           <div className="ending-inner">
@@ -2276,7 +2312,7 @@ export default function ExploreClient() {
               // 거부 결말이 방공호로 넘어가면 앞 장면의 글은 거둔다
               if (ending.kind === "reject" && ending.step >= 3 && i < 3) return null;
               // 空 결말은 앞을 가리지 않도록 마지막 두 줄만 아래에. 수락 결말은 최근 세 줄만 (숫자는 감정 장면 전에 지나간다)
-              if (ending.kind === "ghost" && i < ending.step - 1) return null;
+              if (ending.kind === "ghost" && (ending.step > GHOST_STEP ? i <= GHOST_STEP : i < ending.step - 1)) return null;
               if (ending.kind === "accept" && i < ending.step - 2) return null;
               const last = i === (checkpoint[ending.kind] as Beat[]).length - 1;
               const cls = [last ? "final" : "", l.say ? "say" : "", l.plaque ? "plaque-line" : "", i < arr.length - 1 && !last ? "past" : ""].join(" ");

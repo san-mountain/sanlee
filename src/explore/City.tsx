@@ -403,7 +403,8 @@ function DescentRoute({ lang }: { lang: Lang }) {
     { color: "#d8d2c0", bg: "#101418", mono: true, w: 768, h: 224 }
   );
   const plate = useSign([[ko ? "하층행 승강장 ↓" : "DESCENT ↓", 1]], { color: "#ffb02e", bg: "#0a0604", glow: true, mono: true, w: 512, h: 128 });
-  const steps = useMemo(() => Array.from({ length: 16 }, (_, i) => i), []);
+  // 구름 속으로 길게 (空 결말에서 스무 단쯤 걸어 내려간다)
+  const steps = useMemo(() => Array.from({ length: 30 }, (_, i) => i), []);
   return (
     <group>
       {/* 광장에서 큰길로 들어서는 자리의 낡은 표지판 (남쪽을 향한다). 감시 기둥(x -8.4, z 8)과 떨어진 제 기둥에 선다 */}
@@ -432,7 +433,7 @@ function DescentRoute({ lang }: { lang: Lang }) {
             {/* 단마다 내려서는 쪽 모서리(위에서 내려다볼 때 보이는 끝)에 호박색 띠: 어두운 구름 속에서도 계단이 보이도록 (아래로 갈수록 흐려진다) */}
             <mesh position={[0.42, 0.26, 0]}>
               <boxGeometry args={[0.07, 0.04, 2.5]} />
-              <meshBasicMaterial color="#ffb070" transparent opacity={Math.max(0.15, 1 - i * 0.07)} toneMapped={false} />
+              <meshBasicMaterial color="#ffb070" transparent opacity={Math.max(0.12, 1 - i * 0.045)} toneMapped={false} />
             </mesh>
           </group>
         ))}
@@ -450,6 +451,8 @@ function DescentRoute({ lang }: { lang: Lang }) {
         {/* 계단을 따라 내려가는 낮은 길 조명 (글로 계단을 설명하지 않는다). 그림자 없음 */}
         <pointLight position={[STAIR.w + 2.4, -0.2, 0]} intensity={9} distance={8} color="#ffb070" />
         <pointLight position={[STAIR.w + 6.4, -2.8, 0]} intensity={7} distance={8} color="#ff9a5a" />
+        <pointLight position={[STAIR.w + 11.4, -6.3, 0]} intensity={5} distance={8} color="#ff9a5a" />
+        <pointLight position={[STAIR.w + 16.4, -9.8, 0]} intensity={3.5} distance={8} color="#ff8a4a" />
       </group>
     </group>
   );

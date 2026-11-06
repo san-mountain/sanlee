@@ -21,7 +21,8 @@ export const sanHold: { at: { x: number; z: number; cover: number; manual?: bool
 
 // 정해진 길을 걷는 이산 (망원경 장면·결말): 미리 빈 자리만 이어 둔 점들을 차례로 걷고, 마지막 점에서 yaw 쪽을 본다.
 // 길이 바뀌면 처음 점부터 다시 걷는다. 도착 여부는 sanWalk.arrived로 알린다 (ExploreClient가 도착을 기다린다)
-export type SanPath = { pts: [number, number][]; yaw: number; speed?: number };
+// vanish: 마지막 몇 미터에서 신호가 끊기듯 깜빡이다 끝점에서 사라진다 (空 결말의 계단)
+export type SanPath = { pts: [number, number][]; yaw: number; speed?: number; vanish?: boolean };
 export const sanWalk: { arrived: boolean; path: SanPath | null } = { arrived: false, path: null };
 
 // 복원된 산: 방공호에서는 동상 주위를 거닐고, 지상에서는 방문자 곁을 따라 걷는다
@@ -58,6 +59,7 @@ export default function SanNPC({ mode, item, onTap, start, path }: { mode: "wand
         sanWalk.path = path;
         sanWalk.arrived = false;
         S.wp = 0;
+        g.visible = true;
       }
       const sp = path.speed ?? 1.4;
       let walking = false;
@@ -83,11 +85,18 @@ export default function SanNPC({ mode, item, onTap, start, path }: { mode: "wand
         sanWalk.arrived = true;
         S.yaw = path.yaw;
       }
+      if (path.vanish) {
+        const [ex, ez] = path.pts[path.pts.length - 1];
+        const left = S.wp >= path.pts.length ? 0 : Math.hypot(ex - S.x, ez - S.z);
+        const fade = Math.max(0, 1 - left / 4);
+        g.visible = left > 0 && Math.random() > fade * fade * 0.85;
+      }
       g.position.set(S.x, (walkArea.floor ? walkArea.floor(S.x, S.z) : 0) + (walking ? Math.abs(Math.sin(S.bob)) * 0.05 : 0), S.z);
       g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, S.yaw, 0.12);
       item.pos.set(S.x, 1.5, S.z);
       return;
     }
+    g.visible = true;
     if (sanWalk.path) {
       sanWalk.path = null;
       sanWalk.arrived = false;
