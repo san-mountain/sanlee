@@ -1,5 +1,7 @@
 "use client";
 
+import { runtime } from "./runtime";
+
 // 순찰 드론: 레일을 따라 오가며 바닥에 빛 원을 비춘다.
 // 빛 원(그림), 빛기둥(그림), 가림 판정, 맞음 판정이 모두 아래의 같은 값(드론 위치·반지름·가림 상자)에서 나온다.
 // - 광장·바깥 산책로: 망원경 가는 길. 빛 속에 오래 있으면 식별되어 그 드론 길 앞의 안전한 자리로 돌아간다 (DroneHUD → ExploreClient)
@@ -255,8 +257,9 @@ export default function Drones() {
   const ringT = useRef(0);
 
   useFrame((s, rawDt) => {
+    if (runtime.paused) return;
     const dt = Math.min(rawDt, 0.05);
-    const now = s.clock.elapsedTime;
+    const now = runtime.now() / 1000;
     const px = player.pos.x;
     const pz = player.pos.z;
     // 지금 빛이 사람을 찾을 수 있는가. 기록 없이 돌아온 둘(blind)에게는 빛이 닿아도 형체만 감지된다

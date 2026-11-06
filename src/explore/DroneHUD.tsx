@@ -1,5 +1,8 @@
 "use client";
 
+import { runtime } from "./runtime";
+import { useGameTimers } from "./useGameTimers";
+
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "@/components/LangProvider";
 import { drone } from "./Drones";
@@ -10,6 +13,7 @@ import { droneUi } from "./story";
 // 광장에서 발각되면 화면이 잠깐 어두워지고, onCaught가 그 드론 길 앞의 안전한 자리로 돌려보낸다.
 // 저장된 방문 기록이 없는 방문자에게 빛이 닿으면 게이지 없이 '방문자 기록 없음 · 추적 불가'가 이번 방문에 한 번 뜬다
 export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
+  const { setTimeout, clearTimeout } = useGameTimers();
   const { t } = useLang();
   const tRef = useRef(t);
   tRef.current = t;
@@ -30,7 +34,8 @@ export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
     let shapeUntil = 0;
     const loop = () => {
       raf = requestAnimationFrame(loop);
-      const now = performance.now();
+      if (runtime.paused) return;
+      const now = runtime.now();
       // 큰길의 드론 빛은 대자비의 감시 게이지에 합쳐진다 (여기서는 광장·산책로 드론만 보여 준다)
       const plazaLit = drone.lit >= 0 && drone.zone === "plaza";
       // 기록 없는 방문자에게 고리가 붙지 못한 일은 이번 방문에 한 번만 글로 알린다

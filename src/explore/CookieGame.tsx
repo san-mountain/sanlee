@@ -6,10 +6,13 @@ import { useEffect, useRef, useState } from "react";
 import type { L } from "@/data/site";
 import { cookieGame as G } from "./story";
 import { sfx } from "./sfx";
+import { runtime } from "./runtime";
+import { useGameTimers } from "./useGameTimers";
 
 const LIMIT_MS = 15000;
 
 export default function CookieGame({ t, onWin, onLose }: { t: (l: L) => string; onWin: () => void; onLose: () => void }) {
+  const { setTimeout, clearTimeout, setInterval, clearInterval } = useGameTimers();
   const [on, setOn] = useState<boolean[]>(() => G.items.map(() => true));
   const [back, setBack] = useState<number | null>(null); // 방금 다시 켜진 칸
   const [left, setLeft] = useState(LIMIT_MS);
@@ -20,9 +23,9 @@ export default function CookieGame({ t, onWin, onLose }: { t: (l: L) => string; 
   // 남은 시간
   useEffect(() => {
     if (over) return;
-    const start = performance.now();
+    const start = runtime.now();
     const id = setInterval(() => {
-      const l = Math.max(0, LIMIT_MS - (performance.now() - start));
+      const l = Math.max(0, LIMIT_MS - (runtime.now() - start));
       setLeft(l);
       if (l <= 0) setOver("lose");
     }, 100);
@@ -33,9 +36,9 @@ export default function CookieGame({ t, onWin, onLose }: { t: (l: L) => string; 
   useEffect(() => {
     if (over) return;
     let h: ReturnType<typeof setTimeout>;
-    const t0 = performance.now();
+    const t0 = runtime.now();
     const tick = () => {
-      const p = Math.min(1, (performance.now() - t0) / LIMIT_MS);
+      const p = Math.min(1, (runtime.now() - t0) / LIMIT_MS);
       const offs = onRef.current.map((v, i) => (!v ? i : -1)).filter((i) => i >= 0);
       if (offs.length) {
         const i = offs[Math.floor(Math.random() * offs.length)];

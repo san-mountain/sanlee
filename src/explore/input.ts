@@ -55,3 +55,11 @@ export function turnKeys() {
   const k = input.keys;
   return (k.has("ArrowLeft") || k.has("KeyQ") ? 1 : 0) - (k.has("ArrowRight") ? 1 : 0);
 }
+
+export function resetInput() {
+  input.keys.clear();
+  input.joy.x = input.joy.y = 0;
+  input.look.yaw = input.look.pitch = 0;
+  input.jump = input.jumpHeld = input.runLatch = false;
+  input.shiftAt = 0;
+}

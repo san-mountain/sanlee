@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { input } from "./input";
+import { input, resetInput } from "./input";
 
 // 왼쪽 아래 가상 조이스틱. 엄지가 처음 닿은 자리에 생긴다.
 export function Joystick() {
@@ -51,11 +51,15 @@ export function Joystick() {
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", up);
     el.addEventListener("pointercancel", up);
+    el.addEventListener("lostpointercapture", up);
     return () => {
       el.removeEventListener("pointerdown", down);
       el.removeEventListener("pointermove", move);
       el.removeEventListener("pointerup", up);
       el.removeEventListener("pointercancel", up);
+      el.removeEventListener("lostpointercapture", up);
+      if (id !== null && el.hasPointerCapture(id)) el.releasePointerCapture(id);
+      input.joy.x = input.joy.y = 0;
     };
   }, []);
   return (
@@ -93,6 +97,10 @@ function logKey(kind: string, e: KeyboardEvent) {
 // 모바일 점프 버튼
 // 모바일 오른쪽 아래 버튼: 평소엔 점프, 상호작용할 수 있는 것 가까이에 가면 그 행동 버튼으로 바뀐다
 export function JumpButton({ action }: { action?: { label: string; color?: string; run: () => void } | null }) {
+  useEffect(() => {
+    input.jump = input.jumpHeld = false;
+    return () => { input.jump = input.jumpHeld = false; };
+  }, [!!action]);
   if (action)
     return (
       <button
@@ -144,8 +152,7 @@ export function useLookAndKeys(
   useEffect(() => {
     input.enabled = active;
     if (!active) {
-      input.keys.clear();
-      input.joy.x = input.joy.y = 0;
+      resetInput();
       // 장면 전환 중에는 마우스를 잡아 둔다. 패널·설정창이 뜰 때만 놓아 준다
       if (document.pointerLockElement && !holdLock) document.exitPointerLock();
     }
@@ -228,9 +235,12 @@ export function useLookAndKeys(
       input.keys.delete(e.code);
     };
     const blur = () => {
-      input.keys.clear();
-      input.jumpHeld = false;
+      resetInput();
+      pts.clear();
+      spaceDown = false;
     };
+    const visibility = () => { if (document.hidden) blur(); };
+    document.addEventListener("visibilitychange", visibility);
     el.addEventListener("pointerdown", down);
     window.addEventListener("mousemove", mouseMove);
     document.addEventListener("pointerlockchange", lockChange);
@@ -250,6 +260,9 @@ export function useLookAndKeys(
       window.removeEventListener("keydown", kd);
       window.removeEventListener("keyup", ku);
       window.removeEventListener("blur", blur);
+      document.removeEventListener("visibilitychange", visibility);
+      resetInput();
+      pts.clear();
     };
   }, [target]);
 }

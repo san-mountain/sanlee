@@ -1,5 +1,6 @@
 "use client";
 
+import { runtime } from "./runtime";
 // 방공호의 얼굴 복원 장치. 놋쇠 축에 꿴 나무 원통 세 개(위·가운데·아래)가 한 얼굴을 나눠 들고 있다.
 // 손잡이를 돌리면 원통이 한 면씩 돌아가 걸린다. 맞는 조각끼리 만나면 이음매의 외곽선이 금빛으로 이어진다.
 // 터미널 셋을 모두 연 뒤에야 돌아간다 (그 전에는 등이 꺼진 채 서 있다).
@@ -69,19 +70,19 @@ function Drum({ i, value, onTap }: { i: number; value: number; onTap: TapFn }) {
     a.turns += (value - a.prev + FACES) % FACES;
     a.prev = value;
     a.from = cur;
-    a.at = performance.now();
+    a.at = runtime.now();
   }, [value]);
   useFrame(() => {
     const a = anim.current;
     const target = -a.turns * TURN;
-    const k = a.at < 0 ? 1 : Math.min(1, (performance.now() - a.at) / 1000 / SPIN);
+    const k = a.at < 0 ? 1 : Math.min(1, (runtime.now() - a.at) / 1000 / SPIN);
     const ang = k >= 1 ? target : a.from + (target - a.from) * easeOutBack(k);
     if (group.current) group.current.rotation.y = ang;
     // 손잡이는 원통이 한 칸 돌 때 한 바퀴 돈다
     if (crank.current) crank.current.rotation.x = (ang / TURN) * Math.PI * 2;
     const aimed = faceRt.phase === "idle" && faceRt.near && faceRt.aim === i;
     if (ring.current) ring.current.emissiveIntensity += ((aimed ? 0.55 : 0) - ring.current.emissiveIntensity) * 0.2;
-    if (knob.current) knob.current.emissiveIntensity = aimed ? 0.9 + Math.sin(performance.now() / 160) * 0.3 : 0;
+    if (knob.current) knob.current.emissiveIntensity = aimed ? 0.9 + Math.sin(runtime.now() / 160) * 0.3 : 0;
   });
   return (
     <group position={[0, DRUM_Y[i], 0]}>
@@ -141,11 +142,11 @@ function Seam({ s, joined }: { s: 0 | 1; joined: boolean }) {
   const dotMat = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
   const since = useRef(0);
   useEffect(() => {
-    since.current = joined ? performance.now() : 0;
+    since.current = joined ? runtime.now() : 0;
   }, [joined]);
   useFrame(() => {
     const locked = faceRt.phase !== "idle" && faceRt.phase !== "locked";
-    const age = since.current ? (performance.now() - since.current) / 1000 : 0;
+    const age = since.current ? (runtime.now() - since.current) / 1000 : 0;
     // 막 이어진 순간 밝게 번쩍이고 은은하게 남는다. 장치가 잠기면 계속 켜져 있다
     const o = joined || locked ? Math.min(1, age * 4) * (0.55 + 0.45 * Math.exp(-age * 2.2)) : 0;
     if (mat.current) mat.current.opacity = locked ? 0.9 : o;
@@ -175,7 +176,7 @@ function Smile({ method }: { method: FaceMethod | null }) {
   useFrame((st) => {
     const p = faceRt.phase;
     const t = st.clock.elapsedTime;
-    const age = (performance.now() - faceRt.since) / 1000;
+    const age = (runtime.now() - faceRt.since) / 1000;
     let o = 0;
     let z = R + 0.09;
     let sy = 1;
@@ -263,7 +264,7 @@ function Controls({ method, lang, onTap }: { method: FaceMethod | null; lang: La
     const p = faceRt.phase;
     const t = st.clock.elapsedTime;
     const live = p === "choice";
-    const age = (performance.now() - faceRt.since) / 1000;
+    const age = (runtime.now() - faceRt.since) / 1000;
     const chose = p === "applying" || p === "done";
     // 고른 쪽은 눌리거나 당겨진 채로 남는다
     const pressed = chose && method === "standard" ? Math.min(1, (p === "applying" ? age : 1) * 6) : 0;
@@ -423,7 +424,7 @@ function Bulb() {
   const bulb = useRef<THREE.MeshStandardMaterial>(null);
   const light = useRef<THREE.PointLight>(null);
   useFrame(() => {
-    const on = faceRt.wokeAt ? (performance.now() - faceRt.wokeAt) / 1000 : -1;
+    const on = faceRt.wokeAt ? (runtime.now() - faceRt.wokeAt) / 1000 : -1;
     // 켜지는 순간 몇 번 깜박인다
     let k = on < 0 ? 0.04 : on < 0.9 ? (Math.sin(on * 31) > 0.2 ? 1 : 0.1) : 1;
     if (faceRt.phase === "restored" || faceRt.phase === "applying") k = 1.6;
@@ -484,7 +485,7 @@ export default function FaceMachine({ drums, phase, method, lang, onTap }: { dru
     const dist = Math.hypot(player.pos.x - FACE_MACHINE.pos[0], player.pos.z - FACE_MACHINE.pos[2]);
     faceRt.near = dist < 3.4;
     if (!faceRt.wokeAt && faceRt.phase === "idle" && dist < 7.5) {
-      faceRt.wokeAt = performance.now();
+      faceRt.wokeAt = runtime.now();
       sfx.clunk();
     }
     inv.copy(g.matrixWorld).invert();

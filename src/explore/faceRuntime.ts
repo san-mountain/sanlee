@@ -1,3 +1,4 @@
+import { runtime } from "./runtime";
 // 얼굴 복원 장치의 연출 상태. 3D 장면과 화면 UI가 리렌더 없이 매 프레임 함께 읽는다
 import { START, type Drums, type FaceMethod } from "./faceAuth";
 
@@ -31,5 +32,9 @@ export type FaceView = { drums: Drums; phase: FacePhase; method: FaceMethod | nu
 
 export function setFacePhase(p: FacePhase) {
   faceRt.phase = p;
-  faceRt.since = performance.now();
+  faceRt.since = runtime.now();
+}
+
+export function resetFaceRuntime() {
+  Object.assign(faceRt, { phase: "locked", since: 0, drums: [...START], method: null, aim: 1, near: false, wokeAt: 0, focus: null });
 }

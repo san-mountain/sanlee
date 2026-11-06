@@ -39,7 +39,7 @@ export default function Effects() {
   return (
     <>
       <PerformanceMonitor
-        flipflops={2}
+        flipflops={Infinity}
         onDecline={() => {
           if (isForced()) return;
           setDpr(1);

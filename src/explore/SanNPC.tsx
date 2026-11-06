@@ -1,5 +1,7 @@
 "use client";
 
+import { runtime } from "./runtime";
+
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
@@ -41,6 +43,7 @@ export default function SanNPC({ mode, item, onTap, start, path }: { mode: "wand
     };
   }, [item]);
   useFrame((s, rawDt) => {
+    if (runtime.paused) return;
     const dt = Math.min(rawDt, 0.05);
     const g = ref.current;
     if (!g) return;
