@@ -15,7 +15,7 @@ import { towerMaterial } from "./towerMaterial";
 import { useNeoPost } from "./neoPost";
 import { NeonEnvironment, useBeam, useLightPool } from "./atmosphere";
 import { addRim } from "./rim";
-import { useQuality } from "./quality";
+import { lite, useQuality } from "./quality";
 import { MeshReflectorMaterial } from "@react-three/drei";
 import { concreteTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
@@ -450,9 +450,14 @@ function DescentRoute({ lang }: { lang: Lang }) {
         <pointLight position={[1.5, 2.6, 0]} intensity={8} distance={9} color="#ffb070" />
         {/* 계단을 따라 내려가는 낮은 길 조명 (글로 계단을 설명하지 않는다). 그림자 없음 */}
         <pointLight position={[STAIR.w + 2.4, -0.2, 0]} intensity={9} distance={8} color="#ffb070" />
-        <pointLight position={[STAIR.w + 6.4, -2.8, 0]} intensity={7} distance={8} color="#ff9a5a" />
-        <pointLight position={[STAIR.w + 11.4, -6.3, 0]} intensity={5} distance={8} color="#ff9a5a" />
-        <pointLight position={[STAIR.w + 16.4, -9.8, 0]} intensity={3.5} distance={8} color="#ff8a4a" />
+        {/* 휴대폰에서는 계단 아래쪽 조명을 줄인다 (조명 하나하나가 화면 전체의 계산을 늘린다). 호박색 띠는 그대로 보인다 */}
+        {!lite && (
+          <>
+            <pointLight position={[STAIR.w + 6.4, -2.8, 0]} intensity={7} distance={8} color="#ff9a5a" />
+            <pointLight position={[STAIR.w + 11.4, -6.3, 0]} intensity={5} distance={8} color="#ff9a5a" />
+            <pointLight position={[STAIR.w + 16.4, -9.8, 0]} intensity={3.5} distance={8} color="#ff8a4a" />
+          </>
+        )}
       </group>
     </group>
   );
@@ -1096,7 +1101,7 @@ function Whisper({ onTap }: { onTap: TapFn }) {
 }
 
 /* ---------- 비 ---------- */
-function Rain({ count = 1400 }) {
+function Rain({ count = lite ? 500 : 1400 }) {
   const ref = useRef<THREE.LineSegments>(null);
   const { geo, drops } = useMemo(() => {
     const r = rng(5);
