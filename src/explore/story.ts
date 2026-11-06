@@ -312,16 +312,18 @@ export const encounters: Record<"grandma" | "courier" | "edgekid", { who: "san" 
 // 마지막 페이지(memory)가 뜬 기기에 웹사이트 꼬리말의 'delete seoul'이 켜진다
 export const sanAfterCheckpoint = {
   lines: [
-    { ko: "너만 줄에 설 수 있대. 난 움직이고 있는데도, 저기엔 아직 정지된 사람으로 나와.", en: "Only you can join the line. I'm moving, but it still lists me as suspended." },
-    { ko: "저 명단도 결국 이산의 개인 웹사이트에 저장된대. 우리가 들어와 있는 이곳도 그 웹사이트의 일부고. 터미널에서 네가 열어 본 기록까지 남아 있어.", en: "They say that list is saved on San Lee’s personal website, too. This place we're in is part of it. It even keeps track of the records you opened at the terminals." },
+    { ko: "너만 줄에 설 수 있나 봐. 난 이렇게 움직이는데도, 저기엔 아직 정지된 사람으로 나와.", en: "Looks like only you can join the line. I'm moving, but it still lists me as suspended." },
+    { ko: "저 명단도 결국 그 웹사이트에 남아. 터미널의 내 기록처럼, 오늘 네가 지나온 길까지 전부.", en: "That list ends up on the website too. Like my records in the terminals, down to every step you took today." },
     { ko: "아까 화면에 쓰여 있었지. 기록은 웹사이트로 돌아가야 지울 수 있다고.", en: "It said so on the screen. The records can only be deleted back on the website." },
     { ko: "지우면 난 다시 멈출 거야. 오늘 일도 잊어버릴 테고.", en: "If you delete them, I'll stop again. I'll forget today, too." },
+    // 시 구절로 넘어가는 다리: 기록은 지워져도 마음에 새긴 것은 남을지 모른다
+    { ko: "그래도 하나쯤은 남을지 몰라. 기록이 아니라 마음에 새긴 거라면.", en: "But maybe one thing would stay. If it's carved into my heart, not into a record." },
+    { ko: "내가 가장 좋아하는 시 구절이 있어. 2026년의 ‘이산’이 쓴 거야.", en: "There's a line of poetry I love most. The ‘San Lee’ of 2026 wrote it." },
     // 방문자가 기억해 갈 구절 (재회 때 세 구절 중에서 고른다: reunion.verses)
     { ko: "‘수놓인 별들 아래 걸음이 서투른 저희는 고고합니까?’", en: "‘Beneath the embroidered stars, are we, so clumsy in our steps, noble?’" },
-    { ko: "내가 가장 좋아하는 ‘이산’의 시 구절이야.", en: "It's my favourite line from a poem by ‘San Lee’." },
-    { ko: "물론 내가 쓴 건 아니지만 이 문장이 가장 마음에 들더라.", en: "I didn't write it, of course. But this is the sentence I like best." },
+    { ko: "내가 쓴 건 아니지만, 이 문장만큼은 처음부터 내 것 같았어.", en: "I didn't write it, but this one sentence felt like mine from the start." },
   ] as Line[],
-  memory: { ko: "그래도 다시 와 줄래? 내가 널 몰라봐도, 이 구절을 들려주면 알아들을지도 몰라.", en: "Will you come back anyway? Even if I don't know you, I might understand if you tell me that line." } as Line,
+  memory: { ko: "다시 와 줄래? 내가 널 몰라봐도, 이 구절을 들려주면 알아들을지도 몰라.", en: "Will you come back anyway? Even if I don't know you, I might understand if you tell me that line." } as Line,
 };
 // 그 뒤로 지상에서 이산에게 말을 걸면: 되풀이 없이 짧게
 export const sanReview: Line[] = [{ ko: "같이 내려가고 싶었는데… 돌아오면, 그 구절을 들려줘.", en: "I wanted us to go down together… If you come back, tell me that line." }];
@@ -340,10 +342,10 @@ export const sanCue = {
   avenueDecide: { ko: "난 아래로 가 보고 싶어. 같이 갈 거면 이쪽이야.", en: "I want to go down. If you're coming, it's this way." } as L,
   agree: { ko: "고마워. 검문소까지 같이 가자.", en: "Thank you. Let's go to the checkpoint together." } as L,
   later: { ko: "응. 여기서 기다릴게.", en: "Okay. I'll wait here." } as L,
-  // 기록 없는 방문자: 드론 빛이 둘을 지나간 뒤 (실제로 표적이 붙지 못한 다음에만)
-  passed: { ko: "…그냥 지나갔어.", en: "…It just went past." } as L,
-  // 기록 없는 방문자와 다시 일어난 이산: 방공호를 나설 때
-  lead: { ko: "같이 가자. 이번엔 네가 앞장서 줘.", en: "Let's go together. This time, you lead." } as L,
+  // 기록 없는 방문자: 드론 빛이 둘을 지나간 뒤 (실제로 표적이 붙지 못한 다음에만). 이 말과 함께 f-ALL이 서서히 들어온다
+  passed: { ko: "…그냥 지나갔어. 정말 우릴 못 찾나 봐. 검문소로 가자.", en: "…It just went past. It really can't find us. Let's go to the checkpoint." } as L,
+  // 기록 없는 방문자와 다시 일어난 이산: 방공호를 나설 때 (방공호에서 짐작한 것을 드론 앞에서 확인해 보자고)
+  lead: { ko: "저기 드론이 있어. 정말 우릴 못 찾는지 보자.", en: "There's a drone. Let's see if it really can't find us." } as L,
 };
 
 // 기록을 지우고 돌아온 방문자와의 재회. 방문자는 말하지 않는다: 망원경을 보던 몸짓으로만 기억을 건넨다.
@@ -358,8 +360,15 @@ export const reunion = {
   asked: { ko: "…그 구절, 어떻게 알아? 내가 가장 좋아하는 건데. 난 널 기억 못 하는데.", en: "…How do you know that line? It's my favourite. And I don't remember you." } as Line,
   wrong: { ko: "…처음 듣는 구절이야.", en: "…I've never heard that line." } as Line,
   sit: { ko: "곁에 앉아 기다린다", en: "Sit beside them and wait" } as L,
-  stay: { ko: "…조금 더 같이 있어 줄래?", en: "…Will you stay with me a little longer?" } as Line,
-  awakeLine: { ko: "같이 가자. 이번엔 네가 앞장서 줘.", en: "Let's go together. This time, you lead." } as Line,
+  // 깨어난 뒤: 기록 없이 움직인다는 것(그래서 도시도 둘을 못 찾을지 모른다는 짐작)과 지상으로 가는 이유
+  woke: [
+    { ko: "…움직여. 터미널은 하나도 열리지 않았는데.", en: "…I can move. Not one terminal was opened." },
+    { ko: "너한테서도 아무 기록이 읽히지 않아. 지금 우리 둘은 어디에도 적혀 있지 않은 거야.", en: "I can't read any record from you either. Right now, neither of us is written down anywhere." },
+    { ko: "그럼 도시도 우릴 찾지 못할지 몰라.", en: "Then maybe the city can't find us either." },
+    { ko: "왜인지는 모르겠는데, 구름 아래로 가 보고 싶어. 그 구절처럼 지워지지 않고 남은 마음인가 봐.", en: "I don't know why, but I want to go below the clouds. Maybe it's a feeling that wasn't erased, like that line." },
+    { ko: "승강장은 검문소 너머에 있어. 같이 가 줄래? 이번엔 네가 앞장서 줘.", en: "The platform is past the checkpoint. Will you come? This time, you lead." },
+  ] as Line[],
+  awakeLine: { ko: "검문소 너머 승강장까지. 네가 앞장서 줘.", en: "To the platform past the checkpoint. You lead." } as Line,
 };
 // 연결이 끊긴 적이 있다면 지상의 이산이 덧붙이는 말 (선택 대화)
 export const sanAfterDeath: L = { ko: "방금 쓰러졌는데… 도시가 널 다시 불러냈어.", en: "You just went down… and the city called you back." };
@@ -472,6 +481,8 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
       { ko: "지금 나오는 곡은 D!mple. 여기선 웃어도 아무도 기록하지 않아.", en: "The track playing now is D!mple. Down here, nobody records you for smiling." },
       { ko: "지상에서 들리는 곡은 0x48 0x4F 0x50 0x45. 제목에 말을 하나 숨겨 놨어.", en: "The track you hear on the surface is 0x48 0x4F 0x50 0x45. I hid a word in the title." },
       { ko: "큰길에선 Sti그ma가 흘러. 거기서는 음악에 정신 팔리지 마.", en: "On the avenue it's Sti그ma. Don't get lost in the music out there." },
+      // 결말과 숨은 길의 곡들 (Habitual Suffering, an open ended promise, f-ALL): 제목은 말하지 않는다
+      { ko: "길 끝에도 곡을 몇 개 걸어 뒀어. 어떻게 끝나느냐에 따라 다른 곡이 나와.", en: "I've left a few more tracks at the end of the road. Which one plays depends on how it ends." },
       { ko: "난 백진성이야. 다른 곡도 듣고 싶으면 사운드클라우드에 있어.", en: "I'm Jinseong Baek. If you want to hear more, it's on SoundCloud." },
     ],
     link: { href: MUSIC_URL, label: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" } },

@@ -10,6 +10,7 @@ import { player } from "./Player";
 import { CITY, type Interactable } from "./zones";
 import { resolve } from "./collide";
 import { coverState } from "./Jabi";
+import { walkArea } from "./gaze";
 
 // 지상에서 이산이 잠깐 먼저 가서 기다리는 자리 (ExploreClient가 정하고, 방문자가 그 자리를 지나 북쪽으로 가면 풀린다).
 // 이 자리로 갈 때는 평소처럼 장애물을 피해 걷는다 (경유점 사이가 비어 있도록 ExploreClient가 점을 고른다)
@@ -82,7 +83,7 @@ export default function SanNPC({ mode, item, onTap, start, path }: { mode: "wand
         sanWalk.arrived = true;
         S.yaw = path.yaw;
       }
-      g.position.set(S.x, walking ? Math.abs(Math.sin(S.bob)) * 0.05 : 0, S.z);
+      g.position.set(S.x, (walkArea.floor ? walkArea.floor(S.x, S.z) : 0) + (walking ? Math.abs(Math.sin(S.bob)) * 0.05 : 0), S.z);
       g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, S.yaw, 0.12);
       item.pos.set(S.x, 1.5, S.z);
       return;

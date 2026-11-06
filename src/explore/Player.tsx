@@ -200,7 +200,8 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     if (grounded) s.bob += moved * (mv.run ? 2.2 : 2.6);
 
     const bobY = input.bob && grounded ? Math.sin(s.bob * 2) * 0.035 * Math.min(1, moved / (dt * 2 + 1e-4)) : 0;
-    camera.position.set(s.x, EYE + s.y + bobY, s.z);
+    const floorY = walkArea.floor ? walkArea.floor(s.x, s.z) : 0;
+    camera.position.set(s.x, EYE + floorY + s.y + bobY, s.z);
     camera.rotation.set(s.pitch, s.yaw, 0, "YXZ");
     // 대자비가 분노하면 화면이 흔들린다
     const sh = gaze.shake;

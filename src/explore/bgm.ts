@@ -2,7 +2,7 @@
 // 효과음과 같은 소리 설정을 따른다: 소리를 끄면 음악도 멈춘다. 첫 클릭 뒤에만 재생된다(브라우저 정책).
 import { sfxOn } from "./sfx";
 
-// ending = 空 결말, accept = 수락 결말(Habitual Suffering), reject = 거부 결말(an open ended promise),
+// ending = 예전 空 결말 곡(지금은 쓰지 않는다. 空 결말은 f-ALL을 잇는다), accept = 수락 결말(Habitual Suffering), reject = 거부 결말(an open ended promise),
 // fall = 기록을 지우고 돌아와 이산과 재회한 뒤의 지상(f-ALL)
 export type Track = "bunker" | "ground" | "jabi" | "ending" | "accept" | "reject" | "fall";
 const SRC: Record<Track, string> = {
@@ -19,6 +19,8 @@ const VOL = 0.3;
 // (새 세 곡은 평균 음량(accept −8.0, reject −9.5, fall −8.4 dB)을 기존 곡과 같은 비율로 맞춘 값. 들어 보고 정하지 않았다)
 const LEVEL: Record<Track, number> = { bunker: 1, ground: 0.83, jabi: 0.68, ending: 0.87, accept: 0.61, reject: 0.73, fall: 0.64 };
 const FADE = 1.6;
+// 처음부터 세게 들어오는 곡은 더 천천히 커진다 (f-ALL: 약 9초). 줄어들 때는 다른 곡과 같다
+const FADE_IN: Partial<Record<Track, number>> = { fall: 9 };
 
 let ctx: AudioContext | null = null;
 const chans: Partial<Record<Track, { el: HTMLAudioElement; gain: GainNode }>> = {};
@@ -64,7 +66,7 @@ function apply() {
       const g = ch.gain.gain;
       g.cancelScheduledValues(c.currentTime);
       g.setValueAtTime(g.value, c.currentTime);
-      g.linearRampToValueAtTime(target, c.currentTime + FADE);
+      g.linearRampToValueAtTime(target, c.currentTime + (target > g.value ? (FADE_IN[t] ?? FADE) : FADE));
     }
     if (target > 0) ch.el.play().catch(() => {});
     else {
