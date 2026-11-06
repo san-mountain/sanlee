@@ -1,5 +1,7 @@
 "use client";
 
+import { runtime } from "./runtime";
+
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
@@ -68,6 +70,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
   const jumpBuf = useRef(0);
 
   useFrame((_, rawDt) => {
+    if (runtime.paused) return;
     const dt = Math.min(rawDt, 0.05);
     const s = st.current;
 

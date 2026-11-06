@@ -13,23 +13,43 @@ export type Backup = {
 
 const empty = (): Backup => ({ n: 0, list: [], deaths: 0, restores: 0, deleted: false });
 let cache: Backup | null = null;
+let cachedRaw: string | null | undefined;
+
+const count = (v: unknown) => typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? v : 0;
+const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+
+export function parseBackup(value: unknown): Backup {
+  if (!value || typeof value !== "object") return empty();
+  const v = value as Record<string, unknown>;
+  // Unversioned saves are v0. Never interpret a future schema as this one.
+  if (v.version !== undefined && v.version !== 1) return empty();
+  const list = (Array.isArray(v.list) ? v.list : []).filter((s): s is Slot =>
+    !!s && typeof s === "object" && count(s.n) === s.n &&
+    finite(s.t) && s.t >= 0 && finite(s.x) && finite(s.z)
+  ).slice(-5).map(({ n, t, x, z }) => ({ n, t, x, z }));
+  return {
+    n: Math.max(count(v.n), ...list.map((s) => s.n)), list,
+    deaths: count(v.deaths), restores: count(v.restores), deleted: false,
+  };
+}
 
 export function getBackup(): Backup {
-  if (cache) return cache;
-  try {
-    const v = JSON.parse(localStorage.getItem(BACKUP_KEY) || "null");
-    // 예전 버전에서 남은 '삭제됨' 표시는 무시한다 (남아 있으면 자비가 계속 꺼져 있었다)
-    cache = v && typeof v.n === "number" ? { ...empty(), ...v, deleted: false } : empty();
-  } catch {
-    cache = empty();
-  }
-  return cache!;
+  let raw: string | null;
+  try { raw = localStorage.getItem(BACKUP_KEY); }
+  catch { return cache ??= empty(); }
+  if (cache && raw === cachedRaw) return cache;
+  cachedRaw = raw;
+  try { cache = parseBackup(JSON.parse(raw || "null")); }
+  catch { cache = empty(); }
+  return cache;
 }
 
 function write(b: Backup, ev: string | { kind: string; n: number }) {
   cache = b;
   try {
-    localStorage.setItem(BACKUP_KEY, JSON.stringify(b));
+    const raw = JSON.stringify({ ...b, version: 1 });
+    localStorage.setItem(BACKUP_KEY, raw);
+    cachedRaw = raw;
   } catch {}
   window.dispatchEvent(new CustomEvent("sanlee-backup", { detail: ev }));
 }
@@ -37,7 +57,7 @@ function write(b: Backup, ev: string | { kind: string; n: number }) {
 // 새 백업을 만든다. 백업을 지운 사람은 다시 기록되지 않는다.
 export function saveBackup(x: number, z: number) {
   const b = getBackup();
-  if (b.deleted) return null;
+  if (b.deleted || !finite(x) || !finite(z)) return null;
   const slot = { n: b.n + 1, t: Date.now(), x, z };
   write({ ...b, n: slot.n, list: [...b.list, slot].slice(-5) }, { kind: "save", n: slot.n });
   return slot;
@@ -67,6 +87,7 @@ export function deleteBackup() {
 // 거부 결말·처음부터 다시·도시 밖 기록 삭제: 저장소와 메모리에서 함께 지운다
 export function wipeBackup() {
   cache = empty();
+  cachedRaw = null;
   try {
     localStorage.removeItem(BACKUP_KEY);
   } catch {}

@@ -313,7 +313,7 @@ export const encounters: Record<"grandma" | "courier" | "edgekid", { who: "san" 
 export const sanAfterCheckpoint = {
   lines: [
     { ko: "너만 줄에 설 수 있대. 난 움직이고 있는데도, 저기엔 아직 정지된 사람으로 나와.", en: "Only you can join the line. I'm moving, but it still lists me as suspended." },
-    { ko: "저 명단도 결국 그 웹사이트에 저장된대. 터미널의 내 기록처럼, 오늘 네가 지나온 길까지 전부.", en: "That list is saved on the website in the end, they say. Like my records in the terminals, down to every step you took today." },
+    { ko: "저 명단도 결국 이산의 개인 웹사이트에 저장된대. 우리가 들어와 있는 이곳도 그 웹사이트의 일부고. 터미널에서 네가 열어 본 기록까지 남아 있어.", en: "They say that list is saved on San Lee’s personal website, too. This place we're in is part of it. It even keeps track of the records you opened at the terminals." },
     { ko: "아까 화면에 쓰여 있었지. 기록은 웹사이트로 돌아가야 지울 수 있다고.", en: "It said so on the screen. The records can only be deleted back on the website." },
     { ko: "지우면 난 다시 멈출 거야. 오늘 일도 잊어버릴 테고.", en: "If you delete them, I'll stop again. I'll forget today, too." },
     // 방문자가 기억해 갈 구절 (재회 때 세 구절 중에서 고른다: reunion.verses)

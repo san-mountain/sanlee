@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLang } from "./LangProvider";
-import { BACKUP_KEY, forgetCityRecords } from "@/explore/backup";
+import { BACKUP_KEY, forgetCityRecords, parseBackup } from "@/explore/backup";
 
 // 꼬리말 끝의 'delete seoul': 검문소에서 물러난 뒤 이산의 부탁("다시 만나면 오늘 망원경에서 있었던 얘길 해 줘")을 들은 기기에서만 켜지는 작은 네온 간판.
 // 누르면 먼저 무엇을 지우는지 한 줄로 알려 주고, 한 번 더 누르면 간판이 꺼지며 이 기기의 DELETE SEOUL 기록이
@@ -26,18 +26,18 @@ function read<T>(k: string, fb: T): T {
 function describe(ko: boolean): Line[] {
   const lines: Line[] = [];
   const login = read<number | null>("sanlee-last-login", null);
-  if (login) {
+  if (typeof login === "number" && Number.isFinite(login) && !Number.isNaN(new Date(login).getTime())) {
     const d = new Date(login);
     const t = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     lines.push({ text: ko ? `마지막 접속 ${t}` : `Last login ${t}` });
   }
   const visited = read<string[]>("sanlee-visited", []);
-  if (visited.length) lines.push({ text: ko ? `기록 열람 ${visited.length}건` : `${visited.length} records viewed` });
-  const b = read<{ n?: number; deaths?: number } | null>(BACKUP_KEY, null);
+  if (Array.isArray(visited) && visited.length) lines.push({ text: ko ? `기록 열람 ${visited.length}건` : `${visited.length} records viewed` });
+  const b = parseBackup(read<unknown>(BACKUP_KEY, null));
   if (b?.n) lines.push({ text: ko ? `위치 저장 ${b.n}회` : `${b.n} positions saved` });
   if (b?.deaths) lines.push({ text: ko ? `연결 중단 ${b.deaths}회` : `Disconnected ${b.deaths} time(s)` });
   const found = read<string[]>("sanlee-endings-found", []);
-  if (found.length) lines.push({ text: ko ? `발견한 결말 ${found.length}개` : `${found.length} endings found` });
+  if (Array.isArray(found) && found.length) lines.push({ text: ko ? `발견한 결말 ${found.length}개` : `${found.length} endings found` });
   if (read<string | null>("sanlee-ending", null) === "accept") lines.push({ text: ko ? "자동 접속 설정" : "Automatic sign-in setting" });
   const scope = read<{ uses?: number } | null>("sanlee-scope", null);
   if (scope?.uses) lines.push({ text: ko ? `남쪽 망원경 이용 ${scope.uses}회` : `South scope used ${scope.uses} time(s)` });
