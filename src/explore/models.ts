@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { lite } from "./quality";
 
 // 사람 형태를 하나의 지오메트리로 합쳐 인스턴싱에 쓴다 (키 약 1.75m, 발이 y=0)
 function place(g: THREE.BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0, s: [number, number, number] = [1, 1, 1]) {
@@ -21,12 +22,14 @@ function lathe(points: [number, number][], seg = 14) {
 
 let human: THREE.BufferGeometry | null = null;
 // 긴 코트를 입은 얼굴 없는 시민
+// 휴대폰(lite)에서는 줄과 행진의 시민 수백 명이 같은 모양이라, 면을 반쯤 줄인 모양을 쓴다 (멀리서는 구별되지 않는다)
 export function citizenGeometry() {
   if (human) return human;
+  const L = lite;
   const parts = [
     // 머리 (살짝 갸름하게)
-    place(new THREE.SphereGeometry(0.115, 16, 12), 0, 1.62, 0, 0, 0, 0, [0.92, 1.12, 1]),
-    place(new THREE.CylinderGeometry(0.045, 0.055, 0.12, 10), 0, 1.5, 0),
+    place(new THREE.SphereGeometry(0.115, L ? 10 : 16, L ? 7 : 12), 0, 1.62, 0, 0, 0, 0, [0.92, 1.12, 1]),
+    place(new THREE.CylinderGeometry(0.045, 0.055, 0.12, L ? 6 : 10), 0, 1.5, 0),
     // 코트: 어깨에서 무릎까지 퍼지는 실루엣
     place(
       lathe([
@@ -39,19 +42,19 @@ export function citizenGeometry() {
         [0.2, 1.43],
         [0.1, 1.48],
         [0.0, 1.49],
-      ]),
+      ], L ? 9 : 14),
       0, 0, 0, 0, 0, 0, [1, 1, 0.68]
     ),
     // 옷깃
-    place(new THREE.TorusGeometry(0.075, 0.025, 6, 14), 0, 1.45, 0, Math.PI / 2),
+    place(new THREE.TorusGeometry(0.075, 0.025, L ? 4 : 6, L ? 8 : 14), 0, 1.45, 0, Math.PI / 2),
     // 팔 (몸에 붙인 차렷 자세)
-    place(new THREE.CapsuleGeometry(0.048, 0.5, 4, 8), -0.235, 1.12, 0, 0, 0, 0.06),
-    place(new THREE.CapsuleGeometry(0.048, 0.5, 4, 8), 0.235, 1.12, 0, 0, 0, -0.06),
-    place(new THREE.SphereGeometry(0.045, 8, 6), -0.25, 0.83, 0),
-    place(new THREE.SphereGeometry(0.045, 8, 6), 0.25, 0.83, 0),
+    place(new THREE.CapsuleGeometry(0.048, 0.5, L ? 2 : 4, L ? 5 : 8), -0.235, 1.12, 0, 0, 0, 0.06),
+    place(new THREE.CapsuleGeometry(0.048, 0.5, L ? 2 : 4, L ? 5 : 8), 0.235, 1.12, 0, 0, 0, -0.06),
+    place(new THREE.SphereGeometry(0.045, L ? 5 : 8, L ? 4 : 6), -0.25, 0.83, 0),
+    place(new THREE.SphereGeometry(0.045, L ? 5 : 8, L ? 4 : 6), 0.25, 0.83, 0),
     // 다리와 신발
-    place(new THREE.CapsuleGeometry(0.058, 0.5, 4, 8), -0.085, 0.33, 0),
-    place(new THREE.CapsuleGeometry(0.058, 0.5, 4, 8), 0.085, 0.33, 0),
+    place(new THREE.CapsuleGeometry(0.058, 0.5, L ? 2 : 4, L ? 5 : 8), -0.085, 0.33, 0),
+    place(new THREE.CapsuleGeometry(0.058, 0.5, L ? 2 : 4, L ? 5 : 8), 0.085, 0.33, 0),
     place(new THREE.BoxGeometry(0.1, 0.06, 0.22), -0.085, 0.03, 0.04),
     place(new THREE.BoxGeometry(0.1, 0.06, 0.22), 0.085, 0.03, 0.04),
   ];
@@ -90,7 +93,8 @@ export function overseerGeometry() {
 let roof: THREE.BufferGeometry | null = null;
 export function roofGeometry() {
   if (roof) return roof;
-  const g = new THREE.CylinderGeometry(0.22, 0.72, 0.5, 48, 4, false);
+  // 휴대폰에서는 둘레를 반으로 (4의 배수라 네 모서리는 그대로 들린다)
+  const g = new THREE.CylinderGeometry(0.22, 0.72, 0.5, lite ? 24 : 48, 4, false);
   const p = g.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i);

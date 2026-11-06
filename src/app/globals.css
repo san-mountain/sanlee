@@ -1194,3 +1194,10 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
   .dialog-wrap .panel { width: min(620px, 78vw); height: auto; max-height: 58vh; }
 }
 .record-source { margin: -4px 0 12px; font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--dim); }
+
+/* 空 결말의 계단: 내려갈수록 짙어지는 신호 잡음 (주사선과 세로 줄무늬). 투명도와 줄무늬 위치는 ExploreClient가 매 프레임 바꾼다 */
+.ghost-signal { position: absolute; inset: 0; z-index: 56; pointer-events: none; opacity: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .07) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgba(150, 215, 255, .05) 0 2px, transparent 2px 7px),
+    #000000b8; }

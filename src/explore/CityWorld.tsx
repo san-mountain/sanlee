@@ -8,6 +8,7 @@ import { NEO_POST_GLSL, useNeoPost } from "./neoPost";
 import { useFrame } from "@react-three/fiber";
 import { BAY, BUDDHAS, EDGE, ISLANDS, LOOK, OVERSEER_ISLAND, WALK } from "./zones";
 import { roofGeometry } from "./models";
+import { lite } from "./quality";
 
 const tmpM = new THREE.Matrix4();
 const tmpQ = new THREE.Quaternion();
@@ -209,9 +210,12 @@ export function Platform() {
           [-43, 1.3, 48.6, 4, 8],
           [-30.4, 1.9, 48.9, 8, 7],
         ] as [number, number, number, number, number][]
-      ).map(([x, y, z, intensity, distance], i) => (
-        <pointLight key={`route${i}`} position={[x, y, z]} intensity={intensity} distance={distance} decay={2} color="#ffb877" />
-      ))}
+      )
+        // 휴대폰에서는 하나 걸러 하나만 켜고 더 멀리 닿게 한다 (조명 수가 곧 화면 전체의 계산량)
+        .filter((_, i) => !lite || i % 2 === 0)
+        .map(([x, y, z, intensity, distance], i) => (
+          <pointLight key={`route${i}`} position={[x, y, z]} intensity={lite ? intensity * 1.5 : intensity} distance={lite ? distance * 1.5 : distance} decay={2} color="#ffb877" />
+        ))}
       {/* 바닥 가장자리의 낮은 띠 (길의 꺾임을 미리 읽게): 산책로 안쪽, 다리 북쪽, 전망대 둘레 */}
       {(
         [

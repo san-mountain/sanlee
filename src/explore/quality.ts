@@ -11,7 +11,15 @@ const forced: Quality | null = (() => {
   const v = new URLSearchParams(location.search).get("fx");
   return v === "high" || v === "mid" ? v : v === "off" ? "low" : null;
 })();
-let current: Quality = forced ?? "high";
+// 휴대폰·태블릿(손가락 입력): 처음부터 가볍게 시작한다. 젖은 도로 반사 없이(mid), 해상도는 낮게, 장식 조명과 비를 줄인다.
+// 데스크톱은 그대로 high에서 시작하고, 프레임이 떨어질 때만 낮춘다
+export const lite: boolean = (() => {
+  if (typeof window === "undefined") return false;
+  if (new URLSearchParams(location.search).get("lite") === "0") return false;
+  if (new URLSearchParams(location.search).get("lite") === "1") return true;
+  return window.matchMedia?.("(pointer: coarse)").matches || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+})();
+let current: Quality = forced ?? (lite ? "mid" : "high");
 const subs = new Set<() => void>();
 
 export function setQuality(q: Quality) {

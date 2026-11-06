@@ -342,10 +342,6 @@ export const sanCue = {
   avenueDecide: { ko: "난 아래로 가 보고 싶어. 같이 갈 거면 이쪽이야.", en: "I want to go down. If you're coming, it's this way." } as L,
   agree: { ko: "고마워. 검문소까지 같이 가자.", en: "Thank you. Let's go to the checkpoint together." } as L,
   later: { ko: "응. 여기서 기다릴게.", en: "Okay. I'll wait here." } as L,
-  // 기록 없는 방문자: 드론 빛이 둘을 지나간 뒤 (실제로 표적이 붙지 못한 다음에만). 이 말과 함께 f-ALL이 서서히 들어온다
-  passed: { ko: "…그냥 지나갔어. 정말 우릴 못 찾나 봐. 검문소로 가자.", en: "…It just went past. It really can't find us. Let's go to the checkpoint." } as L,
-  // 기록 없는 방문자와 다시 일어난 이산: 방공호를 나설 때 (방공호에서 짐작한 것을 드론 앞에서 확인해 보자고)
-  lead: { ko: "저기 드론이 있어. 정말 우릴 못 찾는지 보자.", en: "There's a drone. Let's see if it really can't find us." } as L,
 };
 
 // 기록을 지우고 돌아온 방문자와의 재회. 방문자는 말하지 않는다: 망원경을 보던 몸짓으로만 기억을 건넨다.
@@ -364,8 +360,8 @@ export const reunion = {
   woke: [
     { ko: "…움직여. 터미널은 하나도 열리지 않았는데.", en: "…I can move. Not one terminal was opened." },
     { ko: "너한테서도 아무 기록이 읽히지 않아. 지금 우리 둘은 어디에도 적혀 있지 않은 거야.", en: "I can't read any record from you either. Right now, neither of us is written down anywhere." },
-    { ko: "그럼 도시도 우릴 찾지 못할지 몰라.", en: "Then maybe the city can't find us either." },
-    { ko: "왜인지는 모르겠는데, 구름 아래로 가 보고 싶어. 그 구절처럼 지워지지 않고 남은 마음인가 봐.", en: "I don't know why, but I want to go below the clouds. Maybe it's a feeling that wasn't erased, like that line." },
+    { ko: "그럼 도시도, 드론도 우릴 찾지 못할 거야.", en: "Then the city and its drones won't be able to find us either." },
+    { ko: "왜인지는 모르겠는데, 구름 아래로 내려가 보고 싶어. 다른 건 다 잊었는데 그 마음만은 그대로야.", en: "I don't know why, but I want to go down below the clouds. I forgot everything else, but that wish is still here." },
     { ko: "승강장은 검문소 너머에 있어. 같이 가 줄래? 이번엔 네가 앞장서 줘.", en: "The platform is past the checkpoint. Will you come? This time, you lead." },
   ] as Line[],
   awakeLine: { ko: "검문소 너머 승강장까지. 네가 앞장서 줘.", en: "To the platform past the checkpoint. You lead." } as Line,
@@ -454,6 +450,8 @@ export const checkpoint = {
     { ko: "추적할 대상을 찾지 못했습니다.", en: "No one to track was found." },
     { ko: "…이번엔 우릴 막지 않네.", en: "…This time it isn't stopping us.", say: true },
     { ko: "여기부터는 나도 몰라.", en: "From here on, I don't know either.", say: true },
+    // 계단을 다 내려가 화면이 흐려지고 신호가 끊긴 뒤, 검은 화면에 남는 한 문장
+    { ko: "구름 아래에 무엇이 있었는지는 어디에도 기록되지 않았다.", en: "What lay beneath the clouds was never recorded anywhere." },
   ] as Beat[],
   slotErased: { ko: "삭제됨", en: "DELETED" },
   noSlots: { ko: "저장된 기록 없음", en: "NO SAVED RECORDS" },
