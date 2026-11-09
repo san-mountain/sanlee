@@ -94,6 +94,8 @@ export const ui = {
   foundEndings: { ko: "저장된 결말 {n}개", en: "Saved endings: {n}" },
   // 空 결말: 조작을 돌려받은 뒤 화면 아래의 작은 안내
   stepHint: { ko: "계단으로 걸어 내려가기", en: "Walk down the stairs" },
+  // 그 앞, 이산이 먼저 계단참으로 걸어가는 동안
+  followHint: { ko: "이산을 따라 다리 건너기", en: "Follow San across the bridge" },
   notRecorded: { ko: "이 결말은 저장되지 않습니다.", en: "This ending is not saved." },
   welcomeB: { ko: "다시 오셨군요.", en: "Welcome back." },
   // 남쪽 망원경으로 볼 때: 방문자가 보는 것만 적는다 (이산이 본 것은 이산의 말로만 나온다)

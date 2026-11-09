@@ -13,7 +13,8 @@ export function useModalFocus(root: RefObject<HTMLElement | null>, selector: str
       'button:not(:disabled), a[href], input:not(:disabled), summary, [tabindex="0"]'
     )].filter((el) => el.getClientRects().length > 0);
     // preventScroll: 포커스가 게임 화면(overflow: hidden)을 밀어 올리거나 내리지 않게
-    const focusFirst = () => (controls()[0] ?? dialog).focus({ preventScroll: true });
+    // data-autofocus가 있으면 그것부터 (결말 화면: 음악 크레딧 링크가 아니라 첫 버튼에)
+    const focusFirst = () => (dialog.querySelector<HTMLElement>("[data-autofocus]") ?? controls()[0] ?? dialog).focus({ preventScroll: true });
     const frame = requestAnimationFrame(focusFirst);
     const key = (event: KeyboardEvent) => {
       if (event.key !== "Tab") return;
