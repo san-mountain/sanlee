@@ -16,7 +16,6 @@ import { useNeoPost } from "./neoPost";
 import { NeonEnvironment, useBeam, useLightPool } from "./atmosphere";
 import { addRim } from "./rim";
 import { lite, useQuality } from "./quality";
-import { MeshReflectorMaterial } from "@react-three/drei";
 import { concreteTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
@@ -183,7 +182,6 @@ const MIRROR_LITTER: [number, number, number, number][] = (() => {
 })();
 
 function Ground() {
-  const q = useQuality();
   const curb = useMemo(() => {
     const t = concreteTexture(4, 70);
     t.repeat.set(1, 30);
@@ -200,25 +198,7 @@ function Ground() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, (EDGE.z1 + EDGE.z0) / 2]} receiveShadow>
         <planeGeometry args={[W, D]} />
-        {q === "high" ? (
-          // 비 젖은 아스팔트: 네온이 바닥에 번져 비친다 (프레임이 떨어지면 일반 재질로)
-          <MeshReflectorMaterial
-            resolution={512}
-            blur={[200, 60]}
-            mixBlur={1.2}
-            mixStrength={7}
-            mixContrast={1}
-            mirror={0.8}
-            depthScale={0.6}
-            minDepthThreshold={0.4}
-            maxDepthThreshold={1.3}
-            color="#0c0d11"
-            roughness={0.38}
-            metalness={0.6}
-          />
-        ) : (
-          <meshStandardMaterial color="#0c0d11" roughness={0.22} metalness={0.75} />
-        )}
+        <meshStandardMaterial color="#0c0d11" roughness={0.22} metalness={0.75} />
       </mesh>
       {/* 큰길 양옆 인도 */}
       {[-1, 1].map((sd) => (
@@ -245,8 +225,7 @@ function Ground() {
           <group key={`${i}${m}`}>
             <mesh rotation={[-Math.PI / 2, 0, m * rot]} position={[m * x, 0.013, z]} scale={[sz * 1.5, sz, 1]}>
               <circleGeometry args={[1, 16]} />
-              {/* 반사 바닥이 켜져 있으면 웅덩이는 얇게만 덮어서 아래의 네온 반사가 비치게 한다 */}
-              <meshStandardMaterial color="#08090c" roughness={0.04} metalness={0.95} transparent opacity={q === "high" ? 0.3 : 0.85} />
+              <meshStandardMaterial color="#08090c" roughness={0.04} metalness={0.95} transparent opacity={0.85} />
             </mesh>
             {i % 3 === 0 && (
               <mesh position={[m * (x + 0.9), 0.06, z + 0.4]} rotation={[0, m * rot, 0.4]}>
