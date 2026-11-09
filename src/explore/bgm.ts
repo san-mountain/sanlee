@@ -2,28 +2,31 @@
 // 효과음과 같은 소리 설정을 따른다: 소리를 끄면 음악도 멈춘다. 첫 클릭 뒤에만 재생된다(브라우저 정책).
 import { sfxOn } from "./sfx";
 
-// ending = 예전 空 결말 곡(지금은 쓰지 않는다. 空 결말은 f-ALL을 잇는다), accept = 수락 결말(Habitual Suffering), reject = 거부 결말(an open ended promise),
-// fall = 기록을 지우고 돌아와 이산과 재회한 뒤의 지상(f-ALL)
-export type Track = "bunker" | "ground" | "jabi" | "ending" | "accept" | "reject" | "fall";
+// accept = 수락 결말(Habitual Suffering), reject = 거부 결말(an open ended promise),
+// fall = 기록을 지우고 돌아와 이산과 재회한 뒤의 지상과 空 결말(f-ALL)
+export type Track = "bunker" | "ground" | "jabi" | "accept" | "reject" | "fall";
 const SRC: Record<Track, string> = {
   bunker: "/audio/bgm-bunker.mp3",
   ground: "/audio/bgm-ground.mp3",
   jabi: "/audio/bgm-jabi.mp3",
-  ending: "/audio/bgm-ending.mp3",
   accept: "/audio/bgm-accept.mp3",
   reject: "/audio/bgm-reject.mp3",
   fall: "/audio/bgm-fall.mp3",
 };
 const VOL = 0.3;
-// 곡마다 원래 음량이 달라서(대자비가 가장 크다) 방공호 곡에 맞춰 낮춘다
-// (새 세 곡은 평균 음량(accept −8.0, reject −9.5, fall −8.4 dB)을 기존 곡과 같은 비율로 맞춘 값. 들어 보고 정하지 않았다)
-const LEVEL: Record<Track, number> = { bunker: 1, ground: 0.83, jabi: 0.68, ending: 0.87, accept: 0.61, reject: 0.73, fall: 0.64 };
+// 곡마다 원래 음량이 달라서 방공호 곡(−11.1 LUFS)에 맞춰 낮춘다. ffmpeg ebur128로 잰 통합 음량:
+// bunker −11.1, ground −9.5, jabi −7.1, accept −8.6, reject −10.0, fall −7.0 LUFS.
+// 대자비 곡만 일부러 0.6dB쯤 크게 남긴다(긴장). 결말 두 곡은 예전 값이 약 2dB 작게 들려서 맞췄다
+const LEVEL: Record<Track, number> = { bunker: 1, ground: 0.83, jabi: 0.68, accept: 0.75, reject: 0.88, fall: 0.62 };
 const FADE = 1.6;
 // 처음 시작할 때 아주 작게 들어와 천천히 커지는 곡 (f-ALL: 공 경로의 지상에 올라서자마자 약 12초에 걸쳐). 줄어들 때나 설정창을 닫아 되돌릴 때는 다른 곡과 같다
 // 수락·거부 결말 곡은 듣던 곡과 몇 초 겹치며 들어온다
 const FADE_IN: Partial<Record<Track, number>> = { fall: 12, accept: 5, reject: 5 };
 // 파일 맨 앞에 소리 없는 구간이 있는 곡은 그 뒤부터 튼다 (f-ALL: 첫 1.9초가 무음. 지상에 올라서자마자 들리게). 반복할 때도 같은 자리로 돌아간다
 const START: Partial<Record<Track, number>> = { fall: 1.85 };
+// 파일 끝의 소리 없는 구간은 건너뛰고 곧바로 처음으로 돌아간다 (ffmpeg silencedetect −45dB로 잰 무음 시작점).
+// 대자비 곡은 끝에 8.6초가 비어 있어서, 큰길에서 오래 머물면 긴장이 한참 끊겼다
+const END: Partial<Record<Track, number>> = { bunker: 149.8, jabi: 254.9, accept: 221.2, reject: 108.1, fall: 184.9 };
 
 let ctx: AudioContext | null = null;
 const chans: Partial<Record<Track, { el: HTMLAudioElement; gain: GainNode }>> = {};
@@ -49,14 +52,19 @@ function chan(t: Track) {
   let ch = chans[t];
   if (!ch) {
     const el = new Audio();
-    const start = START[t];
+    const start = START[t] ?? 0;
+    const end = END[t];
     el.src = start ? `${SRC[t]}#t=${start}` : SRC[t];
     el.preload = "auto";
-    if (start) {
-      // 처음 재생 위치를 무음 뒤로 옮기고, 끝나면 무음을 건너뛰어 다시 처음으로
+    if (start || end) {
+      // 처음 재생 위치를 무음 뒤로 옮기고, 끝의 무음에 닿으면(또는 끝나면) 앞의 무음을 건너뛴 자리로 돌아간다
       el.addEventListener("loadedmetadata", () => {
         if (el.currentTime < start) el.currentTime = start;
       });
+      if (end)
+        el.addEventListener("timeupdate", () => {
+          if (el.currentTime >= end) el.currentTime = start;
+        });
       el.addEventListener("ended", () => {
         el.currentTime = start;
         if (sfxOn() && t === want) el.play().catch(() => {});
@@ -120,9 +128,9 @@ export function preloadBgm(t: Track) {
   chan(t)?.el.load();
 }
 
-// 설정창이 열려 있을 때처럼 음악을 잠시 낮출 때
-export function duckBgm(low: boolean) {
-  const d = low ? 0.45 : 1;
+// 설정창이 열려 있을 때나 장면의 정적처럼 음악을 잠시 낮출 때 (1 = 원래 크기)
+export function duckBgm(level: number) {
+  const d = Math.max(0, Math.min(1, level));
   if (d === duck) return;
   duck = d;
   apply();

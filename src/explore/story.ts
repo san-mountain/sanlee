@@ -44,7 +44,6 @@ export const ui = {
   talk: { ko: "이야기 듣기", en: "Listen" },
   view: { ko: "보기", en: "View" },
   back: { ko: "닫기", en: "Close" },
-  normalPage: { ko: "웹사이트에서 보기 ↗", en: "View on the website ↗" },
   next: { ko: "계속", en: "Continue" },
   close: { ko: "닫기", en: "Close" },
   home: { ko: "← 웹사이트로", en: "← To the website" },
@@ -57,7 +56,6 @@ export const ui = {
   popup: { ko: "이 도시는 시민을 추적하기 위해 쿠키를 사용합니다.", en: "This city uses cookies to track its citizens." },
   accept: { ko: "모두 수락", en: "Accept all" },
   reject: { ko: "모두 거부", en: "Reject all" },
-  plaqueShort: { ko: "끝까지 '모두 거부'를 누른 사람", en: "The One Who Rejected All" },
   terminalLocked: [
     { ko: "열람 전", en: "Not yet viewed" },
     { ko: "먼저 방 한가운데 앉아 있는 사람에게 다가가세요.", en: "First, go to the person sitting in the middle of the room." },
@@ -77,13 +75,6 @@ export const ui = {
   tracked: { ko: "● 감시 중", en: "● TRACKED" },
   // 저장된 방문 기록이 없는 방문자: 도시가 위치를 추적할 기록이 없다
   unresolved: { ko: "○ 방문자 기록 없음", en: "○ NO VISITOR RECORD" },
-  cookieTitle: { ko: "SEOUL.SYS · 쿠키 동의", en: "SEOUL.SYS · COOKIE CONSENT" },
-  cookieBody: {
-    ko: "도시는 쿠키로 시민의 활동을 기록합니다. 추적에 동의하시겠습니까?",
-    en: "The city records citizens' activity with cookies. Do you consent to tracking?",
-  },
-  processing: { ko: "처리 중…", en: "Processing…" },
-  acceptedAll: { ko: "동의 처리 완료", en: "Consent processed" },
   startLine: { ko: "줄로 돌아가기", en: "Return to the line" },
   savedHint: { ko: "연결이 끊기면 저장된 지점에서 다시 시작합니다.", en: "If the connection drops, you restart from the saved point." },
   // 처음 지상에 나설 때(추적되는 방문자만) 한 번: 이 도시의 규칙
@@ -122,9 +113,6 @@ export const droneUi = {
 
 // 위치 저장 상태 (구역 이름 아래 한 줄)
 export const backupUi = {
-  noSignal: { ko: "저장 신호 없음", en: "NO SAVE SIGNAL" },
-  none: { ko: "저장 대기 중", en: "WAITING TO SAVE" },
-  deleted: { ko: "저장된 위치 없음", en: "NO SAVED LOCATION" },
   saved: { ko: "● 위치 저장됨", en: "● LOCATION SAVED" },
 };
 
@@ -198,7 +186,6 @@ export const jabiUi = {
     { src: "/deleteseoul/jabi-fire.webp", cap: { ko: "빛이 내려오면: 연결 끊김", en: "The light comes down: disconnected" } },
   ] as { src: string; cap: L }[],
   deadTitle: { ko: "연결이 끊겼습니다", en: "CONNECTION LOST" },
-  deadSub: { ko: "큰길 입구에서 다시 시작합니다.", en: "Restarting at the avenue entrance." },
   restoreStart: { ko: "큰길 입구로 돌아왔습니다.", en: "Back at the avenue entrance." },
   cost: { ko: "도시가 저장된 기록에서 당신을 다시 불러냈습니다.", en: "The city called you back from your saved record." },
   noBackup: { ko: "저장된 위치가 없습니다.", en: "No saved location." },
@@ -451,12 +438,18 @@ export const checkpoint = {
     { ko: "기기를 등록했습니다. 다음 방문부터 자동으로 접속됩니다.", en: "Device registered. You will be signed in automatically from your next visit." },
     { ko: "승강장 대기열에 등록됐습니다. 출발 시각은 정해지지 않았습니다.", en: "You are registered for the platform queue. No departure time has been set." },
     { ko: "동행인 이산: 추적 거부 기록으로 등록 불가. 정지 처분합니다. (연결 중단 {a}회 · 복원 {r}회)", en: "Companion San: cannot be registered due to a record of refusing tracking. Suspending. (Disconnected {a} times · restored {r} times)" },
+    // 시점이 이산 쪽으로 돌아간다. 이산은 이 두 줄 동안 천천히 돌처럼 굳는다 (방공호에서 처음 만났을 때의 그 모습으로)
     { ko: "결국 이렇게 되는구나.", en: "So this is how it ends.", say: true },
+    // 망원경에서 본 것을 방문자에게 맡긴다. 출발 시각이 정해지지 않은 줄에 선 사람에게 (작은 아이러니로 남긴다)
+    { ko: "먼저 가. 아까 반짝이던 게 뭐였는지, 네가 대신 보고 와.", en: "Go on ahead. Whatever that glimmer was, go and see it for me.", say: true },
+    // 시점이 다시 줄 앞쪽(성문)으로
     { ko: "뒤따라오던 발소리가 더는 들리지 않는다.", en: "The footsteps that followed you can no longer be heard." },
   ] as Beat[],
   reject: [
     { ko: "거부 선택을 기록했습니다. 쿠키 1개가 저장됐습니다.", en: "Your refusal has been recorded. 1 cookie was saved." },
     { ko: "추적 거부 확인. 방문자와 동행인 이산의 활동을 정지합니다.", en: "Refusal confirmed. Suspending the activity of the visitor and companion San." },
+    // 화면이 하얗게 멎은 뒤, 굳어 가는 이산의 마지막 말 (처음엔 혼자 거부했던 사람이다)
+    { ko: "…괜찮아. 이번엔 나 혼자가 아니네.", en: "…It's all right. This time I'm not the only one.", say: true },
     { ko: "", en: "", slots: true },
     { ko: "끝까지 '모두 거부'를 누른 두 번째 사람.", en: "The second person who pressed 'Reject all' to the end.", plaque: true },
     { ko: "누군가 두 사람 사이에 작은 등 하나를 놓고 갔다.", en: "Someone has left a small lamp between the two of them." },
@@ -485,7 +478,6 @@ export const checkpoint = {
 export const MUSIC_URL = "https://soundcloud.com/user-787015749";
 export const credits = {
   music: { ko: "음악 · Jinseong Baek", en: "Music · Jinseong Baek" },
-  listen: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" },
 };
 
 export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link?: { href: string; label: L } }> = {

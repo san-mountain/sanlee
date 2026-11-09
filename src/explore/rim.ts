@@ -6,6 +6,8 @@ export function addRim<T extends THREE.MeshStandardMaterial>(mat: T, color = "#3
   if (mat.userData.rim) return mat;
   mat.userData.rim = true;
   const c = new THREE.Color(color);
+  // 윤곽색을 나중에 바꿀 수 있도록 (수락 결말에서 이산이 돌처럼 굳을 때 네온 윤곽이 돌빛으로 바랜다)
+  mat.userData.rimColor = c;
   const prev = mat.onBeforeCompile;
   mat.onBeforeCompile = (shader, renderer) => {
     prev?.call(mat, shader, renderer);

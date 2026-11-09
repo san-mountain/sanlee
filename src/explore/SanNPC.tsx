@@ -62,8 +62,19 @@ function StandardSmile() {
   );
 }
 
-export default function SanNPC({ mode, item, onTap, start, path, smile }: { mode: "wander" | "follow"; item: Interactable; onTap: TapFn; start: [number, number]; path?: SanPath; smile?: boolean }) {
+// 수락 결말에서 이산이 굳어 갈 때의 색 (방공호 석상 같은 옅은 돌빛. 어두운 큰길에서도 보이도록 스스로 조금 빛난다)과 걸리는 시간(초)
+const STONE = new THREE.Color("#b4b8bf");
+const STONE_GLOW = new THREE.Color("#3a3d43");
+const STONE_RIM = new THREE.Color("#e2e5ea");
+const STONE_SECS = 3.2;
+type Tint = { m: THREE.MeshStandardMaterial | THREE.MeshBasicMaterial; c: THREE.Color; e?: THREE.Color; ei?: number; rim?: THREE.Color; rim0?: THREE.Color };
+
+export default function SanNPC({ mode, item, onTap, start, path, smile, stone }: { mode: "wander" | "follow"; item: Interactable; onTap: TapFn; start: [number, number]; path?: SanPath; smile?: boolean; stone?: boolean }) {
   const ref = useRef<THREE.Group>(null);
+  const light = useRef<THREE.PointLight>(null);
+  // 돌로 굳는 정도(0~1)와, 처음 굳기 시작할 때 모아 둔 재질의 원래 색
+  const stoneK = useRef(0);
+  const tints = useRef<Tint[] | null>(null);
   const st = useRef({ x: start[0], z: start[1], wp: 0, yaw: 0, bob: 0 });
   // 이산이 사라지면(다시 시작 등) 상호작용 위치를 원래 자리로 되돌린다. 안 그러면 동상에게 말을 걸 수 없다.
   useEffect(() => {
@@ -78,6 +89,33 @@ export default function SanNPC({ mode, item, onTap, start, path, smile }: { mode
     const g = ref.current;
     if (!g) return;
     const S = st.current;
+    // 수락 결말: 몇 초에 걸쳐 색이 빠지고 빛이 꺼진다 (방공호에서 처음 만났을 때의 석상처럼). 움직임은 정해진 길이 끝난 자리에서 멈춘 그대로
+    if (stone || stoneK.current > 0) {
+      if (!tints.current) {
+        const list: Tint[] = [];
+        g.traverse((o) => {
+          const m = (o as THREE.Mesh).material as THREE.Material | undefined;
+          if (m instanceof THREE.MeshStandardMaterial) {
+            const rim = m.userData.rimColor as THREE.Color | undefined;
+            list.push({ m, c: m.color.clone(), e: m.emissive.clone(), ei: m.emissiveIntensity, rim, rim0: rim?.clone() });
+          }
+          else if (m instanceof THREE.MeshBasicMaterial) list.push({ m, c: m.color.clone() });
+        });
+        tints.current = list;
+      }
+      const k = (stoneK.current = Math.max(0, Math.min(1, stoneK.current + (stone ? dt : -dt * 4) / STONE_SECS)));
+      const e = k * k * (3 - 2 * k);
+      for (const t of tints.current) {
+        t.m.color.copy(t.c).lerp(STONE, e);
+        if (t.e && t.m instanceof THREE.MeshStandardMaterial) {
+          // 원래 빛(분홍 고리 등)은 꺼지고, 온몸이 같은 돌빛으로 옅게 떠오른다
+          t.m.emissive.copy(t.e).multiplyScalar(t.ei ?? 1).lerp(STONE_GLOW, e);
+          t.m.emissiveIntensity = 1;
+        }
+        if (t.rim && t.rim0) t.rim.copy(t.rim0).lerp(STONE_RIM, e);
+      }
+      if (light.current) light.current.intensity = 2.5 * (1 - e);
+    }
     const dp = Math.hypot(player.pos.x - S.x, player.pos.z - S.z);
     let tx = S.x;
     let tz = S.z;
@@ -213,7 +251,7 @@ export default function SanNPC({ mode, item, onTap, start, path, smile }: { mode
             </mesh>
           ))}
         </Human>
-        <pointLight position={[0, 2, 0]} intensity={2.5} distance={4} color="#ffd6f4" />
+        <pointLight ref={light} position={[0, 2, 0]} intensity={2.5} distance={4} color="#ffd6f4" />
       </group>
     </Tap>
   );

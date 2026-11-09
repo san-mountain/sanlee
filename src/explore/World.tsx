@@ -22,6 +22,7 @@ type Props = {
   onNear: (it: Interactable | null) => void;
   onTracked: (v: boolean) => void;
   labelEls: LabelEls;
+  sanStone?: boolean; // 수락 결말: 줄 밖의 이산이 돌처럼 굳는다
   sanPath?: SanPath; // 망원경 장면·결말: 이산이 걸어갈 정해진 길과 마지막에 바라볼 방향
   hideSan?: boolean;
   secondStatue?: boolean;
@@ -36,7 +37,7 @@ type Props = {
 
 const POPUP = [{ key: "popup", pos: [1.7, 4.5, 1.6] as [number, number, number], scaleAt: 6, maxScale: 1 }];
 
-export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanPath, hideSan, secondStatue, arrived, awake, face, frozenSan, sanStart }: Props) {
+export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanPath, sanStone, hideSan, secondStatue, arrived, awake, face, frozenSan, sanStart }: Props) {
   const complete = !!awake;
   return (
     <Canvas dpr={[1, 1.25]} gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
@@ -48,7 +49,7 @@ export default function World({ zone, lang, visited, onTap, onNear, onTracked, l
           <>
             <City lang={lang} onTap={onTap} onTracked={onTracked} />
             {complete && !hideSan && (
-              <SanNPC smile={face.method === "standard"} mode="follow" item={CITY.items.find((i) => i.id === "san")!} onTap={onTap} start={sanStart ?? [CITY.spawn.pos[0], CITY.spawn.pos[2] + 2.2]} path={sanPath} />
+              <SanNPC smile={face.method === "standard"} mode="follow" item={CITY.items.find((i) => i.id === "san")!} onTap={onTap} start={sanStart ?? [CITY.spawn.pos[0], CITY.spawn.pos[2] + 2.2]} path={sanPath} stone={sanStone} />
             )}
             {frozenSan && (
               <group position={[FROZEN_SAN.x, 0, FROZEN_SAN.z]}>

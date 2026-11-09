@@ -109,8 +109,8 @@ type Ending = { kind: EndKind; step: number; a: number; r: number; slots: number
 // 결말 대본의 각 줄이 머무는 시간(ms). 마지막 줄의 시간은 버튼이 나오기 전의 정적이다.
 // 걷는 줄은 시간이 아니라 도착으로 넘어간다 (ENDING_GATE가 참이 된 뒤에야 이 시간이 흐른다)
 const BEAT_MS: Record<EndKind, number[]> = {
-  accept: [3000, 3600, 1200, 2400, 3000],
-  reject: [2800, 3400, 3800, 4800, 3200],
+  accept: [3000, 3600, 1200, 2800, 4200, 5200],
+  reject: [2800, 3400, 3600, 3800, 4800, 4400],
   ghost: [3200, 3400, 700, 1800, 5200],
 };
 // 空 결말: 3번째 줄("…이번엔 우릴 막지 않네.", 다리를 걷는 줄)과 4번째 줄("여기부터는 나도 몰라.", 마지막 걸음)에서는 평소 조작으로 걷는다.
@@ -118,6 +118,11 @@ const BEAT_MS: Record<EndKind, number[]> = {
 // 내려갈수록 화면이 흐려지고 지직대다 끊기면, 검은 화면에 마지막 문장 하나가 남는다. 계단을 설명하는 지문은 없다
 const GHOST_WALK = 2;
 const GHOST_STEP = 3;
+// 수락 결말: 이산이 말하는 줄(시점이 이산 쪽으로 돌아가고, 이산이 돌처럼 굳는다)과 시점이 다시 줄 앞으로 돌아가는 줄
+const ACCEPT_SAY = 3;
+const ACCEPT_AWAY = 5;
+// 거부 결말: 장면이 방공호로 넘어가는 줄 (두 번째 정지 시민의 표석). 결말 곡도 이 줄에서 들어온다
+const REJECT_BUNKER = 4;
 // 처음 대자비의 시선 앞에서 이산이 기다리는 자리: 큰길 앞쪽의 방벽(가장 튼튼한 엄폐물) 뒤, 방문자가 설 자리를 비워 두고 오른쪽 끝에 선다
 const WALL_I = COVERS.findIndex((c) => c.kind === "wall");
 const WALL = COVERS[WALL_I];
@@ -158,6 +163,9 @@ const ACCEPT_WALK = [
   { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.4, pitch: 0.42, yaw: 0 },
 ];
 const ACCEPT_SAN: SanPath = { pts: [[-0.9, -121], [-0.9, -104.6]], yaw: Math.atan2(LINE_SPOT.x + 0.9, LINE_SPOT.z + 104.6), speed: 2.6 };
+// 이산의 마지막 말 동안 바라볼 곳(줄 밖에 선 이산. 결말 글이 얼굴을 가리지 않도록 머리 위를 겨눠 이산이 화면 아래쪽에 오게 한다)과, 그 뒤 다시 바라볼 곳(줄 앞, 성문 너머 대자비)
+const ACCEPT_LOOK_SAN = { x: -0.9, y: 3.7, z: -104.6 };
+const ACCEPT_LOOK_GATE = { x: LINE_SPOT.x, y: 7, z: -150 };
 
 // ---------- 남쪽 전망대 가는 길 (zones의 LOOKOUT_PATH) ----------
 // 가는 길(OUT)과 돌아오는 길(BACK). BACK은 OUT을 거꾸로 걷는다 (건너는 드론 길 표시도 한 칸씩 옮긴다). 광장에 닿으면 이산은 평소처럼 따라온다
@@ -208,6 +216,8 @@ export default function ExploreClient() {
   const [fade, setFade] = useState<string | null>(null);
   const [notice, setNotice] = useState<L | null>(null);
   const [ending, setEnding] = useState<Ending>(null);
+  // 거부 결말: 화면이 하얗게 멎은 동안
+  const [flash, setFlash] = useState(false);
   const [locked, setLocked] = useState(false);
   const [paused, setPaused] = useState(false);
   const [recordsChanged, setRecordsChanged] = useState(false);
@@ -348,24 +358,24 @@ export default function ExploreClient() {
   // 수락: 이산의 마지막 말("결국 이렇게 되는구나.")에서. 거부: 장면이 방공호로 넘어가는 순간(두 번째 정지 시민)에서.
   // 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 올라서자마자 f-ALL이 아주 작게 시작해 서서히 커지고, 空 결말도 그 곡을 끝까지 잇는다
   const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "fall") : null;
-  const END_CUE: Record<EndKind, number> = { accept: 3, reject: 3, ghost: 0 };
+  const END_CUE: Record<EndKind, number> = { accept: ACCEPT_SAY, reject: REJECT_BUNKER, ghost: 0 };
   const cityTrack: Track = jabiStage ? "jabi" : "ground";
+  // 거부 결말: 화면이 하얗게 멎는 순간 듣던 곡도 짧게 끊긴다(정지). 방공호로 넘어가면 결말 곡이 천천히 들어온다
+  const frozenQuiet = ending?.kind === "reject" && flash;
   const track: Track | null =
     leaving || intro
       ? null
       : ending
-        ? ending.step >= END_CUE[ending.kind] ? endTrack : zone === "city" ? cityTrack : null
+        ? ending.step >= END_CUE[ending.kind] ? endTrack : frozenQuiet ? null : zone === "city" ? cityTrack : null
         : zone === "city" && ghost ? "fall" : zone === "bunker" ? "bunker" : cityTrack;
   useEffect(() => {
     if (endTrack) preloadBgm(endTrack);
   }, [endTrack]);
   useEffect(() => {
     // 결말 곡으로 넘어갈 때는 듣던 곡을 길게 줄이며 겹친다 (결말 곡도 천천히 들어온다: bgm FADE_IN)
-    playBgm(track, track && ["accept", "reject"].includes(track) ? 5 : undefined);
+    playBgm(track, track && ["accept", "reject"].includes(track) ? 5 : frozenQuiet ? 0.5 : undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track]);
-  useEffect(() => {
-    duckBgm(paused);
-  }, [paused]);
   useEffect(() => {
     window.addEventListener("pointerdown", wakeBgm);
     window.addEventListener("keydown", wakeBgm);
@@ -992,6 +1002,7 @@ export default function ExploreClient() {
       restore: () => setVisited(sections.map((s) => s.id)),
       face: (id = "face-machine") => faceActRef.current(id),
       pos: () => [player.pos.x, player.pos.z, player.yaw, player.air, player.pitch],
+      san: () => { const p = CITY.items.find((i) => i.id === "san")!.pos; return [p.x, p.z]; },
       input,
       look: (pitch: number) => (input.look.pitch += pitch),
       gaze,
@@ -1101,6 +1112,11 @@ export default function ExploreClient() {
     const tm = setTimeout(() => setHush(false), ms);
     return () => clearTimeout(tm);
   }, [hushLine]);
+  // 음악을 잠시 낮추는 때: 설정창, 곁에 앉아 기다리는 재회의 정적(거의 들리지 않게), 망원경 뒤 함께 내려다보는 정적, 망원경을 들여다보는 동안
+  const duckLevel = paused ? 0.45 : beat === "sit" ? 0.12 : hush ? 0.35 : scopeView === "view" ? 0.55 : 1;
+  useEffect(() => {
+    duckBgm(duckLevel);
+  }, [duckLevel]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -1215,7 +1231,6 @@ export default function ExploreClient() {
     scopeRef.current.step = panel.step;
     if (panel.step >= scopeScene.after.length) heardRef.current = true;
   }, [panel]);
-  const [flash, setFlash] = useState(false);
   const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     if (!ending) return;
@@ -1242,12 +1257,19 @@ export default function ExploreClient() {
         // 점마다 도착하면 다음 점으로 (Player가 autoWalk.queue를 차례로 꺼낸다). 이산은 줄 밖에 남는다
         walkPath(ACCEPT_WALK);
       }
+      // 이산의 마지막 말: 줄에 선 채 고개를 돌려 줄 밖의 이산을 본다 (이산은 그동안 돌처럼 굳는다). 발소리가 끊기는 줄에서 다시 앞을 본다
+      if (step === ACCEPT_SAY) {
+        // 빈자리에 다 들어섰다: 자동 걸음이 시선을 붙잡지 않도록 놓는다
+        stopWalk();
+        gaze.lookAt = { ...ACCEPT_LOOK_SAN };
+      }
+      if (step === ACCEPT_AWAY) gaze.lookAt = { ...ACCEPT_LOOK_GATE };
     } else if (kind === "reject") {
       if (step === 0) {
         // 레이저 없이: 화면이 하얗게 멎는 것으로 정지를 보여 준다
         sceneTimer.current = setTimeout(() => setFlash(true), 1500);
       }
-      if (step === 3) {
+      if (step === REJECT_BUNKER) {
         // 장면이 방공호로: 사람들이 두 번째 정지 시민을 옮겨 와 나란히 앉혔다
         setFlash(false);
         setSecondStatue(true);
@@ -1676,6 +1698,11 @@ export default function ExploreClient() {
   const onGameWin = useCallback(() => setPanel({ kind: "choice", confirm: 1 }), []);
   const onGameLose = useCallback(() => setPanel({ kind: "choice" }), []);
   const startEnding = (kind: EndKind) => {
+    // 혹시 대자비 소개가 열리려던 참이었다면 거둔다 (결말 위에 소개 창이 뜨지 않게)
+    cancelIntro.current?.();
+    gaze.intro = false;
+    gaze.frozen = false;
+    gaze.lookAt = null;
     setPanel(null);
     const b = getBackup();
     const slots = Array.from({ length: Math.min(b.n, 12) }, (_, i) => b.n - i);
@@ -1990,7 +2017,7 @@ export default function ExploreClient() {
   const rootClass = [
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
-    ending?.kind === "reject" && ending.step >= 3 ? "thaw" : "",
+    ending?.kind === "reject" && ending.step >= REJECT_BUNKER ? "thaw" : "",
     ending?.kind === "ghost" && ending.step === 1 ? "ghost-freeze" : "",
     flash ? "final-flash" : "",
     tracked && !ending && !ghost ? "is-tracked" : "",
@@ -2012,6 +2039,7 @@ export default function ExploreClient() {
             onTracked={setTracked}
             labelEls={labelEls}
             sanPath={sanPath}
+            sanStone={ending?.kind === "accept" && ending.step >= ACCEPT_SAY}
             hideSan={accepted}
             frozenSan={accepted && zone === "city" && !ending}
             sanStart={replay ? [FROZEN_SAN.x, FROZEN_SAN.z] : undefined}
@@ -2350,7 +2378,7 @@ export default function ExploreClient() {
           <div className="ending-inner">
             {(checkpoint[ending.kind] as Beat[]).slice(0, ending.step + 1).map((l, i, arr) => {
               // 거부 결말이 방공호로 넘어가면 앞 장면의 글은 거둔다
-              if (ending.kind === "reject" && ending.step >= 3 && i < 3) return null;
+              if (ending.kind === "reject" && ending.step >= REJECT_BUNKER && i < REJECT_BUNKER) return null;
               // 空 결말은 앞을 가리지 않도록 마지막 두 줄만 아래에. 수락 결말은 최근 세 줄만 (숫자는 감정 장면 전에 지나간다)
               if (ending.kind === "ghost" && (ending.step > GHOST_STEP ? i <= GHOST_STEP : i < ending.step - 1)) return null;
               if (ending.kind === "accept" && i < ending.step - 2) return null;

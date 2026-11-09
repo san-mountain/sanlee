@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles, useTexture, RoundedBox } from "@react-three/drei";
@@ -218,14 +218,34 @@ function Terminal({ id, pos, rotY, color, lang, visited, onTap }: { id: SectionI
   );
 }
 
+function shrinkTexture(src: THREE.Texture, max: number): THREE.Texture {
+  const img = src.image as { width: number; height: number } & CanvasImageSource;
+  const scale = Math.min(1, max / Math.max(img.width || 1, img.height || 1));
+  let out: THREE.Texture = src;
+  if (scale < 1 && typeof document !== "undefined") {
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * scale);
+    c.height = Math.round(img.height * scale);
+    const g = c.getContext("2d");
+    if (g) {
+      g.imageSmoothingQuality = "high";
+      g.drawImage(img, 0, 0, c.width, c.height);
+      out = new THREE.CanvasTexture(c);
+    }
+  }
+  out.colorSpace = THREE.SRGBColorSpace;
+  out.anisotropy = 4;
+  return out;
+}
+
 function Paintings({ lang }: { lang: Lang }) {
-  const tex = useTexture(PAINTINGS.map((p) => p.w.image!));
+  const full = useTexture(PAINTINGS.map((p) => p.w.image!));
   const wallWash = useLightPool("#ffe6c0", 2.4, "top");
   const paintWash = useLightPool("#fff0d8", 0.3, "top");
-  tex.forEach((t) => {
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 4;
-  });
+  // 벽에 걸린 그림은 2m 남짓이라 원본(긴 변 1400px)을 그대로 올리면 그림 여덟 점에 GPU 메모리를 60MB 가까이 쓴다.
+  // 긴 변 768px로 줄인 사본만 GPU에 올린다(약 3분의 1). 원본은 그림을 열어 볼 때 그대로 쓴다
+  const tex = useMemo(() => full.map((t) => shrinkTexture(t, 768)), [full]);
+  useEffect(() => () => tex.forEach((t) => t.dispose()), [tex]);
   return (
     <group>
       {PAINTINGS.map((p, i) => {
