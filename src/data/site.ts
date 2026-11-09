@@ -2,6 +2,8 @@
 // 일반 포트폴리오 페이지와 /deleteseoul 3D 도시가 둘 다 이 데이터를 읽어요.
 // 각 문장은 { ko: 한국어, en: 영어 } 쌍으로 적어 주세요.
 
+import worksData from "@/content/works.json";
+
 export type Lang = "ko" | "en";
 export type L = { ko: string; en: string };
 export type SectionId = "about" | "works" | "writing";
@@ -40,105 +42,14 @@ export type Work = {
   description?: L;
   link?: string;
   image?: string; // public/works/ 폴더의 WebP 경로
+  category?: "painting" | "sculpture"; // 사진이 있는 작업의 탭. 없으면 그림
   width?: number; // 사진 원본 비율(레이아웃 흔들림 방지용)
   height?: number;
 };
 
-// 8절 종이: 세로 그림은 39.4\u00a0×\u00a027.2\u00a0cm, 가로 그림은 27.2\u00a0×\u00a039.4\u00a0cm (세로 × 가로)
-const PAPER_LANDSCAPE: L = { ko: "8절, 27.2\u00a0×\u00a039.4\u00a0cm", en: "27.2\u00a0×\u00a039.4\u00a0cm" };
-const PAPER_PORTRAIT: L = { ko: "8절, 39.4\u00a0×\u00a027.2\u00a0cm", en: "39.4\u00a0×\u00a027.2\u00a0cm" };
-
-export const works: Work[] = [
-  {
-    title: { ko: "DELETE SEOUL", en: "DELETE SEOUL" },
-    date: "2026. 11.",
-    medium: { ko: "인터랙티브 웹, 3D", en: "Interactive web, 3D" },
-    size: { ko: "가변 크기", en: "Dimensions variable" },
-    description: {
-      ko: "이 포트폴리오를 지하 방공호와 그 위의 감시 도시로 옮겨 지은 3D 작업. 방문자는 직접 걸으며 흩어진 기록을 복원하고, 끝까지 쿠키를 거부하다 정지 시민이 된 작가를 다시 움직이게 한다. 마지막에는 선택 하나가 남는다.",
-      en: "This portfolio rebuilt as an underground shelter and the surveillance city above it. Visitors walk through it to restore a scattered record and bring back the artist, suspended as a citizen after rejecting every last cookie. In the end, one choice remains.",
-    },
-    link: "/deleteseoul",
-  },
-  {
-    title: { ko: "인간도人間圖", en: "Ingando (A Diagram of Humans)" },
-    date: "2026. 10.",
-    medium: { ko: "캔버스에 먹, 아크릴, 마커, 오일파스텔", en: "Ink, acrylic, marker and oil pastel on canvas" },
-    size: { ko: "53.0\u00a0×\u00a045.5\u00a0cm", en: "53.0\u00a0×\u00a045.5\u00a0cm" },
-    image: "/works/sanlee_2026_ingando.webp",
-    width: 1087,
-    height: 1400,
-  },
-  {
-    title: { ko: "울분", en: "Indignation" },
-    date: "2026. 10.",
-    medium: { ko: "종이에 먹, 아크릴, 오일파스텔", en: "Ink, acrylic and oil pastel on paper" },
-    size: PAPER_PORTRAIT,
-    image: "/works/sanlee_2026_indignation.webp",
-    width: 984,
-    height: 1400,
-  },
-  {
-    title: { ko: "갈팡질팡", en: "Back and Forth" },
-    date: "2026. 10.",
-    medium: {
-      ko: "종이에 아크릴, 오일파스텔, 파스텔, 혼합재료",
-      en: "Acrylic, oil pastel, pastel and mixed media on paper",
-    },
-    size: PAPER_LANDSCAPE,
-    image: "/works/sanlee_2026_back-and-forth.webp",
-    width: 1400,
-    height: 953,
-  },
-  {
-    title: { ko: "상실", en: "Loss" },
-    date: "2026. 10.",
-    medium: { ko: "종이에 수채, 오일파스텔, 콜라주", en: "Watercolor, oil pastel and collage on paper" },
-    size: PAPER_PORTRAIT,
-    image: "/works/sanlee_2026_loss.webp",
-    width: 960,
-    height: 1400,
-  },
-  {
-    title: { ko: "자화상", en: "Self-Portrait" },
-    date: "2026. 10.",
-    medium: {
-      ko: "종이에 파스텔, 오일파스텔, 먹, 수채",
-      en: "Pastel, oil pastel, ink and watercolor on paper",
-    },
-    size: PAPER_PORTRAIT,
-    image: "/works/sanlee_2026_self-portrait.webp",
-    width: 910,
-    height: 1400,
-  },
-  {
-    title: { ko: "인고의 번데기", en: "Chrysalis of Endurance" },
-    date: "2026. 10.",
-    medium: { ko: "종이에 수채, 먹", en: "Watercolor and ink on paper" },
-    size: PAPER_PORTRAIT,
-    image: "/works/sanlee_2026_chrysalis-of-endurance.webp",
-    width: 961,
-    height: 1400,
-  },
-  {
-    title: { ko: "방", en: "Room" },
-    date: "2026. 9.",
-    medium: { ko: "종이에 아크릴", en: "Acrylic on paper" },
-    size: PAPER_LANDSCAPE,
-    image: "/works/sanlee_2026_room.webp",
-    width: 1400,
-    height: 963,
-  },
-  {
-    title: { ko: "가치 판단", en: "Value Judgment" },
-    date: "2026. 9.",
-    medium: { ko: "종이에 아크릴", en: "Acrylic on paper" },
-    size: PAPER_LANDSCAPE,
-    image: "/works/sanlee_2026_value-judgment.webp",
-    width: 1400,
-    height: 955,
-  },
-];
+// 작업 목록은 src/content/works.json 에 있고, 사이트의 /admin 에서 올리고 고칠 수 있습니다. 최근 것이 맨 위.
+// 그림 크기는 "세로 × 가로 cm" 순서로 적어요. (8절 종이: 39.4 × 27.2 cm)
+export const works: Work[] = worksData;
 
 export const contact = {
   email: "bysanlee@gmail.com",
