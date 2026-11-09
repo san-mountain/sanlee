@@ -22,6 +22,8 @@ const FADE = 1.6;
 // 처음 시작할 때 아주 작게 들어와 천천히 커지는 곡 (f-ALL: 공 경로의 지상에 올라서자마자 약 12초에 걸쳐). 줄어들 때나 설정창을 닫아 되돌릴 때는 다른 곡과 같다
 // 수락·거부 결말 곡은 듣던 곡과 몇 초 겹치며 들어온다
 const FADE_IN: Partial<Record<Track, number>> = { fall: 12, accept: 5, reject: 5 };
+// 파일 맨 앞에 소리 없는 구간이 있는 곡은 그 뒤부터 튼다 (f-ALL: 첫 1.9초가 무음. 지상에 올라서자마자 들리게). 반복할 때도 같은 자리로 돌아간다
+const START: Partial<Record<Track, number>> = { fall: 1.85 };
 
 let ctx: AudioContext | null = null;
 const chans: Partial<Record<Track, { el: HTMLAudioElement; gain: GainNode }>> = {};
@@ -47,9 +49,19 @@ function chan(t: Track) {
   let ch = chans[t];
   if (!ch) {
     const el = new Audio();
-    el.src = SRC[t];
-    el.loop = true;
+    const start = START[t];
+    el.src = start ? `${SRC[t]}#t=${start}` : SRC[t];
     el.preload = "auto";
+    if (start) {
+      // 처음 재생 위치를 무음 뒤로 옮기고, 끝나면 무음을 건너뛰어 다시 처음으로
+      el.addEventListener("loadedmetadata", () => {
+        if (el.currentTime < start) el.currentTime = start;
+      });
+      el.addEventListener("ended", () => {
+        el.currentTime = start;
+        if (sfxOn() && t === want) el.play().catch(() => {});
+      });
+    } else el.loop = true;
     const gain = c.createGain();
     gain.gain.value = 0;
     c.createMediaElementSource(el).connect(gain).connect(c.destination);

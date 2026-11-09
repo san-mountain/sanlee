@@ -1395,6 +1395,19 @@ export default function ExploreClient() {
     }, 300);
     return () => clearInterval(iv);
   }, [sanWithYou, jabiStage, say]);
+  // 空 경로: 대자비 구역에 처음 들어서면 이산이 스쳐 가듯 한 줄 (대자비가 둘을 보지 못한다. 방공호에서 한 짐작이 확인되는 순간)
+  // 지상에 올라올 때마다 한 번. 창이 떠 있거나 멈춰 있으면 닫힌 뒤에
+  const blindSaid = useRef(false);
+  useEffect(() => {
+    blindSaid.current = false;
+    if (zone !== "city" || !ghost || ending) return;
+    const iv = setInterval(() => {
+      if (blindSaid.current || !gaze.inZone || panelRef.current || pausedRef.current) return;
+      blindSaid.current = true;
+      say(sanCue.blind, 4600);
+    }, 300);
+    return () => clearInterval(iv);
+  }, [zone, ghost, ending, say]);
   // 이산 곁에 와서 처음 숨었을 때 한 줄
   useEffect(() => {
     if (!sanWithYou) return;

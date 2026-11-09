@@ -355,6 +355,8 @@ export const sanCue = {
   avenueDecide: { ko: "난 아래로 가 보고 싶어. 같이 갈 거면 이쪽이야.", en: "I want to go down. If you're coming, it's this way." } as L,
   agree: { ko: "고마워. 검문소까지 같이 가자.", en: "Thank you. Let's go to the checkpoint together." } as L,
   later: { ko: "응. 여기서 기다릴게.", en: "Okay. I'll wait here." } as L,
+  // 기록을 지우고 돌아온 空 경로: 대자비 구역에 처음 들어섰는데 대자비가 둘을 보지 못할 때 (방공호에서 한 짐작이 맞았다)
+  blind: { ko: "…정말 우릴 못 보네. 우린 이제 어디에도 적혀 있지 않은 거야.", en: "…It really can't see us. We're not written down anywhere anymore." } as L,
 };
 
 // 기록을 지우고 돌아온 방문자와의 재회. 방문자는 말하지 않는다: 망원경을 보던 몸짓으로만 기억을 건넨다.
