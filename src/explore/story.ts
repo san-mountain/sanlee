@@ -905,7 +905,7 @@ export const galleryUi = {
   listen: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" } as L,
   endings: {
     accept: {
-      name: { ko: "수락 — 안전과 떨어짐", en: "Accept — Safety, and apart" } as L,
+      name: { ko: "수락 — 안전한 이별", en: "Accept — A safe farewell" } as L,
       line: { ko: "뒤따라오던 발소리가 더는 들리지 않는다.", en: "The footsteps that followed you can no longer be heard." } as L,
       status: { ko: "도시에 저장됨", en: "Saved by the city" } as L,
       hint: { ko: "검문소의 조건을 받아들이면", en: "If you accept the checkpoint's terms" } as L,
