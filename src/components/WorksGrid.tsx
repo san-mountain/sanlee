@@ -174,9 +174,11 @@ export default function WorksGrid({ limit }: { limit?: number }) {
   const router = useRouter();
   const feature = works.filter((w) => !w.image);
   const images = works.filter((w) => w.image);
-  const shown = limit ? images.slice(0, limit) : images;
   const [open, setOpen] = useState<number | null>(null);
   const [tab, setTab] = useState<Cat>("painting");
+  // 사진이 있는 작업은 category(없으면 그림)에 따라 그림·조각 탭에 나뉜다. 첫 화면(limit)에는 둘 다 최근 순으로
+  const shown = limit ? images.slice(0, limit) : images.filter((w) => (w.category ?? "painting") === tab);
+  const gallery = (!!limit || tab !== "interactive") && shown.length > 0;
   const [view, setView] = useState<View>("grid");
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -191,12 +193,13 @@ export default function WorksGrid({ limit }: { limit?: number }) {
     if (VIEWS.some((v) => v.id === h)) setView(h as View);
   }, [limit]);
   const selectTab = (c: Cat) => {
+    setOpen(null);
     setTab(c);
     history.replaceState(null, "", `#${c}`);
   };
   const selectView = (v: View) => {
     setView(v);
-    history.replaceState(null, "", v === "grid" ? "#painting" : `#${v}`);
+    history.replaceState(null, "", v === "grid" ? `#${tab}` : `#${v}`);
   };
 
   const openAt = (i: number) => {
@@ -253,13 +256,13 @@ export default function WorksGrid({ limit }: { limit?: number }) {
               </button>
             ))}
           </div>
-          {tab === "painting" && (
+          {gallery && (
             <ViewMenu view={view} onPick={selectView} />
           )}
         </div>
       )}
 
-      {tab === "painting" && v === "grid" && (
+      {gallery && v === "grid" && (
         <ul className="grid">
           {shown.map((w, i) => (
             <li key={w.title.en}>
@@ -273,7 +276,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
         </ul>
       )}
 
-      {tab === "painting" && v === "index" && (
+      {gallery && v === "index" && (
         <ol className="work-index" onMouseLeave={() => setHover(null)}>
           {shown.map((w, i) => (
             <li key={w.title.en}>
@@ -296,9 +299,9 @@ export default function WorksGrid({ limit }: { limit?: number }) {
         </ol>
       )}
 
-      {tab === "painting" && v === "wall" && <Wall works={shown} onOpen={openAt} />}
+      {gallery && v === "wall" && <Wall works={shown} onOpen={openAt} />}
 
-      {tab === "sculpture" && <p className="cat-empty">{t(ui.sculptureEmpty)}</p>}
+      {tab === "sculpture" && !shown.length && <p className="cat-empty">{t(ui.sculptureEmpty)}</p>}
 
       {tab === "interactive" && (
         <>
