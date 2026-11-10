@@ -18,8 +18,6 @@ export const profile = {
 };
 
 export const about = {
-  // 첫 화면 맨 위의 한 줄 (아래 작가 노트의 첫 문장)
-  homeLine: { ko: "삶은 끝을 향해 조금씩 기운다.", en: "Life leans, little by little, toward its end." },
   paragraphs: [
     {
       ko: "이산은 동국대학교 조소과에 재학 중이며, 조각과 그림, 시를 오가며 작업한다.",

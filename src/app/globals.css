@@ -205,8 +205,6 @@ img { max-width: 100%; height: auto; display: block; }
 @media (max-width: 719px) {
   .home .mgrid-1 { display: none; }
   .home .mgrid-2 { display: flex; gap: var(--s2); }
-  /* 두 단으로 좁게 놓이는 첫 화면에서는 제목과 연도만. 재료와 크기는 그림을 눌러 크게 볼 때 나온다 */
-  .home .mcol .caption .cm, .home .mcol .caption br { display: none; }
   .home .caption { line-height: 1.5; }
 }
 .contact-title { font-size: var(--fs-body); font-weight: 600; letter-spacing: .02em; margin: var(--s4) 0 var(--s1); padding-top: 0; scroll-margin-top: 90px; }
@@ -660,12 +658,9 @@ body.deleting .nav-logo .han, body.deleting .page .han { opacity: 0; transition:
 body.restoring:not(.restoring-light) .nav-logo .han, body.restoring:not(.restoring-light) .page .han { opacity: 0; }
 body.restoring-light .nav-logo .han, body.restoring-light .page .han { transition: opacity .8s ease .3s; }
 
-/* ---------- 다듬기: 첫 화면 한 줄, About, 언어 버튼, 404, 페이지 전환 ---------- */
+/* ---------- 다듬기: About, 언어 버튼, 404, 페이지 전환 ---------- */
 /* 영어 기기: 언어가 정해질 때까지 잠깐 가려 둔다 (layout.tsx의 스크립트와 LangProvider가 켜고 끈다) */
 html[data-lang-wait] body { visibility: hidden; }
-/* 첫 화면 맨 위의 한 줄: 작가 노트의 첫 문장 */
-.home-line { margin: 0 0 var(--s3); font-size: var(--fs-title); line-height: 1.5; letter-spacing: .01em; word-break: keep-all; }
-@media (min-width: 720px) { .home-line { margin-bottom: var(--s4); } }
 /* About: 첫 문단(약력)은 작고 옅게, 그 아래 작가 노트가 본문 */
 .section-body .bio { color: var(--muted); font-size: var(--fs-meta); margin: 0 0 var(--s3); }
 /* 언어 버튼: 상자 없이 메뉴와 같은 글자로 */
