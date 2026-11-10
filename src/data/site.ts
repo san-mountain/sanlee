@@ -39,6 +39,8 @@ export type Work = {
   size: L;
   description?: L;
   link?: string;
+  // 함께 만든 사람 (캡션의 재료·크기 다음 줄)
+  credit?: L;
   image?: string; // public/works/ 폴더의 WebP 경로
   width?: number; // 사진 원본 비율(레이아웃 흔들림 방지용)
   height?: number;
@@ -59,6 +61,7 @@ export const works: Work[] = [
       en: "This portfolio rebuilt as an underground shelter and the surveillance city above it. Visitors walk through it to restore a scattered record and bring back the artist, suspended as a citizen after rejecting every last cookie. In the end, one choice remains.",
     },
     link: "/deleteseoul",
+    credit: { ko: "음악: 백진성", en: "Music: Jinseong Baek" },
   },
   {
     title: { ko: "인간도人間圖", en: "Ingando (A Diagram of Humans)" },

@@ -396,6 +396,15 @@ img { max-width: 100%; height: auto; display: block; }
 .pause-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid #22f0ff1f; font-family: var(--mono); font-size: 12px; letter-spacing: .03em; }
 .pause-row input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--pink); }
 .pause-row small { grid-column: 1 / -1; color: var(--dim); font-size: 10px; font-family: var(--mono); }
+.pause-row.pause-sub { grid-template-columns: 7em 1fr 2.6em; padding: 4px 0 4px 12px; border-bottom: 0; }
+.pause-row.pause-sub input[type="range"], .pause-row.pause-sub small { grid-column: auto; }
+.pause-row.pause-sub small { text-align: right; }
+/* 화면 효과 줄이기 (설정창): 글리치 깜빡임을 멈추고, 거부 결말의 하얀 번쩍임을 어둡게 가라앉는 전환으로 */
+.explore-root.calm-fx .glitch { animation: none; }
+/* 한 글자씩 써지는 대사의 남은 글자: 자리만 차지한다 */
+.typed-rest { visibility: hidden; }
+.explore-root.calm-fx.final-flash::after { animation: finalFlashCalm 2.2s ease-out forwards; }
+@keyframes finalFlashCalm { 0% { background: #00000000; } 30% { background: #2a0a10c0; } 100% { background: #000000f0; } }
 .pause-row.locked { opacity: .5; }
 .pause-row.locked small { color: var(--yellow); }
 .pause-note { margin: -4px 0 0; padding: 0 0 8px; font-size: 10px; color: #ff2bd6aa; font-family: var(--mono); border-bottom: 1px solid #22f0ff1f; }

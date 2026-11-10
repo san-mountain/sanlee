@@ -19,6 +19,25 @@ export function setSfx(v: boolean) {
   applyAmb();
 }
 
+// 소리 크기 (설정창의 슬라이더 셋, 0~1). 켜고 끄기(on)와 따로 기억한다
+const VKEY = "sanlee-volume";
+export type VolKey = "music" | "sfx" | "amb";
+export const vol: Record<VolKey, number> = { music: 1, sfx: 1, amb: 1 };
+try {
+  const v = typeof localStorage === "undefined" ? null : JSON.parse(localStorage.getItem(VKEY) || "null");
+  if (v) (Object.keys(vol) as VolKey[]).forEach((k) => typeof v[k] === "number" && (vol[k] = Math.max(0, Math.min(1, v[k]))));
+} catch {}
+const SFX_GAIN = 0.32;
+let ambBus: GainNode | null = null;
+export function setVol(k: VolKey, v: number) {
+  vol[k] = Math.max(0, Math.min(1, v));
+  try {
+    localStorage.setItem(VKEY, JSON.stringify(vol));
+  } catch {}
+  if (ctx && master) master.gain.setTargetAtTime(SFX_GAIN * vol.sfx, ctx.currentTime, 0.05);
+  if (ctx && ambBus) ambBus.gain.setTargetAtTime(SFX_GAIN * vol.amb, ctx.currentTime, 0.05);
+}
+
 function ac(): AudioContext | null {
   if (!on || typeof window === "undefined") return null;
   if (!ctx) {
@@ -26,8 +45,12 @@ function ac(): AudioContext | null {
     if (!C) return null;
     ctx = new C();
     master = ctx.createGain();
-    master.gain.value = 0.32;
+    master.gain.value = SFX_GAIN * vol.sfx;
     master.connect(ctx.destination);
+    // 바탕 소리는 따로 크기를 정한다
+    ambBus = ctx.createGain();
+    ambBus.gain.value = SFX_GAIN * vol.amb;
+    ambBus.connect(ctx.destination);
   }
   if (ctx.state === "suspended") ctx.resume().catch(() => {});
   return ctx;
@@ -45,7 +68,7 @@ function tone(f: number, d: number, { type = "sine" as Wave, f2 = f, vol = 0.5, 
   o.frequency.setValueAtTime(f, t);
   if (f2 !== f) o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), t + d);
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t + d);
   o.connect(g).connect(master);
   o.start(t);
@@ -77,7 +100,7 @@ function noise(d: number, { vol = 0.3, at = 0, from = 1800, to = 300, q = 0.8 } 
   bp.frequency.exponentialRampToValueAtTime(Math.max(40, to), t + d);
   const g = c.createGain();
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(vol, t + Math.min(d * 0.15, 0.03 + d * 0.1));
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + Math.min(d * 0.15, 0.03 + d * 0.1));
   g.gain.exponentialRampToValueAtTime(0.0001, t + d);
   src.connect(bp).connect(g).connect(master);
   src.start(t, Math.random() * 2);
@@ -104,7 +127,7 @@ const AMB_GAIN = { bunker: 0.75, city: 0.6 };
 function buildAmb(c: AudioContext, kind: "bunker" | "city"): AmbNodes {
   const g = c.createGain();
   g.gain.value = 0;
-  g.connect(master!);
+  g.connect(ambBus!);
   const src = c.createBufferSource();
   src.buffer = nbuf(c);
   src.loop = true;
@@ -164,8 +187,8 @@ function drip() {
   dripTimer = setTimeout(() => {
     if (ambWant === "bunker" && ambLevel > 0.5) {
       const f = 1300 + Math.random() * 700;
-      tone(f, 0.09, { f2: f * 0.6, vol: 0.05 * ambLevel, attack: 0.002 });
-      tone(f * 1.5, 0.05, { vol: 0.015 * ambLevel, at: 0.01, attack: 0.002 });
+      tone(f, 0.09, { f2: f * 0.6, vol: 0.05 * ambLevel * vol.amb, attack: 0.002 });
+      tone(f * 1.5, 0.05, { vol: 0.015 * ambLevel * vol.amb, at: 0.01, attack: 0.002 });
     }
     drip();
   }, 5000 + Math.random() * 9000);
@@ -407,6 +430,14 @@ export const sfx = {
       tone((330 + Math.random() * 90) * r, 0.09, { type: "triangle", vol: 0.09, attack: 0.01 });
       tone((440 + Math.random() * 90) * r, 0.1, { type: "triangle", vol: 0.06, at: 0.07, attack: 0.01 });
     } else blip();
+  },
+  // 대사가 써지는 동안 몇 글자마다: 목소리 소리의 아주 작은 조각
+  tick: (k: Voice) => {
+    const r = 0.92 + Math.random() * 0.16;
+    if (k === "san") tone(660 * r, 0.04, { vol: 0.03, attack: 0.006 });
+    else if (k === "robot") tone((1200 + Math.random() * 600) * r, 0.025, { type: "square", vol: 0.025 });
+    else if (k === "radio") noise(0.04, { vol: 0.04, from: 3000, to: 2000, q: 3 });
+    else if (k === "person") tone((360 + Math.random() * 80) * r, 0.04, { type: "triangle", vol: 0.04, attack: 0.006 });
   },
   // 망원경: 초점 고리가 돌아가며 렌즈가 당겨진다 / 눈을 떼면 풀린다
   scopeIn: () => {

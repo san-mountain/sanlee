@@ -219,7 +219,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     camera.position.set(s.x, EYE + floorY + s.y + bobY, s.z);
     camera.rotation.set(s.pitch, s.yaw, 0, "YXZ");
     // 대자비가 분노하면 화면이 흔들린다
-    const sh = gaze.shake;
+    const sh = gaze.shake * (input.calm ? 0.2 : 1);
     if (sh > 0.001) {
       camera.position.x += (Math.random() - 0.5) * sh;
       camera.position.y += (Math.random() - 0.5) * sh;

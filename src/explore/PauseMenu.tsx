@@ -1,6 +1,6 @@
 "use client";
 
-import { setSfx, sfx, sfxOn } from "./sfx";
+import { setSfx, setVol, sfx, sfxOn, vol, type VolKey } from "./sfx";
 import { syncBgm } from "./bgm";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -30,6 +30,8 @@ export default function PauseMenu({
   const [sens, setSens] = useState(input.sens);
   const [bob, setBob] = useState(input.bob);
   const [sound, setSound] = useState(sfxOn());
+  const [vols, setVols] = useState({ ...vol });
+  const [calm, setCalm] = useState(input.calm);
   const [note, setNote] = useState<string | null>(null);
   const [free, setFree] = useState(true);
   const [line, setLine] = useState(0);
@@ -118,6 +120,43 @@ export default function PauseMenu({
               {t(sound ? pause.on : pause.off)}
             </button>
           </div>
+          {sound &&
+            (["music", "sfx", "amb"] as VolKey[]).map((k) => (
+              <label key={k} className="pause-row pause-sub">
+                <span>{t(pause[k])}</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(vols[k] * 100)}
+                  onChange={(e) => {
+                    const v = Number(e.target.value) / 100;
+                    setVol(k, v);
+                    setVols((o) => ({ ...o, [k]: v }));
+                    if (k === "music") syncBgm();
+                  }}
+                  onPointerUp={() => k === "sfx" && sfx.blip()}
+                  onKeyUp={() => k === "sfx" && sfx.blip()}
+                />
+                <small>{Math.round(vols[k] * 100)}</small>
+              </label>
+            ))}
+          <div className="pause-row">
+            <span>{t(pause.calm)}</span>
+            <button
+              type="button"
+              className={`switch ${calm ? "on" : ""}`}
+              onClick={() => {
+                input.calm = !calm;
+                setCalm(!calm);
+                saveSettings();
+              }}
+            >
+              {t(calm ? pause.on : pause.off)}
+            </button>
+          </div>
+          <p className="pause-note">{t(pause.calmNote)}</p>
 
           <p className="pause-note">
             ♪{" "}

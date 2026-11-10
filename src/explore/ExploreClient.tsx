@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RESTORE_KEY } from "@/components/RestoreCrossing";
 import { FORGET_HINT_KEY } from "@/components/ForgetCity";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
@@ -1187,6 +1187,8 @@ export default function ExploreClient() {
       if (e.code === "KeyE" && !e.repeat && p?.kind === "dialog" && performance.now() - panelAt.current > 250) {
         e.preventDefault();
         if (hushRef.current) return;
+        // 글자가 아직 써지는 중이면 먼저 한 줄을 다 보여 준다
+        if (typing.finish()) return;
         if (p.step < p.lines.length - 1) setPanel({ ...p, step: p.step + 1 });
         else closePanel();
         return;
@@ -1422,7 +1424,7 @@ export default function ExploreClient() {
       k += (want - k) * (steppedRef.current ? 0.05 : 0.15);
       if (!steppedRef.current) ambience("city", Math.max(0, 1 - k * 1.1));
       // 찢김: 깊어질수록 자주, 길게
-      if (tear <= now && Math.random() < k * k * 0.12) tear = now + 60 + Math.random() * 160 * k;
+      if (!input.calm && tear <= now && Math.random() < k * k * 0.12) tear = now + 60 + Math.random() * 160 * k;
       const torn = tear > now;
       if (torn && now - lastGlitch > 900 && k > 0.25 && k < 0.98) {
         lastGlitch = now;
@@ -2114,6 +2116,7 @@ export default function ExploreClient() {
     tracked && !ending && !ghost ? "is-tracked" : "",
     leaving ? "logging-out" : "",
     beat === "sit" ? "reunion-sit" : "",
+    input.calm ? "calm-fx" : "",
   ].join(" ");
 
   return (
@@ -2289,11 +2292,15 @@ export default function ExploreClient() {
             {(() => {
               const line = panel.lines[Math.min(panel.step, panel.lines.length - 1)];
               // 지문(따옴표 없음, 말하는 이 없음) / 그 밖에는 대화창의 이름으로 한 번. 방문자는 말하지 않는다
-              if (line.who === "narr") return <p className="line narr">{t(line)}</p>;
+              const k = `${panel.step}:${t(line)}`;
+              if (line.who === "narr") return <p className="line narr"><Typed key={k} text={t(line)} /></p>;
+              const v = panel.plaque ? "none" : voiceOf(panel.name, line);
               return (
                 <>
                   {!panel.plaque && <div className="speaker">{t(panel.name)}</div>}
-                  <p className="line">“{t(line)}”</p>
+                  <p className="line">
+                    <Typed key={k} text={`“${t(line)}”`} voice={v} />
+                  </p>
                 </>
               );
             })()}
@@ -2323,7 +2330,7 @@ export default function ExploreClient() {
                 </a>
               )}
               {panel.step < panel.lines.length - 1 && !hush && (
-                <button className="btn primary" autoFocus onClick={() => setPanel({ ...panel, step: panel.step + 1 })}>
+                <button className="btn primary" autoFocus onClick={() => !typing.finish() && setPanel({ ...panel, step: panel.step + 1 })}>
                   {t(ui.next)}
                 </button>
               )}
@@ -2591,5 +2598,60 @@ function Reticle({ on, color }: { on: boolean; color?: string }) {
         </g>
       </svg>
     </div>
+  );
+}
+
+// 대사가 한 글자씩 써진다. 써지는 동안 말하는 이의 소리가 몇 글자마다 작게 난다.
+// 계속(E·버튼)이나 대사를 누르면 먼저 한 줄을 다 보여 준다. 남은 글자는 자리만 차지해(보이지 않게) 줄바꿈이 흔들리지 않는다.
+// 화면 효과 줄이기·동작 줄이기에서는 곧바로 다 보인다
+const typing = {
+  done: true,
+  skip: () => {},
+  // 써지는 중이었으면 끝까지 보이고 true
+  finish() {
+    if (this.done) return false;
+    this.skip();
+    return true;
+  },
+};
+function Typed({ text, voice = "none" }: { text: string; voice?: Voice }) {
+  const chars = useMemo(() => Array.from(text), [text]);
+  const instant = input.calm;
+  const [n, setN] = useState(instant ? chars.length : 0);
+  useEffect(() => {
+    if (instant) {
+      typing.done = true;
+      return;
+    }
+    let i = 0;
+    let said = 0;
+    typing.done = false;
+    const stop = () => {
+      clearInterval(iv);
+      typing.done = true;
+    };
+    typing.skip = () => {
+      i = chars.length;
+      setN(i);
+      stop();
+    };
+    const iv = setInterval(() => {
+      i = Math.min(chars.length, i + 1);
+      setN(i);
+      const ch = chars[i - 1];
+      // 글자 몇 개마다 (빈칸·문장부호는 건너뛴다)
+      if (voice !== "none" && ch && /[\p{L}\p{N}]/u.test(ch) && ++said % 4 === 0) sfx.tick(voice);
+      if (i >= chars.length) stop();
+    }, 32);
+    return () => {
+      clearInterval(iv);
+      typing.done = true;
+    };
+  }, [chars, instant, voice]);
+  return (
+    <span onClick={() => typing.finish()}>
+      {chars.slice(0, n).join("")}
+      {n < chars.length && <span className="typed-rest" aria-hidden>{chars.slice(n).join("")}</span>}
+    </span>
   );
 }

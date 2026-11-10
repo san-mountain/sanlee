@@ -16,6 +16,8 @@ export const input = {
   // 설정창에서 바꾸는 값
   sens: 1,
   bob: true,
+  // 화면 효과 줄이기: 흔들림·번쩍임·글리치를 약하게 (빛에 민감한 사람, 멀미)
+  calm: false,
 };
 
 // 설정은 브라우저에 저장해 둔다
@@ -24,11 +26,13 @@ export function loadSettings() {
     const v = JSON.parse(localStorage.getItem("neo-settings") || "{}");
     if (typeof v.sens === "number") input.sens = Math.max(0.3, Math.min(2.5, v.sens));
     if (typeof v.bob === "boolean") input.bob = v.bob;
+    if (typeof v.calm === "boolean") input.calm = v.calm;
+    else if (typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches) input.calm = true;
   } catch {}
 }
 export function saveSettings() {
   try {
-    localStorage.setItem("neo-settings", JSON.stringify({ sens: input.sens, bob: input.bob }));
+    localStorage.setItem("neo-settings", JSON.stringify({ sens: input.sens, bob: input.bob, calm: input.calm }));
   } catch {}
 }
 
