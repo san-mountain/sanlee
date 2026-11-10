@@ -447,8 +447,8 @@ img { max-width: 100%; height: auto; display: block; }
 .gaze[data-hidden="cover"] .gaze-fill, .gaze[data-hidden="line"] .gaze-fill { background: linear-gradient(90deg, #555, #888); box-shadow: none; }
 @keyframes gazeBlink { 50% { color: #ff2a3d; } }
 .gaze-vignette { position: absolute; inset: 0; z-index: 6; pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 16, 40, calc(var(--gaze, 0) * .55)) 100%);
-  mix-blend-mode: screen; }
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 16, 40, .55) 100%);
+  opacity: 0; visibility: hidden; will-change: opacity; }
 .gaze-tip { position: absolute; left: 50%; top: 112px; transform: translateX(-50%); z-index: 31; width: min(520px, 90vw); text-align: center;
   font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--fg); background: #07030fdd; border: 1px solid #ff2a3d88; padding: 9px 12px;
   animation: panelIn .3s ease-out; pointer-events: none; }
@@ -1269,3 +1269,12 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
   .explore-root.is-touch .notice { bottom: 34px; width: min(520px, calc(100vw - 400px)); }
   .explore-root.is-touch .save-toast { bottom: 34px; max-width: calc(100vw - 400px); }
 }
+
+/* 설정창 탭: 조작 · 소리 · 시스템 */
+.pause-tabs { display: flex; gap: 6px; margin: 0 0 -1px; }
+.pause-tabs button { flex: 1; font: inherit; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; padding: 8px 6px; cursor: pointer;
+  color: var(--dim); background: transparent; border: 1px solid #22f0ff33; border-bottom-color: transparent; }
+.pause-tabs button.on { color: var(--cyan); border-color: #22f0ff99; border-bottom-color: transparent; background: #22f0ff14; text-shadow: 0 0 8px #22f0ff88; }
+.pause-tabs button:hover { color: var(--fg); }
+.pause-rows[role="tabpanel"] { min-height: 196px; }
+@media (orientation: landscape) and (max-height: 520px) { .pause-rows[role="tabpanel"] { min-height: 0; } .pause-tabs button { padding: 5px 6px; } }

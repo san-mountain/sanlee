@@ -17,7 +17,8 @@ export const gaze = {
   mood: "" as "" | "calm" | "blind",
   // 처음 시선 구역에 들어설 때의 소개 장면: 게이지를 멈추고 카메라가 lookAt을 바라본다
   intro: false,
-  lookAt: null as { x: number; y: number; z: number } | null,
+  // center: 화면 가운데에 둔다 (소개 팝업을 피해 위쪽으로 올리지 않는다)
+  lookAt: null as { x: number; y: number; z: number; center?: boolean } | null,
   // 空 결말: 성문의 조준 빛이 겨눌 방문 기록을 찾지 못해 빛을 거둔다 (City의 Gate가 천천히 끈다)
   gateOpen: false,
   // 큰길 드론의 빛이 지금 방문자를 비추는가 (줄 속에 서 있어도 보인다). Drones가 쓰고 GazeSystem이 읽는다

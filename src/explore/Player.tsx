@@ -105,7 +105,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       s.yaw += dy * k;
       // 세로 화면은 팝업이 아래 절반을 덮으므로 얼굴이 화면 위쪽에 오도록 덜 올려다본다. 가로 화면은 팝업이 오른쪽에 뜬다
-      const wantP = Math.min(1.1, Math.atan2(la.y - EYE, Math.hypot(la.x - s.x, la.z - s.z)) - (aspect < 1 ? 0.56 : 0.12) * zt);
+      const wantP = Math.min(1.1, Math.atan2(la.y - EYE, Math.hypot(la.x - s.x, la.z - s.z)) - (la.center ? 0 : aspect < 1 ? 0.56 : 0.12) * zt);
       s.pitch += (wantP - s.pitch) * k;
       // 다 돌아봤으면 알린다 (소개 팝업이 이때 뜬다)
       if (!lookDone.current && Math.abs(dy) < 0.02 && Math.abs(wantP - s.pitch) < 0.02) {
@@ -145,7 +145,9 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       const az = aw.z - s.z;
       const ad = Math.hypot(ax, az);
       const k = Math.min(1, dt * 2.2);
-      const want = ad > 0.6 && !aw.faceYaw ? Math.atan2(-ax, -az) : (aw.yaw ?? 0);
+      // 방향이 정해지지 않은 경유점에 다 와 갈 때는 다음 점 쪽을 본다 (예전에는 0, 곧 북쪽을 봐서 경유점마다 시야가 검문소 쪽으로 한 번 튕겼다)
+      const nx = autoWalk.queue[0];
+      const want = ad > 0.6 && !aw.faceYaw ? Math.atan2(-ax, -az) : (aw.yaw ?? (nx ? Math.atan2(-(nx.x - s.x), -(nx.z - s.z)) : s.yaw));
       let dy = want - s.yaw;
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       s.yaw += dy * k;

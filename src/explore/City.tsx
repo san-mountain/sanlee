@@ -1,7 +1,7 @@
 "use client";
 
 import { gaze } from "./gaze";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
@@ -879,6 +879,8 @@ const Q_STARE = new THREE.Color("#ff3b4e");
 const Q_STD = new THREE.Color("#ff79c0");
 // 방문자를 바라보기 시작하는 거리(m)
 const P_NEAR = 6;
+// 줄의 남쪽 끝에서 45m 넘게 떨어진 곳
+const QUEUE_FAR_Z = Math.max(...QUEUE_Z) + 45;
 
 function Queue() {
   const geo = citizenGeometry();
@@ -903,7 +905,10 @@ function Queue() {
   // 물든 바이저: 평소 바이저 위에 살짝 크게 겹쳐 그리는 두 번째 바이저 (물든 시민만 크기 1, 나머지는 0)
   const alert = useRef<THREE.InstancedMesh>(null);
   const alertMat = useRef<THREE.MeshBasicMaterial>(null);
+  const farTick = useRef(0);
   useFrame((s, dt) => {
+    // 줄에서 멀리 있을 때(광장·골목)는 흔들림이 보이지 않는다: 여섯 프레임에 한 번만 계산해 올린다
+    if (player.pos.z > QUEUE_FAR_Z && ++farTick.current % 6) return;
     const t = s.clock.elapsedTime;
     const sway = Math.sin(t * 1.2) * 0.015;
     const m = faceRt.method;
@@ -1234,7 +1239,8 @@ function CookieHolo() {
   );
 }
 
-export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: TapFn; onTracked: (v: boolean) => void }) {
+// 화면 글자(안내·대사)가 바뀔 때마다 도시 전체(물체 약 2천 개)를 다시 계산하지 않도록 memo로 감싼다
+function City({ lang, onTap, onTracked }: { lang: Lang; onTap: TapFn; onTracked: (v: boolean) => void }) {
   const q = useQuality();
   return (
     <group>
@@ -1293,3 +1299,5 @@ export default function City({ lang, onTap, onTracked }: { lang: Lang; onTap: Ta
     </group>
   );
 }
+
+export default memo(City);

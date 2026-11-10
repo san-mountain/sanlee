@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles, useTexture, RoundedBox } from "@react-three/drei";
@@ -1006,7 +1006,7 @@ function Notes({ onTap, read }: { onTap: TapFn; read: number[] }) {
   );
 }
 
-export default function Bunker({ lang, visited, onTap, secondStatue, awake, face, notesRead = [] }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean; face: FaceView; notesRead?: number[] }) {
+function Bunker({ lang, visited, onTap, secondStatue, awake, face, notesRead = [] }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean; face: FaceView; notesRead?: number[] }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -1065,3 +1065,5 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake, face
     </group>
   );
 }
+
+export default memo(Bunker);

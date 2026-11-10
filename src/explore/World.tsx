@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import type { Lang, SectionId } from "@/data/site";
 import type { FaceView } from "./faceRuntime";
 import Player from "./Player";
@@ -10,6 +10,7 @@ import City from "./City";
 import SanNPC, { type SanPath } from "./SanNPC";
 import Labels, { type LabelEls } from "./Labels";
 import Effects from "./Effects";
+import { useRenderScale } from "./quality";
 import { CITY, FROZEN_SAN, ZONES, type Interactable, type Zone } from "./zones";
 import Statue from "./Statue";
 import { Tap } from "./parts";
@@ -36,12 +37,21 @@ type Props = {
   sanStart?: [number, number];
 };
 
+// 테스트용(?debug): 그리는 양을 콘솔에서 볼 수 있게 렌더러와 장면을 내놓는다
+function Probe() {
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
+  if (typeof location !== "undefined" && location.search.includes("debug")) (window as unknown as Record<string, unknown>).__gl = { gl, scene };
+  return null;
+}
+
 const POPUP = [{ key: "popup", pos: [1.7, 4.5, 1.6] as [number, number, number], scaleAt: 6, maxScale: 1 }];
 
 export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanPath, sanStone, hideSan, secondStatue, notesRead, arrived, awake, face, frozenSan, sanStart }: Props) {
   const complete = !!awake;
+  const scale = useRenderScale();
   return (
-    <Canvas dpr={[1, 1.25]} gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
+    <Canvas dpr={scale} gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
       <Player zone={ZONES[zone]} zoneKey={zone} onNear={onNear} arrived={arrived} />
       <Suspense fallback={null}>
         {zone === "bunker" ? (
@@ -62,6 +72,7 @@ export default function World({ zone, lang, visited, onTap, onNear, onTracked, l
           </>
         )}
       </Suspense>
+      <Probe />
       <Effects />
       <Labels anchors={zone === "bunker" && !complete ? POPUP : []} els={labelEls} />
     </Canvas>
