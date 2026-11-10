@@ -10,7 +10,7 @@ import { billboards, ticker } from "./story";
 import { AVENUE, CAMERA_POLES, CITY, CITY_NPCS, CROSS, DEPOT, EDGE, ISLANDS, LOTS, NS2_X, OVERSEER_ISLAND, QUEUE_X, QUEUE_Z, WALK } from "./zones";
 import { AirTraffic, Arks, Bridge, CloudSea, Islands, Platform, Sky, TwinBuddhas } from "./CityWorld";
 import { AlleyDecor, AlleyPeople, AvenueHolo, ChalkMarks, NeonRoute, BellPavilion, Courier, EdgeKid, Grandma, Hatch, LotusStrings, RoboMonk, Scopes, StonePagoda, VendorReplica } from "./CityAlleys";
-import { citizenGeometry, roofGeometry, visorGeometry } from "./models";
+import { citizenGeometry, roofGeometry, smileGeometry, visorGeometry } from "./models";
 import { towerMaterial } from "./towerMaterial";
 import { useNeoPost } from "./neoPost";
 import { NeonEnvironment, useBeam, useLightPool } from "./atmosphere";
@@ -881,6 +881,9 @@ function Queue() {
   const vGeo = visorGeometry();
   const body = useRef<THREE.InstancedMesh>(null);
   const visor = useRef<THREE.InstancedMesh>(null);
+  // 줄 선 시민은 모두 같은 표준 미소를 하고 있다 (도시가 정한 얼굴)
+  const sGeo = smileGeometry();
+  const smileRef = useRef<THREE.InstancedMesh>(null);
   const slots = useMemo(
     () =>
       QUEUE_X.flatMap((x) => QUEUE_Z.map((z) => [x, z] as [number, number])).filter(
@@ -924,6 +927,7 @@ function Queue() {
       tmpM.compose(tmpV.set(x, 0, z), tmpQ.setFromEuler(tmpE.set(nod, Math.PI + turn[i], sway)), tmpS.set(1, 1, 1));
       body.current?.setMatrixAt(i, tmpM);
       visor.current?.setMatrixAt(i, tmpM);
+      smileRef.current?.setMatrixAt(i, tmpM);
       // 옆으로만 살짝 넓혀 평소 바이저를 덮는다 (높이는 그대로)
       const on = tint[i] > 0.12 ? 1 : 0;
       tmpM.compose(tmpV.set(x, 0, z), tmpQ, tmpS.set(1.06 * on, on, 1.06 * on));
@@ -931,6 +935,7 @@ function Queue() {
     });
     if (body.current) body.current.instanceMatrix.needsUpdate = true;
     if (visor.current) visor.current.instanceMatrix.needsUpdate = true;
+    if (smileRef.current) smileRef.current.instanceMatrix.needsUpdate = true;
     if (alert.current) alert.current.instanceMatrix.needsUpdate = true;
     if (alertMat.current) {
       alertMat.current.color.copy(m === "standard" ? Q_STD : Q_STARE);
@@ -944,6 +949,9 @@ function Queue() {
       </instancedMesh>
       <instancedMesh ref={visor} args={[vGeo, undefined, slots.length]} frustumCulled={false}>
         <meshBasicMaterial color="#22f0ff" toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh ref={smileRef} args={[sGeo, undefined, slots.length]} frustumCulled={false}>
+        <meshBasicMaterial color="#ff5fb0" toneMapped={false} side={THREE.DoubleSide} />
       </instancedMesh>
       <instancedMesh ref={alert} args={[vGeo, undefined, slots.length]} frustumCulled={false}>
         <meshBasicMaterial ref={alertMat} color="#ff3b4e" transparent toneMapped={false} />
