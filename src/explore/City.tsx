@@ -19,6 +19,7 @@ import { lite, useQuality } from "./quality";
 import { concreteTexture, glowTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
+import { sfx } from "./sfx";
 import { faceRt } from "./faceRuntime";
 import Jabi from "./Jabi";
 import Drones from "./Drones";
@@ -876,6 +877,9 @@ function Lamps() {
 const Q_NEAR = 5.5;
 const Q_STARE = new THREE.Color("#ff3b4e");
 const Q_STD = new THREE.Color("#ff79c0");
+// 방문자를 바라보기 시작하는 거리(m)
+const P_NEAR = 6;
+
 function Queue() {
   const geo = citizenGeometry();
   const vGeo = visorGeometry();
@@ -884,6 +888,7 @@ function Queue() {
   // 줄 선 시민은 모두 같은 표준 미소를 하고 있다 (도시가 정한 얼굴)
   const sGeo = smileGeometry();
   const smileRef = useRef<THREE.InstancedMesh>(null);
+  const wasStaring = useRef(false);
   const slots = useMemo(
     () =>
       QUEUE_X.flatMap((x) => QUEUE_Z.map((z) => [x, z] as [number, number])).filter(
@@ -903,9 +908,23 @@ function Queue() {
     const sway = Math.sin(t * 1.2) * 0.015;
     const m = faceRt.method;
     const k = Math.min(1, dt * 2.5);
+    let staring = 0;
     slots.forEach(([x, z], i) => {
       let want = 0;
       let tw = 0;
+      // 가까이 온 방문자를 줄 선 시민들이 일제히 돌아본다 (섬뜩하게): 다 같은 순간에, 기계처럼 끊어지는 각도로 빠르게 돌고,
+      // 방문자가 움직이는 대로 끝까지 따라 본다. 미소는 그대로. 줄 앞(−z)을 완전히 등지는 데까지는 돌지 않는다
+      const px = player.pos.x - x;
+      const pz = player.pos.z - z;
+      const pd = Math.hypot(px, pz);
+      let stare = false;
+      if (pd < P_NEAR && pd > 0.3) {
+        let a = Math.atan2(px, pz) - Math.PI;
+        a = Math.atan2(Math.sin(a), Math.cos(a));
+        want = Math.round(Math.max(-1.5, Math.min(1.5, a)) / 0.14) * 0.14;
+        stare = true;
+        staring++;
+      }
       if (san && m) {
         const dx = san.x - x;
         const dz = san.z - z;
@@ -920,8 +939,8 @@ function Queue() {
           }
         }
       }
-      const lag = 0.6 + ((i * 37) % 10) / 25;
-      turn[i] += (want - turn[i]) * k * lag;
+      const lag = stare ? 3.2 : 0.6 + ((i * 37) % 10) / 25;
+      turn[i] += (want - turn[i]) * Math.min(1, k * lag);
       tint[i] += (tw - tint[i]) * k;
       const nod = m === "standard" ? Math.sin(t * 2.4) * 0.05 * tint[i] : 0;
       tmpM.compose(tmpV.set(x, 0, z), tmpQ.setFromEuler(tmpE.set(nod, Math.PI + turn[i], sway)), tmpS.set(1, 1, 1));
@@ -933,6 +952,9 @@ function Queue() {
       tmpM.compose(tmpV.set(x, 0, z), tmpQ, tmpS.set(1.06 * on, on, 1.06 * on));
       alert.current?.setMatrixAt(i, tmpM);
     });
+    // 돌아보기 시작하는 순간 한 번, 여럿의 목이 같이 꺾이는 작은 소리
+    if (staring > 0 && !wasStaring.current) sfx.stare();
+    wasStaring.current = staring > 0;
     if (body.current) body.current.instanceMatrix.needsUpdate = true;
     if (visor.current) visor.current.instanceMatrix.needsUpdate = true;
     if (smileRef.current) smileRef.current.instanceMatrix.needsUpdate = true;
