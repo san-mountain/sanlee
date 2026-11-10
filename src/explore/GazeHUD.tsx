@@ -58,6 +58,7 @@ export default function GazeHUD({
   goneRef.current = onGone;
   const wrap = useRef<HTMLDivElement>(null);
   const fill = useRef<HTMLDivElement>(null);
+  const vig = useRef<HTMLDivElement>(null);
   const label = useRef<HTMLSpanElement>(null);
   const [dead, setDead] = useState<Dead | null>(null);
   const shown = useRef(false);
@@ -70,6 +71,8 @@ export default function GazeHUD({
     let armed = false; // 게이지가 의심 이상까지 찼다가 숨어서 바닥을 치면 백업
     let prevState = gaze.state;
     let prevHidden = "";
+    let vigShown = -1;
+    let hudSig = "";
     const loop = () => {
       raf = requestAnimationFrame(loop);
       if (runtime.paused) { tension(0); return; }
@@ -92,15 +95,27 @@ export default function GazeHUD({
       const hot = gaze.state === "lock" || gaze.state === "fire" ? 1 : m;
       // 게이지가 차오르는 동안 긴장음 (발사되거나 쓰러지면 멈춘다)
       tension(gaze.dead || gaze.state === "fire" || gaze.mood === "blind" || gaze.intro ? 0 : m);
-      root?.style.setProperty("--gaze", String(hot));
+      // 화면 가장자리의 붉은 기운: 투명도만 바꾼다. 예전에는 화면 전체 요소의 변수를 매 프레임 바꾸고 혼합 모드로 겹쳐서,
+      // 지상에 있는 내내 브라우저가 화면 전체를 다시 계산하고 한 번 더 합성했다 (게임 화면보다 이쪽이 더 무거웠다)
+      const vq = Math.round(hot * 40) / 40;
+      if (vq !== vigShown && vig.current) {
+        vigShown = vq;
+        vig.current.style.opacity = String(vq);
+        vig.current.style.visibility = vq > 0 ? "visible" : "hidden";
+      }
       // 방문 기록을 지운 사람에게는 자비의 시선이 닿지 않으므로 게이지도 띄우지 않는다
       const visible = gaze.mood !== "blind" && (gaze.inZone || gaze.meter > 1 || gaze.state === "fire" || gaze.state === "cool");
-      if (wrap.current) {
-        wrap.current.style.opacity = visible ? "1" : "0";
-        wrap.current.dataset.state = gaze.state;
-        wrap.current.dataset.hidden = gaze.hiddenBy;
+      // 값이 바뀔 때만 화면 요소를 건드린다
+      const sig = `${visible ? 1 : 0}|${gaze.state}|${gaze.hiddenBy}|${Math.round(hot * 100)}`;
+      if (sig !== hudSig) {
+        hudSig = sig;
+        if (wrap.current) {
+          wrap.current.style.opacity = visible ? "1" : "0";
+          wrap.current.dataset.state = gaze.state;
+          wrap.current.dataset.hidden = gaze.hiddenBy;
+        }
+        if (fill.current) fill.current.style.width = `${Math.round(hot * 100)}%`;
       }
-      if (fill.current) fill.current.style.width = `${Math.round(hot * 100)}%`;
       if (label.current) {
         const key = gaze.state === "fire" ? "fire" : gaze.state === "lock" ? "lock" : gaze.hiddenBy && gaze.inZone ? (gaze.hiddenBy === "line" ? "line" : "hidden") : gaze.state;
         const s = tRef.current(jabiUi.states[key as keyof typeof jabiUi.states] ?? jabiUi.states.idle);
@@ -168,7 +183,7 @@ export default function GazeHUD({
         </div>
         <span className="gaze-state" ref={label} />
       </div>
-      <div className="gaze-vignette" aria-hidden />
+      <div className="gaze-vignette" ref={vig} aria-hidden />
       {dead && (
         <div className={`archived ${dead.kind === "gone" ? "gone" : ""}`}>
           <div>

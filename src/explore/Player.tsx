@@ -145,7 +145,9 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       const az = aw.z - s.z;
       const ad = Math.hypot(ax, az);
       const k = Math.min(1, dt * 2.2);
-      const want = ad > 0.6 && !aw.faceYaw ? Math.atan2(-ax, -az) : (aw.yaw ?? 0);
+      // 방향이 정해지지 않은 경유점에 다 와 갈 때는 다음 점 쪽을 본다 (예전에는 0, 곧 북쪽을 봐서 경유점마다 시야가 검문소 쪽으로 한 번 튕겼다)
+      const nx = autoWalk.queue[0];
+      const want = ad > 0.6 && !aw.faceYaw ? Math.atan2(-ax, -az) : (aw.yaw ?? (nx ? Math.atan2(-(nx.x - s.x), -(nx.z - s.z)) : s.yaw));
       let dy = want - s.yaw;
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       s.yaw += dy * k;

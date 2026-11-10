@@ -151,6 +151,9 @@ export function useLookAndKeys(
   lockCb.current = onLockChange;
   const holdRef = useRef(holdLock);
   holdRef.current = holdLock;
+  // 같은 렌더의 값끼리 본다 (input.enabled는 화면이 그려진 뒤에야 바뀌므로, 그 사이의 마우스 움직임을 '멈춘 채 잠김'으로 잘못 보면 안 된다)
+  const activeRef = useRef(active);
+  activeRef.current = active;
   useEffect(() => {
     input.enabled = active;
     if (!active) {
@@ -166,7 +169,7 @@ export function useLookAndKeys(
     const locked = () => document.pointerLockElement === el;
     // 다른 창에 다녀오는 사이 브라우저가 잠금을 풀지 않고(또는 돌아오며 다시 걸고) 설정창만 뜬 경우,
     // 커서가 숨은 채 아무것도 누를 수 없게 된다. 조작이 멈춘 동안 잠겨 있으면 곧바로 풀어 커서를 돌려준다
-    const stuck = () => locked() && !input.enabled && !holdRef.current;
+    const stuck = () => locked() && !activeRef.current && !input.enabled && !holdRef.current;
     const release = () => {
       if (stuck()) document.exitPointerLock();
     };

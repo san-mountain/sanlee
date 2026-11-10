@@ -126,6 +126,7 @@ const BEAT_MS: Record<EndKind, number[]> = {
 const GHOST_WALK = 2;
 const GHOST_STEP = 3;
 // 수락 결말: 이산이 말하는 줄(시점이 이산 쪽으로 돌아가고, 이산이 돌처럼 굳는다)과 시점이 다시 줄 앞으로 돌아가는 줄
+const TO_LINE_KEY = "sanlee-to-line";
 const ACCEPT_SAY = 4;
 const ACCEPT_AWAY = 6;
 // 수락 결말: 성문을 올려다보며 등록을 듣고(0), 돌아서서 이산의 말을 듣고(1), 그다음 줄에서야 걷기 시작한다(2)
@@ -1351,8 +1352,9 @@ export default function ExploreClient() {
   // 걷는 줄은 도착해야 다음으로: 수락은 줄 옆에 닿은 뒤 이산의 말, 빈자리에 들어선 뒤 마지막 줄.
   // 空은 둘 다 계단 앞에 온 뒤 이산의 말, 방문자가 계단참에 들어선 뒤 정적. 그다음의 시간(BEAT_MS)은 도착 뒤의 멈춤이다
   const endGate = (kind: EndKind, step: number) => {
-    if (kind === "accept" && step === ACCEPT_GO + 1) return autoWalk.queue.length === 0;
-    if (kind === "accept" && step === ACCEPT_SAY) return autoWalk.arrived;
+    // 빈자리에 다 들어선 뒤에야 이산의 말로 넘어간다. 예전에는 마지막 구간에 들어서기만 하면 넘어갔고, 프레임이 느린 기기에서는
+    // 다 닿기 전에 다음 줄이 걸음을 멈춰 버려(stopWalk) 결말이 그 자리에서 더 나아가지 않았다
+    if (kind === "accept" && step === ACCEPT_GO + 1) return autoWalk.arrived;
     if (kind === "ghost" && step === GHOST_WALK) return sanWalk.path === GHOST_SAN && sanWalk.arrived && inRect(STAIR_APPROACH, player.pos.x, player.pos.z);
     if (kind === "ghost" && step === GHOST_STEP) return steppedRef.current;
     return true;
@@ -2083,6 +2085,18 @@ export default function ExploreClient() {
       }, 400);
     }
   };
+  // 수락 결말의 '줄로 돌아가기'로 다시 불러온 경우: 첫 화면을 다시 띄우지 않는다 (같은 버튼이 두 번 나오지 않게)
+  useEffect(() => {
+    if (!accepted || !intro) return;
+    try {
+      if (sessionStorage.getItem(TO_LINE_KEY) !== "1") return;
+      sessionStorage.removeItem(TO_LINE_KEY);
+    } catch {
+      return;
+    }
+    enter();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accepted, intro]);
 
   // 퀘스트 화살표의 목표: 매 프레임 플레이어 위치에 따라 고른다
   const questRef = useRef<() => QuestTarget>(() => null);
@@ -2203,6 +2217,7 @@ export default function ExploreClient() {
     );
   }
 
+  const faceView = useMemo(() => ({ drums: face.drums, phase: facePhase, method: face.method }), [face.drums, facePhase, face.method]);
   const sectionMeta = panel?.kind === "section" ? sections.find((s) => s.id === panel.id)! : null;
   // 이산이 걸을 정해진 길: 망원경 장면(접안렌즈로 → 비켜선 자리), 수락 결말(줄 밖), 空 결말(계단참 → 돌아섬).
   // 그 밖에는 평소처럼 따라오거나 경유점에서 기다린다
@@ -2268,7 +2283,7 @@ export default function ExploreClient() {
             secondStatue={secondStatue}
             notesRead={notesRead}
             awake={complete}
-            face={{ drums: face.drums, phase: facePhase, method: face.method }}
+            face={faceView}
             arrived={arrived}
             />
           </WorldBoundary>
@@ -2649,7 +2664,17 @@ export default function ExploreClient() {
                 </small>
                 <div>
                   {ending.kind === "accept" ? (
-                    <button className="btn" data-autofocus onClick={() => location.reload()}>
+                    <button
+                      className="btn"
+                      data-autofocus
+                      onClick={() => {
+                        // 다시 불러온 뒤 첫 화면(같은 '줄로 돌아가기' 버튼)을 건너뛰고 곧바로 줄에 선다
+                        try {
+                          sessionStorage.setItem(TO_LINE_KEY, "1");
+                        } catch {}
+                        location.reload();
+                      }}
+                    >
                       {t(checkpoint.reconnect)}
                     </button>
                   ) : (

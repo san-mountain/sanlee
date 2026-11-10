@@ -123,6 +123,7 @@ export const pause = {
   title: { ko: "일시정지", en: "PAUSED" },
   sub: { ko: "바깥을 한 번 클릭하거나 계속하기를 누르면 멈춘 지점에서 이어집니다.", en: "Click outside or press Continue to pick up where you stopped." },
   resume: { ko: "계속하기", en: "Continue" },
+  tabs: { control: { ko: "조작", en: "Controls" }, sound: { ko: "소리", en: "Sound" }, system: { ko: "시스템", en: "System" } },
   sens: { ko: "마우스 감도", en: "Mouse sensitivity" },
   sensNote: { ko: "마우스를 움직일 때 시점이 돌아가는 속도입니다.", en: "How fast the view turns when you move the mouse." },
   bob: { ko: "걷기 화면 흔들림", en: "Walking camera bob" },
@@ -458,7 +459,7 @@ export const checkpoint = {
   accept: [
     { ko: "기기를 등록했습니다. 다음 방문부터 자동으로 접속됩니다.", en: "Device registered. You will be signed in automatically from your next visit." },
     // 성문을 올려다보던 시점이 천천히 돌아서 큰길과 이산을 본다. 걸음은 다음 줄부터
-    { ko: "…그래. 줄까지는 같이 걸어 줄게.", en: "…Alright. I'll walk with you as far as the line.", say: true },
+    { ko: "…그래. 갈 수 있는 데까지는 같이 걸을게.", en: "…Alright. I'll walk with you as far as they let me.", say: true },
     { ko: "승강장 대기열에 등록됐습니다. 출발 시각은 정해지지 않았습니다.", en: "You are registered for the platform queue. No departure time has been set." },
     { ko: "동행인 이산: 추적 거부 기록으로 등록 불가. 정지 처분합니다. (연결 중단 {a}회 · 복원 {r}회)", en: "Companion San: cannot be registered due to a record of refusing tracking. Suspending. (Disconnected {a} times · restored {r} times)" },
     // 시점이 이산 쪽으로 돌아간다. 이산은 이 두 줄 동안 천천히 돌처럼 굳는다 (방공호에서 처음 만났을 때의 그 모습으로)

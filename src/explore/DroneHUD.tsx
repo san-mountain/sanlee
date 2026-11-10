@@ -30,6 +30,7 @@ export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
     let raf = 0;
     let handled = false;
     let prev = "";
+    let prevW = -1;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let shapeUntil = 0;
     const loop = () => {
@@ -44,11 +45,15 @@ export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
         shapeUntil = now + 2800;
       }
       const key = drone.caught ? "caught" : plazaLit ? "lit" : now < shapeUntil ? "shape" : drone.meter > 0.5 ? "lost" : "";
-      if (wrap.current) {
+      const w = Math.round(key === "shape" ? 0 : drone.meter);
+      if (key !== prev && wrap.current) {
         wrap.current.style.opacity = key ? "1" : "0";
         wrap.current.dataset.state = key;
       }
-      if (fill.current) fill.current.style.width = `${Math.round(key === "shape" ? 0 : drone.meter)}%`;
+      if (w !== prevW && fill.current) {
+        prevW = w;
+        fill.current.style.width = `${w}%`;
+      }
       if (key !== prev) {
         prev = key;
         const s = key ? tRef.current(droneUi[key as keyof typeof droneUi]) : "";

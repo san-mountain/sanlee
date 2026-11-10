@@ -41,6 +41,8 @@ export default function PauseMenu({
   const [free, setFree] = useState(true);
   const [line, setLine] = useState(0);
   const [ask, setAsk] = useState(false);
+  // 설정을 세 묶음으로 나눠 한 번에 한 묶음만 보여 준다 (한 줄로 늘어서 창이 너무 길었다)
+  const [tab, setTab] = useState<"control" | "sound" | "system">("control");
   const [, tick] = useState(0);
   const noteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -75,153 +77,173 @@ export default function PauseMenu({
           <p>{t(pause.sub)}</p>
         </div>
 
-        <div className="pause-rows">
-          <label className="pause-row">
-            <span>{t(pause.sens)}</span>
-            <input
-              type="range"
-              min={0.3}
-              max={2.5}
-              step={0.05}
-              value={sens}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setSens(v);
-                input.sens = v;
-                saveSettings();
-              }}
-            />
-            <small>{sens.toFixed(2)}×</small>
-          </label>
-          <p className="pause-note">{t(pause.sensNote)}</p>
-
-          <div className="pause-row">
-            <span>{t(pause.bob)}</span>
-            <button
-              type="button"
-              className={`switch ${bob ? "on" : ""}`}
-              onClick={() => {
-                input.bob = !bob;
-                setBob(!bob);
-                saveSettings();
-              }}
-            >
-              {t(bob ? pause.on : pause.off)}
+        <div className="pause-tabs" role="tablist">
+          {(["control", "sound", "system"] as const).map((k) => (
+            <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>
+              {t(pause.tabs[k])}
             </button>
-          </div>
+          ))}
+        </div>
 
-          <div className="pause-row">
-            <span>{t(pause.sound)}</span>
-            <button
-              type="button"
-              className={`switch ${sound ? "on" : ""}`}
-              onClick={() => {
-                setSfx(!sound);
-                setSound(!sound);
-                syncBgm();
-                if (!sound) sfx.blip();
-              }}
-            >
-              {t(sound ? pause.on : pause.off)}
-            </button>
-          </div>
-          {sound &&
-            (["music", "sfx", "amb"] as VolKey[]).map((k) => (
-              <label key={k} className="pause-row pause-sub">
-                <span>{t(pause[k])}</span>
+        <div className="pause-rows" role="tabpanel">
+          {tab === "control" && (
+            <>
+              <label className="pause-row">
+                <span>{t(pause.sens)}</span>
                 <input
                   type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={Math.round(vols[k] * 100)}
+                  min={0.3}
+                  max={2.5}
+                  step={0.05}
+                  value={sens}
                   onChange={(e) => {
-                    const v = Number(e.target.value) / 100;
-                    setVol(k, v);
-                    setVols((o) => ({ ...o, [k]: v }));
-                    if (k === "music") syncBgm();
+                    const v = Number(e.target.value);
+                    setSens(v);
+                    input.sens = v;
+                    saveSettings();
                   }}
-                  onPointerUp={() => k === "sfx" && sfx.blip()}
-                  onKeyUp={() => k === "sfx" && sfx.blip()}
                 />
-                <small>{Math.round(vols[k] * 100)}</small>
+                <small>{sens.toFixed(2)}×</small>
               </label>
-            ))}
-          <div className="pause-row">
-            <span>{t(pause.calm)}</span>
-            <button
-              type="button"
-              className={`switch ${calm ? "on" : ""}`}
-              onClick={() => {
-                input.calm = !calm;
-                setCalm(!calm);
-                saveSettings();
-              }}
-            >
-              {t(calm ? pause.on : pause.off)}
-            </button>
-          </div>
-          <p className="pause-note">{t(pause.calmNote)}</p>
+              <p className="pause-note">{t(pause.sensNote)}</p>
 
-          <p className="pause-note">
-            ♪{" "}
-            <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">
-              {t(credits.music)}
-            </a>
-          </p>
-
-          <div className="pause-row">
-            <span>{t(pause.lang)}</span>
-            <LangToggle />
-          </div>
-
-          <div className="pause-row locked">
-            <span>{t(pause.humanity)}</span>
-            <input type="range" min={0} max={100} value={0} disabled readOnly />
-            <small>🔒 {t(pause.humanityNote)}</small>
-          </div>
-
-          <div className="pause-row">
-            <span>{t(pause.freeWill)}</span>
-            <button
-              type="button"
-              className={`switch ${free ? "" : "on"}`}
-              onClick={() => {
-                // 눌러도 잠깐 바뀌었다가 원래대로 돌아온다
-                setFree(false);
-                setTimeout(() => setFree(true), 450);
-                say(t(pause.freeWillNo));
-              }}
-            >
-              {t(free ? pause.off : pause.on)}
-            </button>
-          </div>
-
-          <div className="pause-row">
-            <span>{t(pause.cookies)}</span>
-            <button type="button" className="switch" onClick={() => say(t(pause.cookiesNo))}>
-              ⚙
-            </button>
-          </div>
-
-          {onRestart && (
-            <div className="pause-row">
-              <span>{ask ? t(pause.restartAsk) : t(pause.restart)}</span>
-              {ask ? (
-                <span className="pause-confirm">
-                  <button type="button" className="switch" onClick={() => setAsk(false)}>
-                    {t(pause.restartNo)}
-                  </button>
-                  <button type="button" className="switch danger" onClick={onRestart}>
-                    {t(pause.restartYes)}
-                  </button>
-                </span>
-              ) : (
-                <button type="button" className="switch danger" onClick={() => setAsk(true)}>
-                  ↺
+              <div className="pause-row">
+                <span>{t(pause.bob)}</span>
+                <button
+                  type="button"
+                  className={`switch ${bob ? "on" : ""}`}
+                  onClick={() => {
+                    input.bob = !bob;
+                    setBob(!bob);
+                    saveSettings();
+                  }}
+                >
+                  {t(bob ? pause.on : pause.off)}
                 </button>
+              </div>
+
+              <div className="pause-row">
+                <span>{t(pause.calm)}</span>
+                <button
+                  type="button"
+                  className={`switch ${calm ? "on" : ""}`}
+                  onClick={() => {
+                    input.calm = !calm;
+                    setCalm(!calm);
+                    saveSettings();
+                  }}
+                >
+                  {t(calm ? pause.on : pause.off)}
+                </button>
+              </div>
+              <p className="pause-note">{t(pause.calmNote)}</p>
+
+              <div className="pause-row">
+                <span>{t(pause.lang)}</span>
+                <LangToggle />
+              </div>
+
+            </>
+          )}
+          {tab === "sound" && (
+            <>
+              <div className="pause-row">
+                <span>{t(pause.sound)}</span>
+                <button
+                  type="button"
+                  className={`switch ${sound ? "on" : ""}`}
+                  onClick={() => {
+                    setSfx(!sound);
+                    setSound(!sound);
+                    syncBgm();
+                    if (!sound) sfx.blip();
+                  }}
+                >
+                  {t(sound ? pause.on : pause.off)}
+                </button>
+              </div>
+              {sound &&
+                (["music", "sfx", "amb"] as VolKey[]).map((k) => (
+                  <label key={k} className="pause-row pause-sub">
+                    <span>{t(pause[k])}</span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={Math.round(vols[k] * 100)}
+                      onChange={(e) => {
+                        const v = Number(e.target.value) / 100;
+                        setVol(k, v);
+                        setVols((o) => ({ ...o, [k]: v }));
+                        if (k === "music") syncBgm();
+                      }}
+                      onPointerUp={() => k === "sfx" && sfx.blip()}
+                      onKeyUp={() => k === "sfx" && sfx.blip()}
+                    />
+                    <small>{Math.round(vols[k] * 100)}</small>
+                  </label>
+                ))}
+              <p className="pause-note">
+                ♪{" "}
+                <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">
+                  {t(credits.music)}
+                </a>
+              </p>
+
+            </>
+          )}
+          {tab === "system" && (
+            <>
+              <div className="pause-row locked">
+                <span>{t(pause.humanity)}</span>
+                <input type="range" min={0} max={100} value={0} disabled readOnly />
+                <small>🔒 {t(pause.humanityNote)}</small>
+              </div>
+
+              <div className="pause-row">
+                <span>{t(pause.freeWill)}</span>
+                <button
+                  type="button"
+                  className={`switch ${free ? "" : "on"}`}
+                  onClick={() => {
+                    // 눌러도 잠깐 바뀌었다가 원래대로 돌아온다
+                    setFree(false);
+                    setTimeout(() => setFree(true), 450);
+                    say(t(pause.freeWillNo));
+                  }}
+                >
+                  {t(free ? pause.off : pause.on)}
+                </button>
+              </div>
+
+              <div className="pause-row">
+                <span>{t(pause.cookies)}</span>
+                <button type="button" className="switch" onClick={() => say(t(pause.cookiesNo))}>
+                  ⚙
+                </button>
+              </div>
+
+              {onRestart && (
+                <div className="pause-row">
+                  <span>{ask ? t(pause.restartAsk) : t(pause.restart)}</span>
+                  {ask ? (
+                    <span className="pause-confirm">
+                      <button type="button" className="switch" onClick={() => setAsk(false)}>
+                        {t(pause.restartNo)}
+                      </button>
+                      <button type="button" className="switch danger" onClick={onRestart}>
+                        {t(pause.restartYes)}
+                      </button>
+                    </span>
+                  ) : (
+                    <button type="button" className="switch danger" onClick={() => setAsk(true)}>
+                      ↺
+                    </button>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
