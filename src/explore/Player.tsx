@@ -15,6 +15,9 @@ import type { Box } from "./collide";
 const EYE = 1.65;
 const WALK = 3.4;
 const RUN = 6.2;
+// 발소리 보폭(m): 걷기 3.4m/s ÷ 1.6 ≈ 초당 2.1걸음, 뛰기 6.2m/s ÷ 2.2 ≈ 초당 2.8걸음
+const STRIDE_WALK = 1.6;
+const STRIDE_RUN = 2.2;
 const RADIUS = 0.38;
 const JUMP_V = 6.2;
 const GRAVITY = 19;
@@ -70,7 +73,8 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
   const tmp = useRef(new THREE.Vector3());
   const jumpBuf = useRef(0);
   // 발소리: 화면이 한 번 내려앉을 때마다(걸음마다) 한 번. 점프 뒤에는 착지 소리
-  const stepPh = useRef(0);
+  // 지난 발소리 뒤로 걸은 거리. 보폭만큼 걸을 때마다 한 걸음 (걷기 초당 약 2걸음, 뛰기 약 2.8걸음)
+  const stepDist = useRef(0);
   const wasAir = useRef(false);
 
   useFrame((_, rawDt) => {
@@ -205,13 +209,16 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     const ground = walkArea.floor && walkArea.floor(s.x, s.z) < -0.05 ? "stair" : zone === CITY ? "city" : "bunker";
     if (grounded && wasAir.current) {
       sfx.land(ground);
-      stepPh.current = Math.floor(s.bob / (Math.PI / 2));
+      stepDist.current = 0;
     }
     wasAir.current = !grounded;
-    const ph = Math.floor(s.bob / (Math.PI / 2));
-    if (ph !== stepPh.current) {
-      stepPh.current = ph;
-      if (grounded && moved > dt * 0.5) sfx.step(ground, mv.run || (!!aw && aw.speed > 4));
+    if (grounded && moved > dt * 0.5) {
+      stepDist.current += moved;
+      const stride = mv.run ? STRIDE_RUN : STRIDE_WALK;
+      if (stepDist.current >= stride) {
+        stepDist.current %= stride;
+        sfx.step(ground, mv.run || (!!aw && aw.speed > 4));
+      }
     }
 
     const bobY = input.bob && grounded ? Math.sin(s.bob * 2) * 0.035 * Math.min(1, moved / (dt * 2 + 1e-4)) : 0;

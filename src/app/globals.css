@@ -1256,5 +1256,5 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .gallery-notes { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 6px; }
 .gallery-notes li { font-size: 13px; color: #efe4c4; background: #1a150c; border-left: 2px solid #ffe9a8aa; padding: 6px 10px; word-break: keep-all; }
 .gallery-notes li.hidden { color: #6d6450; border-left-color: #6d645055; font-style: italic; }
-.ending-share { display: block; margin: 8px 0 4px; background: none; border: 0; border-bottom: 1px dashed currentColor; padding: 0; color: #9ff6ff; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; cursor: pointer; }
+.ending-share { display: block; width: fit-content; margin: 10px auto 8px; background: none; border: 0; border-bottom: 1px dashed currentColor; padding: 0; color: #9ff6ff; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; cursor: pointer; }
 .ending-share:hover, .ending-share:focus-visible { color: #fff; }
