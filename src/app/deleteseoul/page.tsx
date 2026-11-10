@@ -3,7 +3,7 @@ import ExploreClient from "@/explore/ExploreClient";
 
 // 결말 화면의 '공유하기'는 ?end=accept|reject|ghost 주소를 건넨다. 그 주소의 미리보기 카드만 결말마다 다르다 (들어오면 평소처럼 처음부터)
 const ENDS = {
-  accept: { ko: "결말: 수락 — 안전과 떨어짐", line: "뒤따라오던 발소리가 더는 들리지 않는다." },
+  accept: { ko: "결말: 수락 — 안전한 이별", line: "뒤따라오던 발소리가 더는 들리지 않는다." },
   reject: { ko: "결말: 거부 — 두 번째 정지 시민", line: "누군가 두 사람 사이에 작은 등 하나를 놓고 갔다." },
   ghost: { ko: "결말: 空 — 다음 한 걸음", line: "구름 아래에 무엇이 있었는지는 어디에도 기록되지 않았다." },
 } as const;
