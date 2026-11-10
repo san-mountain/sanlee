@@ -12,7 +12,7 @@ import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
 import { MUSIC_URL, faceTalk, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
-import { AVENUE_EDGE_Z, BAY, EDGE, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
+import { AVENUE_EDGE_Z, BAY, EDGE, machinePoint, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
 import { sanHold, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -169,6 +169,11 @@ const ACCEPT_WALK = [
 ];
 const ACCEPT_SAN: SanPath = { pts: [[-0.9, -121], [-0.9, -104.6]], yaw: Math.atan2(LINE_SPOT.x + 0.9, LINE_SPOT.z + 104.6), speed: 2.6 };
 // 이산의 마지막 말 동안 바라볼 곳(줄 밖에 선 이산. 결말 글이 얼굴을 가리지 않도록 머리 위를 겨눠 이산이 화면 아래쪽에 오게 한다)과, 그 뒤 다시 바라볼 곳(줄 앞, 성문 너머 대자비)
+// 얼굴이 맞은 뒤 시선이 잠깐 내려가는 곳: 장치 아래쪽 분홍 버튼과 나무 레버 사이
+const CONTROLS_AT = (() => {
+  const v = machinePoint(0, 0.95, 0.22);
+  return { x: v.x, y: v.y, z: v.z };
+})();
 const ACCEPT_LOOK_SAN = { x: -0.9, y: 3.7, z: -104.6 };
 const ACCEPT_LOOK_GATE = { x: LINE_SPOT.x, y: 7, z: -150 };
 
@@ -762,8 +767,19 @@ export default function ExploreClient() {
     faceLater(2600, () => {
       toFacePhase("twist");
       sfx.cityVoice();
-      speak([{ who: faceUi.city, line: faceUi.smileMissing, ms: 3400 }]);
-      faceLater(3400, () => toFacePhase("choice"));
+      // 도시가 분홍 버튼을, 낡은 장치가 나무 레버를 가리키는 동안 시선이 아래쪽 조작부로 내려간다 (얼굴을 올려다보던 눈을 데려간다)
+      speak([
+        { who: faceUi.city, line: faceUi.smileMissing, ms: 2800 },
+        { who: faceUi.city, line: faceUi.offerStandard, ms: 3600 },
+        { who: faceUi.machine, line: faceUi.offerKeep, ms: 3600 },
+      ]);
+      faceLater(2800, () => {
+        toFacePhase("choice");
+        gaze.lookAt = { ...CONTROLS_AT };
+      });
+      faceLater(5600, () => {
+        if (gaze.lookAt && gaze.lookAt.x === CONTROLS_AT.x && gaze.lookAt.z === CONTROLS_AT.z) gaze.lookAt = null;
+      });
     });
   };
   // 표준 미소 적용(분홍 버튼) 또는 원본 얼굴 보존(나무 레버). 어느 쪽이든 이산이 깨어난다
@@ -1959,7 +1975,8 @@ export default function ExploreClient() {
       }
       if (restored && !complete) {
         const it = items.find((i) => i.id === (face.asked ? "face-machine" : "statue"));
-        return it ? { pos: it.pos, label: t(face.asked ? faceUi.quest : faceUi.questAsk) } : null;
+        const label = !face.asked ? faceUi.questAsk : facePhase === "choice" ? faceUi.questChoose : faceUi.quest;
+        return it ? { pos: it.pos, label: t(label) } : null;
       }
       if (!complete) {
         const left = items.filter((i) => i.kind === "section" && !visited.includes(i.section!));
@@ -2184,11 +2201,12 @@ export default function ExploreClient() {
 
       {/* 空 결말: 다리를 걷는 동안은 이산을 따라가라는 안내, 이산이 사라져 계단이 열린 뒤에야 계단 안내 (막힌 계단 앞에서 '내려가기'를 띄우지 않는다) */}
       {active && walkable && (ending?.step === GHOST_WALK || stairsOpen) && <div className="hint">{t(ending?.step === GHOST_WALK ? ui.followHint : ui.stepHint)}</div>}
-      {active && !walkable && near?.id === "face-machine" && !scopeView && <div className="hint">{t(touch ? faceUi.hintTouch : faceUi.hintPc)}</div>}
+      {active && !walkable && near?.kind === "face" && facePhase === "choice" && !scopeView && <div className="hint">{t(touch ? faceUi.hintChooseTouch : faceUi.hintChoosePc)}</div>}
+      {active && !walkable && near?.id === "face-machine" && facePhase !== "choice" && !scopeView && <div className="hint">{t(touch ? faceUi.hintTouch : faceUi.hintPc)}</div>}
       {/* 휴대폰: 장치 앞에서는 화면 가운데에 조준점을 띄운다 (조준점이 가리키는 원통이 빛나고, 행동 버튼이 그 원통을 돌린다) */}
-      {active && touch && near?.kind === "face" && !scopeView && <div className="crosshair crosshair-face" aria-hidden />}
+      {active && touch && near?.kind === "face" && !scopeView && <Reticle on color={near.color} />}
       {active && !walkable && !near && !scopeView && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
-      {active && locked && !scopeView && <div className="crosshair" aria-hidden />}
+      {active && locked && !scopeView && <Reticle on={!!near} color={near?.color} />}
       {active && !scopeView && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
       {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
@@ -2546,5 +2564,32 @@ export default function ExploreClient() {
         </div>
       )}
     </main>
+  );
+}
+
+// 조준점 (globals.css .reticle). 좌표 원점이 화면 가운데
+function Reticle({ on, color }: { on: boolean; color?: string }) {
+  return (
+    <div className={`reticle${on ? " on" : ""}`} style={on && color ? { color } : undefined} aria-hidden>
+      <svg viewBox="-22 -22 44 44">
+        <circle r="1.6" fill="currentColor" />
+        <g className="r-tick" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square">
+          <line x1="0" y1="-5" x2="0" y2="-10" />
+          <line x1="0" y1="5" x2="0" y2="10" />
+          <line x1="-5" y1="0" x2="-10" y2="0" />
+          <line x1="5" y1="0" x2="10" y2="0" />
+        </g>
+        <g className="r-ring" fill="none" stroke="currentColor" strokeWidth="1">
+          <path d="M -9.9 -9.9 A 14 14 0 0 1 9.9 -9.9" />
+          <path d="M 9.9 9.9 A 14 14 0 0 1 -9.9 9.9" />
+        </g>
+        <g className="r-brk" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M -19 -12 V -19 H -12" />
+          <path d="M 12 -19 H 19 V -12" />
+          <path d="M 19 12 V 19 H 12" />
+          <path d="M -12 19 H -19 V 12" />
+        </g>
+      </svg>
+    </div>
   );
 }

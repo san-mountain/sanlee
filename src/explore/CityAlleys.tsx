@@ -9,7 +9,7 @@ import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
 import { ALLEYS, ALLEY_PEOPLE, AVENUE, AVENUE_HOLO, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOOKOUT_PATH, LOTS, PAGODA, SCOPES } from "./zones";
 import { citizenGeometry, roofGeometry } from "./models";
-import { chalkArrowTexture, concreteTexture, signTexture } from "./textures";
+import { chalkArrowTexture, concreteTexture, glowTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
 import { gaze, route } from "./gaze";
@@ -839,20 +839,6 @@ export function StonePagoda() {
 /* ---------- 전망 망원경 ---------- */
 // 어두운 난간 앞에서도 멀리서 찾을 수 있게: 옆에 따뜻한 등 하나, 발밑에 둥근 불빛, 몸체의 금색 테와 렌즈가 은은히 빛난다.
 // 망원경을 보러 가는 단계(scope)에서는 남쪽 망원경 발밑의 고리가 퍼지듯 숨 쉬고, 위로 옅은 빛기둥이 선다 (실제 광원은 쓰지 않는다)
-function glowTexture() {
-  const c = document.createElement("canvas");
-  c.width = c.height = 128;
-  const g = c.getContext("2d")!;
-  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
-  r.addColorStop(0, "rgba(255,255,255,1)");
-  r.addColorStop(0.35, "rgba(255,255,255,0.45)");
-  r.addColorStop(1, "rgba(255,255,255,0)");
-  g.fillStyle = r;
-  g.fillRect(0, 0, 128, 128);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
 const SCOPE_WARM = "#ffc46b";
 export function Scopes({ onTap }: { onTap: TapFn }) {
   // 남쪽 망원경으로 들여다보는 동안(시야가 좁아진 동안)에는 망원경 몸체가 시야를 가리지 않게 감춘다 (눈 자리가 몸체 바로 뒤라서)

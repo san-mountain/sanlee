@@ -16,7 +16,7 @@ import { useNeoPost } from "./neoPost";
 import { NeonEnvironment, useBeam, useLightPool } from "./atmosphere";
 import { addRim } from "./rim";
 import { lite, useQuality } from "./quality";
-import { concreteTexture, signTexture } from "./textures";
+import { concreteTexture, glowTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
 import Jabi from "./Jabi";
@@ -448,8 +448,23 @@ function Depot({ lang }: { lang: Lang }) {
   const ko = lang === "ko";
   const sign = useSign([[ko ? "배송 대기소 7-서" : "COURIER BAY 7-W", 1]], { color: "#cfd6dd", bg: "#14181c", mono: true, w: 512, h: 96 });
   const { x, z, w, d, y0, y1 } = DEPOT;
+  // 처마 밑 형광등과 바닥의 푸른 불빛: 드론 빛을 피해 숨을 자리라는 것이 광장에서도 보이게
+  const glow = useMemo(glowTexture, []);
+  useEffect(() => () => glow.dispose(), [glow]);
   return (
     <group position={[x, 0, z]}>
+      <mesh position={[0, y0 - 0.04, -d / 2 + 0.4]}>
+        <boxGeometry args={[w * 0.7, 0.05, 0.08]} />
+        <meshBasicMaterial color="#d8fbff" toneMapped={false} />
+      </mesh>
+      <mesh position={[0, y1 + 0.005, -d / 2 + 0.01]}>
+        <boxGeometry args={[w, 0.03, 0.03]} />
+        <meshBasicMaterial color="#ffb347" toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 0.03, -0.2]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+        <planeGeometry args={[w * 1.25, d * 1.5]} />
+        <meshBasicMaterial map={glow} color="#7fe9ff" transparent opacity={0.7} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
+      </mesh>
       <mesh position={[0, (y0 + y1) / 2, 0]}>
         <boxGeometry args={[w, y1 - y0, d]} />
         <meshStandardMaterial color="#2c3036" metalness={0.6} roughness={0.5} />

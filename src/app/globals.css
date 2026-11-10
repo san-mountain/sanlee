@@ -368,13 +368,17 @@ img { max-width: 100%; height: auto; display: block; }
   .painting-panel img { max-height: 58vh; }
 }
 .ending-inner { word-break: keep-all; background: radial-gradient(ellipse at center, #000000aa, transparent 70%); padding: 30px 10px; }
-.crosshair { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; z-index: 30; pointer-events: none; }
-.crosshair::before, .crosshair::after { content: ""; position: absolute; background: #ffffffb0; box-shadow: 0 0 4px #000; }
-.crosshair::before { left: 6px; top: 0; width: 2px; height: 14px; }
-.crosshair::after { top: 6px; left: 0; height: 2px; width: 14px; }
-.crosshair-face { width: 26px; height: 26px; margin: -13px 0 0 -13px; border: 2px solid #ffd27acc; border-radius: 50%; box-shadow: 0 0 6px #000, inset 0 0 4px #000; }
-.crosshair-face::before { left: 11px; top: 4px; width: 2px; height: 14px; background: #ffd27a; }
-.crosshair-face::after { top: 11px; left: 4px; height: 2px; width: 14px; background: #ffd27a; }
+/* 조준점: 가운데 점과 네 갈래 눈금, 천천히 도는 바깥 호. 상호작용할 것이 잡히면 모서리 괄호가 조여 들며 그 대상의 색으로 바뀐다.
+   SVG 좌표 원점(0,0)이 정확히 화면 가운데에 오도록 짝수 크기 + translate(-50%). view-box 기준의 transform-origin 0 0이 그 원점이다 */
+.reticle { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); z-index: 30; pointer-events: none; color: #9ff6ff; filter: drop-shadow(0 0 1.5px #000) drop-shadow(0 0 3px color-mix(in srgb, currentColor 60%, transparent)); transition: color .2s; }
+.reticle svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.reticle .r-tick { transition: transform .2s ease-out; transform-box: view-box; transform-origin: 0 0; }
+.reticle .r-brk { opacity: 0; transform: scale(1.5) rotate(45deg); transform-box: view-box; transform-origin: 0 0; transition: opacity .18s, transform .22s ease-out; }
+.reticle .r-ring { opacity: .45; transform-box: view-box; transform-origin: 0 0; animation: reticleSpin 9s linear infinite; }
+.reticle.on .r-brk { opacity: 1; transform: none; }
+.reticle.on .r-tick { transform: scale(.75); }
+.reticle.on .r-ring { opacity: .8; animation-duration: 3s; }
+@keyframes reticleSpin { to { transform: rotate(360deg); } }
 
 /* ---------- explore v3: 설정창(제4의 벽), 퀘스트 화살표, 점프 버튼 ---------- */
 /* 설정창: 도시의 관리 AI가 띄운 시스템 단말. 방문자에게 직접 말을 거는 붉은 문장이 아래에 흐른다 */

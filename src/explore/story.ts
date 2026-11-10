@@ -823,6 +823,12 @@ export const faceUi = {
   // 장치 근처 안내 (PC·휴대폰)
   hintPc: { ko: "원통을 바라보고 E 또는 클릭으로 돌립니다.", en: "Look at a drum and press E or click to turn it." } as L,
   hintTouch: { ko: "원통을 눌러 돌립니다.", en: "Tap a drum to turn it." } as L,
+  // 얼굴이 맞은 뒤: 도시와 장치가 각자 아래쪽 조작부를 가리킨다 (도시는 분홍 버튼을, 낡은 장치는 나무 레버를)
+  offerStandard: { ko: "아래의 분홍 버튼을 누르면 표준 미소가 적용됩니다. 권장 사항입니다.", en: "Press the pink button below to apply the standard smile. Recommended." } as L,
+  offerKeep: { ko: "…원본을 그대로 두려면, 옆의 나무 레버를 당기십시오.", en: "…To keep the original as it is, pull the wooden lever beside it." } as L,
+  questChoose: { ko: "분홍 버튼 또는 나무 레버", en: "Pink button or wooden lever" } as L,
+  hintChoosePc: { ko: "장치 아래쪽의 분홍 버튼(표준 미소)이나 나무 레버(원본 얼굴)를 바라보고 E 또는 클릭.", en: "Look at the pink button (standard smile) or the wooden lever (original face) below and press E or click." } as L,
+  hintChooseTouch: { ko: "장치 아래쪽의 분홍 버튼이나 나무 레버를 누릅니다.", en: "Tap the pink button or the wooden lever below the machine." } as L,
 };
 
 
