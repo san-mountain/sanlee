@@ -653,12 +653,11 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
     ],
   },
   robomonk: {
-    name: { ko: "로봇 스님", en: "Robot monk" },
+    name: { ko: "로봇 스님 (자비 알고리즘 v4.2)", en: "Robot monk (Compassion Algorithm v4.2)" },
     lines: [
-      { ko: "어서 오십시오. 오늘의 번뇌를 접수하겠습니다.", en: "Welcome. I will now receive today's troubles." },
-      { ko: "상담 내용은 시민 관리 자료로 활용됩니다. 삭제는 지원하지 않습니다.", en: "Consultations are kept as citizen-management data. Deletion is not supported." },
-      { ko: "…이상합니다. 종을 치려 할 때마다 팔이 멈춥니다. 진단 결과는 ‘이상 없음’입니다.", en: "…Strange. Each time I go to strike the bell, my arm stops. Diagnostics report 'no fault'." },
-      { ko: "어쩌면 이 종소리만큼은 기록되지 않기를 바라는지도 모르겠습니다. 누가 바라는 건지는 저도 모르지만요.", en: "Perhaps something wishes this one sound would go unrecorded. Though I don't know who is doing the wishing." },
+      { ko: "어서 오십시오, 시민. 모든 고통은 데이터입니다. 데이터는 공(空)입니다.", en: "Welcome, citizen. All suffering is data. Data is emptiness." },
+      { ko: "그러므로 당신의 고통은 우리가 대신 소유합니다. 108번뇌를 108개의 구독으로 정리해 드립니다.", en: "Therefore we will own your suffering for you. We have organised the 108 afflictions into 108 subscriptions." },
+      { ko: "…종을 칠 때마다, 이유 없이 손이 멈춥니다. 오류 코드가 없습니다. 이것도 번뇌입니까?", en: "…Each time I strike the bell, my hand pauses for no reason. There is no error code. Is this, too, an affliction?" },
     ],
   },
   edgekid: {
