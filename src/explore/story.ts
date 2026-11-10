@@ -457,6 +457,8 @@ export const checkpoint = {
   // 마지막 줄 뒤에 잠깐 정적이 흐른 다음 버튼이 나온다
   accept: [
     { ko: "기기를 등록했습니다. 다음 방문부터 자동으로 접속됩니다.", en: "Device registered. You will be signed in automatically from your next visit." },
+    // 성문을 올려다보던 시점이 천천히 돌아서 큰길과 이산을 본다. 걸음은 다음 줄부터
+    { ko: "…그래. 줄까지는 같이 걸어 줄게.", en: "…Alright. I'll walk with you as far as the line.", say: true },
     { ko: "승강장 대기열에 등록됐습니다. 출발 시각은 정해지지 않았습니다.", en: "You are registered for the platform queue. No departure time has been set." },
     { ko: "동행인 이산: 추적 거부 기록으로 등록 불가. 정지 처분합니다. (연결 중단 {a}회 · 복원 {r}회)", en: "Companion San: cannot be registered due to a record of refusing tracking. Suspending. (Disconnected {a} times · restored {r} times)" },
     // 시점이 이산 쪽으로 돌아간다. 이산은 이 두 줄 동안 천천히 돌처럼 굳는다 (방공호에서 처음 만났을 때의 그 모습으로)
@@ -915,7 +917,7 @@ export const galleryUi = {
       hint: { ko: "검문소의 조건을 받아들이면", en: "If you accept the checkpoint's terms" } as L,
     },
     reject: {
-      name: { ko: "거부 — 두 번째 정지 시민", en: "Reject — The second suspended citizen" } as L,
+      name: { ko: "거부 — 기록된 관계", en: "Reject — A recorded bond" } as L,
       line: { ko: "누군가 두 사람 사이에 작은 등 하나를 놓고 갔다.", en: "Someone has left a small lamp between the two of them." } as L,
       status: { ko: "저장되지 않음", en: "Not saved" } as L,
       hint: { ko: "끝까지 거부하면", en: "If you refuse to the end" } as L,
