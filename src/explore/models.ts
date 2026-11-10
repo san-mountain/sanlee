@@ -64,6 +64,18 @@ export function citizenGeometry() {
 
 let visor: THREE.BufferGeometry | null = null;
 // 눈을 가리는 발광 바이저 (시민 모두가 같은 것을 쓴다)
+// 도시의 표준 미소 (줄 선 시민): 이산에게 붙는 것과 같은 크게 올라간 입꼬리와 분홍 볼. 눈은 바이저가 가린다
+let smile: THREE.BufferGeometry | null = null;
+export function smileGeometry() {
+  if (smile) return smile;
+  smile = mergeGeometries([
+    place(new THREE.TorusGeometry(0.036, 0.0055, 5, 16, Math.PI), 0, 1.588, 0.112, 0.25, 0, Math.PI),
+    place(new THREE.CircleGeometry(0.016, 12), -0.056, 1.606, 0.098, 0, -0.55, 0),
+    place(new THREE.CircleGeometry(0.016, 12), 0.056, 1.606, 0.098, 0, 0.55, 0),
+  ])!;
+  return smile;
+}
+
 export function visorGeometry() {
   if (visor) return visor;
   visor = place(new THREE.CylinderGeometry(0.122, 0.122, 0.035, 18, 1, true, -1.1, 2.2), 0, 1.645, 0, 0, 0, 0, [0.95, 1, 1.05]);

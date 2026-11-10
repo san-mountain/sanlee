@@ -116,7 +116,7 @@ type Ending = { kind: EndKind; step: number; a: number; r: number; slots: number
 // 결말 대본의 각 줄이 머무는 시간(ms). 마지막 줄의 시간은 버튼이 나오기 전의 정적이다.
 // 걷는 줄은 시간이 아니라 도착으로 넘어간다 (ENDING_GATE가 참이 된 뒤에야 이 시간이 흐른다)
 const BEAT_MS: Record<EndKind, number[]> = {
-  accept: [3000, 3600, 1200, 2800, 4200, 5200],
+  accept: [3600, 3400, 3600, 1200, 2800, 4200, 5200],
   reject: [2800, 3400, 3600, 3800, 4800, 4400],
   ghost: [3200, 3400, 700, 1800, 5200],
 };
@@ -126,8 +126,11 @@ const BEAT_MS: Record<EndKind, number[]> = {
 const GHOST_WALK = 2;
 const GHOST_STEP = 3;
 // 수락 결말: 이산이 말하는 줄(시점이 이산 쪽으로 돌아가고, 이산이 돌처럼 굳는다)과 시점이 다시 줄 앞으로 돌아가는 줄
-const ACCEPT_SAY = 3;
-const ACCEPT_AWAY = 5;
+const ACCEPT_SAY = 4;
+const ACCEPT_AWAY = 6;
+// 수락 결말: 성문을 올려다보며 등록을 듣고(0), 돌아서서 이산의 말을 듣고(1), 그다음 줄에서야 걷기 시작한다(2)
+const ACCEPT_TURN = 1;
+const ACCEPT_GO = 2;
 // 거부 결말: 장면이 방공호로 넘어가는 줄 (두 번째 정지 시민의 표석). 결말 곡도 이 줄에서 들어온다
 const REJECT_BUNKER = 4;
 // 처음 대자비의 시선 앞에서 이산이 기다리는 자리: 큰길 앞쪽의 방벽(가장 튼튼한 엄폐물) 뒤, 방문자가 설 자리를 비워 두고 오른쪽 끝에 선다
@@ -178,6 +181,9 @@ const CONTROLS_AT = (() => {
 })();
 const ACCEPT_LOOK_SAN = { x: -0.9, y: 3.7, z: -104.6 };
 const ACCEPT_LOOK_GATE = { x: LINE_SPOT.x, y: 7, z: -150 };
+// 수락 직후: 성문 너머 대자비를 올려다본다 / 돌아서서 큰길(줄과 이산이 있는 쪽)을 본다
+const ACCEPT_LOOK_UP = { x: 0, y: 11, z: -150 };
+const ACCEPT_LOOK_BACK = { x: 0.5, y: 2.2, z: -108 };
 
 // ---------- 남쪽 전망대 가는 길 (zones의 LOOKOUT_PATH) ----------
 // 가는 길(OUT)과 돌아오는 길(BACK). BACK은 OUT을 거꾸로 걷는다 (건너는 드론 길 표시도 한 칸씩 옮긴다). 광장에 닿으면 이산은 평소처럼 따라온다
@@ -388,15 +394,18 @@ export default function ExploreClient() {
   // 수락: 이산의 마지막 말("결국 이렇게 되는구나.")에서. 거부: 장면이 방공호로 넘어가는 순간(두 번째 정지 시민)에서.
   // 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 올라서자마자 f-ALL이 아주 작게 시작해 서서히 커지고, 空 결말도 그 곡을 끝까지 잇는다
   const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "fall") : null;
-  const END_CUE: Record<EndKind, number> = { accept: ACCEPT_SAY, reject: REJECT_BUNKER, ghost: 0 };
+  // 수락: 돌아서서 이산의 말("…그래.")을 듣는 줄부터 결말 곡이 겹쳐 들어와 줄까지 걷는 길을 받친다 (예전엔 이산의 마지막 말에서야 들어왔다)
+  const END_CUE: Record<EndKind, number> = { accept: ACCEPT_TURN, reject: REJECT_BUNKER, ghost: 0 };
   const cityTrack: Track = jabiStage ? "jabi" : "ground";
   // 거부 결말: 화면이 하얗게 멎는 순간 듣던 곡도 짧게 끊긴다(정지). 방공호로 넘어가면 결말 곡이 천천히 들어온다
   const frozenQuiet = ending?.kind === "reject" && flash;
   const track: Track | null =
     leaving
       ? null
+      : gallery
+        ? "empty"
       : intro
-        ? gallery || seenCount === 3 ? "empty" : null
+        ? seenCount === 3 ? "empty" : null
       : ending
         ? ending.step >= END_CUE[ending.kind] ? endTrack : frozenQuiet ? null : zone === "city" ? cityTrack : null
         : zone === "city" && ghost ? "fall" : zone === "bunker" ? "bunker" : cityTrack;
@@ -1315,8 +1324,8 @@ export default function ExploreClient() {
   // 걷는 줄은 도착해야 다음으로: 수락은 줄 옆에 닿은 뒤 이산의 말, 빈자리에 들어선 뒤 마지막 줄.
   // 空은 둘 다 계단 앞에 온 뒤 이산의 말, 방문자가 계단참에 들어선 뒤 정적. 그다음의 시간(BEAT_MS)은 도착 뒤의 멈춤이다
   const endGate = (kind: EndKind, step: number) => {
-    if (kind === "accept" && step === 2) return autoWalk.queue.length === 0;
-    if (kind === "accept" && step === 3) return autoWalk.arrived;
+    if (kind === "accept" && step === ACCEPT_GO + 1) return autoWalk.queue.length === 0;
+    if (kind === "accept" && step === ACCEPT_SAY) return autoWalk.arrived;
     if (kind === "ghost" && step === GHOST_WALK) return sanWalk.path === GHOST_SAN && sanWalk.arrived && inRect(STAIR_APPROACH, player.pos.x, player.pos.z);
     if (kind === "ghost" && step === GHOST_STEP) return steppedRef.current;
     return true;
@@ -1389,9 +1398,24 @@ export default function ExploreClient() {
           localStorage.setItem(END_KEY, "accept");
         } catch {}
         gaze.mood = "calm";
+        // 곧바로 걷지 않는다: 등록 방송을 들으며 성문 너머 대자비를 올려다본다 (살짝 당겨 보며)
+        gaze.lookAt = { ...ACCEPT_LOOK_UP };
+        gaze.zoom = 0.86;
+        sfx.cityVoice();
+      }
+      // 천천히 돌아서 큰길과 이산 쪽을 본다 (이산의 말)
+      if (step === ACCEPT_TURN) {
+        gaze.zoom = 1;
+        gaze.lookAt = { ...ACCEPT_LOOK_BACK };
+      }
+      if (step === ACCEPT_GO) {
+        gaze.lookAt = null;
         // 플레이 중 몸을 숨기던 그 줄로: 큰길 가운데를 따라 줄 옆까지 걸어가 빈자리에 들어서서 가만히 선다.
-        // 점마다 도착하면 다음 점으로 (Player가 autoWalk.queue를 차례로 꺼낸다). 이산은 줄 밖에 남는다
-        walkPath(ACCEPT_WALK);
+        // 점마다 도착하면 다음 점으로 (Player가 autoWalk.queue를 차례로 꺼낸다). 이산은 줄 밖에 남는다.
+        // 이미 지나온 점(검문소 앞에서 성문 쪽으로 되돌아가는 점)은 건너뛴다: 뒤로 갔다 다시 돌아서는 일이 없게
+        const z = player.pos.z;
+        const i = ACCEPT_WALK.findIndex((p) => p.z > z + 1);
+        walkPath(ACCEPT_WALK.slice(Math.max(0, i)));
       }
       // 이산의 마지막 말: 줄에 선 채 고개를 돌려 줄 밖의 이산을 본다 (이산은 그동안 돌처럼 굳는다). 발소리가 끊기는 줄에서 다시 앞을 본다
       if (step === ACCEPT_SAY) {
@@ -2157,7 +2181,9 @@ export default function ExploreClient() {
   // 그 밖에는 평소처럼 따라오거나 경유점에서 기다린다
   const sanPath: SanPath | undefined =
     ending?.kind === "accept"
-      ? ACCEPT_SAN
+      ? ending.step >= ACCEPT_TURN
+        ? ACCEPT_SAN
+        : undefined
       : ending?.kind === "ghost"
         ? ending.step >= GHOST_WALK
           ? ending.step >= GHOST_STEP && sanGoes

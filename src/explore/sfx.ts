@@ -462,6 +462,11 @@ export const sfx = {
     } else blip();
   },
   // 대사가 써지는 동안 몇 글자마다: 목소리 소리의 아주 작은 조각
+  // 줄 선 시민들이 일제히 돌아볼 때: 여럿의 목이 거의 같은 순간 꺾이는 마른 소리 몇 개와 낮게 깔리는 숨
+  stare: () => {
+    for (let i = 0; i < 6; i++) noise(0.03, { vol: 0.05, from: 2400 + Math.random() * 1200, to: 900, q: 4, at: i * 0.018 + Math.random() * 0.012 });
+    tone(68, 0.9, { type: "sine", f2: 52, vol: 0.06, attack: 0.08, at: 0.05 });
+  },
   tick: (k: Voice) => {
     const r = 0.92 + Math.random() * 0.16;
     if (k === "san") tone(660 * r, 0.04, { vol: 0.03, attack: 0.006 });

@@ -150,7 +150,9 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       dy = Math.atan2(Math.sin(dy), Math.cos(dy));
       s.yaw += dy * k;
       if (aw.pitch !== undefined) s.pitch += (aw.pitch - s.pitch) * Math.min(1, dt * 1.2);
-      const st = Math.min(ad, aw.speed * dt);
+      // 길 쪽으로 다 돌아서기 전에는 천천히 (등 뒤로 미끄러지듯 움직이지 않게): 돈 만큼 속도가 붙는다
+      const turning = ad > 0.6 && !aw.faceYaw ? Math.max(0.12, Math.cos(Math.min(Math.abs(dy), Math.PI / 2))) : 1;
+      const st = Math.min(ad, aw.speed * dt * turning);
       p.x = ad > 1e-4 ? s.x + (ax / ad) * st : s.x;
       p.z = ad > 1e-4 ? s.z + (az / ad) * st : s.z;
       // 다 왔으면 다음 점으로. 마지막 점이면 도착을 알린다 (그 점의 방향은 계속 맞춘다)

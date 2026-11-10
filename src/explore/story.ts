@@ -37,8 +37,8 @@ export const ui = {
   recordSource: { ko: "2026 · 이산의 개인 웹사이트에서 옮겨 온 기록", en: "2026 · carried over from San Lee's personal website" },
   goBack: { ko: "웹사이트로 돌아가기", en: "Back to the website" },
   hintPc: { ko: "화면을 클릭하면 마우스로 둘러볼 수 있습니다.", en: "Click the screen to look around with the mouse." },
-  hintLocked: { ko: "WASD 이동 · Shift 달리기 전환 · Space 점프 · E/클릭 상호작용 · Esc 일시정지", en: "WASD move · Shift toggle run · Space jump · E/click interact · Esc pause" },
-  hintIntroPc: { ko: "마우스 시점 조절 · WASD 이동 · Shift 달리기 전환 · Space 점프 · E/클릭 상호작용", en: "Mouse to look · WASD move · Shift toggle run · Space jump · E/click interact" },
+  hintLocked: { ko: "WASD 이동 · Shift 또는 W 두 번 달리기 · Space 점프 · E/클릭 상호작용 · Esc 일시정지", en: "WASD move · Shift or double-tap W to run · Space jump · E/click interact · Esc pause" },
+  hintIntroPc: { ko: "마우스 시점 조절 · WASD 이동 · Shift 또는 W 두 번 달리기 · Space 점프 · E/클릭 상호작용", en: "Mouse to look · WASD move · Shift or double-tap W to run · Space jump · E/click interact" },
   hintTouch: { ko: "왼쪽 조이스틱으로 이동 · 화면을 드래그해 둘러보기 · ⤒ 점프", en: "Left stick to move · drag the screen to look around · ⤒ jump" },
   open: { ko: "열기", en: "Open" },
   talk: { ko: "이야기 듣기", en: "Listen" },
@@ -121,7 +121,7 @@ export const backupUi = {
 // Esc 일시정지 창
 export const pause = {
   title: { ko: "일시정지", en: "PAUSED" },
-  sub: { ko: "계속하면 멈춘 지점에서 이어집니다.", en: "Continue to pick up where you stopped." },
+  sub: { ko: "바깥을 한 번 클릭하거나 계속하기를 누르면 멈춘 지점에서 이어집니다.", en: "Click outside or press Continue to pick up where you stopped." },
   resume: { ko: "계속하기", en: "Continue" },
   sens: { ko: "마우스 감도", en: "Mouse sensitivity" },
   sensNote: { ko: "마우스를 움직일 때 시점이 돌아가는 속도입니다.", en: "How fast the view turns when you move the mouse." },
@@ -457,6 +457,8 @@ export const checkpoint = {
   // 마지막 줄 뒤에 잠깐 정적이 흐른 다음 버튼이 나온다
   accept: [
     { ko: "기기를 등록했습니다. 다음 방문부터 자동으로 접속됩니다.", en: "Device registered. You will be signed in automatically from your next visit." },
+    // 성문을 올려다보던 시점이 천천히 돌아서 큰길과 이산을 본다. 걸음은 다음 줄부터
+    { ko: "…그래. 줄까지는 같이 걸어 줄게.", en: "…Alright. I'll walk with you as far as the line.", say: true },
     { ko: "승강장 대기열에 등록됐습니다. 출발 시각은 정해지지 않았습니다.", en: "You are registered for the platform queue. No departure time has been set." },
     { ko: "동행인 이산: 추적 거부 기록으로 등록 불가. 정지 처분합니다. (연결 중단 {a}회 · 복원 {r}회)", en: "Companion San: cannot be registered due to a record of refusing tracking. Suspending. (Disconnected {a} times · restored {r} times)" },
     // 시점이 이산 쪽으로 돌아간다. 이산은 이 두 줄 동안 천천히 돌처럼 굳는다 (방공호에서 처음 만났을 때의 그 모습으로)
@@ -872,7 +874,7 @@ export const replayUi = {
 // 기록은 지워졌어도 무언가 남아 있다는 느낌만. 결말을 설명하지 않는다
 export const echoLines: Record<string, Line> = {
   keeper: { ko: "…이상하네. 처음 보는 얼굴인데, 어디서 본 것 같아.", en: "…Strange. I've never seen your face, but it feels like I have." },
-  r07: { ko: "처음 뵙는 분인데, 바퀴가 먼저 이쪽으로 돌았습니다. 기록에 없는 일입니다.", en: "We haven't met, yet my wheels turned toward you first. That isn't in any record." },
+  r07: { ko: "처음 뵙는 분인데… 이상하게 낯설지가 않습니다. 기록에는 없는데요.", en: "We've never met… yet you don't feel like a stranger. There's nothing in my records." },
   monk: { ko: "지운다고 다 지워지지는 않지. 자네 발소리가 그렇네.", en: "Erasing doesn't erase everything. Your footsteps say as much." },
   kid: { ko: "이 그림, 전에 보여 준 적 있어요? …아닌가.", en: "Did I show you this drawing before? …Maybe not." },
   radio: { ko: "지상 주파수에서 가끔 너 같은 사람 얘기가 들려. 아니, 내가 잘못 들었겠지.", en: "Sometimes the surface frequency talks about someone like you. No, I must have misheard." },
@@ -915,7 +917,7 @@ export const galleryUi = {
       hint: { ko: "검문소의 조건을 받아들이면", en: "If you accept the checkpoint's terms" } as L,
     },
     reject: {
-      name: { ko: "거부 — 두 번째 정지 시민", en: "Reject — The second suspended citizen" } as L,
+      name: { ko: "거부 — 기록된 관계", en: "Reject — A recorded bond" } as L,
       line: { ko: "누군가 두 사람 사이에 작은 등 하나를 놓고 갔다.", en: "Someone has left a small lamp between the two of them." } as L,
       status: { ko: "저장되지 않음", en: "Not saved" } as L,
       hint: { ko: "끝까지 거부하면", en: "If you refuse to the end" } as L,
@@ -935,6 +937,6 @@ export const TRACKS: { title: string; where: L; need?: "accept" | "reject" | "gh
   { title: "Sti그ma", where: { ko: "대자비의 큰길", en: "The Great Mercy's avenue" } },
   { title: "Habitual Suffering", where: { ko: "수락", en: "Accept" }, need: "accept" },
   { title: "an open ended promise", where: { ko: "거부", en: "Reject" }, need: "reject" },
-  { title: "f-ALL", where: { ko: "기억으로 깨어난 길, 空", en: "The path woken by memory, 空" }, need: "ghost" },
-  { title: "空", where: { ko: "기억된 결말", en: "Remembered endings" } },
+  { title: "f-ALL", where: { ko: "기록을 지우고 돌아온 지상, 空 결말", en: "The surface after erasing your record, the 空 ending" }, need: "ghost" },
+  { title: "空", where: { ko: "기억된 결말 화면, 세 결말을 다 본 뒤의 첫 화면", en: "This screen, and the title screen after all three endings" } },
 ];
