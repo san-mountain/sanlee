@@ -11,7 +11,9 @@ export type Zone = "bunker" | "city";
 
 export type Interactable = {
   id: string;
-  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup" | "face";
+  kind: "section" | "painting" | "statue" | "npc" | "door" | "checkpoint" | "backup" | "face" | "note";
+  // 쪽지 번호 (NOTES의 순서)
+  note?: number;
   pos: THREE.Vector3; // NPC처럼 움직이는 것은 컴포넌트가 이 값을 갱신
   radius: number;
   label: L;
@@ -75,6 +77,15 @@ export const PAINTINGS = imageWorks.slice(0, SLOTS.length).map(({ w, i }, k) => 
 
 // 끊긴 백업 단말: 지상에서 만든 백업이 흘러드는 곳. 신호가 안 닿는 여기서만 지울 수 있다
 export const BACKUP_RACK = { pos: [11.3, 0, -7.6] as Vec3, rotY: -Math.PI / 2 };
+
+// 지워진 사람들이 방공호 곳곳에 남긴 쪽지 다섯 장. rotY = 종이가 향한 쪽, flat = 바닥·침대에 눕혀 놓음
+export const NOTES: { pos: Vec3; rotY: number; flat?: boolean }[] = [
+  { pos: [-6.5, 1.5, 6.615], rotY: 0 }, // 입구 쪽 왼편 기둥
+  { pos: [6.5, 1.3, -14.615], rotY: Math.PI }, // 무전수 쪽 기둥 뒷면
+  { pos: [-10.75, 0.53, 12.25], rotY: 0, flat: true }, // 잠든 사람의 간이침대 머리맡
+  { pos: [11.985, 1.2, 11.4], rotY: -Math.PI / 2 }, // R-07이 닦는 구석의 벽
+  { pos: [7.6, 1.15, -19.585], rotY: 0 }, // 아이의 분필 그림 옆 벽
+];
 
 export const PILLARS: Vec3[] = [
   [-6.5, 0, 6],
@@ -171,6 +182,7 @@ export const BUNKER: ZoneDef = {
     bnpc("dj", { ko: "음향 담당 진성", en: "Jinseong, on sound" }),
     bnpc("sleeper", { ko: "잠든 사람", en: "Sleeper" }, 0.6, 2.4),
     { id: "exit", kind: "door", to: "city", pos: v(0, 1.6, -19), radius: 3.6, label: { ko: "지상 출구", en: "Surface exit" } },
+    ...NOTES.map<Interactable>((n, i) => ({ id: `note-${i}`, kind: "note", note: i, pos: v(n.pos[0], n.pos[1], n.pos[2]), radius: 1.7, label: { ko: "쪽지", en: "Note" }, color: "#f3ead2" })),
   ],
 };
 

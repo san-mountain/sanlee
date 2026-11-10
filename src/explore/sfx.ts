@@ -57,6 +57,36 @@ function ac(): AudioContext | null {
 }
 
 type Wave = OscillatorType;
+// 소리가 나는 자리 (spatial 안에서만): 좌우로 나뉘고 멀수록 작아진다
+let dest: AudioNode | null = null;
+export function spatial(listener: { x: number; z: number; yaw: number }, src: { x: number; z: number }, play: () => void) {
+  const c = ac();
+  if (!c || !master) return;
+  const dx = src.x - listener.x;
+  const dz = src.z - listener.z;
+  const d = Math.hypot(dx, dz);
+  // 시점의 오른쪽 방향 (yaw 0이면 −z를 본다)
+  const rx = Math.cos(listener.yaw);
+  const rz = -Math.sin(listener.yaw);
+  const pan = d < 0.5 ? 0 : Math.max(-1, Math.min(1, ((dx * rx + dz * rz) / d) * 0.85));
+  const g = c.createGain();
+  g.gain.value = 1 / (1 + Math.max(0, d - 1.5) * 0.18);
+  let node: AudioNode = g;
+  if (c.createStereoPanner) {
+    const p = c.createStereoPanner();
+    p.pan.value = pan;
+    p.connect(g);
+    node = p;
+  }
+  g.connect(master);
+  dest = node;
+  try {
+    play();
+  } finally {
+    dest = null;
+  }
+  setTimeout(() => g.disconnect(), 4000);
+}
 // 음 하나: 주파수 f(끝 f2로 미끄러짐), 길이 d초, 시작 지연 at초
 function tone(f: number, d: number, { type = "sine" as Wave, f2 = f, vol = 0.5, at = 0, attack = 0.005 } = {}) {
   const c = ac();
@@ -70,7 +100,7 @@ function tone(f: number, d: number, { type = "sine" as Wave, f2 = f, vol = 0.5, 
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  o.connect(g).connect(master);
+  o.connect(g).connect(dest ?? master);
   o.start(t);
   o.stop(t + d + 0.02);
 }
@@ -102,7 +132,7 @@ function noise(d: number, { vol = 0.3, at = 0, from = 1800, to = 300, q = 0.8 } 
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + Math.min(d * 0.15, 0.03 + d * 0.1));
   g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  src.connect(bp).connect(g).connect(master);
+  src.connect(bp).connect(g).connect(dest ?? master);
   src.start(t, Math.random() * 2);
   src.stop(t + d + 0.02);
 }
@@ -438,6 +468,11 @@ export const sfx = {
     else if (k === "robot") tone((1200 + Math.random() * 600) * r, 0.025, { type: "square", vol: 0.025 });
     else if (k === "radio") noise(0.04, { vol: 0.04, from: 3000, to: 2000, q: 3 });
     else if (k === "person") tone((360 + Math.random() * 80) * r, 0.04, { type: "triangle", vol: 0.04, attack: 0.006 });
+  },
+  // 로봇 스님의 목탁: 마른 나무 두 번
+  moktak: () => {
+    tone(860, 0.07, { type: "triangle", f2: 640, vol: 0.2, attack: 0.002 });
+    tone(860, 0.07, { type: "triangle", f2: 640, vol: 0.16, at: 0.42, attack: 0.002 });
   },
   // 망원경: 초점 고리가 돌아가며 렌즈가 당겨진다 / 눈을 떼면 풀린다
   scopeIn: () => {

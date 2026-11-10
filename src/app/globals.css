@@ -1229,3 +1229,32 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .forget-city.lit { animation: forgetLit .4s steps(1) 6; }
 @keyframes forgetLit { 0% { box-shadow: 0 0 6px #22f0ff, 0 0 22px #ff2bd6; color: #fff; } 50% { box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .forget-hint { animation: none; } }
+
+/* 결말 모음 (첫 화면): 세 칸과 백진성의 수록곡 */
+.intro-gallery { display: inline-block; margin: 2px 0 6px; padding: 0; background: none; border: 0; border-bottom: 1px dashed #ffe14d88; color: #ffe14d; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; cursor: pointer; }
+.intro-gallery:hover, .intro-gallery:focus-visible { color: #fff; border-bottom-color: #fff; }
+.gallery-wrap { z-index: 51; }
+.intro .panel.gallery { width: min(620px, 92vw); max-height: 92vh; overflow-y: auto; }
+.gallery-sub { color: var(--dim); font-size: 13px; margin: 2px 0 14px; }
+.gallery-endings { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 10px; }
+.gallery-endings li { border: 1px solid #ff2bd655; padding: 10px 12px; background: #12061ccc; }
+.gallery-endings li b { display: block; font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: #fff; }
+.gallery-endings li p { margin: 6px 0 4px; font-size: 14px; color: #e4dcf2; word-break: keep-all; }
+.gallery-endings li small { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: #b9aed6; }
+.gallery-endings li.end-accept { border-color: #22f0ff66; }
+.gallery-endings li.end-reject { border-color: #ff2a3d66; }
+.gallery-endings li.end-ghost { border-color: #ffffff55; }
+.gallery-endings li.unseen { border-style: dashed; border-color: #ffffff2a; background: #0a0612cc; }
+.gallery-endings li.unseen b { color: #8d84a3; }
+.gallery-endings li.unseen .g-hint { color: #8d84a3; font-style: italic; }
+.gallery-tracks-title { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; color: var(--pink); margin: 0 0 6px; }
+.gallery-tracks { list-style: none; padding: 0; margin: 0 0 6px; font-family: var(--mono); font-size: 12px; }
+.gallery-tracks li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid #22f0ff1a; }
+.gallery-tracks li span { color: #fff; }
+.gallery-tracks li small { color: var(--dim); text-align: right; }
+.gallery-tracks li.hidden span { color: #5d5672; letter-spacing: -.05em; }
+.gallery-notes { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 6px; }
+.gallery-notes li { font-size: 13px; color: #efe4c4; background: #1a150c; border-left: 2px solid #ffe9a8aa; padding: 6px 10px; word-break: keep-all; }
+.gallery-notes li.hidden { color: #6d6450; border-left-color: #6d645055; font-style: italic; }
+.ending-share { display: block; margin: 8px 0 4px; background: none; border: 0; border-bottom: 1px dashed currentColor; padding: 0; color: #9ff6ff; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; cursor: pointer; }
+.ending-share:hover, .ending-share:focus-visible { color: #fff; }

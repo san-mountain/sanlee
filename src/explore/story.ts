@@ -88,6 +88,8 @@ export const ui = {
   // 그 앞, 이산이 먼저 계단참으로 걸어가는 동안
   followHint: { ko: "이산을 따라 다리 건너기", en: "Follow San across the bridge" },
   notRecorded: { ko: "이 결말은 저장되지 않습니다.", en: "This ending is not saved." },
+  share: { ko: "결말 공유하기", en: "Share this ending" },
+  shared: { ko: "링크를 복사했습니다", en: "Link copied" },
   welcomeB: { ko: "다시 오셨군요.", en: "Welcome back." },
   // 남쪽 망원경으로 볼 때: 방문자가 보는 것만 적는다 (이산이 본 것은 이산의 말로만 나온다)
   scopeSees: { ko: "구름에 가려 아래는 보이지 않는다.", en: "Clouds hide everything below." },
@@ -861,3 +863,74 @@ export const replayUi = {
   woke: { ko: "……또 와 줬네. 이번엔 같이 갈 수 있을까?", en: "……You came back. Can we go together this time?" } as L,
   quest: { ko: "굳은 이산에게 가기", en: "Go to the frozen San" } as L,
 };
+
+// 다시 온 방문자 (결말을 하나라도 본 기기): 이산이 깨어나기 전, 몇몇이 첫마디 다음에 기억하는 듯한 한 줄을 흘린다.
+// 기록은 지워졌어도 무언가 남아 있다는 느낌만. 결말을 설명하지 않는다
+export const echoLines: Record<string, Line> = {
+  keeper: { ko: "…이상하네. 처음 보는 얼굴인데, 어디서 본 것 같아.", en: "…Strange. I've never seen your face, but it feels like I have." },
+  r07: { ko: "처음 뵙는 분입니다. 그런데 제 바퀴가 당신 쪽으로 먼저 돌았습니다. 기록에는 없는 일입니다.", en: "We have not met. Yet my wheels turned toward you first. That is not in any record." },
+  monk: { ko: "지운다고 다 지워지지는 않지. 그대 발소리가 그렇네.", en: "Erasing doesn't erase everything. Your footsteps say as much." },
+  kid: { ko: "이 그림, 전에 보여 준 적 있어요? …아닌가.", en: "Did I show you this drawing before? …Maybe not." },
+  radio: { ko: "지상 주파수에서 가끔 너 같은 사람 얘기가 들려. 아니, 내가 잘못 들었겠지.", en: "Sometimes the surface frequency talks about someone like you. No, I must have misheard." },
+};
+
+// 방공호의 쪽지 다섯 장 (지워진 사람들이 남긴 것). 이 기기에 모인다: 도시의 기록이 아니라서 기록 지우기로도 지워지지 않는다
+export const notes: L[] = [
+  { ko: "엄마 생일은 3월 9일. 도시가 지워도 내가 기억하면 된다.", en: "Mum's birthday is March 9. The city can erase it. I'll remember." },
+  { ko: "동의서에 서명하지 않은 날, 문패에서 내 이름이 사라졌다. 여기 다시 적는다. ■■■.", en: "The day I didn't sign the consent form, my name vanished from my door. I'm writing it here again: ■■■." },
+  { ko: "꿈은 기록되지 않는다. 그래서 여기 사람들은 잠을 많이 잔다.", en: "Dreams aren't recorded. That's why people down here sleep so much." },
+  { ko: "R-07에게. 바닥 닦아 줘서 고마워. 친구 목록에 내 이름도 넣어 줘. 이름은 네가 지어 줘.", en: "To R-07. Thanks for cleaning the floor. Put me on your friends list too. You can choose my name." },
+  { ko: "구름 아래로 내려간 언니가 돌아오면 이 벽 그림부터 보여 줄 거야.", en: "When my sister comes back from below the clouds, I'll show her this wall first." },
+];
+export const notesUi = {
+  title: { ko: "쪽지 {n}/5", en: "Note {n}/5" } as L,
+  found: { ko: "방공호의 쪽지 {n}/5", en: "Notes from the shelter {n}/5" } as L,
+  // 다섯 장을 다 모았을 때 (지문)
+  all: { ko: "쪽지 다섯 장. 도시의 기록 어디에도 없는 이름들이 이제 당신에게 있다.", en: "Five notes. Names that appear nowhere in the city's records are now with you." } as L,
+  missing: { ko: "아직 찾지 못한 쪽지", en: "A note not yet found" } as L,
+};
+
+// 결말 모음 (첫 화면의 버튼). 도시의 저장과 따로, 이 기기가 '기억'하는 결말. 기록 지우기로도 지워지지 않는다
+export const galleryUi = {
+  open: { ko: "기억된 결말 {n}/3", en: "Remembered endings {n}/3" } as L,
+  title: { ko: "기억된 결말", en: "Remembered endings" } as L,
+  sub: {
+    ko: "도시는 하나만 저장했습니다. 나머지는 당신이 기억합니다.",
+    en: "The city saved only one. You remember the rest.",
+  } as L,
+  unknown: { ko: "아직 보지 못한 결말", en: "An ending not yet seen" } as L,
+  close: { ko: "닫기", en: "Close" } as L,
+  tracks: { ko: "수록곡 · 음악 백진성", en: "Tracks · Music by Jinseong Baek" } as L,
+  hidden: { ko: "아직 들리지 않은 곡", en: "Not heard yet" } as L,
+  listen: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" } as L,
+  endings: {
+    accept: {
+      name: { ko: "수락 — 안전과 떨어짐", en: "Accept — Safety, and apart" } as L,
+      line: { ko: "뒤따라오던 발소리가 더는 들리지 않는다.", en: "The footsteps that followed you can no longer be heard." } as L,
+      status: { ko: "도시에 저장됨", en: "Saved by the city" } as L,
+      hint: { ko: "검문소의 조건을 받아들이면", en: "If you accept the checkpoint's terms" } as L,
+    },
+    reject: {
+      name: { ko: "거부 — 두 번째 정지 시민", en: "Reject — The second suspended citizen" } as L,
+      line: { ko: "누군가 두 사람 사이에 작은 등 하나를 놓고 갔다.", en: "Someone has left a small lamp between the two of them." } as L,
+      status: { ko: "저장되지 않음", en: "Not saved" } as L,
+      hint: { ko: "끝까지 거부하면", en: "If you refuse to the end" } as L,
+    },
+    ghost: {
+      name: { ko: "空 — 다음 한 걸음", en: "空 — The next step" } as L,
+      line: { ko: "구름 아래에 무엇이 있었는지는 어디에도 기록되지 않았다.", en: "What lay beneath the clouds was never recorded anywhere." } as L,
+      status: { ko: "기록 없음", en: "No record" } as L,
+      hint: { ko: "도시 밖에서 무언가를 지우고 돌아오면", en: "If you erase something outside the city and come back" } as L,
+    },
+  },
+};
+// 백진성의 곡: 어디서 나오는지. need = 그 결말을 봐야 제목이 보인다
+export const TRACKS: { title: string; where: L; need?: "accept" | "reject" | "ghost" }[] = [
+  { title: "D!mple", where: { ko: "방공호", en: "The shelter" } },
+  { title: "0x48 0x4F 0x50 0x45", where: { ko: "지상", en: "The surface" } },
+  { title: "Sti그ma", where: { ko: "대자비의 큰길", en: "The Great Mercy's avenue" } },
+  { title: "Habitual Suffering", where: { ko: "수락", en: "Accept" }, need: "accept" },
+  { title: "an open ended promise", where: { ko: "거부", en: "Reject" }, need: "reject" },
+  { title: "f-ALL", where: { ko: "기억으로 깨어난 길, 空", en: "The path woken by memory, 空" }, need: "ghost" },
+  { title: "空", where: { ko: "기억된 결말", en: "Remembered endings" } },
+];
