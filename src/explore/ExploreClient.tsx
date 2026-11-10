@@ -276,6 +276,8 @@ export default function ExploreClient() {
   const [ghost, setGhost] = useState(false);
   // 空 결말에서 방문자가 계단 쪽으로 실제로 걸어 나갔는지
   const [stepped, setStepped] = useState(false);
+  // 空 결말: 이산이 먼저 내려가 사라져 계단이 열렸는지 (그 전에는 계단 안내를 띄우지 않는다)
+  const [stairsOpen, setStairsOpen] = useState(false);
   // 空 결말: 이산이 먼저 계단을 내려가기 시작했는가
   const [sanGoes, setSanGoes] = useState(false);
   const steppedRef = useRef(false);
@@ -1293,7 +1295,10 @@ export default function ExploreClient() {
     if (!walkable || ending?.step !== GHOST_STEP) return;
     const iv = setInterval(() => {
       if (steppedRef.current) return;
-      if (walkArea.rects === GHOST_RECTS && sanWalk.path === GHOST_DOWN && sanWalk.arrived) walkArea.rects = [...GHOST_RECTS, STAIR_RECT];
+      if (walkArea.rects === GHOST_RECTS && sanWalk.path === GHOST_DOWN && sanWalk.arrived) {
+        walkArea.rects = [...GHOST_RECTS, STAIR_RECT];
+        setStairsOpen(true);
+      }
       const x = player.pos.x;
       if (!inRect(STAIR_RECT, x, player.pos.z) || x < STAIR_END) return;
       steppedRef.current = true;
@@ -1395,6 +1400,19 @@ export default function ExploreClient() {
     }, 300);
     return () => clearInterval(iv);
   }, [sanWithYou, jabiStage, say]);
+  // 空 경로: 대자비 구역에 처음 들어서면 이산이 스쳐 가듯 한 줄 (대자비가 둘을 보지 못한다. 방공호에서 한 짐작이 확인되는 순간)
+  // 지상에 올라올 때마다 한 번. 창이 떠 있거나 멈춰 있으면 닫힌 뒤에
+  const blindSaid = useRef(false);
+  useEffect(() => {
+    blindSaid.current = false;
+    if (zone !== "city" || !ghost || ending) return;
+    const iv = setInterval(() => {
+      if (blindSaid.current || !gaze.inZone || panelRef.current || pausedRef.current) return;
+      blindSaid.current = true;
+      say(sanCue.blind, 4600);
+    }, 300);
+    return () => clearInterval(iv);
+  }, [zone, ghost, ending, say]);
   // 이산 곁에 와서 처음 숨었을 때 한 줄
   useEffect(() => {
     if (!sanWithYou) return;
@@ -1707,6 +1725,7 @@ export default function ExploreClient() {
     gaze.mood = "";
     steppedRef.current = false;
     setStepped(false);
+    setStairsOpen(false);
     setSanGoes(false);
     walkArea.floor = null;
     setSecondStatue(false);
@@ -2061,7 +2080,8 @@ export default function ExploreClient() {
         </button>
       )}
 
-      {active && walkable && <div className="hint">{t(ui.stepHint)}</div>}
+      {/* 空 결말: 다리를 걷는 동안은 이산을 따라가라는 안내, 이산이 사라져 계단이 열린 뒤에야 계단 안내 (막힌 계단 앞에서 '내려가기'를 띄우지 않는다) */}
+      {active && walkable && (ending?.step === GHOST_WALK || stairsOpen) && <div className="hint">{t(ending?.step === GHOST_WALK ? ui.followHint : ui.stepHint)}</div>}
       {active && !walkable && near?.id === "face-machine" && !scopeView && <div className="hint">{t(touch ? faceUi.hintTouch : faceUi.hintPc)}</div>}
       {/* 휴대폰: 장치 앞에서는 화면 가운데에 조준점을 띄운다 (조준점이 가리키는 원통이 빛나고, 행동 버튼이 그 원통을 돌린다) */}
       {active && touch && near?.kind === "face" && !scopeView && <div className="crosshair crosshair-face" aria-hidden />}
@@ -2370,11 +2390,11 @@ export default function ExploreClient() {
                 </small>
                 <div>
                   {ending.kind === "accept" ? (
-                    <button className="btn" onClick={() => location.reload()}>
+                    <button className="btn" data-autofocus onClick={() => location.reload()}>
                       {t(checkpoint.reconnect)}
                     </button>
                   ) : (
-                    <button className="btn" onClick={restart}>
+                    <button className="btn" data-autofocus onClick={restart}>
                       {t(checkpoint.again)}
                     </button>
                   )}

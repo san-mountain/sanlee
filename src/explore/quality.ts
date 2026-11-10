@@ -1,25 +1,18 @@
 import { useSyncExternalStore } from "react";
 
-// 화면 효과 단계. 프레임이 떨어지면 PerformanceMonitor가 한 단계씩 낮춘다.
-// high: 빛 번짐 + 젖은 도로 반사 / mid: 빛 번짐만 / low: 효과 없음
-export type Quality = "high" | "mid" | "low";
+// 화면 효과 단계. 프레임이 떨어지면 PerformanceMonitor가 한 단계 낮춘다.
+// mid: 빛 번짐 / low: 효과 없음. 고화질(젖은 도로 반사·4배 안티에일리어싱) 단계는 없앴다: 노트북에서 끊겼다
+export type Quality = "mid" | "low";
 
-const ORDER: Quality[] = ["low", "mid", "high"];
-// 비교·테스트용: 주소에 ?fx=high 를 붙이면 단계 고정, ?fx=off 는 효과 끔
+const ORDER: Quality[] = ["low", "mid"];
+// 비교·테스트용: 주소에 ?fx=off 를 붙이면 효과를 끈 채로 고정
 const forced: Quality | null = (() => {
   if (typeof location === "undefined") return null;
-  const v = new URLSearchParams(location.search).get("fx");
-  return v === "high" || v === "mid" ? v : v === "off" ? "low" : null;
+  return new URLSearchParams(location.search).get("fx") === "off" ? "low" : null;
 })();
-// 휴대폰·태블릿(손가락 입력): 처음부터 가볍게 시작한다. 젖은 도로 반사 없이(mid), 해상도는 낮게, 장식 조명과 비를 줄인다.
-// 데스크톱은 그대로 high에서 시작하고, 프레임이 떨어질 때만 낮춘다
-export const lite: boolean = (() => {
-  if (typeof window === "undefined") return false;
-  if (new URLSearchParams(location.search).get("lite") === "0") return false;
-  if (new URLSearchParams(location.search).get("lite") === "1") return true;
-  return window.matchMedia?.("(pointer: coarse)").matches || /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-})();
-let current: Quality = forced ?? (lite ? "mid" : "high");
+// 성능 우선 설정: 모든 기기(PC·노트북 포함)가 가벼운 설정으로 그린다. 해상도는 낮게, 장식 조명과 비를 줄인다
+export const lite = true;
+let current: Quality = forced ?? "mid";
 const subs = new Set<() => void>();
 
 export function setQuality(q: Quality) {
@@ -41,7 +34,7 @@ export function useQuality() {
       return () => subs.delete(f);
     },
     () => current,
-    () => "high" as Quality
+    () => "mid" as Quality
   );
 }
 

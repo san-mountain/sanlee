@@ -10,7 +10,6 @@ import City from "./City";
 import SanNPC, { type SanPath } from "./SanNPC";
 import Labels, { type LabelEls } from "./Labels";
 import Effects from "./Effects";
-import { lite } from "./quality";
 import { CITY, FROZEN_SAN, ZONES, type Interactable, type Zone } from "./zones";
 import Statue from "./Statue";
 import { Tap } from "./parts";
@@ -40,7 +39,7 @@ const POPUP = [{ key: "popup", pos: [1.7, 4.5, 1.6] as [number, number, number],
 export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanPath, hideSan, secondStatue, arrived, awake, face, frozenSan, sanStart }: Props) {
   const complete = !!awake;
   return (
-    <Canvas dpr={lite ? [1, 1.25] : [1, 1.75]} gl={{ antialias: !lite, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
+    <Canvas dpr={[1, 1.25]} gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
       <Player zone={ZONES[zone]} zoneKey={zone} onNear={onNear} arrived={arrived} />
       <Suspense fallback={null}>
         {zone === "bunker" ? (

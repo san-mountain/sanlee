@@ -94,6 +94,8 @@ export const ui = {
   foundEndings: { ko: "저장된 결말 {n}개", en: "Saved endings: {n}" },
   // 空 결말: 조작을 돌려받은 뒤 화면 아래의 작은 안내
   stepHint: { ko: "계단으로 걸어 내려가기", en: "Walk down the stairs" },
+  // 그 앞, 이산이 먼저 계단참으로 걸어가는 동안
+  followHint: { ko: "이산을 따라 다리 건너기", en: "Follow San across the bridge" },
   notRecorded: { ko: "이 결말은 저장되지 않습니다.", en: "This ending is not saved." },
   welcomeB: { ko: "다시 오셨군요.", en: "Welcome back." },
   // 남쪽 망원경으로 볼 때: 방문자가 보는 것만 적는다 (이산이 본 것은 이산의 말로만 나온다)
@@ -355,6 +357,8 @@ export const sanCue = {
   avenueDecide: { ko: "난 아래로 가 보고 싶어. 같이 갈 거면 이쪽이야.", en: "I want to go down. If you're coming, it's this way." } as L,
   agree: { ko: "고마워. 검문소까지 같이 가자.", en: "Thank you. Let's go to the checkpoint together." } as L,
   later: { ko: "응. 여기서 기다릴게.", en: "Okay. I'll wait here." } as L,
+  // 기록을 지우고 돌아온 空 경로: 대자비 구역에 처음 들어섰는데 대자비가 둘을 보지 못할 때 (방공호에서 한 짐작이 맞았다)
+  blind: { ko: "…정말 우릴 못 보네. 우린 이제 어디에도 적혀 있지 않은 거야.", en: "…It really can't see us. We're not written down anywhere anymore." } as L,
 };
 
 // 기록을 지우고 돌아온 방문자와의 재회. 방문자는 말하지 않는다: 망원경을 보던 몸짓으로만 기억을 건넨다.
