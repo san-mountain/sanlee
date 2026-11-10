@@ -214,6 +214,8 @@ export default function ExploreClient() {
   const [near, setNear] = useState<Interactable | null>(null);
   const [tracked, setTracked] = useState(false);
   const [fade, setFade] = useState<string | null>(null);
+  const fadeRef = useRef(fade);
+  fadeRef.current = fade;
   const [notice, setNotice] = useState<L | null>(null);
   const [ending, setEnding] = useState<Ending>(null);
   // 거부 결말: 화면이 하얗게 멎은 동안
@@ -607,9 +609,15 @@ export default function ExploreClient() {
     closePanelRef.current();
     say(sanCue.later, 2600);
   };
+  // 망원경 뒤의 대화: "방금 본 건 내 기억이야." 다음에 얼굴(표준 미소 / 원본)에 따라 한 줄이 끼어든다
+  const afterLines = (): Line[] => {
+    const m = faceRef.current.method;
+    if (!m || ghostRef.current) return scopeScene.after;
+    return [...scopeScene.after.slice(0, 3), faceTalk.scope[m], ...scopeScene.after.slice(3)];
+  };
   const afterPanel = (): Panel => {
     const full = !heardRef.current;
-    const lines = full ? [...scopeScene.after, ...scopeScene.decide] : scopeScene.decide;
+    const lines = full ? [...afterLines(), ...scopeScene.decide] : scopeScene.decide;
     const last = lines.length - 1;
     return {
       kind: "dialog",
@@ -721,7 +729,14 @@ export default function ExploreClient() {
           befriend([r07Friend.answer]);
         },
       });
-    return { kind: "dialog", name: n.name, lines: n.lines, step: 0, choices };
+    // 이산이 깨어난 뒤에는 첫 줄만 바뀐다 (청소한 받침대 이야기)
+    const fm = faceRef.current.method;
+    const first = complete && !ghost && fm && n.face ? n.face[fm] : complete ? n.after : undefined;
+    const lines = first ? [...first, ...n.lines.slice(1)] : n.lines;
+    choices.forEach((c) => {
+      if (c.at > 0) c.at = lines.length - 1;
+    });
+    return { kind: "dialog", name: n.name, lines, step: 0, choices };
   };
 
   // 얼굴 복원 장치의 원통 하나를 한 칸 돌린다. 세 부분이 다 맞으면 장치가 잠기고, 도시가 표준 미소를 내민다
@@ -920,7 +935,11 @@ export default function ExploreClient() {
             setPanel({ kind: "dialog", name: n.name, lines: patrolNoRecord, step: 0 });
             break;
           }
-          const base = complete && n.after ? n.after : n.lines;
+          // 진행에 따라 말이 바뀐다: 기억으로 깨어난 이산과 함께 / 아래로 가기로 한 뒤 / 이산이 깨어난 뒤 / 처음
+          const fm = faceRef.current.method;
+          const byPhase = ghost && n.ghost ? n.ghost : phase === "descent" && n.descent ? n.descent : complete && n.after ? n.after : n.lines;
+          // 이산이 깨어난 뒤에는 첫마디 다음에 얼굴 맞추기에서 고른 것에 대한 한마디가 붙는다 (기억으로 깨어난 길에서는 고른 적이 없다)
+          const base = complete && !ghost && fm && n.face ? [byPhase[0], ...n.face[fm], ...byPhase.slice(1)] : byPhase;
           // 한 번이라도 보관 처리됐다면 관리인은 알아본다
           const bk = getBackup();
           const lines = it.npc === "keeper" && bk.deaths > 0 ? [keeperAfterDeath, ...base] : base;
@@ -1156,14 +1175,22 @@ export default function ExploreClient() {
   useEffect(() => () => clearTimeout(noticeTimer.current), []);
   // 지상에서는 관리 AI 방송이 주기적으로 흘러나옴. 대화·망원경·검문소·결말·이산의 말·다른 안내가 떠 있는 동안에는 건너뛴다
   const quietRef = useRef(false);
+  // 이산의 얼굴(표준 미소 / 원본)을 도시가 알아본다: 지상에 올라설 때마다 첫 방송으로 한 번
+  const faceCastRef = useRef<L | null>(null);
+  faceCastRef.current = complete && !ghost && !accepted && face.method ? faceTalk.broadcast[face.method] : null;
   useEffect(() => {
     if (zone !== "city" || ending) return;
     let i = 0;
+    let faceSaid = false;
     let hide: ReturnType<typeof setTimeout>;
     const show = () => {
       if (quietRef.current || drone.lit >= 0 || drone.caught) return;
       clearTimeout(noticeTimer.current);
-      setNotice(announcements[i++ % announcements.length]);
+      const fc = faceCastRef.current;
+      if (fc && !faceSaid) {
+        faceSaid = true;
+        setNotice(fc);
+      } else setNotice(announcements[i++ % announcements.length]);
       hide = setTimeout(() => setNotice(null), 6500);
     };
     const first = setTimeout(show, 3500);
@@ -1229,7 +1256,7 @@ export default function ExploreClient() {
   useEffect(() => {
     if (panel?.kind !== "dialog" || panel.scene !== "after") return;
     scopeRef.current.step = panel.step;
-    if (panel.step >= scopeScene.after.length) heardRef.current = true;
+    if (panel.step >= afterLines().length) heardRef.current = true;
   }, [panel]);
   const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
@@ -1404,7 +1431,7 @@ export default function ExploreClient() {
   const speaking = () => runtime.now() < speakUntil.current;
   useEffect(() => () => clearTimeout(sayTimer.current), []);
   // 처음 시선 구역: 대자비 소개가 닫힌 뒤 이산이 첫 엄폐물 뒤로 가서 기다린다 (탭마다 한 번 말하고, 재시도 때는 말없이 다시 기다린다)
-  const cueRef = useRef({ cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0 });
+  const cueRef = useRef({ cover: false, wait: false, back: false, plaza: false, shelter: false, surface: false, surfaceAt: 0, avenueAt: 0 });
   const sanWithYou = zone === "city" && complete && talked && !ghost && !accepted && !ending;
   const sanWithYouRef = useRef(sanWithYou);
   sanWithYouRef.current = sanWithYou;
@@ -1606,7 +1633,8 @@ export default function ExploreClient() {
         }
         if (m.looked && phaseRef.current !== "scope") say(scopeScene.again, 2600);
       }
-      if (pausedRef.current || panelRef.current || drone.caught || gaze.intro) return;
+      // 구역을 오가는 화면 전환 중에는 (아직 앞 구역의 자리에 있으므로) 길 위의 말을 꺼내지 않는다
+      if (pausedRef.current || panelRef.current || drone.caught || gaze.intro || fadeRef.current) return;
       const now = runtime.now();
       const px = player.pos.x;
       const pz = player.pos.z;
@@ -1619,6 +1647,15 @@ export default function ExploreClient() {
         presetSweep(0, 1.6);
         // 길 안내 팝업 (시야는 붙잡지 않는다. 이산의 말이 아니라 대자비 소개 같은 안내 창)
         if (!panelRef.current && !endingRef.current) setPanel({ kind: "route" });
+      }
+      // 처음 지상에 올라서면 (배전실 문 앞, 망원경 단계에서 이번 방문에 한 번): 바닥의 분필 화살표를 가리킨다
+      if (ph === "scope" && withSan && !c.surface) {
+        if (!c.surfaceAt) {
+          if (Math.hypot(px - CITY.spawn.pos[0], pz - CITY.spawn.pos[2]) < 6) c.surfaceAt = now;
+        } else if (now - c.surfaceAt > 10500 && !speaking()) {
+          c.surface = true;
+          say(sanCue.surface, 4200);
+        }
       }
       if (ph === "scope" && withSan && !c.shelter && underRoof(px, pz)) {
         c.shelter = true;
@@ -1736,7 +1773,7 @@ export default function ExploreClient() {
     sanHold.at = null;
     walkArea.rects = null;
     gaze.gateOpen = false;
-    cueRef.current = { cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0 };
+    cueRef.current = { cover: false, wait: false, back: false, plaza: false, shelter: false, surface: false, surfaceAt: 0, avenueAt: 0 };
     cpRef.current = { seen: false, talked: false };
     metRef.current = {};
     clearTimeout(beatTimer.current);
