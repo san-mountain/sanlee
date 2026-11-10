@@ -7,10 +7,24 @@ San Lee 포트폴리오 사이트.
 
 ## 내용 고치기
 
-- 소개, 작업, 연락처: `src/data/site.ts` (한국어/영어 쌍으로)
-- 시: `src/data/poems.ts` (원문 한국어)
+시·일기·작업은 사이트의 **`/admin`** 에서 쓰고 고치고 올릴 수 있습니다(사이트 주인만, 비밀번호 로그인).
+저장하면 이 저장소의 main에 커밋이 하나 생기고, Vercel이 사이트를 다시 만들어 1~2분 뒤 반영됩니다.
+
+- 시: `src/content/poems.json` (원문 한국어, 최근 것이 위)
+- 일기: `src/content/diary.json` (오래된 것이 위). `/admin`에서 `{중괄호}`로 감싼 곳은 저장할 때 `⟦글자 수⟧`로 바뀌어 원문이 남지 않아요
+- 작업: `src/content/works.json` + 사진 `public/works/*.webp` (최근 것이 위)
+- 소개, 연락처, 화면 문구: `src/data/site.ts` (한국어/영어 쌍으로)
 - 동상 스토리와 대사: `src/explore/story.ts`
-- 작업 사진: `public/works/` 에 넣고 `site.ts`의 `image`에 경로 적기
+
+### /admin 설정 (한 번만)
+
+Vercel 프로젝트 > Settings > Environment Variables 에 두 값을 넣고(Production) 다시 배포합니다.
+
+- `ADMIN_PASSWORD`: 관리 화면 비밀번호. 다른 곳에 쓰지 않는 긴 문장으로(8자 이상)
+- `GITHUB_TOKEN`: GitHub > Settings > Developer settings > Fine-grained tokens 에서 만든 토큰.
+  Repository access는 `san-mountain/sanlee` 하나만, Permissions는 **Contents: Read and write** 하나만
+
+비밀번호나 토큰을 바꾸면 모든 기기의 로그인이 풀립니다.
 
 ## 실행
 
