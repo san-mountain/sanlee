@@ -124,7 +124,12 @@ function apply() {
 export function playBgm(t: Track | null, out = FADE) {
   if (t === want) return;
   want = t;
-  if (t && sfxOn()) chan(t);
+  if (t && sfxOn()) {
+    // 다 꺼져서 멈춰 있던 곡은 다시 들어올 때 처음부터 튼다 (방공호·지상에 다시 들어서면 곡이 새로 시작된다).
+    // 아직 줄어드는 중에 되돌아오면 끊기지 않게 그대로 이어서 다시 키운다
+    const ch = chan(t);
+    if (ch && ch.el.paused && ch.el.readyState > 0) ch.el.currentTime = START[t] ?? 0;
+  }
   outFade = out;
   apply();
   outFade = FADE;

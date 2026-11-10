@@ -1260,3 +1260,12 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .gallery-notes li.hidden { color: #6d6450; border-left-color: #6d645055; font-style: italic; }
 .ending-share { display: block; width: fit-content; margin: 10px auto 8px; background: none; border: 0; border-bottom: 1px dashed currentColor; padding: 0; color: #9ff6ff; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; cursor: pointer; }
 .ending-share:hover, .ending-share:focus-visible { color: #fff; }
+
+/* 휴대폰: 대사·안내방송·저장 알림이 조이스틱과 점프(행동) 버튼에 겹치지 않게.
+   세로 화면은 두 조작부 위로 올리고, 가로 화면은 두 조작부 사이의 가운데 폭에만 놓는다 */
+.explore-root.is-touch .notice { bottom: 186px; }
+.explore-root.is-touch .save-toast { bottom: 196px; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .explore-root.is-touch .notice { bottom: 34px; width: min(520px, calc(100vw - 400px)); }
+  .explore-root.is-touch .save-toast { bottom: 34px; max-width: calc(100vw - 400px); }
+}

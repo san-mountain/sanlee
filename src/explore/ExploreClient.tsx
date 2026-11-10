@@ -2220,6 +2220,7 @@ export default function ExploreClient() {
     leaving ? "logging-out" : "",
     beat === "sit" ? "reunion-sit" : "",
     input.calm ? "calm-fx" : "",
+    touch ? "is-touch" : "",
   ].join(" ");
 
   return (
