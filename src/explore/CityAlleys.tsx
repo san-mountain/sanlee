@@ -837,11 +837,42 @@ export function StonePagoda() {
 }
 
 /* ---------- 전망 망원경 ---------- */
+// 어두운 난간 앞에서도 멀리서 찾을 수 있게: 옆에 따뜻한 등 하나, 발밑에 둥근 불빛, 몸체의 금색 테와 렌즈가 은은히 빛난다.
+// 망원경을 보러 가는 단계(scope)에서는 남쪽 망원경 발밑의 고리가 퍼지듯 숨 쉬고, 위로 옅은 빛기둥이 선다 (실제 광원은 쓰지 않는다)
+function glowTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const g = c.getContext("2d")!;
+  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, "rgba(255,255,255,1)");
+  r.addColorStop(0.35, "rgba(255,255,255,0.45)");
+  r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r;
+  g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const SCOPE_WARM = "#ffc46b";
 export function Scopes({ onTap }: { onTap: TapFn }) {
   // 남쪽 망원경으로 들여다보는 동안(시야가 좁아진 동안)에는 망원경 몸체가 시야를 가리지 않게 감춘다 (눈 자리가 몸체 바로 뒤라서)
   const south = useRef<THREE.Group>(null);
-  useFrame(() => {
+  const glow = useMemo(glowTexture, []);
+  useLayoutEffect(() => () => glow.dispose(), [glow]);
+  const beacon = useRef<THREE.Group>(null);
+  const ring = useRef<THREE.Mesh>(null);
+  const ringMat = useRef<THREE.MeshBasicMaterial>(null);
+  const column = useRef<THREE.MeshBasicMaterial>(null);
+  useFrame((st) => {
     if (south.current) south.current.visible = gaze.zoom === 1;
+    const on = route.phase === "scope";
+    if (beacon.current) beacon.current.visible = on;
+    if (!on) return;
+    // 고리가 망원경 발밑에서 바깥으로 퍼지며 옅어진다 (2초에 한 번)
+    const k = (st.clock.elapsedTime % 2) / 2;
+    if (ring.current) ring.current.scale.setScalar(0.6 + k * 1.6);
+    if (ringMat.current) ringMat.current.opacity = 0.7 * (1 - k);
+    if (column.current) column.current.opacity = 0.16 + Math.sin(st.clock.elapsedTime * 2) * 0.05;
   });
   return (
     <group>
@@ -850,12 +881,17 @@ export function Scopes({ onTap }: { onTap: TapFn }) {
           <group ref={i === 0 ? south : undefined} position={s.pos} rotation={[0, s.rotY, 0]}>
             <mesh position={[0, 0.55, 0]}>
               <cylinderGeometry args={[0.06, 0.12, 1.1, 8]} />
-              <meshStandardMaterial color="#2a2c31" metalness={0.8} roughness={0.4} />
+              <meshStandardMaterial color="#3a3d44" metalness={0.7} roughness={0.4} emissive="#3a2a10" emissiveIntensity={0.6} />
             </mesh>
             <group position={[0, 1.25, 0]} rotation={[-0.15, 0, 0]}>
               <mesh>
                 <boxGeometry args={[0.42, 0.28, 0.32]} />
-                <meshStandardMaterial color="#d8b030" metalness={0.4} roughness={0.5} />
+                <meshStandardMaterial color="#e2b836" metalness={0.4} roughness={0.45} emissive="#b8860b" emissiveIntensity={0.55} />
+              </mesh>
+              {/* 금색 테 */}
+              <mesh position={[0, 0.145, 0]}>
+                <boxGeometry args={[0.44, 0.015, 0.34]} />
+                <meshBasicMaterial color="#ffe08a" toneMapped={false} />
               </mesh>
               {[-0.1, 0.1].map((x) => (
                 <mesh key={x} position={[x, 0.02, 0.3]} rotation={[Math.PI / 2, 0, 0]}>
@@ -863,7 +899,47 @@ export function Scopes({ onTap }: { onTap: TapFn }) {
                   <meshStandardMaterial color="#222" metalness={0.8} roughness={0.3} />
                 </mesh>
               ))}
+              {/* 바깥을 향한 대물렌즈: 하늘빛이 비친다 */}
+              <mesh position={[0, 0.0, -0.165]}>
+                <circleGeometry args={[0.1, 20]} />
+                <meshBasicMaterial color="#8fe3ff" toneMapped={false} side={THREE.DoubleSide} />
+              </mesh>
             </group>
+            {/* 옆의 낮은 등: 기둥과 따뜻한 갓 */}
+            <group position={[1.15, 0, -0.45]}>
+              <mesh position={[0, 1.1, 0]}>
+                <cylinderGeometry args={[0.035, 0.05, 2.2, 6]} />
+                <meshStandardMaterial color="#2a2c31" metalness={0.8} roughness={0.4} />
+              </mesh>
+              <mesh position={[0, 2.28, 0]}>
+                <coneGeometry args={[0.22, 0.16, 12, 1, true]} />
+                <meshStandardMaterial color="#2a2c31" metalness={0.8} roughness={0.4} side={THREE.DoubleSide} />
+              </mesh>
+              <mesh position={[0, 2.18, 0]}>
+                <sphereGeometry args={[0.09, 12, 8]} />
+                <meshBasicMaterial color="#fff0c8" toneMapped={false} />
+              </mesh>
+              <sprite position={[0, 2.18, 0]} scale={[1.2, 1.2, 1]}>
+                <spriteMaterial map={glow} color={SCOPE_WARM} transparent opacity={0.6} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
+              </sprite>
+            </group>
+            {/* 발밑의 둥근 불빛 */}
+            <mesh position={[0.5, 0.03, -0.2]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+              <planeGeometry args={[4.2, 4.2]} />
+              <meshBasicMaterial map={glow} color={SCOPE_WARM} transparent opacity={0.42} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
+            </mesh>
+            {i === 0 && (
+              <group ref={beacon} visible={false}>
+                <mesh ref={ring} position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+                  <ringGeometry args={[0.9, 1.0, 40]} />
+                  <meshBasicMaterial ref={ringMat} color="#ffd98a" transparent depthWrite={false} toneMapped={false} />
+                </mesh>
+                <mesh position={[0, 4, 0]}>
+                  <cylinderGeometry args={[0.35, 0.6, 8, 16, 1, true]} />
+                  <meshBasicMaterial ref={column} color={SCOPE_WARM} transparent opacity={0.16} depthWrite={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} toneMapped={false} />
+                </mesh>
+              </group>
+            )}
           </group>
         </Tap>
       ))}

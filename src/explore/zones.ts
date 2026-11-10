@@ -537,6 +537,8 @@ export const CITY: ZoneDef = {
     { x: -CITY_NPCS.vendor.pos[0], z: CITY_NPCS.vendor.pos[2], r: 0.4 },
     ...(["grandma", "robomonk", "edgekid", "courier"] as const).map((k) => ({ x: CITY_NPCS[k].pos[0], z: CITY_NPCS[k].pos[2], r: 0.45 })),
     ...SCOPES.map((s) => ({ x: s.pos[0], z: s.pos[2], r: 0.4 })),
+    // 망원경 옆 등 기둥 (CityAlleys Scopes의 [1.15, -0.45]를 망원경 방향으로 돌린 자리)
+    ...SCOPES.map((s) => ({ x: s.pos[0] + 1.15 * Math.cos(s.rotY) - 0.45 * Math.sin(s.rotY), z: s.pos[2] - 1.15 * Math.sin(s.rotY) - 0.45 * Math.cos(s.rotY), r: 0.2 })),
     // 배송 대기소 기둥 넷
     ...[-1, 1].flatMap((sx) => [-1, 1].map((sz) => ({ x: DEPOT.x + sx * (DEPOT.w / 2 - 0.15), z: DEPOT.z + sz * (DEPOT.d / 2 - 0.15), r: 0.12 }))),
     ...ALLEY_PEOPLE.map((p) => ({ x: p.x, z: p.z, r: 0.32 })),
