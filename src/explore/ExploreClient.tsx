@@ -2668,7 +2668,7 @@ export default function ExploreClient() {
                 <div>
                   {ending.kind === "accept" ? (
                     <button
-                      className="btn"
+                      className="btn primary"
                       data-autofocus
                       onClick={() => {
                         // 다시 불러온 뒤 첫 화면(같은 '줄로 돌아가기' 버튼)을 건너뛰고 곧바로 줄에 선다
@@ -2685,7 +2685,8 @@ export default function ExploreClient() {
                       {t(checkpoint.again)}
                     </button>
                   )}
-                  <Link className="btn primary" href="/" onClick={logout}>
+                  {/* 수락 결말은 '줄로 돌아가기'가 주 버튼이고 웹사이트로는 보조 버튼이다 */}
+                  <Link className={ending.kind === "accept" ? "btn" : "btn primary"} href="/" onClick={logout}>
                     {t(ending.kind === "accept" ? ui.toPortfolio : checkpoint.toPortfolio)}
                   </Link>
                 </div>
