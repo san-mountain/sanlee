@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
+import * as THREE from "three";
 import { Canvas, useThree } from "@react-three/fiber";
 import type { Lang, SectionId } from "@/data/site";
 import type { FaceView } from "./faceRuntime";
@@ -11,6 +12,7 @@ import SanNPC, { type SanPath } from "./SanNPC";
 import Labels, { type LabelEls } from "./Labels";
 import Effects from "./Effects";
 import { useRenderScale } from "./quality";
+import { warm } from "./runtime";
 import { CITY, FROZEN_SAN, ZONES, type Interactable, type Zone } from "./zones";
 import Statue from "./Statue";
 import { Tap } from "./parts";
@@ -45,6 +47,54 @@ function Probe() {
   return null;
 }
 
+// 장면을 미리 데운다. three.js는 물체를 처음 그리는 순간에야 셰이더를 만들고 모양·그림을 그래픽 카드에 올린다.
+// 그래서 구역에 들어선 직후나 처음 보는 쪽으로 고개를 돌릴 때마다 화면이 멈췄다.
+// 구역이 바뀌면 검은 화면 뒤에서 시야 밖의 것까지 한 번에 그려, 셰이더·모양·그림을 전부 올려 둔다
+function Warm({ zone }: { zone: Zone }) {
+  const scene = useThree((s) => s.scene);
+  useEffect(() => {
+    const id = ++warm.id;
+    warm.ready = false;
+    let off = false;
+    const frame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+    const count = () => {
+      let n = 0;
+      scene.traverse(() => void n++);
+      return n;
+    };
+    (async () => {
+      // 그림처럼 늦게 불러오는 것들이 다 놓일 때까지: 물체 수가 잠깐(여덟 프레임) 그대로면 다 놓인 것으로 본다 (길어도 4초)
+      const t0 = performance.now();
+      let last = -1;
+      let same = 0;
+      while (!off && same < 8 && performance.now() - t0 < 4000) {
+        await frame();
+        const n = count();
+        same = n === last ? same + 1 : 0;
+        last = n;
+      }
+      if (off) return;
+      // 시야 밖의 것까지 몇 프레임 동안 그리게 한다. 평소와 똑같은 경로(후처리 포함)로 그려야 실제로 쓰일 셰이더가 만들어진다:
+      // 따로 미리 컴파일하면 조건이 달라 다른 셰이더가 만들어지고, 정작 쓸 것은 화면이 열린 뒤에 다시 만들어졌다
+      const culled: THREE.Object3D[] = [];
+      scene.traverse((o) => {
+        if (o.frustumCulled) {
+          culled.push(o);
+          o.frustumCulled = false;
+        }
+      });
+      for (let k = 0; k < 3; k++) await frame();
+      culled.forEach((o) => (o.frustumCulled = true));
+      await frame();
+      if (warm.id === id) warm.ready = true;
+    })();
+    return () => {
+      off = true;
+    };
+  }, [zone, scene]);
+  return null;
+}
+
 const POPUP = [{ key: "popup", pos: [1.7, 4.5, 1.6] as [number, number, number], scaleAt: 6, maxScale: 1 }];
 
 export default function World({ zone, lang, visited, onTap, onNear, onTracked, labelEls, sanPath, sanStone, hideSan, secondStatue, notesRead, arrived, awake, face, frozenSan, sanStart }: Props) {
@@ -76,6 +126,7 @@ export default function World({ zone, lang, visited, onTap, onNear, onTracked, l
         )}
       </Suspense>
       <Probe />
+      <Warm zone={zone} />
       <Effects />
       <Labels anchors={zone === "bunker" && !complete ? POPUP : []} els={labelEls} />
     </Canvas>

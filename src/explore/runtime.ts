@@ -20,6 +20,10 @@ export const runtime = {
   },
 };
 
+// 장면 준비 상태: 구역이 바뀌면 World의 Warm이 셰이더·텍스처·모양을 미리 올리고, 끝나면 ready를 켠다.
+// 화면 전환(검은 화면)은 이것을 기다렸다가 걷힌다
+export const warm = { ready: true, id: 0 };
+
 // Explicit advancement makes cancellation and pause behavior independently testable.
 export class GameTimers {
   private time = 0;

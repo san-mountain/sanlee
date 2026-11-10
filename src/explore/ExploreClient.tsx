@@ -12,8 +12,8 @@ import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
 import { MUSIC_URL, echoLines, galleryUi, notes, notesUi, faceTalk, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
-import { AVENUE_EDGE_Z, BAY, BUNKER_NPCS, EDGE, machinePoint, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
-import { sanHold, sanWalk, type SanPath } from "./SanNPC";
+import { AVENUE_EDGE_Z, BAY, BUNKER, BUNKER_NPCS, EDGE, machinePoint, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
+import { sanHold, sanRise, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
 import { input, loadSettings, resetInput } from "./input";
@@ -33,7 +33,7 @@ import { getBackup, saveBackup, wipeBackup } from "./backup";
 import { FACE_KEY, SOLUTION, emptyFace, faceFinished, loadFace, rotateDrum, saveFace, seamJoined, type Drums, type FaceMethod, type FaceState } from "./faceAuth";
 import { faceRt, resetFaceRuntime, setFacePhase, type FacePhase } from "./faceRuntime";
 
-import { runtime } from "./runtime";
+import { runtime, warm } from "./runtime";
 import { useGameTimers } from "./useGameTimers";
 import { useModalFocus } from "./useModalFocus";
 import WorldBoundary from "./WorldBoundary";
@@ -584,7 +584,13 @@ export default function ExploreClient() {
         if (ghostRef.current) gaze.mood = "blind";
         else if (viaDoor) later(700, () => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]));
       }
-      later(500, () => setFade(null));
+      // 새 구역의 셰이더·그림이 다 준비된 뒤에 화면을 연다 (World의 Warm). 그 전에 열면 들어서자마자 몇 초씩 멈춘다. 길어도 8초
+      const opened = performance.now();
+      const open = () => {
+        if (warm.ready || performance.now() - opened > 8000) setFade(null);
+        else later(120, open);
+      };
+      later(500, open);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -723,6 +729,13 @@ export default function ExploreClient() {
   const [beat, setBeat] = useState<"" | "sit">("");
   const beatTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(beatTimer.current), []);
+  // 풀려난 이산을 따라가던 시선: 첫 대화가 닫히면 방문자에게 돌려준다
+  const riseLook = useRef(false);
+  useEffect(() => {
+    if (panel || !riseLook.current) return;
+    riseLook.current = false;
+    gaze.lookAt = null;
+  }, [panel]);
   const sitBeside = () => {
     setPanel(null);
     setBeat("sit");
@@ -734,15 +747,27 @@ export default function ExploreClient() {
         localStorage.removeItem(MET_KEY);
       } catch {}
       sfx.restore();
+      // 풀려난 이산이 받침대에서 몸을 펴고 내려온다. 시선은 빈 받침대에 두지 않고 내려오는 이산을 따라간다
+      sanRise.on = true;
+      const at = BUNKER.items.find((i) => i.id === "statue")!.pos;
+      gaze.lookAt = at;
       setGhost(true);
       setTalked(true);
-      beatTimer.current = setTimeout(() => {
-        setBeat("");
+      setBeat("");
+      // 다 내려선 뒤에 첫마디가 열린다 (느린 기기에서도 장면이 끝나기 전에 대화가 뜨지 않게, 시간 대신 장면이 끝났다는 신호를 기다린다)
+      const speak = () => {
+        window.removeEventListener("sanlee-rise-done", speak);
+        clearTimeout(beatTimer.current);
         gaze.still = false;
+        riseLook.current = true;
         setPanel({ kind: "dialog", name: SAN, lines: reunion.woke, step: 0 });
-      }, 1800);
+      };
+      window.addEventListener("sanlee-rise-done", speak);
+      beatTimer.current = setTimeout(speak, 9000);
     }, 3000);
   };
+  const sitRef = useRef(sitBeside);
+  sitRef.current = sitBeside;
   // 구절을 들려준다: 이산이 부탁한 구절이면 이산이 묻고, 아니면 모르는 구절이라고 한다 (다시 말을 걸면 또 고를 수 있다)
   const tellVerse = (right: boolean) => {
     if (right) setPanel({ kind: "dialog", name: SAN, lines: [reunion.asked], step: 0, choices: [{ at: 0, label: reunion.sit, go: sitBeside }] });
@@ -1124,6 +1149,7 @@ export default function ExploreClient() {
       sanWalk,
       end: (k: EndKind) => startEndingRef.current(k),
       thaw: () => thawRef.current(),
+      sit: () => sitRef.current(),
     };
   }, [goTo]);
 

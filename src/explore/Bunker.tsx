@@ -1039,6 +1039,8 @@ function Bunker({ lang, visited, onTap, secondStatue, awake, face, notesRead = [
           <FaceConduit />
         </>
       )}
+      {/* 이산이 깨어나기 전에도 이산의 빛 자리를 꺼 둔 채 둔다: 깨어나는 순간 빛 개수가 바뀌면 방공호의 모든 셰이더를 다시 만들어 화면이 멈춘다 */}
+      {!(awake && !secondStatue) && <pointLight position={[0, -50, 0]} intensity={0} distance={4} color="#ffd6f4" />}
       {secondStatue ? (
         <>
           {/* 거부 결말: 이산도 다시 보관 처리되어 굳었다. 그 곁에 두 번째 동상이 나란히 앉아 있다 */}
