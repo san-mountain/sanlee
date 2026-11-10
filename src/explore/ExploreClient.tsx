@@ -1,6 +1,6 @@
 "use client";
 
-import { sfx } from "./sfx";
+import { ambience, sfx, type Voice } from "./sfx";
 import { duckBgm, playBgm, preloadBgm, wakeBgm, type Track } from "./bgm";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -68,6 +68,11 @@ function readScope(): ScopeData {
 }
 
 const SAN: L = { ko: "이산", en: "San" };
+// 대사가 뜰 때 나는 목소리 대신의 짧은 소리: 말하는 이에 따라 (이름표로 고른다)
+const ROBOTS = ["r07", "robomonk", "courier", "patrol", "patrol2"];
+const VOICES = new Map<L, Voice>([[SAN, "san"]]);
+for (const [k, n] of Object.entries(npcs)) VOICES.set(n.name, ROBOTS.includes(k) ? "robot" : k === "radio" ? "radio" : "person");
+const voiceOf = (name: L, line?: Line): Voice => (line?.who === "narr" ? "none" : (VOICES.get(name) ?? "none"));
 
 function hasWebGL() {
   try {
@@ -662,6 +667,7 @@ export default function ExploreClient() {
     m.looked = m.mode === "view";
     m.mode = "out";
     setScopeView("");
+    sfx.scopeOut();
     gaze.zoom = 1;
     gaze.clamp = null;
     if (m.back) walkPath([m.back]);
@@ -1133,6 +1139,20 @@ export default function ExploreClient() {
   }, [hushLine]);
   // 음악을 잠시 낮추는 때: 설정창, 곁에 앉아 기다리는 재회의 정적(거의 들리지 않게), 망원경 뒤 함께 내려다보는 정적, 망원경을 들여다보는 동안
   const duckLevel = paused ? 0.45 : beat === "sit" ? 0.12 : hush ? 0.35 : scopeView === "view" ? 0.55 : 1;
+  // 구역의 바탕 소리 (환기구·바람). 하얗게 멎은 순간과 신호가 끊긴 뒤에는 아무 소리도 없다. 空 결말의 계단에서는 내려갈수록 잦아든다(아래 효과)
+  const ambKind = intro || leaving || (ending?.kind === "reject" && flash) || stepped ? null : zone;
+  const ambLevel = paused ? 0.3 : beat === "sit" ? 0.4 : panel ? 0.7 : 1;
+  useEffect(() => {
+    if (ending?.kind === "ghost" && ending.step >= GHOST_STEP && ambKind) return;
+    ambience(ambKind, ambLevel);
+  }, [ambKind, ambLevel, ending]);
+  useEffect(() => () => ambience(null), []);
+  // 로봇에게 다가가면 먼저 짧게 삑삑댄다 (말을 걸기 전, 알아봤다는 듯이)
+  const nearNpc = near?.kind === "npc" ? near.npc : undefined;
+  useEffect(() => {
+    if (nearNpc && ROBOTS.includes(nearNpc) && !panel) sfx.voice("robot");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nearNpc]);
   useEffect(() => {
     duckBgm(duckLevel);
   }, [duckLevel]);
@@ -1289,12 +1309,16 @@ export default function ExploreClient() {
         // 빈자리에 다 들어섰다: 자동 걸음이 시선을 붙잡지 않도록 놓는다
         stopWalk();
         gaze.lookAt = { ...ACCEPT_LOOK_SAN };
+        sfx.stone();
       }
       if (step === ACCEPT_AWAY) gaze.lookAt = { ...ACCEPT_LOOK_GATE };
     } else if (kind === "reject") {
       if (step === 0) {
         // 레이저 없이: 화면이 하얗게 멎는 것으로 정지를 보여 준다
-        sceneTimer.current = setTimeout(() => setFlash(true), 1500);
+        sceneTimer.current = setTimeout(() => {
+          setFlash(true);
+          sfx.freeze();
+        }, 1500);
       }
       if (step === REJECT_BUNKER) {
         // 장면이 방공호로: 사람들이 두 번째 정지 시민을 옮겨 와 나란히 앉혔다
@@ -1380,6 +1404,7 @@ export default function ExploreClient() {
       // 다 내려선 뒤에는 남은 신호가 1초 남짓에 걸쳐 끊긴다
       const want = steppedRef.current ? 1 : depth * 0.82;
       k += (want - k) * (steppedRef.current ? 0.05 : 0.15);
+      if (!steppedRef.current) ambience("city", Math.max(0, 1 - k * 1.1));
       // 찢김: 깊어질수록 자주, 길게
       if (tear <= now && Math.random() < k * k * 0.12) tear = now + 60 + Math.random() * 160 * k;
       const torn = tear > now;
@@ -1410,6 +1435,9 @@ export default function ExploreClient() {
   // 지상에서 직접 오가는 짧은 말 (자막 한 줄. 말하는 사람 이름과 함께). 대화창을 열지 않고, 조작을 막지 않는다.
   // 한 번에 한 줄만 뜨고, 그동안 방송(.notice)은 비켜 준다. speak는 여러 줄을 차례로 (길 위의 짧은 만남)
   const [sanSay, setSanSay] = useState<{ who: L; line: L } | null>(null);
+  useEffect(() => {
+    if (sanSay) sfx.voice(voiceOf(sanSay.who));
+  }, [sanSay]);
   const sayTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const speakUntil = useRef(0);
   const speak = useCallback((seq: { who: L; line: L; ms?: number }[]) => {
@@ -1618,6 +1646,7 @@ export default function ExploreClient() {
         gaze.clamp = { ...SCOPE_CLAMP };
         m.mode = "view";
         setScopeView("view");
+        sfx.scopeIn();
         // 들여다본 횟수만 센다 (기억으로 깨어난 사람은 기록을 남기지 않는다)
         if (!ghostRef.current) writeScope({ ...readScope(), uses: readScope().uses + 1 });
       } else if (m.mode === "out" && autoWalk.arrived) {
@@ -1827,8 +1856,16 @@ export default function ExploreClient() {
     if (panel.kind === "jabi") return sfx.gong();
     if (panel.kind === "route") return sfx.chime();
     if (panel.kind === "dialog" && panel.locked && a?.kind !== "dialog") return sfx.denied();
-    if (!a || a.kind !== panel.kind) return sfx.open();
-    if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
+    const line = panel.kind === "dialog" && !panel.plaque ? panel.lines[Math.min(panel.step, panel.lines.length - 1)] : undefined;
+    if (!a || a.kind !== panel.kind) {
+      sfx.open();
+      if (panel.kind === "dialog" && line) setTimeout(() => sfx.voice(voiceOf(panel.name, line)), 160);
+      return;
+    }
+    if (panel.kind === "dialog" && a.kind === "dialog" && (panel.step !== a.step || panel.lines !== a.lines)) {
+      if (line) sfx.voice(voiceOf(panel.name, line));
+      else sfx.blip();
+    }
   }, [panel]);
   const startJabiIntro = useCallback(() => {
     cancelIntro.current?.();

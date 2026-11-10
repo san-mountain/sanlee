@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { input, moveVector, turnKeys } from "./input";
 import { resolve } from "./collide";
+import { sfx } from "./sfx";
 import { autoWalk, gaze, route, walkArea, type Rect } from "./gaze";
 import { CITY, GATE_STOP, inAvenueStrip, type Interactable, type ZoneDef } from "./zones";
 import type { Box } from "./collide";
@@ -68,6 +69,9 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
   const fwd = useRef(new THREE.Vector3());
   const tmp = useRef(new THREE.Vector3());
   const jumpBuf = useRef(0);
+  // 발소리: 화면이 한 번 내려앉을 때마다(걸음마다) 한 번. 점프 뒤에는 착지 소리
+  const stepPh = useRef(0);
+  const wasAir = useRef(false);
 
   useFrame((_, rawDt) => {
     if (runtime.paused) return;
@@ -198,6 +202,17 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     }
     const grounded = s.y <= 0;
     if (grounded) s.bob += moved * (mv.run ? 2.2 : 2.6);
+    const ground = walkArea.floor && walkArea.floor(s.x, s.z) < -0.05 ? "stair" : zone === CITY ? "city" : "bunker";
+    if (grounded && wasAir.current) {
+      sfx.land(ground);
+      stepPh.current = Math.floor(s.bob / (Math.PI / 2));
+    }
+    wasAir.current = !grounded;
+    const ph = Math.floor(s.bob / (Math.PI / 2));
+    if (ph !== stepPh.current) {
+      stepPh.current = ph;
+      if (grounded && moved > dt * 0.5) sfx.step(ground, mv.run || (!!aw && aw.speed > 4));
+    }
 
     const bobY = input.bob && grounded ? Math.sin(s.bob * 2) * 0.035 * Math.min(1, moved / (dt * 2 + 1e-4)) : 0;
     const floorY = walkArea.floor ? walkArea.floor(s.x, s.z) : 0;
