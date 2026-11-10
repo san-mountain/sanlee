@@ -867,10 +867,10 @@ body:not(:has(.explore-root)) > .site-footer { flex: none; }
 .poems .stanza { font-size: 17px; line-height: 2.05; letter-spacing: .015em; }
 .poems .poem-first { font-size: 14px; }
 .diary .poem-title { font-weight: 400; letter-spacing: .04em; }
-/* 글을 다 읽으면 끝에 붉은 낙관(山) 하나 */
+/* 글을 다 읽으면 끝에 붉은 낙관(山) 하나. 로고처럼 山은 거꾸로 뒤집는다(180°에 원래의 -3° 기울기) */
 .poem-seal { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin: .4em 0 .2em;
   border: 1.5px solid #b3261e; color: #b3261e; border-radius: 3px; font: 700 15px/1 var(--font-brush), var(--font-serif), serif;
-  transform: rotate(-3deg); opacity: .85; user-select: none; }
+  transform: rotate(177deg); opacity: .85; user-select: none; }
 .explore-root .poem-seal { border-color: var(--pink); color: var(--pink); }
 
 /* Works: 보기 전환은 아이콘으로, 분류 탭과 한 줄에. 탭 아래 구분선 없음. 페이지 제목은 화면 크기와 상관없이 숨김(메뉴가 대신함) */
