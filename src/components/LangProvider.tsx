@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useState } from "react";
 import type { L, Lang } from "@/data/site";
 
 const KEY = "sanlee-lang";
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 type Ctx = { lang: Lang; setLang: (l: Lang) => void; t: (s: L) => string };
 const LangContext = createContext<Ctx>({ lang: "ko", setLang: () => {}, t: (s) => s.ko });
@@ -13,7 +14,9 @@ const LangContext = createContext<Ctx>({ lang: "ko", setLang: () => {}, t: (s) =
 export function LangProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("ko");
 
-  useEffect(() => {
+  // 화면에 그려지기 전에 언어를 맞춘다. 영어 기기에서는 layout.tsx의 작은 스크립트가 그때까지 화면을 가려 두어
+  // 한국어가 잠깐 보였다 영어로 바뀌는 깜빡임이 없다
+  useIsoLayoutEffect(() => {
     let saved: string | null = null;
     try {
       saved = localStorage.getItem(KEY);
@@ -22,6 +25,7 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
       ? "ko"
       : "en";
     setLangState(saved === "ko" || saved === "en" ? saved : detected);
+    document.documentElement.removeAttribute("data-lang-wait");
   }, []);
 
   useEffect(() => {

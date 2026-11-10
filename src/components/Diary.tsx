@@ -1,5 +1,6 @@
 "use client";
 
+import Han from "./Han";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { diary, type DiaryEntry } from "@/data/diary";
 import { useLang } from "./LangProvider";
@@ -370,8 +371,8 @@ export default function Diary({ inExplore = false }: { inExplore?: boolean }) {
             <div className="poem-body">
               <Body body={e.body} />
               <span className="poem-seal" aria-hidden>
-                山
-              </span>
+                  <Han ch="山" />
+                </span>
               <button
                 type="button"
                 className="poem-fold"
