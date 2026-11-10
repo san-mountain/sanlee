@@ -33,7 +33,7 @@ import { getBackup, saveBackup, wipeBackup } from "./backup";
 import { FACE_KEY, SOLUTION, emptyFace, faceFinished, loadFace, rotateDrum, saveFace, seamJoined, type Drums, type FaceMethod, type FaceState } from "./faceAuth";
 import { faceRt, resetFaceRuntime, setFacePhase, type FacePhase } from "./faceRuntime";
 
-import { runtime, warm } from "./runtime";
+import { resetTally, runtime, tally, warm } from "./runtime";
 import { useGameTimers } from "./useGameTimers";
 import { useModalFocus } from "./useModalFocus";
 import WorldBoundary from "./WorldBoundary";
@@ -43,6 +43,16 @@ const World = dynamic(() => import("./World"), { ssr: false });
 
 const KEY = "sanlee-visited";
 const END_KEY = "sanlee-ending";
+// 수락하면 받는 대기 번호. 줄에서 다시 시작할 때마다 하나씩 밀린다
+const QUEUE_KEY = "sanlee-queue-no";
+const QUEUE_FIRST = 1204118;
+const readQueueNo = () => {
+  try {
+    return Number(localStorage.getItem(QUEUE_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+};
 const MET_KEY = "sanlee-met";
 const TALK_KEY = "sanlee-san-talked";
 const LOGIN_KEY = "sanlee-last-login";
@@ -776,6 +786,7 @@ export default function ExploreClient() {
   // R-07: 소개 뒤 친구를 묻는다. 친구는 이번 방문 동안만 기억하고, 아무것도 열거나 바꾸지 않는다.
   // 방문자는 말하지 않는다: 고개를 끄덕이거나, 손을 흔들고 돌아서거나, (기록을 지우고 돌아온 사람은) 실제로 두 번 두드린다
   const r07Panel = (): Panel => {
+    tally.r07++;
     const n = npcs.r07;
     if (friend) return { kind: "dialog", name: n.name, lines: [r07Friend.again], step: 0 };
     let forgot = false;
@@ -997,7 +1008,10 @@ export default function ExploreClient() {
             // 얼굴 맞추기에서 고른 것에 따라 가벼운 말 한 줄이 끼어든다 (표준 미소면 의구심 줄도 그 얼굴에 맞게)
             const [first, doubt, ...rest] = statueLines[statueLines.length - 1];
             const m = faceRef.current.method;
-            const lines = m === "standard" ? [first, faceTalk.standard.joke, faceTalk.standard.doubt, ...rest] : m === "exception" ? [first, faceTalk.exception.joke, doubt, ...rest] : [first, doubt, ...rest];
+            // 가장 먼저 연 기록에 따라 한 줄 (도시도 이 순서를 적어 두었다: 검문소의 기록)
+            const opened = sanCue.first[visited[0]];
+            const head = opened ? [first, opened] : [first];
+            const lines = m === "standard" ? [...head, faceTalk.standard.joke, faceTalk.standard.doubt, ...rest] : m === "exception" ? [...head, faceTalk.exception.joke, doubt, ...rest] : [...head, doubt, ...rest];
             setPanel({ kind: "dialog", name: SAN, lines, step: 0 });
             setTalked(true);
             try {
@@ -1150,6 +1164,8 @@ export default function ExploreClient() {
       end: (k: EndKind) => startEndingRef.current(k),
       thaw: () => thawRef.current(),
       sit: () => sitRef.current(),
+      cp: () => setPanel({ kind: "choice" }),
+      tally,
     };
   }, [goTo]);
 
@@ -1201,6 +1217,7 @@ export default function ExploreClient() {
   // 검문소에서 결정하지 않고 물러난다 (어느 단계에서든: 선택·확인·쿠키 끄기·설정). 수락도 거부도 아니고 결말도 열리지 않는다.
   // 읽는 동안 쌓인 시선은 비워 준다. 처음 물러나면 이산이 말을 건다
   const withdraw = useCallback(() => {
+    tally.withdraw++;
     resetGaze();
     cpRef.current.seen = true;
     if (!cpRef.current.talked && !ghostRef.current) setPanel(afterCheckpointPanel());
@@ -1345,18 +1362,24 @@ export default function ExploreClient() {
   // 지상에서는 관리 AI 방송이 주기적으로 흘러나옴. 대화·망원경·검문소·결말·이산의 말·다른 안내가 떠 있는 동안에는 건너뛴다
   const quietRef = useRef(false);
   // 이산의 얼굴(표준 미소 / 원본)을 도시가 알아본다: 지상에 올라설 때마다 첫 방송으로 한 번
+  const queueCastRef = useRef<L | null>(null);
   const faceCastRef = useRef<L | null>(null);
   faceCastRef.current = complete && !ghost && !accepted && face.method ? faceTalk.broadcast[face.method] : null;
   useEffect(() => {
     if (zone !== "city" || ending) return;
-    let i = 0;
+    // 방송은 올라설 때마다 다른 줄에서 시작한다 (늘 같은 앞의 몇 줄만 듣지 않게)
+    let i = Math.floor(Math.random() * announcements.length);
     let faceSaid = false;
     let hide: ReturnType<typeof setTimeout>;
     const show = () => {
       if (quietRef.current || drone.lit >= 0 || drone.caught) return false;
       clearTimeout(noticeTimer.current);
       const fc = faceCastRef.current;
-      if (fc && !faceSaid) {
+      const qc = queueCastRef.current;
+      if (qc) {
+        queueCastRef.current = null;
+        setNotice(qc);
+      } else if (fc && !faceSaid) {
         faceSaid = true;
         setNotice(fc);
       } else setNotice(announcements[i++ % announcements.length]);
@@ -1454,6 +1477,7 @@ export default function ExploreClient() {
         // 동의는 첫 줄에서 이미 처리된다: 도중에 나가도 다음 입장은 줄 속에서 시작한다
         try {
           localStorage.setItem(END_KEY, "accept");
+          if (!readQueueNo()) localStorage.setItem(QUEUE_KEY, String(QUEUE_FIRST));
         } catch {}
         gaze.mood = "calm";
         // 곧바로 걷지 않는다: 등록 방송을 들으며 성문 너머 대자비를 올려다본다 (살짝 당겨 보며)
@@ -1500,7 +1524,7 @@ export default function ExploreClient() {
       if (end) {
         // 도시가 둘을 다시 정지시켰다: 열람·만남·대화·결말·위치 백업이 처음 상태로 돌아간다 (약속과 발견한 결말은 남는다)
         try {
-          [KEY, END_KEY, MET_KEY, TALK_KEY, SCOPE_KEY, FACE_KEY].forEach((k) => localStorage.removeItem(k));
+          [KEY, END_KEY, QUEUE_KEY, MET_KEY, TALK_KEY, SCOPE_KEY, FACE_KEY].forEach((k) => localStorage.removeItem(k));
         } catch {}
         wipeBackup();
       }
@@ -1650,6 +1674,23 @@ export default function ExploreClient() {
   }, [sanWithYou, jabiStage, say]);
   // 空 경로: 대자비 구역에 처음 들어서면 이산이 스쳐 가듯 한 줄 (대자비가 둘을 보지 못한다. 방공호에서 한 짐작이 확인되는 순간)
   // 지상에 올라올 때마다 한 번. 창이 떠 있거나 멈춰 있으면 닫힌 뒤에
+  // 길 위의 가벼운 말: 처음 달렸을 때, 드론 빛을 벗어난 뒤, 여러 번 뛰어올랐을 때, 식별되어 되돌아온 뒤 (이번 방문에 한 번씩).
+  // 다른 말·창·방송이 없고 드론 빛 밖에 있을 때만, 서로 20초 넘게 띄워서 한다
+  const lightSaid = useRef({ ran: false, droneLight: false, jump: false, caught: false, at: 0 });
+  useEffect(() => {
+    if (!sanWithYou) return;
+    const iv = setInterval(() => {
+      const L = lightSaid.current;
+      const now = performance.now();
+      if (quietRef.current || pausedRef.current || gaze.intro || gaze.seen || drone.lit >= 0 || drone.caught || now - L.at < 20000 || now - cueRef.current.surfaceAt < 12000) return;
+      const key = !L.caught && tally.caught > 0 ? "caught" : !L.droneLight && tally.lost > 0 ? "droneLight" : !L.jump && tally.jumps >= 4 ? "jump" : !L.ran && tally.ran ? "ran" : null;
+      if (!key) return;
+      L[key] = true;
+      L.at = now;
+      say(sanCue[key], 3800);
+    }, 1500);
+    return () => clearInterval(iv);
+  }, [sanWithYou, say]);
   const blindSaid = useRef(false);
   useEffect(() => {
     blindSaid.current = false;
@@ -1956,6 +1997,7 @@ export default function ExploreClient() {
     try {
       localStorage.removeItem(KEY);
       localStorage.removeItem(END_KEY);
+      localStorage.removeItem(QUEUE_KEY);
       localStorage.removeItem(MET_KEY);
       localStorage.removeItem(TALK_KEY);
       localStorage.removeItem(SCOPE_KEY);
@@ -2004,6 +2046,7 @@ export default function ExploreClient() {
     setAccepted(false);
     setGhost(false);
     setEnding(null);
+    resetTally();
     goTo("bunker", false);
     lock();
   };
@@ -2112,6 +2155,17 @@ export default function ExploreClient() {
         teleport.req = { x: LINE_SPOT.x, z: QUEUE_Z[30], yaw: 0 };
         setNotice(ui.welcomeB);
       }, 400);
+      // 줄은 줄지 않는다: 돌아올 때마다 번호가 하나 밀려 있다
+      const no = readQueueNo();
+      if (no) {
+        try {
+          localStorage.setItem(QUEUE_KEY, String(no + 1));
+        } catch {}
+        const bump = checkpoint.queueBump;
+        const n = (no + 1).toLocaleString("en-US");
+        // 줄에 선 뒤의 첫 방송으로 나온다
+        queueCastRef.current = { ko: bump.ko.replace("{n}", n), en: bump.en.replace("{n}", n) };
+      }
     }
   };
   // 수락 결말의 '줄로 돌아가기'로 다시 불러온 경우: 첫 화면을 다시 띄우지 않는다 (같은 버튼이 두 번 나오지 않게)
@@ -2274,8 +2328,24 @@ export default function ExploreClient() {
     evidence.push(t(checkpoint.evOrder).replace("{order}", order).replace("{n}", String(visited.length)));
     if (scopeData.uses > 0) evidence.push(t(checkpoint.evScope).replace("{n}", String(scopeData.uses)));
     else if (scopeData.seen) evidence.push(t(checkpoint.evScopeDone));
+    // 이번 방문에 실제로 한 사소한 일들도 적혀 있다
+    const top = Object.entries(tally.look).sort((a, b) => b[1] - a[1])[0];
+    if (top && top[1] >= 5000) evidence.push(t(checkpoint.evLook).replace("{title}", t(works[Number(top[0])].title)).replace("{n}", String(Math.round(top[1] / 1000))));
+    if (tally.jumps > 0) evidence.push(t(checkpoint.evJump).replace("{n}", String(tally.jumps)));
+    if (tally.r07 > 0) evidence.push(t(checkpoint.evR07).replace("{n}", String(tally.r07)));
+    if (tally.caught > 0) evidence.push(t(checkpoint.evCaught).replace("{n}", String(tally.caught)));
+    if (tally.withdraw > 0) evidence.push(t(checkpoint.evWithdraw).replace("{n}", String(tally.withdraw)));
   }
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
+  // 그림을 열어 둔 시간을 그림별로 센다 (검문소의 기록에 가장 오래 본 그림이 적힌다)
+  const lookWork = panel?.kind === "painting" ? panel.work : -1;
+  useEffect(() => {
+    if (lookWork < 0) return;
+    const at = performance.now();
+    return () => {
+      tally.look[lookWork] = (tally.look[lookWork] ?? 0) + performance.now() - at;
+    };
+  }, [lookWork]);
   const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || scopeStage === "idle" || scopeStage === "done") ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" || near.kind === "note" || near.npc === "frozen" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
   quietRef.current = !!panel || !!scopeView || !!sanSay || !!toast || !!beat || paused;
   const rootClass = [
@@ -2596,6 +2666,7 @@ export default function ExploreClient() {
             ) : (
               <>
                 <h2>{t(checkpoint.title)}</h2>
+                {tally.withdraw > 0 && <p className="cp-again">{t(checkpoint.returned[Math.min(tally.withdraw, 2) - 1])}</p>}
                 <p>{t(checkpoint.body)}</p>
                 <div className="cp-outcomes">
                   <div>
@@ -2682,6 +2753,7 @@ export default function ExploreClient() {
             {ending.step >= (checkpoint[ending.kind] as Beat[]).length && (
               <div className="ending-actions">
                 <small>{t(ending.kind === "accept" ? checkpoint.endingAccept : ending.kind === "reject" ? checkpoint.endingReject : checkpoint.endingGhost)}</small>
+                {ending.kind === "accept" && readQueueNo() > 0 && <small className="ending-found">{t(checkpoint.queueNo).replace("{n}", readQueueNo().toLocaleString("en-US"))}</small>}
                 {ending.kind !== "ghost" && (
                   <small className="ending-found">
                     {ending.kind === "reject" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}

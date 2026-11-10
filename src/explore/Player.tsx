@@ -1,6 +1,6 @@
 "use client";
 
-import { runtime } from "./runtime";
+import { tally, runtime } from "./runtime";
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
@@ -189,6 +189,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       }
     }
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
+    if (mv.run && moved > 0.01) tally.ran = true;
     s.x = p.x;
     s.z = p.z;
     // 점프: 달리거나 걷는 중에도 언제든. 착지 직전에 누른 것도 0.15초 동안 기억했다가 닿자마자 뛰고,
@@ -199,6 +200,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     if ((jumpBuf.current > 0 || input.jumpHeld) && s.y <= 0 && s.vy <= 0 && input.enabled) {
       s.vy = JUMP_V;
       jumpBuf.current = 0;
+      tally.jumps++;
     }
     if (s.y > 0 || s.vy > 0) {
       s.vy -= GRAVITY * dt;

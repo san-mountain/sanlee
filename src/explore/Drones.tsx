@@ -1,6 +1,6 @@
 "use client";
 
-import { runtime } from "./runtime";
+import { tally, runtime } from "./runtime";
 
 // 순찰 드론: 레일을 따라 오가며 바닥에 빛 원을 비춘다.
 // 빛 원(그림), 빛기둥(그림), 가림 판정, 맞음 판정이 모두 아래의 같은 값(드론 위치·반지름·가림 상자)에서 나온다.
@@ -341,7 +341,10 @@ export default function Drones() {
     }
     if (litI !== prevLit.current) {
       if (litI >= 0 && prevLit.current < 0) sfx.droneSpot();
-      else if (litI < 0 && prevLit.current >= 0 && !drone.caught) sfx.droneLost();
+      else if (litI < 0 && prevLit.current >= 0 && !drone.caught) {
+        sfx.droneLost();
+        tally.lost++;
+      }
       prevLit.current = litI;
     }
     drone.lit = litI;
