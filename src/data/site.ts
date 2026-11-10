@@ -18,6 +18,8 @@ export const profile = {
 };
 
 export const about = {
+  // 첫 화면 맨 위의 한 줄 (아래 작가 노트의 첫 문장)
+  homeLine: { ko: "삶은 끝을 향해 조금씩 기운다.", en: "Life leans, little by little, toward its end." },
   paragraphs: [
     {
       ko: "이산은 동국대학교 조소과에 재학 중이며, 조각과 그림, 시를 오가며 작업한다.",
@@ -47,7 +49,11 @@ export type Work = {
   category?: "painting" | "sculpture"; // 사진이 있는 작업의 탭. 없으면 그림
   width?: number; // 사진 원본 비율(레이아웃 흔들림 방지용)
   height?: number;
+  color?: string; // 사진의 평균색(#rrggbb). 사진이 뜨기 전 그 자리에 깔린다. /admin이 사진을 올릴 때 계산한다
 };
+
+// 그리드에 쓰는 작은 사진(폭 600px): public/works/thumb/ 에 같은 이름으로 있다. /admin이 사진을 올릴 때 같이 만든다
+export const thumbOf = (image: string) => image.replace("/works/", "/works/thumb/");
 
 // 작업 목록은 src/content/works.json 에 있고, 사이트의 /admin 에서 올리고 고칠 수 있습니다. 최근 것이 맨 위.
 // 그림 크기는 "세로 × 가로 cm" 순서로 적어요. (8절 종이: 39.4 × 27.2 cm)
@@ -73,6 +79,8 @@ export const ui = {
   selected: { ko: "최근 작업", en: "Recent works" },
   allWorks: { ko: "전체 작업 보기 →", en: "All works →" },
   close: { ko: "닫기", en: "Close" },
+  notFound: { ko: "이 기록은 삭제되었거나, 처음부터 없었습니다.", en: "This record was deleted, or was never here." },
+  notFoundBack: { ko: "← 작업으로 돌아가기", en: "← Back to works" },
   prev: { ko: "이전", en: "Previous" },
   next: { ko: "다음", en: "Next" },
   enter: { ko: "도시로 들어가기 ↗", en: "Enter the city ↗" },

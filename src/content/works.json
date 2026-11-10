@@ -39,7 +39,8 @@
     },
     "image": "/works/sanlee_2026_ingando.webp",
     "width": 1087,
-    "height": 1400
+    "height": 1400,
+    "color": "#464140"
   },
   {
     "title": {
@@ -57,7 +58,8 @@
     },
     "image": "/works/sanlee_2026_indignation.webp",
     "width": 984,
-    "height": 1400
+    "height": 1400,
+    "color": "#98898e"
   },
   {
     "title": {
@@ -75,7 +77,8 @@
     },
     "image": "/works/sanlee_2026_back-and-forth.webp",
     "width": 1400,
-    "height": 953
+    "height": 953,
+    "color": "#252221"
   },
   {
     "title": {
@@ -93,7 +96,8 @@
     },
     "image": "/works/sanlee_2026_loss.webp",
     "width": 960,
-    "height": 1400
+    "height": 1400,
+    "color": "#5c7090"
   },
   {
     "title": {
@@ -111,7 +115,8 @@
     },
     "image": "/works/sanlee_2026_self-portrait.webp",
     "width": 910,
-    "height": 1400
+    "height": 1400,
+    "color": "#8c8d9b"
   },
   {
     "title": {
@@ -129,7 +134,8 @@
     },
     "image": "/works/sanlee_2026_chrysalis-of-endurance.webp",
     "width": 961,
-    "height": 1400
+    "height": 1400,
+    "color": "#2d2d2d"
   },
   {
     "title": {
@@ -147,7 +153,8 @@
     },
     "image": "/works/sanlee_2026_room.webp",
     "width": 1400,
-    "height": 963
+    "height": 963,
+    "color": "#9eb2ab"
   },
   {
     "title": {
@@ -165,6 +172,7 @@
     },
     "image": "/works/sanlee_2026_value-judgment.webp",
     "width": 1400,
-    "height": 955
+    "height": 955,
+    "color": "#8e847a"
   }
 ]

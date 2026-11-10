@@ -1,5 +1,6 @@
 "use client";
 
+import Han from "./Han";
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -20,10 +21,11 @@ export default function SiteNav() {
       {/* 이름과 메뉴는 늘 영문이라 lang="en"으로 고정: 시스템 글꼴이 페이지 언어(ko/en)에 따라 다른 글꼴을 고르지 않게 */}
       <Link href="/" className="nav-logo">
         <span lang="en">{profile.name}</span>
-        <span className="nav-logo-han" lang="ko-Hani">
-          李
+        {/* 한자 두 글자는 글꼴 파일 없이 획 모양으로 그린다 (Han) */}
+        <span className="nav-logo-han" lang="ko-Hani" role="img" aria-label="李山">
+          <Han ch="李" />
           {/* 거꾸로 뒤집힌 山: 작품에 되풀이되는 거꾸로 된 왕관처럼 보인다 */}
-          <span className="nav-logo-san">山</span>
+          <Han ch="山" className="nav-logo-san" />
         </span>
       </Link>
       <nav className="nav-links" aria-label="Main">
@@ -35,6 +37,8 @@ export default function SiteNav() {
         {/* 3D 도시 작품 입구: 작품 제목을 네온사인처럼. SEOUL의 O 하나는 고장 난 관처럼 깜빡인다 */}
         <Link
           href="/deleteseoul"
+          // 게임의 스타일·글꼴을 일반 페이지에서 미리 받지 않는다 (들어갈 때 받는다)
+          prefetch={false}
           className="nav-explore nav-explore-pill"
           aria-label={t(ui.explore)}
           title={t(ui.explore)}
@@ -45,7 +49,7 @@ export default function SiteNav() {
           }}
         >
           <span className="ne-han" aria-hidden>
-            空
+            <Han ch="空" />
           </span>
           <span className="ne-text" data-text="DELETE SEOUL" aria-hidden>
             DELETE SE<span className="ne-dead">O</span>UL

@@ -1,5 +1,6 @@
 "use client";
 
+import Han from "./Han";
 import { useEffect, useState } from "react";
 import { about, contact, ui, works, type SectionId, type Work } from "@/data/site";
 import { poems } from "@/data/poems";
@@ -15,7 +16,10 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
     return (
       <div className="section-body">
         {about.paragraphs.map((p, i) => (
-          <p key={i}>{t(p)}</p>
+          // 첫 문단은 약력(작게, 옅게), 그 아래가 작가 노트
+          <p key={i} className={i === 0 ? "bio" : undefined}>
+            {t(p)}
+          </p>
         ))}
         <h2 id="contact" className="contact-title">
           {t(ui.contactTitle)}
@@ -210,7 +214,7 @@ function Poems({ inExplore }: { inExplore: boolean }) {
                   </p>
                 ))}
                 <span className="poem-seal" aria-hidden>
-                  山
+                  <Han ch="山" />
                 </span>
                 <button
                   type="button"

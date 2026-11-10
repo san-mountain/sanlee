@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
-import type { Work } from "@/data/site";
+import { thumbOf, type Work } from "@/data/site";
 import { isOwner, sameOrigin } from "@/lib/admin/auth";
 import { blobSha, clean, cleanUpload, droppedImages, FILES, Invalid, KINDS, serialize, type Kind } from "@/lib/admin/content";
 import { commit, Conflict, readFile, type Change } from "@/lib/admin/github";
@@ -65,10 +65,18 @@ export async function PUT(req: Request) {
         w.width = out.info.width;
         w.height = out.info.height;
         extra.push({ path: `public${u.path}`, base64: out.data.toString("base64") });
+        // 그리드용 작은 사진(폭 600px)과, 사진이 뜨기 전에 깔아 둘 평균색도 같이 만든다
+        const thumb = await sharp(out.data).resize({ width: 600, withoutEnlargement: true }).webp({ quality: 72, effort: 6 }).toBuffer();
+        extra.push({ path: `public${thumbOf(u.path)}`, base64: thumb.toString("base64") });
+        const px = await sharp(out.data).resize(1, 1, { fit: "fill" }).removeAlpha().raw().toBuffer();
+        w.color = "#" + [...px.subarray(0, 3)].map((v) => v.toString(16).padStart(2, "0")).join("");
         known.add(u.path);
       }
       if (works.some((w) => w.image && !known.has(w.image))) throw new Invalid("없는 사진을 가리키는 작업이 있어요");
-      for (const p of droppedImages(before, works)) extra.push({ path: `public${p}`, delete: true });
+      // 관리 화면은 평균색을 모른 채 목록을 돌려보내므로, 이미 있던 사진의 평균색은 저장된 값을 잇는다
+      const colors = new Map(before.filter((w) => w.image && w.color).map((w) => [w.image!, w.color!]));
+      for (const w of works) if (w.image && !w.color && colors.has(w.image)) w.color = colors.get(w.image);
+      for (const p of droppedImages(before, works)) extra.push({ path: `public${p}`, delete: true }, { path: `public${thumbOf(p)}`, delete: true });
     }
     const json = serialize(items);
     const changes: Change[] = [{ path, text: json }, ...extra];
