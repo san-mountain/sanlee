@@ -1233,7 +1233,9 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 /* 결말 모음 (첫 화면): 세 칸과 백진성의 수록곡 */
 .intro-gallery { display: inline-block; margin: 2px 0 6px; padding: 0; background: none; border: 0; border-bottom: 1px dashed #ffe14d88; color: #ffe14d; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; cursor: pointer; }
 .intro-gallery:hover, .intro-gallery:focus-visible { color: #fff; border-bottom-color: #fff; }
-.gallery-wrap { z-index: 51; }
+/* 첫 화면(z 50)과 설정창(z 60) 어느 쪽에서 열어도 그 위에 */
+.gallery-wrap { z-index: 70; }
+.pause-gallery { display: block; margin: 0 auto 12px; }
 .intro .panel.gallery { width: min(620px, 92vw); max-height: 92vh; overflow-y: auto; }
 .gallery-sub { color: var(--dim); font-size: 13px; margin: 2px 0 14px; }
 .gallery-endings { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 10px; }

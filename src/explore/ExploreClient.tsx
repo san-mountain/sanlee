@@ -2313,6 +2313,8 @@ export default function ExploreClient() {
           since={since}
           inBunker={zone === "bunker"}
           onLeave={logout}
+          onGallery={() => setGallery(true)}
+          seenCount={seenCount}
         />
       )}
 
@@ -2613,7 +2615,7 @@ export default function ExploreClient() {
 
       {fade && <div className="fade">{t(fade === "up" ? ui.goingUp : ui.goingDown)}</div>}
 
-      {intro && gallery && <EndingGallery seen={memory} notesRead={notesRead} onClose={() => setGallery(false)} />}
+      {gallery && <EndingGallery seen={memory} notesRead={notesRead} onClose={() => setGallery(false)} />}
       {intro && !gallery && (
         <div className="intro">
           <div className="panel pink" role="dialog" aria-modal="true" aria-label={t(ui.title)} tabIndex={-1}>
