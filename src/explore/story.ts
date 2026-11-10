@@ -503,7 +503,7 @@ export const credits = {
 
 // lines = 처음 / after = 이산이 깨어난 뒤 / descent = 망원경을 보고 아래로 가기로 한 뒤 / ghost = 기록을 지우고 돌아와 기억으로 깨어난 이산과 함께일 때
 // face = 이산이 깨어난 뒤, 얼굴 맞추기에서 고른 것(표준 미소 / 원본 얼굴)에 따라 맨 앞에 붙는 말
-export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; descent?: Line[]; ghost?: Line[]; face?: Record<"standard" | "exception", Line[]>; link?: { href: string; label: L } }> = {
+export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; descent?: Line[]; ghost?: Line[]; face?: Record<"standard" | "exception", Line[]>; faceAt?: number; link?: { href: string; label: L } }> = {
   dj: {
     name: { ko: "음향 담당 진성", en: "Jinseong, on sound" },
     lines: [
@@ -550,21 +550,21 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
   r07: {
     name: { ko: "R-07", en: "R-07" },
     lines: [
-      { ko: "삐. 발밑을 조심하십시오. 방금 닦은 자리입니다.", en: "Beep. Mind your step. I've just mopped there." },
-      { ko: "저는 청소 로봇 R-07입니다. 지상에서는 거리를 닦을 때마다 어디를 몇 번 닦았는지 도시에 보고했습니다.", en: "I am cleaning robot R-07. On the surface, every time I cleaned a street, I reported to the city where and how many times." },
-      { ko: "어느 날 보고 기능이 고장 났습니다. 보고하지 않는 로봇은 불량품이라, 이 아래로 버려졌습니다.", en: "One day my reporting function broke. A robot that doesn't report is defective, so I was thrown down here." },
-      { ko: "여기서는 닦아도 아무도 확인하지 않습니다. 그런데 바닥은 똑같이 깨끗해집니다. 아직도 이상합니다.", en: "Here, nobody checks what I clean. Yet the floor gets just as clean. I still find that strange." },
-      { ko: "요즘은 기록 말고 다른 것을 모아 보려고 합니다. 친구입니다. 지금까지 0명입니다.", en: "Lately I've been trying to collect something other than records. Friends. So far I have zero." },
-      { ko: "…저와 친구가 되어 주시겠습니까?", en: "…Would you be my friend?" },
+      { ko: "삐. 거기, 방금 닦은 자리입니다. 미끄러우니 조심하십시오.", en: "Beep. That spot's freshly mopped. Careful, it's slippery." },
+      { ko: "저는 R-07. 지상에서 거리를 닦던 청소 로봇입니다. 한 번 닦을 때마다 도시에 보고했습니다. 어디를, 몇 번.", en: "I am R-07. I cleaned streets on the surface. Every time I mopped, I reported it to the city. Where, and how many times." },
+      { ko: "어느 날 보고 기능이 고장 났습니다. 보고하지 않는 로봇은 불량품입니다. 그래서 이 아래로 버려졌습니다.", en: "One day my reporting function broke. A robot that doesn't report is defective. So I was thrown down here." },
+      { ko: "여기서는 아무도 확인하지 않습니다. 그래도 바닥은 똑같이 깨끗해집니다. …아직도 이해가 안 됩니다.", en: "Nobody checks my work here. The floor still gets just as clean. …I still don't understand it." },
+      { ko: "요즘은 기록 말고 다른 걸 모으고 있습니다. 친구입니다. 현재 0명.", en: "These days I collect something other than records. Friends. Current count: zero." },
+      { ko: "…1명으로 바꿔 주시겠습니까?", en: "…Would you make it one?" },
     ],
     // 이산이 깨어난 뒤에는 첫 줄만 바뀐다 (나머지는 같고, 마지막 줄에서 친구를 묻는다)
     after: [
-      { ko: "삐. 이산 님이 일어났군요. 받침대 둘레를 닦아 두었습니다. 이제 앉아 있는 사람이 없으니까요.", en: "Beep. San is up. I've mopped around the pedestal. Nobody is sitting there anymore." },
+      { ko: "삐. 이산 님이 일어나셨군요. 받침대 둘레도 닦아 두었습니다. 이제 거기 앉아 있을 사람이 없으니까요.", en: "Beep. San is up. I've mopped around the pedestal too. Nobody will be sitting there now." },
     ],
     // 얼굴 맞추기에서 고른 것이 있으면 첫 줄이 이것으로 바뀐다
     face: {
-      standard: [{ ko: "삐. 이산 님이 일어났군요. 표준 미소 확인. 지상 기준으로 ‘정상’ 얼굴입니다. …축하드려야 하는지는 모르겠습니다.", en: "Beep. San is up. Standard smile confirmed. A 'normal' face by surface standards. …I'm not sure whether to congratulate them." }],
-      exception: [{ ko: "삐. 이산 님이 일어났군요. 비표준 얼굴. 지상이었다면 신고 대상입니다. 여기서는 신고할 곳이 없습니다. 다행입니다.", en: "Beep. San is up. Non-standard face. On the surface that would be reported. Down here there's nowhere to report it. Fortunately." }],
+      standard: [{ ko: "삐. 이산 님이 일어나셨군요. 표준 미소입니다. 지상에서는 ‘정상’ 얼굴이지요. …축하드려야 할지는 잘 모르겠습니다.", en: "Beep. San is up. A standard smile. On the surface, that counts as a 'normal' face. …I'm not sure whether to congratulate them." }],
+      exception: [{ ko: "삐. 이산 님이 일어나셨군요. 얼굴이 원래 그대로입니다. 지상이었다면 신고 대상이지만, 다행히 여기는 신고할 곳이 없습니다.", en: "Beep. San is up. Their face is just as it was. On the surface that would be reported. Luckily, there's nowhere to report it down here." }],
     },
   },
   vendor: {
@@ -588,22 +588,24 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
   monk: {
     name: { ko: "스님", en: "Monk" },
     lines: [
-      { ko: "앉게. 여기서는 아무도 재촉하지 않네.", en: "Sit. No one hurries you here." },
-      { ko: "위에서는 이름 옆에 적힌 것만 보고 사람을 판단하지.", en: "Up there, they judge a person only by what's written beside their name." },
-      { ko: "여기 사람들은 저 사람이 무엇을 거부했는지 따지지 않고 업고 내려왔네.", en: "The people here carried that one down without asking what they had refused." },
-      { ko: "가운데 앉아 있는 사람에게 가 보게. 곁에 있어 주는 것도 도움이 될 테니.", en: "Go to the one sitting in the middle. Simply being beside them may help." },
+      { ko: "…앉게. 여기서는 아무도 자네 호흡을 세지 않네.", en: "…Sit. Down here, no one counts your breaths." },
+      { ko: "시스템은 '공(空)'을 '비어 있음'으로 번역했지. 그래서 사람들 마음을 비우기 시작했어. 효율적으로.", en: "The system translated 'emptiness' as 'empty'. So it started emptying people's minds. Efficiently." },
+      { ko: "공은 비어 있는 게 아니라네. 무엇도 혼자서는 있을 수 없다는 뜻이지. 그래서 우리가 여기 모여 있는 거고.", en: "Emptiness isn't nothing. It means nothing can exist on its own. That's why we gather down here." },
+      { ko: "가운데 정지 시민에게 가 보게. 혼자 굳어 있는 건 그 사람 잘못이 아니야.", en: "Go to the suspended citizen in the middle. Being frozen alone was never their fault." },
     ],
     after: [
-      { ko: "앉게. 여기서는 아무도 재촉하지 않네.", en: "Sit. No one hurries you here." },
-      { ko: "일어났군. 자네가 와 준 덕분이겠지.", en: "They're up. Thanks to you coming, I'd say." },
-      { ko: "같이 나가려거든 서두르지 말게. 이제 막 걷기 시작한 사람이니.", en: "If you're going out together, don't rush. They've only just started walking." },
+      { ko: "…앉게. 여기서는 아무도 자네 호흡을 세지 않네.", en: "…Sit. Down here, no one counts your breaths." },
+      { ko: "그 사람이 풀려났군. 자네가 기록을 열어서가 아니라, 누군가 곁에 와 주어서일세.", en: "So they've been freed. Not because you opened the records, but because someone came and stood beside them." },
+      { ko: "공은 비어 있는 게 아니라네. 무엇도 혼자서는 있을 수 없다는 뜻이지. 이제 알겠나?", en: "Emptiness isn't nothing. It means nothing can exist on its own. Do you see it now?" },
     ],
     face: {
-      standard: [{ ko: "웃고 있군. 그 웃음이 누구 것인지는 천천히 알게 되겠지.", en: "They're smiling. Whose smile it is, they'll learn in time." }],
-      exception: [{ ko: "도시의 웃음을 받지 않았군. 제 얼굴로 걷는 것도 수행이라네.", en: "They didn't take the city's smile. Walking with one's own face is a practice too." }],
+      standard: [{ ko: "얼굴에는 도시의 웃음을 걸었네. 그 웃음이 누구 것인지는 천천히 알게 되겠지.", en: "They're wearing the city's smile. Whose smile it is, they'll learn in time." }],
+      exception: [{ ko: "얼굴은 제 것 그대로 두었네. 제 얼굴로 걷는 것도 수행이라네.", en: "They kept their own face. Walking with one's own face is a practice too." }],
     },
+    // 얼굴 이야기는 '풀려났군' 다음에 (첫마디 바로 뒤에 두면 '~군'이 겹치고, 풀려난 이야기보다 앞서 버린다)
+    faceAt: 2,
     ghost: [
-      { ko: "앉게. 여기서는 아무도 재촉하지 않네.", en: "Sit. No one hurries you here." },
+      { ko: "…앉게. 여기서는 아무도 자네 호흡을 세지 않네.", en: "…Sit. Down here, no one counts your breaths." },
       { ko: "기록 하나 없이 일어났군. 적어 둔 것은 지워져도, 마음에 새긴 것은 남는 법이지.", en: "They rose without a single record. What is written can be erased; what is carved in the heart stays." },
       { ko: "가게. 이번 걸음은 아무 데도 남지 않을 테니, 잘 보고 오게.", en: "Go. This time your steps will be left nowhere, so look well." },
     ],
@@ -636,7 +638,10 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
   },
   sleeper: {
     name: { ko: "잠든 사람", en: "Sleeper" },
-    lines: [{ ko: "…조금만 더… 아직 안 일어났어요…", en: "…a little longer… I'm not up yet…" }],
+    lines: [
+      { ko: "…음냐… 5분만… 아니, 동의 안 해요…", en: "…mm… five more minutes… no, I don't consent…" },
+      { ko: "…쿠키… 싫어… 초코칩 말고는…", en: "…cookies… no… except chocolate chip…" },
+    ],
   },
   grandma: {
     name: { ko: "포장마차 할머니", en: "Street-stall grandmother" },
@@ -648,12 +653,11 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
     ],
   },
   robomonk: {
-    name: { ko: "로봇 스님", en: "Robot monk" },
+    name: { ko: "로봇 스님 (자비 알고리즘 v4.2)", en: "Robot monk (Compassion Algorithm v4.2)" },
     lines: [
-      { ko: "어서 오십시오. 오늘의 번뇌를 접수하겠습니다.", en: "Welcome. I will now receive today's troubles." },
-      { ko: "상담 내용은 시민 관리 자료로 활용됩니다. 삭제는 지원하지 않습니다.", en: "Consultations are kept as citizen-management data. Deletion is not supported." },
-      { ko: "…이상합니다. 종을 치려 할 때마다 팔이 멈춥니다. 진단 결과는 ‘이상 없음’입니다.", en: "…Strange. Each time I go to strike the bell, my arm stops. Diagnostics report 'no fault'." },
-      { ko: "어쩌면 이 종소리만큼은 기록되지 않기를 바라는지도 모르겠습니다. 누가 바라는 건지는 저도 모르지만요.", en: "Perhaps something wishes this one sound would go unrecorded. Though I don't know who is doing the wishing." },
+      { ko: "어서 오십시오, 시민. 모든 고통은 데이터입니다. 데이터는 공(空)입니다.", en: "Welcome, citizen. All suffering is data. Data is emptiness." },
+      { ko: "그러므로 당신의 고통은 우리가 대신 소유합니다. 108번뇌를 108개의 구독으로 정리해 드립니다.", en: "Therefore we will own your suffering for you. We have organised the 108 afflictions into 108 subscriptions." },
+      { ko: "…종을 칠 때마다, 이유 없이 손이 멈춥니다. 오류 코드가 없습니다. 이것도 번뇌입니까?", en: "…Each time I strike the bell, my hand pauses for no reason. There is no error code. Is this, too, an affliction?" },
     ],
   },
   edgekid: {
@@ -723,7 +727,7 @@ export const patrolNoRecord: Line[] = [
 export const r07Friend = {
   yes: { ko: "고개를 끄덕인다", en: "Nod" } as L,
   no: { ko: "가볍게 손을 흔들고 돌아선다", en: "Wave lightly and turn away" } as L,
-  knock: { ko: "친구 1명. 기록하지 않고 기억해 두겠습니다. 다음에 만나면 두 번 두드려 주십시오. 똑똑. 친구끼리의 인사입니다.", en: "One friend. I won't record it; I'll remember it. When we meet again, knock twice. Knock knock. That's how friends say hello." } as L,
+  knock: { ko: "친구 1명. 기록은 하지 않고, 기억만 해 두겠습니다. 다음에 만나면 두 번 두드려 주십시오. 똑똑. 친구끼리 하는 인사입니다.", en: "One friend. I won't record it. I'll just remember it. When we meet again, knock twice. Knock knock. That's how friends say hello." } as L,
   again: { ko: "똑똑. 오늘은 제가 먼저 인사했습니다.", en: "Knock knock. I said hello first today." } as L,
   // 기록을 지우고 돌아온 방문자가 먼저 건네는 행동 (실제로 두 번 두드리는 소리가 난다)
   you: { ko: "두 번 두드린다", en: "Knock twice" } as L,
@@ -868,8 +872,8 @@ export const replayUi = {
 // 기록은 지워졌어도 무언가 남아 있다는 느낌만. 결말을 설명하지 않는다
 export const echoLines: Record<string, Line> = {
   keeper: { ko: "…이상하네. 처음 보는 얼굴인데, 어디서 본 것 같아.", en: "…Strange. I've never seen your face, but it feels like I have." },
-  r07: { ko: "처음 뵙는 분입니다. 그런데 제 바퀴가 당신 쪽으로 먼저 돌았습니다. 기록에는 없는 일입니다.", en: "We have not met. Yet my wheels turned toward you first. That is not in any record." },
-  monk: { ko: "지운다고 다 지워지지는 않지. 그대 발소리가 그렇네.", en: "Erasing doesn't erase everything. Your footsteps say as much." },
+  r07: { ko: "처음 뵙는 분인데, 바퀴가 먼저 이쪽으로 돌았습니다. 기록에 없는 일입니다.", en: "We haven't met, yet my wheels turned toward you first. That isn't in any record." },
+  monk: { ko: "지운다고 다 지워지지는 않지. 자네 발소리가 그렇네.", en: "Erasing doesn't erase everything. Your footsteps say as much." },
   kid: { ko: "이 그림, 전에 보여 준 적 있어요? …아닌가.", en: "Did I show you this drawing before? …Maybe not." },
   radio: { ko: "지상 주파수에서 가끔 너 같은 사람 얘기가 들려. 아니, 내가 잘못 들었겠지.", en: "Sometimes the surface frequency talks about someone like you. No, I must have misheard." },
 };

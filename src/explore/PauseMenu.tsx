@@ -5,7 +5,7 @@ import { syncBgm } from "./bgm";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LangToggle, useLang } from "@/components/LangProvider";
-import { MUSIC_URL, credits, fourthWall, pause } from "./story";
+import { MUSIC_URL, credits, fourthWall, galleryUi, pause } from "./story";
 import { input, saveSettings } from "./input";
 import { getBackup } from "./backup";
 
@@ -17,6 +17,8 @@ export default function PauseMenu({
   since,
   inBunker,
   onLeave,
+  onGallery,
+  seenCount = 0,
 }: {
   onResume: () => void;
   // 수락 결말 뒤 줄에서 빠져나오는 유일한 길 (진행을 처음으로 되돌린다). 그 밖에는 넘기지 않는다
@@ -25,6 +27,9 @@ export default function PauseMenu({
   since: number;
   inBunker: boolean;
   onLeave?: (e: React.MouseEvent) => void;
+  // 기억된 결말 열기 (첫 화면의 링크와 같은 창)
+  onGallery?: () => void;
+  seenCount?: number;
 }) {
   const { t, lang } = useLang();
   const [sens, setSens] = useState(input.sens);
@@ -223,6 +228,12 @@ export default function PauseMenu({
         <p className="pause-wall" key={line}>
           {note ?? fill(t(fourthWall[line % fourthWall.length]))}
         </p>
+
+        {onGallery && (
+          <button type="button" className="intro-gallery pause-gallery" onClick={onGallery}>
+            {t(galleryUi.open).replace("{n}", String(seenCount))} →
+          </button>
+        )}
 
         <div className="pause-actions">
           <Link className="btn" href="/" onClick={onLeave}>

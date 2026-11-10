@@ -999,7 +999,8 @@ export default function ExploreClient() {
           const fm = faceRef.current.method;
           const byPhase = ghost && n.ghost ? n.ghost : phase === "descent" && n.descent ? n.descent : complete && n.after ? n.after : n.lines;
           // 이산이 깨어난 뒤에는 첫마디 다음에 얼굴 맞추기에서 고른 것에 대한 한마디가 붙는다 (기억으로 깨어난 길에서는 고른 적이 없다)
-          const faced = complete && !ghost && fm && n.face ? [byPhase[0], ...n.face[fm], ...byPhase.slice(1)] : byPhase;
+          const at = n.faceAt ?? 1;
+          const faced = complete && !ghost && fm && n.face ? [...byPhase.slice(0, at), ...n.face[fm], ...byPhase.slice(at)] : byPhase;
           // 결말을 본 적 있는 기기로 다시 왔다면, 이산이 깨어나기 전에는 첫마디 다음에 기억하는 듯한 한 줄
           const echo = seenCountRef.current > 0 && !complete && !ghost ? echoLines[it.npc!] : undefined;
           const base = echo ? [faced[0], echo, ...faced.slice(1)] : faced;
@@ -2312,6 +2313,8 @@ export default function ExploreClient() {
           since={since}
           inBunker={zone === "bunker"}
           onLeave={logout}
+          onGallery={() => setGallery(true)}
+          seenCount={seenCount}
         />
       )}
 
@@ -2612,7 +2615,7 @@ export default function ExploreClient() {
 
       {fade && <div className="fade">{t(fade === "up" ? ui.goingUp : ui.goingDown)}</div>}
 
-      {intro && gallery && <EndingGallery seen={memory} notesRead={notesRead} onClose={() => setGallery(false)} />}
+      {gallery && <EndingGallery seen={memory} notesRead={notesRead} onClose={() => setGallery(false)} />}
       {intro && !gallery && (
         <div className="intro">
           <div className="panel pink" role="dialog" aria-modal="true" aria-label={t(ui.title)} tabIndex={-1}>

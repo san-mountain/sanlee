@@ -431,11 +431,11 @@ export const sfx = {
     const v = run ? 1 : 0.72;
     const r = 0.88 + Math.random() * 0.24;
     if (where === "bunker") {
-      tone(92 * r, 0.08, { type: "triangle", f2: 58, vol: 0.28 * v, attack: 0.002 });
-      noise(0.07, { vol: 0.15 * v, from: 1300 * r, to: 420, q: 1.1 });
+      tone(88 * r, 0.11, { type: "triangle", f2: 56, vol: 0.26 * v, attack: 0.006 });
+      noise(0.09, { vol: 0.1 * v, from: 900 * r, to: 320, q: 0.9 });
     } else {
-      tone(120 * r, 0.06, { type: "triangle", f2: 70, vol: 0.22 * v, attack: 0.002 });
-      noise(0.06, { vol: 0.19 * v, from: 2600 * r, to: 900, q: 1.4 });
+      tone(112 * r, 0.09, { type: "triangle", f2: 66, vol: 0.2 * v, attack: 0.006 });
+      noise(0.08, { vol: 0.12 * v, from: 1700 * r, to: 600, q: 1.1 });
       // 계단: 텅 빈 아래에서 한 박 늦게 되돌아온다
       if (where === "stair") noise(0.08, { vol: 0.06 * v, from: 1800 * r, to: 700, q: 1.4, at: 0.19 });
     }
