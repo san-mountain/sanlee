@@ -149,6 +149,8 @@ export function useLookAndKeys(
   cb.current = onInteract;
   const lockCb = useRef(onLockChange);
   lockCb.current = onLockChange;
+  const holdRef = useRef(holdLock);
+  holdRef.current = holdLock;
   useEffect(() => {
     input.enabled = active;
     if (!active) {
@@ -162,7 +164,14 @@ export function useLookAndKeys(
     if (!el) return;
     const pts = new Map<number, { x: number; y: number }>();
     const locked = () => document.pointerLockElement === el;
+    // 다른 창에 다녀오는 사이 브라우저가 잠금을 풀지 않고(또는 돌아오며 다시 걸고) 설정창만 뜬 경우,
+    // 커서가 숨은 채 아무것도 누를 수 없게 된다. 조작이 멈춘 동안 잠겨 있으면 곧바로 풀어 커서를 돌려준다
+    const stuck = () => locked() && !input.enabled && !holdRef.current;
+    const release = () => {
+      if (stuck()) document.exitPointerLock();
+    };
     const down = (e: PointerEvent) => {
+      if (stuck()) return release();
       if (locked()) {
         // 잠긴 상태의 클릭 = 상호작용
         if (e.button === 0 && input.enabled) cb.current();
@@ -173,6 +182,7 @@ export function useLookAndKeys(
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     };
     const mouseMove = (e: MouseEvent) => {
+      if (stuck()) return release();
       if (!locked() || !input.enabled) return;
       // 브라우저가 가끔 튀는 값을 보내므로 큰 값은 잘라낸다
       const mx = Math.max(-200, Math.min(200, e.movementX));
@@ -183,6 +193,12 @@ export function useLookAndKeys(
     const lockChange = () => {
       pts.clear();
       lockCb.current?.(locked());
+      // 상태 반영이 끝난 뒤에 확인한다 (잠금이 걸리는 순간에는 아직 조작이 켜지기 전일 수 있다)
+      setTimeout(release, 120);
+    };
+    const focus = () => {
+      release();
+      setTimeout(release, 120);
     };
     const move = (e: PointerEvent) => {
       if (locked()) return;
@@ -246,7 +262,8 @@ export function useLookAndKeys(
       pts.clear();
       spaceDown = false;
     };
-    const visibility = () => { if (document.hidden) blur(); };
+    const visibility = () => { if (document.hidden) blur(); else focus(); };
+    window.addEventListener("focus", focus);
     document.addEventListener("visibilitychange", visibility);
     el.addEventListener("pointerdown", down);
     window.addEventListener("mousemove", mouseMove);
@@ -267,6 +284,7 @@ export function useLookAndKeys(
       window.removeEventListener("keydown", kd);
       window.removeEventListener("keyup", ku);
       window.removeEventListener("blur", blur);
+      window.removeEventListener("focus", focus);
       document.removeEventListener("visibilitychange", visibility);
       resetInput();
       pts.clear();

@@ -1109,6 +1109,9 @@ export default function ExploreClient() {
   const active = !intro && !panel && !fade && (!ending || walkable) && !paused && !recordsChanged && !beat;
   const activeRef = useRef(active);
   activeRef.current = active;
+  // 설정창을 닫았을 때 곧바로 조작이 돌아오는지 (결말 연출·대화 중이면 마우스를 잠그지 않는다)
+  const playableRef = useRef(false);
+  playableRef.current = !intro && !panel && !fade && (!ending || walkable) && !recordsChanged && !beat;
   const touchRef = useRef(touch);
   touchRef.current = touch;
   const nearRef = useRef(near);
@@ -1167,7 +1170,7 @@ export default function ExploreClient() {
   }, [active, locked, touch, lock]);
   const resume = useCallback(() => {
     setPaused(false);
-    lock();
+    if (playableRef.current) lock();
   }, [lock]);
   // 설정창에서 곧장 방공호로: 방폭문 앞에서 방 안을 바라보며 들어온다
   const backToBunker = useCallback(() => {

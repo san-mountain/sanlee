@@ -679,7 +679,8 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
     lines: [
       { ko: "배달 로봇 D-12입니다. 소포 하나를 412일째 들고 있습니다.", en: "Courier bot D-12. I have been carrying one parcel for 412 days." },
       { ko: "수령인이 추적을 거부한 날, 주소가 지도에서 사라졌습니다. 경로를 다시 계산해도 ‘없는 곳’으로만 나옵니다.", en: "The day the recipient refused tracking, their address vanished from the map. Every time I recalculate, the route ends at 'nowhere'." },
-      { ko: "돌아가면 반송 처리되고, 반송된 소포는 폐기됩니다. 그래서 드론이 내려다보지 않는 이 처마 밑에서 기다립니다.", en: "If I go back, it's marked returned, and returned parcels are destroyed. So I wait here, under the eaves, where the drones don't look." },
+      { ko: "멈춰 선 배달 로봇이 드론 눈에 띄면 ‘배송 실패’로 회수됩니다. 회수된 소포는 반송 처리되어 폐기되고요.", en: "If a drone spots a courier standing still, it's recalled as a 'failed delivery'. Recalled parcels are marked returned and destroyed." },
+      { ko: "그래서 드론이 내려다보지 않는 이 처마 밑에 숨어 기다립니다. 주소가 다시 생길지도 모르니까요.", en: "So I hide and wait here, under the eaves, where the drones don't look. The address might come back." },
       { ko: "제 화면에는 아직 ‘배송 중’이라고 떠 있습니다. 거짓말은 아닙니다. 아직 포기하지 않았으니까요.", en: "My screen still says 'delivering'. It isn't a lie. I haven't given up yet." },
     ],
   },
