@@ -807,7 +807,8 @@ export default function ExploreClient() {
       ]);
       faceLater(2800, () => {
         toFacePhase("choice");
-        gaze.lookAt = { ...CONTROLS_AT };
+        // 두 조작부를 화면 가운데에 (세로 화면에서 위로 치우쳐 아래 절반이 바닥만 보이던 문제)
+        gaze.lookAt = { ...CONTROLS_AT, center: true };
       });
       faceLater(5600, () => {
         if (gaze.lookAt && gaze.lookAt.x === CONTROLS_AT.x && gaze.lookAt.z === CONTROLS_AT.z) gaze.lookAt = null;
@@ -815,6 +816,25 @@ export default function ExploreClient() {
     });
   };
   // 표준 미소 적용(분홍 버튼) 또는 원본 얼굴 보존(나무 레버). 어느 쪽이든 이산이 깨어난다
+  // 세로 화면: 장치 앞에서 고르는 동안 시야를 넓혀 분홍 버튼·나무 레버와 두 이름표가 화면 안에 다 들어오게 한다
+  const faceWide = useRef(false);
+  // 첫 쿠키 안내(저장 알림)가 떠 있는 동안에는 이산의 분필 안내를 미룬다 (같은 자리에 겹친다). 안내가 없으면 곧바로 말한다
+  const cookieUntil = useRef(0);
+  useEffect(() => {
+    const on = (e: Event) => {
+      const d = (e as CustomEvent).detail as { kind?: string; n?: number } | string;
+      if (typeof d === "object" && d.kind === "save" && d.n === 1) cookieUntil.current = performance.now() + 6900;
+    };
+    window.addEventListener("sanlee-backup", on);
+    return () => window.removeEventListener("sanlee-backup", on);
+  }, []);
+  useEffect(() => {
+    const portrait = typeof window !== "undefined" && window.innerWidth < window.innerHeight * 0.8;
+    const want = portrait && facePhase === "choice" && !!near?.id.startsWith("face");
+    if (want === faceWide.current) return;
+    faceWide.current = want;
+    gaze.zoom = want ? 1.28 : 1;
+  }, [facePhase, near]);
   const chooseFace = (method: FaceMethod) => {
     if (faceRt.phase !== "choice" || endingRef.current) return;
     updateFace({ ...faceRef.current, method });
@@ -1303,7 +1323,7 @@ export default function ExploreClient() {
     let faceSaid = false;
     let hide: ReturnType<typeof setTimeout>;
     const show = () => {
-      if (quietRef.current || drone.lit >= 0 || drone.caught) return;
+      if (quietRef.current || drone.lit >= 0 || drone.caught) return false;
       clearTimeout(noticeTimer.current);
       const fc = faceCastRef.current;
       if (fc && !faceSaid) {
@@ -1311,9 +1331,13 @@ export default function ExploreClient() {
         setNotice(fc);
       } else setNotice(announcements[i++ % announcements.length]);
       hide = setTimeout(() => setNotice(null), 6500);
+      return true;
     };
-    const first = setTimeout(show, 3500);
-    const iv = setInterval(show, 17000);
+    // 첫 방송은 이산의 말(분필 안내 등)이 끝나기를 기다렸다가 곧이어 나온다
+    let first: ReturnType<typeof setTimeout>;
+    const tryFirst = () => { if (!show()) first = setTimeout(tryFirst, 1500); };
+    first = setTimeout(tryFirst, 3500);
+    const iv = setInterval(() => { clearTimeout(first); show(); }, 17000);
     return () => {
       clearTimeout(first);
       clearTimeout(hide);
@@ -1797,7 +1821,7 @@ export default function ExploreClient() {
       if (ph === "scope" && withSan && !c.surface) {
         if (!c.surfaceAt) {
           if (Math.hypot(px - CITY.spawn.pos[0], pz - CITY.spawn.pos[2]) < 6) c.surfaceAt = now;
-        } else if (now - c.surfaceAt > 10500 && !speaking()) {
+        } else if (now - c.surfaceAt > 1800 && performance.now() > cookieUntil.current && !speaking()) {
           c.surface = true;
           say(sanCue.surface, 4200);
         }
