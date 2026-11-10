@@ -23,7 +23,9 @@ const VOL = 0.3;
 // bunker −11.1, ground −9.5, jabi −7.1, accept −8.6, reject −10.0, fall −7.0 LUFS.
 // 대자비 곡만 일부러 0.6dB쯤 크게 남긴다(긴장). 결말 두 곡은 예전 값이 약 2dB 작게 들려서 맞췄다
 // 〈空〉 −9.9 LUFS
-const LEVEL: Record<Track, number> = { bunker: 1, ground: 0.83, jabi: 0.68, accept: 0.75, reject: 0.88, fall: 0.62, empty: 0.87 };
+// f-ALL은 다른 곡보다 약 3dB 크게 둔다 (0.62 → 0.87): 空 경로의 지상에는 대사·안내가 거의 없고 결말까지 이 곡 하나가 장면을 끌고 간다.
+// 게임 믹싱에서 대사·효과음이 빠지는 컷신·엔딩에는 음악에 자리를 더 내주는 것이 흔한 방식이다 (평소 플레이는 음악을 낮춰 둔다)
+const LEVEL: Record<Track, number> = { bunker: 1, ground: 0.83, jabi: 0.68, accept: 0.75, reject: 0.88, fall: 0.87, empty: 0.87 };
 const FADE = 1.6;
 // 처음 시작할 때 아주 작게 들어와 천천히 커지는 곡 (f-ALL: 공 경로의 지상에 올라서자마자 약 12초에 걸쳐). 줄어들 때나 설정창을 닫아 되돌릴 때는 다른 곡과 같다
 // 수락·거부 결말 곡은 듣던 곡과 몇 초 겹치며 들어온다

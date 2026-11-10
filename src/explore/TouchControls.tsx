@@ -198,6 +198,7 @@ export function useLookAndKeys(
     // 점프 키: 스페이스. 한국어 입력기 등에서 key가 "Process"로 오거나 keyCode만 오는 경우도 받는다
     const isJump = (e: KeyboardEvent) => e.code === "Space" || e.key === " " || e.key === "Spacebar" || e.keyCode === 32;
     let spaceDown = false;
+    let lastFwd = -1e9;
     const kd = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest?.("input, textarea")) return;
       logKey("down", e);
@@ -219,6 +220,12 @@ export function useLookAndKeys(
       if ((e.code === "ShiftLeft" || e.code === "ShiftRight") && !e.repeat) {
         input.runLatch = true;
         input.shiftAt = e.timeStamp;
+      }
+      // 앞으로 키를 두 번 톡톡 누르면 달린다 (Shift를 누르고 있지 않아도 되므로 달리면서 스페이스로 뛸 수 있다.
+      // macOS 등에서 Shift+Space가 한/영 전환으로 먹히면 Shift를 누른 채로는 점프 키가 오지 않는다)
+      if ((e.code === "KeyW" || e.code === "ArrowUp") && !e.repeat) {
+        if (e.timeStamp - lastFwd < 320) input.runLatch = true;
+        lastFwd = e.timeStamp;
       }
       input.keys.add(e.code);
     };

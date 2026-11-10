@@ -68,7 +68,7 @@ export default function PauseMenu({
       .replace("{copy}", String(getBackup().restores + 1));
 
   return (
-    <div className="pause-wrap">
+    <div className="pause-wrap" onClick={(e) => e.target === e.currentTarget && onResume()}>
       <div className="pause" role="dialog" aria-modal="true" aria-label={t(pause.title)}>
         <div className="pause-head">
           <h2 className="glitch">{t(pause.title)}</h2>

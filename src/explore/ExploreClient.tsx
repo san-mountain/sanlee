@@ -394,15 +394,18 @@ export default function ExploreClient() {
   // 수락: 이산의 마지막 말("결국 이렇게 되는구나.")에서. 거부: 장면이 방공호로 넘어가는 순간(두 번째 정지 시민)에서.
   // 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 올라서자마자 f-ALL이 아주 작게 시작해 서서히 커지고, 空 결말도 그 곡을 끝까지 잇는다
   const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "fall") : null;
-  const END_CUE: Record<EndKind, number> = { accept: ACCEPT_SAY, reject: REJECT_BUNKER, ghost: 0 };
+  // 수락: 돌아서서 이산의 말("…그래.")을 듣는 줄부터 결말 곡이 겹쳐 들어와 줄까지 걷는 길을 받친다 (예전엔 이산의 마지막 말에서야 들어왔다)
+  const END_CUE: Record<EndKind, number> = { accept: ACCEPT_TURN, reject: REJECT_BUNKER, ghost: 0 };
   const cityTrack: Track = jabiStage ? "jabi" : "ground";
   // 거부 결말: 화면이 하얗게 멎는 순간 듣던 곡도 짧게 끊긴다(정지). 방공호로 넘어가면 결말 곡이 천천히 들어온다
   const frozenQuiet = ending?.kind === "reject" && flash;
   const track: Track | null =
     leaving
       ? null
+      : gallery
+        ? "empty"
       : intro
-        ? gallery || seenCount === 3 ? "empty" : null
+        ? seenCount === 3 ? "empty" : null
       : ending
         ? ending.step >= END_CUE[ending.kind] ? endTrack : frozenQuiet ? null : zone === "city" ? cityTrack : null
         : zone === "city" && ghost ? "fall" : zone === "bunker" ? "bunker" : cityTrack;
