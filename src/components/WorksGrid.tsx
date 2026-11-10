@@ -28,6 +28,12 @@ function Caption({ w }: { w: Work }) {
       <span className="cm">
         {t(w.medium)}, {t(w.size)}
       </span>
+      {w.credit && (
+        <>
+          <br />
+          <span className="cm">{t(w.credit)}</span>
+        </>
+      )}
     </p>
   );
 }

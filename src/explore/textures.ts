@@ -168,3 +168,19 @@ export function chalkArrowTexture(turn = false) {
   }
   return finish(c);
 }
+
+// 가운데가 밝고 가장자리로 사라지는 둥근 빛 (바닥의 불빛 웅덩이, 등의 번짐). 색은 재질 color로 입힌다
+export function glowTexture() {
+  const c = document.createElement("canvas");
+  c.width = c.height = 128;
+  const g = c.getContext("2d")!;
+  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, "rgba(255,255,255,1)");
+  r.addColorStop(0.35, "rgba(255,255,255,0.45)");
+  r.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = r;
+  g.fillRect(0, 0, 128, 128);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}

@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles, useTexture, RoundedBox } from "@react-three/drei";
 import type { Lang, SectionId } from "@/data/site";
 import { works } from "@/data/site";
-import { concreteTexture, hazardTexture } from "./textures";
-import { BACKUP_RACK, BUNKER_H, BUNKER_NPCS, BUNKER_Z0, BUNKER_Z1, PAINTINGS, PILLARS, TERMINALS } from "./zones";
+import { concreteTexture, glowTexture, hazardTexture } from "./textures";
+import { BACKUP_RACK, BUNKER_H, BUNKER_NPCS, BUNKER_Z0, BUNKER_Z1, NOTES, PAINTINGS, PILLARS, TERMINALS } from "./zones";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import Statue, { Pedestal } from "./Statue";
 import SanNPC from "./SanNPC";
@@ -218,14 +218,34 @@ function Terminal({ id, pos, rotY, color, lang, visited, onTap }: { id: SectionI
   );
 }
 
+function shrinkTexture(src: THREE.Texture, max: number): THREE.Texture {
+  const img = src.image as { width: number; height: number } & CanvasImageSource;
+  const scale = Math.min(1, max / Math.max(img.width || 1, img.height || 1));
+  let out: THREE.Texture = src;
+  if (scale < 1 && typeof document !== "undefined") {
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * scale);
+    c.height = Math.round(img.height * scale);
+    const g = c.getContext("2d");
+    if (g) {
+      g.imageSmoothingQuality = "high";
+      g.drawImage(img, 0, 0, c.width, c.height);
+      out = new THREE.CanvasTexture(c);
+    }
+  }
+  out.colorSpace = THREE.SRGBColorSpace;
+  out.anisotropy = 4;
+  return out;
+}
+
 function Paintings({ lang }: { lang: Lang }) {
-  const tex = useTexture(PAINTINGS.map((p) => p.w.image!));
+  const full = useTexture(PAINTINGS.map((p) => p.w.image!));
   const wallWash = useLightPool("#ffe6c0", 2.4, "top");
   const paintWash = useLightPool("#fff0d8", 0.3, "top");
-  tex.forEach((t) => {
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 4;
-  });
+  // 벽에 걸린 그림은 2m 남짓이라 원본(긴 변 1400px)을 그대로 올리면 그림 여덟 점에 GPU 메모리를 60MB 가까이 쓴다.
+  // 긴 변 768px로 줄인 사본만 GPU에 올린다(약 3분의 1). 원본은 그림을 열어 볼 때 그대로 쓴다
+  const tex = useMemo(() => full.map((t) => shrinkTexture(t, 768)), [full]);
+  useEffect(() => () => tex.forEach((t) => t.dispose()), [tex]);
   return (
     <group>
       {PAINTINGS.map((p, i) => {
@@ -944,7 +964,49 @@ function SmallLamp() {
   );
 }
 
-export default function Bunker({ lang, visited, onTap, secondStatue, awake, face }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean; face: FaceView }) {
+/* ---------- 지워진 사람들의 쪽지: 테이프로 붙인 누런 종이. 아직 읽지 않은 것은 가장자리가 희미하게 빛난다 ---------- */
+function Notes({ onTap, read }: { onTap: TapFn; read: number[] }) {
+  const glow = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
+  const halo = useMemo(glowTexture, []);
+  useEffect(() => () => halo.dispose(), [halo]);
+  useFrame((st) => {
+    const t = st.clock.elapsedTime;
+    glow.current.forEach((m, i) => m && (m.opacity = read.includes(i) ? 0 : 0.45 + Math.sin(t * 2 + i) * 0.2));
+  });
+  return (
+    <group>
+      {NOTES.map((n, i) => (
+        <Tap key={i} id={`note-${i}`} onTap={onTap}>
+          <group position={n.pos} rotation={n.flat ? [-Math.PI / 2, 0, n.rotY + 0.3] : [0, n.rotY, (i % 2 ? -1 : 1) * 0.06]}>
+            <mesh position={[0, 0, 0.012]}>
+              <planeGeometry args={[0.7, 0.7]} />
+              <meshBasicMaterial ref={(m) => { glow.current[i] = m; }} map={halo} color="#ffe9a8" transparent opacity={0.4} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
+            </mesh>
+            <mesh position={[0, 0, 0.016]}>
+              <planeGeometry args={[0.24, 0.3]} />
+              <meshStandardMaterial color={read.includes(i) ? "#cfc6ae" : "#efe4c4"} roughness={0.9} emissive="#3a3220" emissiveIntensity={0.5} side={THREE.DoubleSide} />
+            </mesh>
+            {/* 손글씨 줄 */}
+            {[0.08, 0.03, -0.02, -0.07].map((y, k) => (
+              <mesh key={k} position={[-0.01 * k, y, 0.018]}>
+                <planeGeometry args={[0.17 - k * 0.025, 0.008]} />
+                <meshBasicMaterial color="#4a4033" />
+              </mesh>
+            ))}
+            {!n.flat && (
+              <mesh position={[0, 0.15, 0.02]}>
+                <planeGeometry args={[0.08, 0.03]} />
+                <meshBasicMaterial color="#d9d3c2" transparent opacity={0.8} />
+              </mesh>
+            )}
+          </group>
+        </Tap>
+      ))}
+    </group>
+  );
+}
+
+export default function Bunker({ lang, visited, onTap, secondStatue, awake, face, notesRead = [] }: { lang: Lang; visited: SectionId[]; onTap: TapFn; secondStatue?: boolean; awake?: boolean; face: FaceView; notesRead?: number[] }) {
   return (
     <group>
       <color attach="background" args={["#060607"]} />
@@ -968,6 +1030,7 @@ export default function Bunker({ lang, visited, onTap, secondStatue, awake, face
       <Kid onTap={onTap} />
       <Sleeper onTap={onTap} />
       <BackupRack lang={lang} onTap={onTap} />
+      <Notes onTap={onTap} read={notesRead} />
       <BunkerLotus />
       {/* 이산 곁의 얼굴 복원 장치: 터미널 셋을 연 뒤 어긋난 얼굴을 맞추면 이산이 깨어난다 */}
       {!secondStatue && (

@@ -16,6 +16,7 @@ type Work = {
   size: L;
   description?: L;
   link?: string;
+  credit?: L;
   image?: string;
   category?: "painting" | "sculpture";
   width?: number;
@@ -42,6 +43,8 @@ type WorkDraft = {
   descKo: string;
   descEn: string;
   link: string;
+  creditKo: string;
+  creditEn: string;
   category: "painting" | "sculpture";
   image: string;
   width: number;
@@ -118,6 +121,8 @@ function toDraft(kind: Kind, item?: Item): Draft {
     descKo: w?.description?.ko ?? "",
     descEn: w?.description?.en ?? "",
     link: w?.link ?? "",
+    creditKo: w?.credit?.ko ?? "",
+    creditEn: w?.credit?.en ?? "",
     category: w?.category ?? "painting",
     image: w?.image ?? "",
     width: w?.width ?? 0,
@@ -150,6 +155,7 @@ function fromDraft(kind: Kind, d: Draft): Item {
   };
   if (w.descKo.trim() || w.descEn.trim()) out.description = { ko: w.descKo, en: w.descEn };
   if (w.link.trim()) out.link = w.link.trim();
+  if (w.creditKo.trim() || w.creditEn.trim()) out.credit = { ko: w.creditKo.trim(), en: w.creditEn.trim() };
   if (w.image && w.image !== "pending") {
     out.image = w.image;
     if (w.category === "sculpture") out.category = "sculpture";
@@ -726,6 +732,14 @@ function WorkFields({ d, set }: { d: WorkDraft; set: SetFn }) {
       <Field label="링크(없어도 돼요)" hint="/deleteseoul 처럼 이 사이트 주소나 https:// 주소">
         <input value={d.link} onChange={(e) => set({ link: e.target.value })} />
       </Field>
+      <div className="admin-row">
+        <Field label="함께 만든 사람(한국어, 없어도 돼요)" hint="캡션의 재료·크기 다음 줄에 나와요. 예: 음악: 백진성">
+          <input value={d.creditKo} onChange={(e) => set({ creditKo: e.target.value })} />
+        </Field>
+        <Field label="함께 만든 사람(영어)">
+          <input value={d.creditEn} onChange={(e) => set({ creditEn: e.target.value })} />
+        </Field>
+      </div>
     </>
   );
 }

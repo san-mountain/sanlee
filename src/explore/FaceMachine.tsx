@@ -279,10 +279,14 @@ function Controls({ method, lang, onTap }: { method: FaceMethod | null; lang: La
     halos.current.forEach((h, k) => {
       if (!h) return;
       const on = k ? fKeep : fStd;
-      h.visible = on;
+      // 고를 차례가 되면 둘 다 은은히 숨 쉬고, 바라보는 쪽은 더 밝게 뛴다
+      h.visible = live;
       if (on) {
         h.scale.setScalar(1 + Math.sin(t * 6) * 0.08);
         (h.material as THREE.MeshBasicMaterial).opacity = 0.65 + Math.sin(t * 6) * 0.25;
+      } else if (live) {
+        h.scale.setScalar(1 + ((t * 0.8 + k * 0.5) % 1) * 0.5);
+        (h.material as THREE.MeshBasicMaterial).opacity = 0.45 * (1 - ((t * 0.8 + k * 0.5) % 1));
       }
     });
   });

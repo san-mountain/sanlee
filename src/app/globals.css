@@ -368,13 +368,17 @@ img { max-width: 100%; height: auto; display: block; }
   .painting-panel img { max-height: 58vh; }
 }
 .ending-inner { word-break: keep-all; background: radial-gradient(ellipse at center, #000000aa, transparent 70%); padding: 30px 10px; }
-.crosshair { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; z-index: 30; pointer-events: none; }
-.crosshair::before, .crosshair::after { content: ""; position: absolute; background: #ffffffb0; box-shadow: 0 0 4px #000; }
-.crosshair::before { left: 6px; top: 0; width: 2px; height: 14px; }
-.crosshair::after { top: 6px; left: 0; height: 2px; width: 14px; }
-.crosshair-face { width: 26px; height: 26px; margin: -13px 0 0 -13px; border: 2px solid #ffd27acc; border-radius: 50%; box-shadow: 0 0 6px #000, inset 0 0 4px #000; }
-.crosshair-face::before { left: 11px; top: 4px; width: 2px; height: 14px; background: #ffd27a; }
-.crosshair-face::after { top: 11px; left: 4px; height: 2px; width: 14px; background: #ffd27a; }
+/* 조준점: 가운데 점과 네 갈래 눈금, 천천히 도는 바깥 호. 상호작용할 것이 잡히면 모서리 괄호가 조여 들며 그 대상의 색으로 바뀐다.
+   SVG 좌표 원점(0,0)이 정확히 화면 가운데에 오도록 짝수 크기 + translate(-50%). view-box 기준의 transform-origin 0 0이 그 원점이다 */
+.reticle { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); z-index: 30; pointer-events: none; color: #9ff6ff; filter: drop-shadow(0 0 1.5px #000) drop-shadow(0 0 3px color-mix(in srgb, currentColor 60%, transparent)); transition: color .2s; }
+.reticle svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.reticle .r-tick { transition: transform .2s ease-out; transform-box: view-box; transform-origin: 0 0; }
+.reticle .r-brk { opacity: 0; transform: scale(1.5) rotate(45deg); transform-box: view-box; transform-origin: 0 0; transition: opacity .18s, transform .22s ease-out; }
+.reticle .r-ring { opacity: .45; transform-box: view-box; transform-origin: 0 0; animation: reticleSpin 9s linear infinite; }
+.reticle.on .r-brk { opacity: 1; transform: none; }
+.reticle.on .r-tick { transform: scale(.75); }
+.reticle.on .r-ring { opacity: .8; animation-duration: 3s; }
+@keyframes reticleSpin { to { transform: rotate(360deg); } }
 
 /* ---------- explore v3: 설정창(제4의 벽), 퀘스트 화살표, 점프 버튼 ---------- */
 /* 설정창: 도시의 관리 AI가 띄운 시스템 단말. 방문자에게 직접 말을 거는 붉은 문장이 아래에 흐른다 */
@@ -392,6 +396,15 @@ img { max-width: 100%; height: auto; display: block; }
 .pause-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid #22f0ff1f; font-family: var(--mono); font-size: 12px; letter-spacing: .03em; }
 .pause-row input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--pink); }
 .pause-row small { grid-column: 1 / -1; color: var(--dim); font-size: 10px; font-family: var(--mono); }
+.pause-row.pause-sub { grid-template-columns: 7em 1fr 2.6em; padding: 4px 0 4px 12px; border-bottom: 0; }
+.pause-row.pause-sub input[type="range"], .pause-row.pause-sub small { grid-column: auto; }
+.pause-row.pause-sub small { text-align: right; }
+/* 화면 효과 줄이기 (설정창): 글리치 깜빡임을 멈추고, 거부 결말의 하얀 번쩍임을 어둡게 가라앉는 전환으로 */
+.explore-root.calm-fx .glitch { animation: none; }
+/* 한 글자씩 써지는 대사의 남은 글자: 자리만 차지한다 */
+.typed-rest { visibility: hidden; }
+.explore-root.calm-fx.final-flash::after { animation: finalFlashCalm 2.2s ease-out forwards; }
+@keyframes finalFlashCalm { 0% { background: #00000000; } 30% { background: #2a0a10c0; } 100% { background: #000000f0; } }
 .pause-row.locked { opacity: .5; }
 .pause-row.locked small { color: var(--yellow); }
 .pause-note { margin: -4px 0 0; padding: 0 0 8px; font-size: 10px; color: #ff2bd6aa; font-family: var(--mono); border-bottom: 1px solid #22f0ff1f; }
@@ -1216,3 +1229,32 @@ body.restoring-light .page img, body.restoring-light .feature-art { transition: 
 .forget-city.lit { animation: forgetLit .4s steps(1) 6; }
 @keyframes forgetLit { 0% { box-shadow: 0 0 6px #22f0ff, 0 0 22px #ff2bd6; color: #fff; } 50% { box-shadow: none; } }
 @media (prefers-reduced-motion: reduce) { .forget-hint { animation: none; } }
+
+/* 결말 모음 (첫 화면): 세 칸과 백진성의 수록곡 */
+.intro-gallery { display: inline-block; margin: 2px 0 6px; padding: 0; background: none; border: 0; border-bottom: 1px dashed #ffe14d88; color: #ffe14d; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; cursor: pointer; }
+.intro-gallery:hover, .intro-gallery:focus-visible { color: #fff; border-bottom-color: #fff; }
+.gallery-wrap { z-index: 51; }
+.intro .panel.gallery { width: min(620px, 92vw); max-height: 92vh; overflow-y: auto; }
+.gallery-sub { color: var(--dim); font-size: 13px; margin: 2px 0 14px; }
+.gallery-endings { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 10px; }
+.gallery-endings li { border: 1px solid #ff2bd655; padding: 10px 12px; background: #12061ccc; }
+.gallery-endings li b { display: block; font-family: var(--mono); font-size: 13px; letter-spacing: .06em; color: #fff; }
+.gallery-endings li p { margin: 6px 0 4px; font-size: 14px; color: #e4dcf2; word-break: keep-all; }
+.gallery-endings li small { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: #b9aed6; }
+.gallery-endings li.end-accept { border-color: #22f0ff66; }
+.gallery-endings li.end-reject { border-color: #ff2a3d66; }
+.gallery-endings li.end-ghost { border-color: #ffffff55; }
+.gallery-endings li.unseen { border-style: dashed; border-color: #ffffff2a; background: #0a0612cc; }
+.gallery-endings li.unseen b { color: #8d84a3; }
+.gallery-endings li.unseen .g-hint { color: #8d84a3; font-style: italic; }
+.gallery-tracks-title { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; color: var(--pink); margin: 0 0 6px; }
+.gallery-tracks { list-style: none; padding: 0; margin: 0 0 6px; font-family: var(--mono); font-size: 12px; }
+.gallery-tracks li { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid #22f0ff1a; }
+.gallery-tracks li span { color: #fff; }
+.gallery-tracks li small { color: var(--dim); text-align: right; }
+.gallery-tracks li.hidden span { color: #5d5672; letter-spacing: -.05em; }
+.gallery-notes { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 6px; }
+.gallery-notes li { font-size: 13px; color: #efe4c4; background: #1a150c; border-left: 2px solid #ffe9a8aa; padding: 6px 10px; word-break: keep-all; }
+.gallery-notes li.hidden { color: #6d6450; border-left-color: #6d645055; font-style: italic; }
+.ending-share { display: block; margin: 8px 0 4px; background: none; border: 0; border-bottom: 1px dashed currentColor; padding: 0; color: #9ff6ff; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; cursor: pointer; }
+.ending-share:hover, .ending-share:focus-visible { color: #fff; }

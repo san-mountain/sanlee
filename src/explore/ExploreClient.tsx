@@ -1,18 +1,18 @@
 "use client";
 
-import { sfx } from "./sfx";
+import { ambience, sfx, spatial, type Voice } from "./sfx";
 import { duckBgm, playBgm, preloadBgm, wakeBgm, type Track } from "./bgm";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { RESTORE_KEY } from "@/components/RestoreCrossing";
 import { FORGET_HINT_KEY } from "@/components/ForgetCity";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, faceTalk, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
-import { AVENUE_EDGE_Z, BAY, EDGE, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
+import { MUSIC_URL, echoLines, galleryUi, notes, notesUi, faceTalk, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
+import { AVENUE_EDGE_Z, BAY, BUNKER_NPCS, EDGE, machinePoint, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
 import { sanHold, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -26,6 +26,7 @@ import { autoWalk, gaze, resetGaze, route, stopWalk, walkArea, walkPath, type Re
 import { drone, laneClear, presetSweep, resetDrones } from "./Drones";
 import DroneHUD from "./DroneHUD";
 import ScopeView from "./ScopeView";
+import EndingGallery, { readMemory, remember, type EndKey } from "./EndingGallery";
 import { coverState, restoreCovers } from "./Jabi";
 import SaveToast from "./BackupLine";
 import { getBackup, saveBackup, wipeBackup } from "./backup";
@@ -48,6 +49,7 @@ const LOGIN_KEY = "sanlee-last-login";
 const PROMISE_KEY = "sanlee-promise";
 const FORGOT_KEY = "sanlee-forgotten";
 const FOUND_KEY = "sanlee-endings-found";
+const NOTES_KEY = "sanlee-notes";
 // 남쪽 망원경 가는 길의 기록 (이 기기에만). 서로 다른 세 가지 사실을 따로 적는다:
 // uses 방문자가 직접 들여다본 횟수 / seen 이산과 함께 본 장면(관측)을 마쳤다 / agreed 승강장으로 더 가기로 했다
 // 예전 저장값 { done: true }는 둘 다 참으로 옮긴다. 예전의 open(통제선 천막)은 천막이 없어졌으므로 읽지 않는다
@@ -68,6 +70,11 @@ function readScope(): ScopeData {
 }
 
 const SAN: L = { ko: "이산", en: "San" };
+// 대사가 뜰 때 나는 목소리 대신의 짧은 소리: 말하는 이에 따라 (이름표로 고른다)
+const ROBOTS = ["r07", "robomonk", "courier", "patrol", "patrol2"];
+const VOICES = new Map<L, Voice>([[SAN, "san"]]);
+for (const [k, n] of Object.entries(npcs)) VOICES.set(n.name, ROBOTS.includes(k) ? "robot" : k === "radio" ? "radio" : "person");
+const voiceOf = (name: L, line?: Line): Voice => (line?.who === "narr" ? "none" : (VOICES.get(name) ?? "none"));
 
 function hasWebGL() {
   try {
@@ -109,8 +116,8 @@ type Ending = { kind: EndKind; step: number; a: number; r: number; slots: number
 // 결말 대본의 각 줄이 머무는 시간(ms). 마지막 줄의 시간은 버튼이 나오기 전의 정적이다.
 // 걷는 줄은 시간이 아니라 도착으로 넘어간다 (ENDING_GATE가 참이 된 뒤에야 이 시간이 흐른다)
 const BEAT_MS: Record<EndKind, number[]> = {
-  accept: [3000, 3600, 1200, 2400, 3000],
-  reject: [2800, 3400, 3800, 4800, 3200],
+  accept: [3000, 3600, 1200, 2800, 4200, 5200],
+  reject: [2800, 3400, 3600, 3800, 4800, 4400],
   ghost: [3200, 3400, 700, 1800, 5200],
 };
 // 空 결말: 3번째 줄("…이번엔 우릴 막지 않네.", 다리를 걷는 줄)과 4번째 줄("여기부터는 나도 몰라.", 마지막 걸음)에서는 평소 조작으로 걷는다.
@@ -118,6 +125,11 @@ const BEAT_MS: Record<EndKind, number[]> = {
 // 내려갈수록 화면이 흐려지고 지직대다 끊기면, 검은 화면에 마지막 문장 하나가 남는다. 계단을 설명하는 지문은 없다
 const GHOST_WALK = 2;
 const GHOST_STEP = 3;
+// 수락 결말: 이산이 말하는 줄(시점이 이산 쪽으로 돌아가고, 이산이 돌처럼 굳는다)과 시점이 다시 줄 앞으로 돌아가는 줄
+const ACCEPT_SAY = 3;
+const ACCEPT_AWAY = 5;
+// 거부 결말: 장면이 방공호로 넘어가는 줄 (두 번째 정지 시민의 표석). 결말 곡도 이 줄에서 들어온다
+const REJECT_BUNKER = 4;
 // 처음 대자비의 시선 앞에서 이산이 기다리는 자리: 큰길 앞쪽의 방벽(가장 튼튼한 엄폐물) 뒤, 방문자가 설 자리를 비워 두고 오른쪽 끝에 선다
 const WALL_I = COVERS.findIndex((c) => c.kind === "wall");
 const WALL = COVERS[WALL_I];
@@ -158,6 +170,14 @@ const ACCEPT_WALK = [
   { x: LINE_SPOT.x, z: LINE_SPOT.z, speed: 1.4, pitch: 0.42, yaw: 0 },
 ];
 const ACCEPT_SAN: SanPath = { pts: [[-0.9, -121], [-0.9, -104.6]], yaw: Math.atan2(LINE_SPOT.x + 0.9, LINE_SPOT.z + 104.6), speed: 2.6 };
+// 이산의 마지막 말 동안 바라볼 곳(줄 밖에 선 이산. 결말 글이 얼굴을 가리지 않도록 머리 위를 겨눠 이산이 화면 아래쪽에 오게 한다)과, 그 뒤 다시 바라볼 곳(줄 앞, 성문 너머 대자비)
+// 얼굴이 맞은 뒤 시선이 잠깐 내려가는 곳: 장치 아래쪽 분홍 버튼과 나무 레버 사이
+const CONTROLS_AT = (() => {
+  const v = machinePoint(0, 0.95, 0.22);
+  return { x: v.x, y: v.y, z: v.z };
+})();
+const ACCEPT_LOOK_SAN = { x: -0.9, y: 3.7, z: -104.6 };
+const ACCEPT_LOOK_GATE = { x: LINE_SPOT.x, y: 7, z: -150 };
 
 // ---------- 남쪽 전망대 가는 길 (zones의 LOOKOUT_PATH) ----------
 // 가는 길(OUT)과 돌아오는 길(BACK). BACK은 OUT을 거꾸로 걷는다 (건너는 드론 길 표시도 한 칸씩 옮긴다). 광장에 닿으면 이산은 평소처럼 따라온다
@@ -206,8 +226,12 @@ export default function ExploreClient() {
   const [near, setNear] = useState<Interactable | null>(null);
   const [tracked, setTracked] = useState(false);
   const [fade, setFade] = useState<string | null>(null);
+  const fadeRef = useRef(fade);
+  fadeRef.current = fade;
   const [notice, setNotice] = useState<L | null>(null);
   const [ending, setEnding] = useState<Ending>(null);
+  // 거부 결말: 화면이 하얗게 멎은 동안
+  const [flash, setFlash] = useState(false);
   const [locked, setLocked] = useState(false);
   const [paused, setPaused] = useState(false);
   const [recordsChanged, setRecordsChanged] = useState(false);
@@ -256,6 +280,22 @@ export default function ExploreClient() {
   // 입장 전 쿠키 창: ask → busy(처리 중…) → yes(수락됨) → done
   // 발견한 결말 (거부 결말은 기록을 지우므로 남지 않는다)
   const [found, setFound] = useState<string[]>([]);
+  // 이 기기가 기억하는 결말 (결말 모음). 도시의 저장(found)과 따로
+  const [memory, setMemory] = useState<Partial<Record<EndKey, number>>>({});
+  const [gallery, setGallery] = useState(false);
+  // 방공호에서 읽은 쪽지 (이 기기에 모인다. 기록 지우기·처음부터 다시로도 지워지지 않는다)
+  const [notesRead, setNotesRead] = useState<number[]>([]);
+  useEffect(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem(NOTES_KEY) || "[]");
+      if (Array.isArray(v)) setNotesRead(v.filter((x) => Number.isInteger(x) && x >= 0 && x < notes.length));
+    } catch {}
+  }, []);
+  const galleryRef = useRef(false);
+  galleryRef.current = gallery;
+  const seenCount = Object.keys(memory).length;
+  const seenCountRef = useRef(0);
+  seenCountRef.current = seenCount;
   // 남쪽 망원경 기록 (이 기기의 실제 값. 검문소가 그대로 읽는다)
   const [scopeData, setScopeData] = useState<ScopeData>(NO_SCOPE);
   // R-07과 친구가 되었는지: 이번 방문(이 페이지) 동안만. 어디에도 저장하지 않는다
@@ -348,24 +388,26 @@ export default function ExploreClient() {
   // 수락: 이산의 마지막 말("결국 이렇게 되는구나.")에서. 거부: 장면이 방공호로 넘어가는 순간(두 번째 정지 시민)에서.
   // 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 올라서자마자 f-ALL이 아주 작게 시작해 서서히 커지고, 空 결말도 그 곡을 끝까지 잇는다
   const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "fall") : null;
-  const END_CUE: Record<EndKind, number> = { accept: 3, reject: 3, ghost: 0 };
+  const END_CUE: Record<EndKind, number> = { accept: ACCEPT_SAY, reject: REJECT_BUNKER, ghost: 0 };
   const cityTrack: Track = jabiStage ? "jabi" : "ground";
+  // 거부 결말: 화면이 하얗게 멎는 순간 듣던 곡도 짧게 끊긴다(정지). 방공호로 넘어가면 결말 곡이 천천히 들어온다
+  const frozenQuiet = ending?.kind === "reject" && flash;
   const track: Track | null =
-    leaving || intro
+    leaving
       ? null
+      : intro
+        ? gallery || seenCount === 3 ? "empty" : null
       : ending
-        ? ending.step >= END_CUE[ending.kind] ? endTrack : zone === "city" ? cityTrack : null
+        ? ending.step >= END_CUE[ending.kind] ? endTrack : frozenQuiet ? null : zone === "city" ? cityTrack : null
         : zone === "city" && ghost ? "fall" : zone === "bunker" ? "bunker" : cityTrack;
   useEffect(() => {
     if (endTrack) preloadBgm(endTrack);
   }, [endTrack]);
   useEffect(() => {
     // 결말 곡으로 넘어갈 때는 듣던 곡을 길게 줄이며 겹친다 (결말 곡도 천천히 들어온다: bgm FADE_IN)
-    playBgm(track, track && ["accept", "reject"].includes(track) ? 5 : undefined);
+    playBgm(track, track && ["accept", "reject"].includes(track) ? 5 : frozenQuiet ? 0.5 : undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track]);
-  useEffect(() => {
-    duckBgm(paused);
-  }, [paused]);
   useEffect(() => {
     window.addEventListener("pointerdown", wakeBgm);
     window.addEventListener("keydown", wakeBgm);
@@ -422,6 +464,8 @@ export default function ExploreClient() {
       if (localStorage.getItem(PROMISE_KEY) === "1") localStorage.removeItem(PROMISE_KEY);
       const f = JSON.parse(localStorage.getItem(FOUND_KEY) || "[]");
       setFound(uniqueIds(f, ["accept", "reject", "ghost"]));
+      // 결말 모음이 생기기 전에 본 수락 결말도 기억으로 옮긴다
+      setMemory(Array.isArray(f) && f.includes("accept") ? remember("accept") : readMemory());
     } catch {}
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || "[]");
@@ -597,9 +641,15 @@ export default function ExploreClient() {
     closePanelRef.current();
     say(sanCue.later, 2600);
   };
+  // 망원경 뒤의 대화: "방금 본 건 내 기억이야." 다음에 얼굴(표준 미소 / 원본)에 따라 한 줄이 끼어든다
+  const afterLines = (): Line[] => {
+    const m = faceRef.current.method;
+    if (!m || ghostRef.current) return scopeScene.after;
+    return [...scopeScene.after.slice(0, 3), faceTalk.scope[m], ...scopeScene.after.slice(3)];
+  };
   const afterPanel = (): Panel => {
     const full = !heardRef.current;
-    const lines = full ? [...scopeScene.after, ...scopeScene.decide] : scopeScene.decide;
+    const lines = full ? [...afterLines(), ...scopeScene.decide] : scopeScene.decide;
     const last = lines.length - 1;
     return {
       kind: "dialog",
@@ -644,6 +694,7 @@ export default function ExploreClient() {
     m.looked = m.mode === "view";
     m.mode = "out";
     setScopeView("");
+    sfx.scopeOut();
     gaze.zoom = 1;
     gaze.clamp = null;
     if (m.back) walkPath([m.back]);
@@ -711,7 +762,15 @@ export default function ExploreClient() {
           befriend([r07Friend.answer]);
         },
       });
-    return { kind: "dialog", name: n.name, lines: n.lines, step: 0, choices };
+    // 이산이 깨어난 뒤에는 첫 줄만 바뀐다 (청소한 받침대 이야기)
+    const fm = faceRef.current.method;
+    const first = complete && !ghost && fm && n.face ? n.face[fm] : complete ? n.after : undefined;
+    const echo = seenCountRef.current > 0 && !complete && !ghost && !forgot ? echoLines.r07 : undefined;
+    const lines = first ? [...first, ...n.lines.slice(1)] : echo ? [n.lines[0], echo, ...n.lines.slice(1)] : n.lines;
+    choices.forEach((c) => {
+      if (c.at > 0) c.at = lines.length - 1;
+    });
+    return { kind: "dialog", name: n.name, lines, step: 0, choices };
   };
 
   // 얼굴 복원 장치의 원통 하나를 한 칸 돌린다. 세 부분이 다 맞으면 장치가 잠기고, 도시가 표준 미소를 내민다
@@ -731,8 +790,19 @@ export default function ExploreClient() {
     faceLater(2600, () => {
       toFacePhase("twist");
       sfx.cityVoice();
-      speak([{ who: faceUi.city, line: faceUi.smileMissing, ms: 3400 }]);
-      faceLater(3400, () => toFacePhase("choice"));
+      // 도시가 분홍 버튼을, 낡은 장치가 나무 레버를 가리키는 동안 시선이 아래쪽 조작부로 내려간다 (얼굴을 올려다보던 눈을 데려간다)
+      speak([
+        { who: faceUi.city, line: faceUi.smileMissing, ms: 2800 },
+        { who: faceUi.city, line: faceUi.offerStandard, ms: 3600 },
+        { who: faceUi.machine, line: faceUi.offerKeep, ms: 3600 },
+      ]);
+      faceLater(2800, () => {
+        toFacePhase("choice");
+        gaze.lookAt = { ...CONTROLS_AT };
+      });
+      faceLater(5600, () => {
+        if (gaze.lookAt && gaze.lookAt.x === CONTROLS_AT.x && gaze.lookAt.z === CONTROLS_AT.z) gaze.lookAt = null;
+      });
     });
   };
   // 표준 미소 적용(분홍 버튼) 또는 원본 얼굴 보존(나무 레버). 어느 쪽이든 이산이 깨어난다
@@ -804,6 +874,21 @@ export default function ExploreClient() {
           // 기억으로 깨어난 사람은 터미널을 열어도 기록이 남지 않는다
           if (!ghost) markVisited(it.section!);
           break;
+        case "note": {
+          const i = it.note!;
+          const next = notesRead.includes(i) ? notesRead : [...notesRead, i];
+          if (next !== notesRead) {
+            setNotesRead(next);
+            try {
+              localStorage.setItem(NOTES_KEY, JSON.stringify(next));
+            } catch {}
+          }
+          const head = { ...notesUi.title, ko: notesUi.title.ko.replace("{n}", String(next.length)), en: notesUi.title.en.replace("{n}", String(next.length)) };
+          const lines: Line[] = [notes[i]];
+          if (next !== notesRead && next.length === notes.length) lines.push({ ...notesUi.all, who: "narr" });
+          setPanel({ kind: "dialog", name: head, lines, step: 0 });
+          break;
+        }
         case "painting":
           setPanel({ kind: "painting", work: it.work! });
           break;
@@ -910,7 +995,14 @@ export default function ExploreClient() {
             setPanel({ kind: "dialog", name: n.name, lines: patrolNoRecord, step: 0 });
             break;
           }
-          const base = complete && n.after ? n.after : n.lines;
+          // 진행에 따라 말이 바뀐다: 기억으로 깨어난 이산과 함께 / 아래로 가기로 한 뒤 / 이산이 깨어난 뒤 / 처음
+          const fm = faceRef.current.method;
+          const byPhase = ghost && n.ghost ? n.ghost : phase === "descent" && n.descent ? n.descent : complete && n.after ? n.after : n.lines;
+          // 이산이 깨어난 뒤에는 첫마디 다음에 얼굴 맞추기에서 고른 것에 대한 한마디가 붙는다 (기억으로 깨어난 길에서는 고른 적이 없다)
+          const faced = complete && !ghost && fm && n.face ? [byPhase[0], ...n.face[fm], ...byPhase.slice(1)] : byPhase;
+          // 결말을 본 적 있는 기기로 다시 왔다면, 이산이 깨어나기 전에는 첫마디 다음에 기억하는 듯한 한 줄
+          const echo = seenCountRef.current > 0 && !complete && !ghost ? echoLines[it.npc!] : undefined;
+          const base = echo ? [faced[0], echo, ...faced.slice(1)] : faced;
           // 한 번이라도 보관 처리됐다면 관리인은 알아본다
           const bk = getBackup();
           const lines = it.npc === "keeper" && bk.deaths > 0 ? [keeperAfterDeath, ...base] : base;
@@ -956,7 +1048,7 @@ export default function ExploreClient() {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [complete, restored, talked, goTo, markVisited, visited.length, met, ghost, found.length, phase, accepted, friend]
+    [complete, restored, talked, goTo, markVisited, visited.length, met, ghost, found.length, phase, accepted, friend, notesRead]
   );
 
   const startEndingRef = useRef<(k: EndKind) => void>(() => {});
@@ -992,6 +1084,7 @@ export default function ExploreClient() {
       restore: () => setVisited(sections.map((s) => s.id)),
       face: (id = "face-machine") => faceActRef.current(id),
       pos: () => [player.pos.x, player.pos.z, player.yaw, player.air, player.pitch],
+      san: () => { const p = CITY.items.find((i) => i.id === "san")!.pos; return [p.x, p.z]; },
       input,
       look: (pitch: number) => (input.look.pitch += pitch),
       gaze,
@@ -1101,8 +1194,54 @@ export default function ExploreClient() {
     const tm = setTimeout(() => setHush(false), ms);
     return () => clearTimeout(tm);
   }, [hushLine]);
+  // 음악을 잠시 낮추는 때: 설정창, 곁에 앉아 기다리는 재회의 정적(거의 들리지 않게), 망원경 뒤 함께 내려다보는 정적, 망원경을 들여다보는 동안
+  const duckLevel = paused ? 0.45 : beat === "sit" ? 0.12 : hush ? 0.35 : scopeView === "view" ? 0.55 : 1;
+  // 구역의 바탕 소리 (환기구·바람). 하얗게 멎은 순간과 신호가 끊긴 뒤에는 아무 소리도 없다. 空 결말의 계단에서는 내려갈수록 잦아든다(아래 효과)
+  const ambKind = intro || leaving || (ending?.kind === "reject" && flash) || stepped ? null : zone;
+  const ambLevel = paused ? 0.3 : beat === "sit" ? 0.4 : panel ? 0.7 : 1;
+  useEffect(() => {
+    if (ending?.kind === "ghost" && ending.step >= GHOST_STEP && ambKind) return;
+    ambience(ambKind, ambLevel);
+  }, [ambKind, ambLevel, ending]);
+  useEffect(() => () => ambience(null), []);
+  // 로봇에게 다가가면 먼저 짧게 삑삑댄다 (말을 걸기 전, 알아봤다는 듯이). 로봇이 있는 쪽에서 들린다
+  const nearNpc = near?.kind === "npc" ? near.npc : undefined;
+  useEffect(() => {
+    const it = nearRef.current;
+    if (nearNpc && ROBOTS.includes(nearNpc) && !panel && it) at3d(it.pos, () => sfx.voice("robot"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nearNpc]);
+  // 혼자 소리를 내는 것들: 가까이 가면 그쪽에서 가끔 들린다 (소리를 따라 찾아갈 수 있게)
+  useEffect(() => {
+    if (intro || ending) return;
+    const src =
+      zone === "bunker"
+        ? [
+            { p: BUNKER_NPCS.r07.pos, r: 16, odds: 0.14, play: () => sfx.voice("robot") },
+            { p: BUNKER_NPCS.radio.pos, r: 14, odds: 0.18, play: () => sfx.voice("radio") },
+          ]
+        : [
+            { p: CITY_NPCS.courier.pos, r: 16, odds: 0.12, play: () => sfx.voice("robot") },
+            { p: CITY_NPCS.robomonk.pos, r: 22, odds: 0.16, play: () => sfx.moktak() },
+          ];
+    const iv = setInterval(() => {
+      if (!activeRef.current) return;
+      for (const e of src) {
+        const d = Math.hypot(e.p[0] - player.pos.x, e.p[2] - player.pos.z);
+        if (d < e.r && d > 2.2 && Math.random() < e.odds) at3d({ x: e.p[0], z: e.p[2] }, e.play);
+      }
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [zone, intro, ending]);
+  useEffect(() => {
+    duckBgm(duckLevel);
+  }, [duckLevel]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && galleryRef.current) {
+        setGallery(false);
+        return;
+      }
       if (e.key === "Escape") {
         if (performance.now() - unlockAt.current < 250) return; // 잠금 해제와 같은 Esc
         if (scopeBusy()) exitScopeRef.current();
@@ -1116,6 +1255,8 @@ export default function ExploreClient() {
       if (e.code === "KeyE" && !e.repeat && p?.kind === "dialog" && performance.now() - panelAt.current > 250) {
         e.preventDefault();
         if (hushRef.current) return;
+        // 글자가 아직 써지는 중이면 먼저 한 줄을 다 보여 준다
+        if (typing.finish()) return;
         if (p.step < p.lines.length - 1) setPanel({ ...p, step: p.step + 1 });
         else closePanel();
         return;
@@ -1140,14 +1281,22 @@ export default function ExploreClient() {
   useEffect(() => () => clearTimeout(noticeTimer.current), []);
   // 지상에서는 관리 AI 방송이 주기적으로 흘러나옴. 대화·망원경·검문소·결말·이산의 말·다른 안내가 떠 있는 동안에는 건너뛴다
   const quietRef = useRef(false);
+  // 이산의 얼굴(표준 미소 / 원본)을 도시가 알아본다: 지상에 올라설 때마다 첫 방송으로 한 번
+  const faceCastRef = useRef<L | null>(null);
+  faceCastRef.current = complete && !ghost && !accepted && face.method ? faceTalk.broadcast[face.method] : null;
   useEffect(() => {
     if (zone !== "city" || ending) return;
     let i = 0;
+    let faceSaid = false;
     let hide: ReturnType<typeof setTimeout>;
     const show = () => {
       if (quietRef.current || drone.lit >= 0 || drone.caught) return;
       clearTimeout(noticeTimer.current);
-      setNotice(announcements[i++ % announcements.length]);
+      const fc = faceCastRef.current;
+      if (fc && !faceSaid) {
+        faceSaid = true;
+        setNotice(fc);
+      } else setNotice(announcements[i++ % announcements.length]);
       hide = setTimeout(() => setNotice(null), 6500);
     };
     const first = setTimeout(show, 3500);
@@ -1213,15 +1362,16 @@ export default function ExploreClient() {
   useEffect(() => {
     if (panel?.kind !== "dialog" || panel.scene !== "after") return;
     scopeRef.current.step = panel.step;
-    if (panel.step >= scopeScene.after.length) heardRef.current = true;
+    if (panel.step >= afterLines().length) heardRef.current = true;
   }, [panel]);
-  const [flash, setFlash] = useState(false);
   const sceneTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {
     if (!ending) return;
     const { kind, step } = ending;
     const end = step === BEAT_MS[kind].length;
-    // 마지막 줄 뒤 정적까지 지나면 발견한 결말로 남긴다 (거부와 空은 남기지 않는다)
+    // 마지막 줄 뒤 정적까지 지나면 이 기기의 기억(결말 모음)에 남긴다: 세 결말 모두
+    if (end) setMemory(remember(kind));
+    // 도시가 발견한 결말로 저장하는 것은 수락뿐이다 (거부와 空은 남기지 않는다)
     if (kind === "accept" && end) {
       setFound((f) => {
         const next = f.includes(kind) ? f : [...f, kind];
@@ -1242,12 +1392,23 @@ export default function ExploreClient() {
         // 점마다 도착하면 다음 점으로 (Player가 autoWalk.queue를 차례로 꺼낸다). 이산은 줄 밖에 남는다
         walkPath(ACCEPT_WALK);
       }
+      // 이산의 마지막 말: 줄에 선 채 고개를 돌려 줄 밖의 이산을 본다 (이산은 그동안 돌처럼 굳는다). 발소리가 끊기는 줄에서 다시 앞을 본다
+      if (step === ACCEPT_SAY) {
+        // 빈자리에 다 들어섰다: 자동 걸음이 시선을 붙잡지 않도록 놓는다
+        stopWalk();
+        gaze.lookAt = { ...ACCEPT_LOOK_SAN };
+        sfx.stone();
+      }
+      if (step === ACCEPT_AWAY) gaze.lookAt = { ...ACCEPT_LOOK_GATE };
     } else if (kind === "reject") {
       if (step === 0) {
         // 레이저 없이: 화면이 하얗게 멎는 것으로 정지를 보여 준다
-        sceneTimer.current = setTimeout(() => setFlash(true), 1500);
+        sceneTimer.current = setTimeout(() => {
+          setFlash(true);
+          sfx.freeze();
+        }, 1500);
       }
-      if (step === 3) {
+      if (step === REJECT_BUNKER) {
         // 장면이 방공호로: 사람들이 두 번째 정지 시민을 옮겨 와 나란히 앉혔다
         setFlash(false);
         setSecondStatue(true);
@@ -1331,8 +1492,9 @@ export default function ExploreClient() {
       // 다 내려선 뒤에는 남은 신호가 1초 남짓에 걸쳐 끊긴다
       const want = steppedRef.current ? 1 : depth * 0.82;
       k += (want - k) * (steppedRef.current ? 0.05 : 0.15);
+      if (!steppedRef.current) ambience("city", Math.max(0, 1 - k * 1.1));
       // 찢김: 깊어질수록 자주, 길게
-      if (tear <= now && Math.random() < k * k * 0.12) tear = now + 60 + Math.random() * 160 * k;
+      if (!input.calm && tear <= now && Math.random() < k * k * 0.12) tear = now + 60 + Math.random() * 160 * k;
       const torn = tear > now;
       if (torn && now - lastGlitch > 900 && k > 0.25 && k < 0.98) {
         lastGlitch = now;
@@ -1361,6 +1523,9 @@ export default function ExploreClient() {
   // 지상에서 직접 오가는 짧은 말 (자막 한 줄. 말하는 사람 이름과 함께). 대화창을 열지 않고, 조작을 막지 않는다.
   // 한 번에 한 줄만 뜨고, 그동안 방송(.notice)은 비켜 준다. speak는 여러 줄을 차례로 (길 위의 짧은 만남)
   const [sanSay, setSanSay] = useState<{ who: L; line: L } | null>(null);
+  useEffect(() => {
+    if (sanSay) sfx.voice(voiceOf(sanSay.who));
+  }, [sanSay]);
   const sayTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const speakUntil = useRef(0);
   const speak = useCallback((seq: { who: L; line: L; ms?: number }[]) => {
@@ -1382,7 +1547,7 @@ export default function ExploreClient() {
   const speaking = () => runtime.now() < speakUntil.current;
   useEffect(() => () => clearTimeout(sayTimer.current), []);
   // 처음 시선 구역: 대자비 소개가 닫힌 뒤 이산이 첫 엄폐물 뒤로 가서 기다린다 (탭마다 한 번 말하고, 재시도 때는 말없이 다시 기다린다)
-  const cueRef = useRef({ cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0 });
+  const cueRef = useRef({ cover: false, wait: false, back: false, plaza: false, shelter: false, surface: false, surfaceAt: 0, avenueAt: 0 });
   const sanWithYou = zone === "city" && complete && talked && !ghost && !accepted && !ending;
   const sanWithYouRef = useRef(sanWithYou);
   sanWithYouRef.current = sanWithYou;
@@ -1569,6 +1734,7 @@ export default function ExploreClient() {
         gaze.clamp = { ...SCOPE_CLAMP };
         m.mode = "view";
         setScopeView("view");
+        sfx.scopeIn();
         // 들여다본 횟수만 센다 (기억으로 깨어난 사람은 기록을 남기지 않는다)
         if (!ghostRef.current) writeScope({ ...readScope(), uses: readScope().uses + 1 });
       } else if (m.mode === "out" && autoWalk.arrived) {
@@ -1584,7 +1750,8 @@ export default function ExploreClient() {
         }
         if (m.looked && phaseRef.current !== "scope") say(scopeScene.again, 2600);
       }
-      if (pausedRef.current || panelRef.current || drone.caught || gaze.intro) return;
+      // 구역을 오가는 화면 전환 중에는 (아직 앞 구역의 자리에 있으므로) 길 위의 말을 꺼내지 않는다
+      if (pausedRef.current || panelRef.current || drone.caught || gaze.intro || fadeRef.current) return;
       const now = runtime.now();
       const px = player.pos.x;
       const pz = player.pos.z;
@@ -1597,6 +1764,15 @@ export default function ExploreClient() {
         presetSweep(0, 1.6);
         // 길 안내 팝업 (시야는 붙잡지 않는다. 이산의 말이 아니라 대자비 소개 같은 안내 창)
         if (!panelRef.current && !endingRef.current) setPanel({ kind: "route" });
+      }
+      // 처음 지상에 올라서면 (배전실 문 앞, 망원경 단계에서 이번 방문에 한 번): 바닥의 분필 화살표를 가리킨다
+      if (ph === "scope" && withSan && !c.surface) {
+        if (!c.surfaceAt) {
+          if (Math.hypot(px - CITY.spawn.pos[0], pz - CITY.spawn.pos[2]) < 6) c.surfaceAt = now;
+        } else if (now - c.surfaceAt > 10500 && !speaking()) {
+          c.surface = true;
+          say(sanCue.surface, 4200);
+        }
       }
       if (ph === "scope" && withSan && !c.shelter && underRoof(px, pz)) {
         c.shelter = true;
@@ -1676,6 +1852,11 @@ export default function ExploreClient() {
   const onGameWin = useCallback(() => setPanel({ kind: "choice", confirm: 1 }), []);
   const onGameLose = useCallback(() => setPanel({ kind: "choice" }), []);
   const startEnding = (kind: EndKind) => {
+    // 혹시 대자비 소개가 열리려던 참이었다면 거둔다 (결말 위에 소개 창이 뜨지 않게)
+    cancelIntro.current?.();
+    gaze.intro = false;
+    gaze.frozen = false;
+    gaze.lookAt = null;
     setPanel(null);
     const b = getBackup();
     const slots = Array.from({ length: Math.min(b.n, 12) }, (_, i) => b.n - i);
@@ -1709,7 +1890,7 @@ export default function ExploreClient() {
     sanHold.at = null;
     walkArea.rects = null;
     gaze.gateOpen = false;
-    cueRef.current = { cover: false, wait: false, back: false, plaza: false, shelter: false, avenueAt: 0 };
+    cueRef.current = { cover: false, wait: false, back: false, plaza: false, shelter: false, surface: false, surfaceAt: 0, avenueAt: 0 };
     cpRef.current = { seen: false, talked: false };
     metRef.current = {};
     clearTimeout(beatTimer.current);
@@ -1763,8 +1944,19 @@ export default function ExploreClient() {
     if (panel.kind === "jabi") return sfx.gong();
     if (panel.kind === "route") return sfx.chime();
     if (panel.kind === "dialog" && panel.locked && a?.kind !== "dialog") return sfx.denied();
-    if (!a || a.kind !== panel.kind) return sfx.open();
-    if (panel.kind === "dialog" && a.kind === "dialog" && panel.step !== a.step) sfx.blip();
+    const line = panel.kind === "dialog" && !panel.plaque ? panel.lines[Math.min(panel.step, panel.lines.length - 1)] : undefined;
+    if (!a || a.kind !== panel.kind) {
+      // 말을 건 상대의 자리 (가까이 있던 대상). 저절로 열린 대화는 가운데서
+      const it = nearRef.current;
+      talkPos = it && Math.hypot(it.pos.x - player.pos.x, it.pos.z - player.pos.z) < 6 ? { x: it.pos.x, z: it.pos.z } : null;
+      sfx.open();
+      if (panel.kind === "dialog" && line) setTimeout(() => voiceAt(voiceOf(panel.name, line)), 160);
+      return;
+    }
+    if (panel.kind === "dialog" && a.kind === "dialog" && (panel.step !== a.step || panel.lines !== a.lines)) {
+      if (line) voiceAt(voiceOf(panel.name, line));
+      else sfx.blip();
+    }
   }, [panel]);
   const startJabiIntro = useCallback(() => {
     cancelIntro.current?.();
@@ -1858,7 +2050,8 @@ export default function ExploreClient() {
       }
       if (restored && !complete) {
         const it = items.find((i) => i.id === (face.asked ? "face-machine" : "statue"));
-        return it ? { pos: it.pos, label: t(face.asked ? faceUi.quest : faceUi.questAsk) } : null;
+        const label = !face.asked ? faceUi.questAsk : facePhase === "choice" ? faceUi.questChoose : faceUi.quest;
+        return it ? { pos: it.pos, label: t(label) } : null;
       }
       if (!complete) {
         const left = items.filter((i) => i.kind === "section" && !visited.includes(i.section!));
@@ -1985,17 +2178,18 @@ export default function ExploreClient() {
     else if (scopeData.seen) evidence.push(t(checkpoint.evScopeDone));
   }
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || scopeStage === "idle" || scopeStage === "done") ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" || near.npc === "frozen" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
+  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || scopeStage === "idle" || scopeStage === "done") ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" || near.kind === "note" || near.npc === "frozen" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
   quietRef.current = !!panel || !!scopeView || !!sanSay || !!toast || !!beat || paused;
   const rootClass = [
     "explore-root",
     ending ? `ending-${ending.kind}` : "",
-    ending?.kind === "reject" && ending.step >= 3 ? "thaw" : "",
+    ending?.kind === "reject" && ending.step >= REJECT_BUNKER ? "thaw" : "",
     ending?.kind === "ghost" && ending.step === 1 ? "ghost-freeze" : "",
     flash ? "final-flash" : "",
     tracked && !ending && !ghost ? "is-tracked" : "",
     leaving ? "logging-out" : "",
     beat === "sit" ? "reunion-sit" : "",
+    input.calm ? "calm-fx" : "",
   ].join(" ");
 
   return (
@@ -2012,10 +2206,12 @@ export default function ExploreClient() {
             onTracked={setTracked}
             labelEls={labelEls}
             sanPath={sanPath}
+            sanStone={ending?.kind === "accept" && ending.step >= ACCEPT_SAY}
             hideSan={accepted}
             frozenSan={accepted && zone === "city" && !ending}
             sanStart={replay ? [FROZEN_SAN.x, FROZEN_SAN.z] : undefined}
             secondStatue={secondStatue}
+            notesRead={notesRead}
             awake={complete}
             face={{ drums: face.drums, phase: facePhase, method: face.method }}
             arrived={arrived}
@@ -2082,11 +2278,12 @@ export default function ExploreClient() {
 
       {/* 空 결말: 다리를 걷는 동안은 이산을 따라가라는 안내, 이산이 사라져 계단이 열린 뒤에야 계단 안내 (막힌 계단 앞에서 '내려가기'를 띄우지 않는다) */}
       {active && walkable && (ending?.step === GHOST_WALK || stairsOpen) && <div className="hint">{t(ending?.step === GHOST_WALK ? ui.followHint : ui.stepHint)}</div>}
-      {active && !walkable && near?.id === "face-machine" && !scopeView && <div className="hint">{t(touch ? faceUi.hintTouch : faceUi.hintPc)}</div>}
+      {active && !walkable && near?.kind === "face" && facePhase === "choice" && !scopeView && <div className="hint">{t(touch ? faceUi.hintChooseTouch : faceUi.hintChoosePc)}</div>}
+      {active && !walkable && near?.id === "face-machine" && facePhase !== "choice" && !scopeView && <div className="hint">{t(touch ? faceUi.hintTouch : faceUi.hintPc)}</div>}
       {/* 휴대폰: 장치 앞에서는 화면 가운데에 조준점을 띄운다 (조준점이 가리키는 원통이 빛나고, 행동 버튼이 그 원통을 돌린다) */}
-      {active && touch && near?.kind === "face" && !scopeView && <div className="crosshair crosshair-face" aria-hidden />}
+      {active && touch && near?.kind === "face" && !scopeView && <Reticle on color={near.color} />}
       {active && !walkable && !near && !scopeView && <div className="hint">{t(touch ? ui.hintTouch : locked ? ui.hintLocked : ui.hintPc)}</div>}
-      {active && locked && !scopeView && <div className="crosshair" aria-hidden />}
+      {active && locked && !scopeView && <Reticle on={!!near} color={near?.color} />}
       {active && !scopeView && <QuestArrow get={getQuest} />}
       {!intro && !ending && <Minimap zone={zone} get={getQuest} />}
       {zone === "city" && !ending && !accepted && <GazeHUD rootRef={rootRef} onGone={onGone} onIntro={startJabiIntro} onStage={onStage} />}
@@ -2169,11 +2366,15 @@ export default function ExploreClient() {
             {(() => {
               const line = panel.lines[Math.min(panel.step, panel.lines.length - 1)];
               // 지문(따옴표 없음, 말하는 이 없음) / 그 밖에는 대화창의 이름으로 한 번. 방문자는 말하지 않는다
-              if (line.who === "narr") return <p className="line narr">{t(line)}</p>;
+              const k = `${panel.step}:${t(line)}`;
+              if (line.who === "narr") return <p className="line narr"><Typed key={k} text={t(line)} /></p>;
+              const v = panel.plaque ? "none" : voiceOf(panel.name, line);
               return (
                 <>
                   {!panel.plaque && <div className="speaker">{t(panel.name)}</div>}
-                  <p className="line">“{t(line)}”</p>
+                  <p className="line">
+                    <Typed key={k} text={`“${t(line)}”`} voice={v} />
+                  </p>
                 </>
               );
             })()}
@@ -2203,7 +2404,7 @@ export default function ExploreClient() {
                 </a>
               )}
               {panel.step < panel.lines.length - 1 && !hush && (
-                <button className="btn primary" autoFocus onClick={() => setPanel({ ...panel, step: panel.step + 1 })}>
+                <button className="btn primary" autoFocus onClick={() => !typing.finish() && setPanel({ ...panel, step: panel.step + 1 })}>
                   {t(ui.next)}
                 </button>
               )}
@@ -2350,7 +2551,7 @@ export default function ExploreClient() {
           <div className="ending-inner">
             {(checkpoint[ending.kind] as Beat[]).slice(0, ending.step + 1).map((l, i, arr) => {
               // 거부 결말이 방공호로 넘어가면 앞 장면의 글은 거둔다
-              if (ending.kind === "reject" && ending.step >= 3 && i < 3) return null;
+              if (ending.kind === "reject" && ending.step >= REJECT_BUNKER && i < REJECT_BUNKER) return null;
               // 空 결말은 앞을 가리지 않도록 마지막 두 줄만 아래에. 수락 결말은 최근 세 줄만 (숫자는 감정 장면 전에 지나간다)
               if (ending.kind === "ghost" && (ending.step > GHOST_STEP ? i <= GHOST_STEP : i < ending.step - 1)) return null;
               if (ending.kind === "accept" && i < ending.step - 2) return null;
@@ -2385,6 +2586,7 @@ export default function ExploreClient() {
                     {ending.kind === "reject" ? t(ui.notRecorded) : t(ui.foundEndings).replace("{n}", String(Math.max(1, found.length)))}
                   </small>
                 )}
+                <ShareEnding kind={ending.kind} />
                 <small className="ending-credit">
                   ♪ {ending.kind === "accept" ? "Habitual Suffering" : ending.kind === "reject" ? "an open ended promise" : "f-ALL"} · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
                 </small>
@@ -2410,7 +2612,8 @@ export default function ExploreClient() {
 
       {fade && <div className="fade">{t(fade === "up" ? ui.goingUp : ui.goingDown)}</div>}
 
-      {intro && (
+      {intro && gallery && <EndingGallery seen={memory} notesRead={notesRead} onClose={() => setGallery(false)} />}
+      {intro && !gallery && (
         <div className="intro">
           <div className="panel pink" role="dialog" aria-modal="true" aria-label={t(ui.title)} tabIndex={-1}>
             <div className="panel-head">
@@ -2419,6 +2622,11 @@ export default function ExploreClient() {
             </div>
             {accepted ? <p>{t(ui.welcomeB)}</p> : ui.introLines.map((l, i) => <p key={i}>{t(l)}</p>)}
             {found.length > 0 && <p className="intro-found">{t(ui.foundEndings).replace("{n}", String(found.length))}</p>}
+            {(seenCount > 0 || notesRead.length > 0) && (
+              <button type="button" className="intro-gallery" onClick={() => setGallery(true)}>
+                {t(galleryUi.open).replace("{n}", String(seenCount))} →
+              </button>
+            )}
             <p className="intro-controls">{t(touch ? ui.hintTouch : ui.hintIntroPc)}</p>
             <div className="panel-actions" style={{ justifyContent: "flex-end" }}>
               {/* 들어가지 않고 웹사이트로 돌아가는 보조 선택지 */}
@@ -2444,5 +2652,121 @@ export default function ExploreClient() {
         </div>
       )}
     </main>
+  );
+}
+
+// 조준점 (globals.css .reticle). 좌표 원점이 화면 가운데
+function Reticle({ on, color }: { on: boolean; color?: string }) {
+  return (
+    <div className={`reticle${on ? " on" : ""}`} style={on && color ? { color } : undefined} aria-hidden>
+      <svg viewBox="-22 -22 44 44">
+        <circle r="1.6" fill="currentColor" />
+        <g className="r-tick" stroke="currentColor" strokeWidth="1.6" strokeLinecap="square">
+          <line x1="0" y1="-5" x2="0" y2="-10" />
+          <line x1="0" y1="5" x2="0" y2="10" />
+          <line x1="-5" y1="0" x2="-10" y2="0" />
+          <line x1="5" y1="0" x2="10" y2="0" />
+        </g>
+        <g className="r-ring" fill="none" stroke="currentColor" strokeWidth="1">
+          <path d="M -9.9 -9.9 A 14 14 0 0 1 9.9 -9.9" />
+          <path d="M 9.9 9.9 A 14 14 0 0 1 -9.9 9.9" />
+        </g>
+        <g className="r-brk" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M -19 -12 V -19 H -12" />
+          <path d="M 12 -19 H 19 V -12" />
+          <path d="M 19 12 V 19 H 12" />
+          <path d="M -12 19 H -19 V 12" />
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+// 대사가 한 글자씩 써진다. 써지는 동안 말하는 이의 소리가 몇 글자마다 작게 난다.
+// 계속(E·버튼)이나 대사를 누르면 먼저 한 줄을 다 보여 준다. 남은 글자는 자리만 차지해(보이지 않게) 줄바꿈이 흔들리지 않는다.
+// 화면 효과 줄이기·동작 줄이기에서는 곧바로 다 보인다
+const typing = {
+  done: true,
+  skip: () => {},
+  // 써지는 중이었으면 끝까지 보이고 true
+  finish() {
+    if (this.done) return false;
+    this.skip();
+    return true;
+  },
+};
+function Typed({ text, voice = "none" }: { text: string; voice?: Voice }) {
+  const chars = useMemo(() => Array.from(text), [text]);
+  const instant = input.calm;
+  const [n, setN] = useState(instant ? chars.length : 0);
+  useEffect(() => {
+    if (instant) {
+      typing.done = true;
+      return;
+    }
+    let i = 0;
+    let said = 0;
+    typing.done = false;
+    const stop = () => {
+      clearInterval(iv);
+      typing.done = true;
+    };
+    typing.skip = () => {
+      i = chars.length;
+      setN(i);
+      stop();
+    };
+    const iv = setInterval(() => {
+      i = Math.min(chars.length, i + 1);
+      setN(i);
+      const ch = chars[i - 1];
+      // 글자 몇 개마다 (빈칸·문장부호는 건너뛴다)
+      if (voice !== "none" && ch && /[\p{L}\p{N}]/u.test(ch) && ++said % 4 === 0) sfx.tick(voice);
+      if (i >= chars.length) stop();
+    }, 32);
+    return () => {
+      clearInterval(iv);
+      typing.done = true;
+    };
+  }, [chars, instant, voice]);
+  return (
+    <span onClick={() => typing.finish()}>
+      {chars.slice(0, n).join("")}
+      {n < chars.length && <span className="typed-rest" aria-hidden>{chars.slice(n).join("")}</span>}
+    </span>
+  );
+}
+
+// 소리를 그 자리에서: 시점 기준으로 좌우·거리
+function at3d(pos: { x: number; z: number }, play: () => void) {
+  spatial({ x: player.pos.x, z: player.pos.z, yaw: player.yaw }, pos, play);
+}
+// 대화 상대의 자리에서 (가까이 선 상대: 대개 정면이지만 옆에 있으면 옆에서)
+let talkPos: { x: number; z: number } | null = null;
+function voiceAt(v: Voice) {
+  if (talkPos) at3d(talkPos, () => sfx.voice(v));
+  else sfx.voice(v);
+}
+
+// 결말 공유: 이 결말의 미리보기 카드가 붙는 주소(?end=)를 건넨다. 휴대폰은 공유 창, 아니면 복사
+function ShareEnding({ kind }: { kind: EndKind }) {
+  const { t } = useLang();
+  const [done, setDone] = useState(false);
+  const share = async () => {
+    const url = `${location.origin}/deleteseoul?end=${kind}`;
+    try {
+      if (navigator.share && matchMedia("(pointer: coarse)").matches) {
+        await navigator.share({ title: "DELETE SEOUL", url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setDone(true);
+      setTimeout(() => setDone(false), 2400);
+    } catch {}
+  };
+  return (
+    <button type="button" className="ending-share" onClick={share}>
+      {t(done ? ui.shared : ui.share)} ↗
+    </button>
   );
 }

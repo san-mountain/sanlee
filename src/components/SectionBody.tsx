@@ -56,6 +56,12 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
               <strong>{lang === "ko" ? `〈${w.title.ko}〉` : <em>{w.title.en}</em>}</strong>, {w.date.slice(0, 4)}
               <br />
               {t(w.medium)}, {t(w.size)}
+              {w.credit && (
+                <>
+                  <br />
+                  {t(w.credit)}
+                </>
+              )}
             </p>
             {w.description && <p className="work-desc">{t(w.description)}</p>}
             {w.link && !(inExplore && w.link === "/deleteseoul") && (
@@ -135,6 +141,12 @@ function WorksViewer({ list }: { list: Work[] }) {
           <span className="cm">
             {t(w.medium)}, {t(w.size)}
           </span>
+          {w.credit && (
+            <>
+              <br />
+              <span className="cm">{t(w.credit)}</span>
+            </>
+          )}
         </p>
         {!w.image && (
           <p className="viewer-here-note">

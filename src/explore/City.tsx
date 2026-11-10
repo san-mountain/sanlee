@@ -16,9 +16,10 @@ import { useNeoPost } from "./neoPost";
 import { NeonEnvironment, useBeam, useLightPool } from "./atmosphere";
 import { addRim } from "./rim";
 import { lite, useQuality } from "./quality";
-import { concreteTexture, signTexture } from "./textures";
+import { concreteTexture, glowTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
+import { faceRt } from "./faceRuntime";
 import Jabi from "./Jabi";
 import Drones from "./Drones";
 
@@ -448,8 +449,23 @@ function Depot({ lang }: { lang: Lang }) {
   const ko = lang === "ko";
   const sign = useSign([[ko ? "배송 대기소 7-서" : "COURIER BAY 7-W", 1]], { color: "#cfd6dd", bg: "#14181c", mono: true, w: 512, h: 96 });
   const { x, z, w, d, y0, y1 } = DEPOT;
+  // 처마 밑 형광등과 바닥의 푸른 불빛: 드론 빛을 피해 숨을 자리라는 것이 광장에서도 보이게
+  const glow = useMemo(glowTexture, []);
+  useEffect(() => () => glow.dispose(), [glow]);
   return (
     <group position={[x, 0, z]}>
+      <mesh position={[0, y0 - 0.04, -d / 2 + 0.4]}>
+        <boxGeometry args={[w * 0.7, 0.05, 0.08]} />
+        <meshBasicMaterial color="#d8fbff" toneMapped={false} />
+      </mesh>
+      <mesh position={[0, y1 + 0.005, -d / 2 + 0.01]}>
+        <boxGeometry args={[w, 0.03, 0.03]} />
+        <meshBasicMaterial color="#ffb347" toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 0.03, -0.2]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+        <planeGeometry args={[w * 1.25, d * 1.5]} />
+        <meshBasicMaterial map={glow} color="#7fe9ff" transparent opacity={0.7} depthWrite={false} blending={THREE.AdditiveBlending} toneMapped={false} />
+      </mesh>
       <mesh position={[0, (y0 + y1) / 2, 0]}>
         <boxGeometry args={[w, y1 - y0, d]} />
         <meshStandardMaterial color="#2c3036" metalness={0.6} roughness={0.5} />
@@ -855,6 +871,11 @@ function Lamps() {
 }
 
 /* ---------- 줄 선 시민들 (모두 같은 박자로 흔들림) ---------- */
+// 이산이 곁을 지나가면 얼굴에 따라 반응한다 (이야기는 바뀌지 않는다):
+// 원본 얼굴이면 하나둘 몸을 돌려 이산을 지켜보고 바이저가 붉어진다. 표준 미소면 돌아보지 않고 바이저만 분홍으로 맞춰 깜빡인다 (한 사람으로 받아들인다)
+const Q_NEAR = 5.5;
+const Q_STARE = new THREE.Color("#ff3b4e");
+const Q_STD = new THREE.Color("#ff79c0");
 function Queue() {
   const geo = citizenGeometry();
   const vGeo = visorGeometry();
@@ -867,16 +888,54 @@ function Queue() {
       ),
     []
   );
-  useFrame((s) => {
+  // 시민마다 지금 돌아간 정도(라디안)와 바이저가 물든 정도(0~1)
+  const turn = useMemo(() => new Float32Array(slots.length), [slots]);
+  const tint = useMemo(() => new Float32Array(slots.length), [slots]);
+  const san = useMemo(() => CITY.items.find((i) => i.id === "san")?.pos, []);
+  // 물든 바이저: 평소 바이저 위에 살짝 크게 겹쳐 그리는 두 번째 바이저 (물든 시민만 크기 1, 나머지는 0)
+  const alert = useRef<THREE.InstancedMesh>(null);
+  const alertMat = useRef<THREE.MeshBasicMaterial>(null);
+  useFrame((s, dt) => {
     const t = s.clock.elapsedTime;
     const sway = Math.sin(t * 1.2) * 0.015;
+    const m = faceRt.method;
+    const k = Math.min(1, dt * 2.5);
     slots.forEach(([x, z], i) => {
-      tmpM.compose(tmpV.set(x, 0, z), tmpQ.setFromEuler(tmpE.set(0, Math.PI, sway)), tmpS.set(1, 1, 1));
+      let want = 0;
+      let tw = 0;
+      if (san && m) {
+        const dx = san.x - x;
+        const dz = san.z - z;
+        const d = Math.hypot(dx, dz);
+        if (d < Q_NEAR) {
+          tw = 1 - d / Q_NEAR;
+          if (m === "exception") {
+            // 줄 앞(−z)을 보던 몸을 이산 쪽으로. 등 뒤까지는 돌지 않는다. 시민마다 조금씩 늦게
+            let a = Math.atan2(dx, dz) - Math.PI;
+            a = Math.atan2(Math.sin(a), Math.cos(a));
+            want = Math.max(-1.4, Math.min(1.4, a)) * Math.min(1, tw * 2.2);
+          }
+        }
+      }
+      const lag = 0.6 + ((i * 37) % 10) / 25;
+      turn[i] += (want - turn[i]) * k * lag;
+      tint[i] += (tw - tint[i]) * k;
+      const nod = m === "standard" ? Math.sin(t * 2.4) * 0.05 * tint[i] : 0;
+      tmpM.compose(tmpV.set(x, 0, z), tmpQ.setFromEuler(tmpE.set(nod, Math.PI + turn[i], sway)), tmpS.set(1, 1, 1));
       body.current?.setMatrixAt(i, tmpM);
       visor.current?.setMatrixAt(i, tmpM);
+      // 옆으로만 살짝 넓혀 평소 바이저를 덮는다 (높이는 그대로)
+      const on = tint[i] > 0.12 ? 1 : 0;
+      tmpM.compose(tmpV.set(x, 0, z), tmpQ, tmpS.set(1.06 * on, on, 1.06 * on));
+      alert.current?.setMatrixAt(i, tmpM);
     });
     if (body.current) body.current.instanceMatrix.needsUpdate = true;
     if (visor.current) visor.current.instanceMatrix.needsUpdate = true;
+    if (alert.current) alert.current.instanceMatrix.needsUpdate = true;
+    if (alertMat.current) {
+      alertMat.current.color.copy(m === "standard" ? Q_STD : Q_STARE);
+      alertMat.current.opacity = m === "standard" ? 0.85 + Math.sin(t * 2.4) * 0.15 : 1;
+    }
   });
   return (
     <group>
@@ -885,6 +944,9 @@ function Queue() {
       </instancedMesh>
       <instancedMesh ref={visor} args={[vGeo, undefined, slots.length]} frustumCulled={false}>
         <meshBasicMaterial color="#22f0ff" toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh ref={alert} args={[vGeo, undefined, slots.length]} frustumCulled={false}>
+        <meshBasicMaterial ref={alertMat} color="#ff3b4e" transparent toneMapped={false} />
       </instancedMesh>
     </group>
   );

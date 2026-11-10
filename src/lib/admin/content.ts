@@ -22,6 +22,7 @@ type Work = {
   size: L;
   description?: L;
   link?: string;
+  credit?: L;
   image?: string;
   category?: "painting" | "sculpture";
   width?: number;
@@ -144,6 +145,8 @@ export function cleanWorks(v: unknown): Work[] {
       if (!/^(\/[^\s]*|https:\/\/[^\s]+)$/.test(link)) fail(`${where} 링크: /로 시작하는 주소나 https:// 주소만 돼요`);
       w.link = link;
     }
+    const credit = pair(o.credit, `${where} 함께 만든 사람`, false);
+    if (credit) w.credit = credit;
     const image = line(o.image, `${where} 사진`, { required: false });
     if (image) {
       if (!IMAGE.test(image)) fail(`${where} 사진 경로가 맞지 않아요`);

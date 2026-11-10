@@ -41,6 +41,8 @@ export type Work = {
   size: L;
   description?: L;
   link?: string;
+  // 함께 만든 사람 (캡션의 재료·크기 다음 줄)
+  credit?: L;
   image?: string; // public/works/ 폴더의 WebP 경로
   category?: "painting" | "sculpture"; // 사진이 있는 작업의 탭. 없으면 그림
   width?: number; // 사진 원본 비율(레이아웃 흔들림 방지용)

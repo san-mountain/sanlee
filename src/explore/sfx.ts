@@ -16,6 +16,26 @@ export function setSfx(v: boolean) {
   try {
     localStorage.setItem(KEY, v ? "1" : "0");
   } catch {}
+  applyAmb();
+}
+
+// 소리 크기 (설정창의 슬라이더 셋, 0~1). 켜고 끄기(on)와 따로 기억한다
+const VKEY = "sanlee-volume";
+export type VolKey = "music" | "sfx" | "amb";
+export const vol: Record<VolKey, number> = { music: 1, sfx: 1, amb: 1 };
+try {
+  const v = typeof localStorage === "undefined" ? null : JSON.parse(localStorage.getItem(VKEY) || "null");
+  if (v) (Object.keys(vol) as VolKey[]).forEach((k) => typeof v[k] === "number" && (vol[k] = Math.max(0, Math.min(1, v[k]))));
+} catch {}
+const SFX_GAIN = 0.32;
+let ambBus: GainNode | null = null;
+export function setVol(k: VolKey, v: number) {
+  vol[k] = Math.max(0, Math.min(1, v));
+  try {
+    localStorage.setItem(VKEY, JSON.stringify(vol));
+  } catch {}
+  if (ctx && master) master.gain.setTargetAtTime(SFX_GAIN * vol.sfx, ctx.currentTime, 0.05);
+  if (ctx && ambBus) ambBus.gain.setTargetAtTime(SFX_GAIN * vol.amb, ctx.currentTime, 0.05);
 }
 
 function ac(): AudioContext | null {
@@ -25,14 +45,48 @@ function ac(): AudioContext | null {
     if (!C) return null;
     ctx = new C();
     master = ctx.createGain();
-    master.gain.value = 0.32;
+    master.gain.value = SFX_GAIN * vol.sfx;
     master.connect(ctx.destination);
+    // 바탕 소리는 따로 크기를 정한다
+    ambBus = ctx.createGain();
+    ambBus.gain.value = SFX_GAIN * vol.amb;
+    ambBus.connect(ctx.destination);
   }
   if (ctx.state === "suspended") ctx.resume().catch(() => {});
   return ctx;
 }
 
 type Wave = OscillatorType;
+// 소리가 나는 자리 (spatial 안에서만): 좌우로 나뉘고 멀수록 작아진다
+let dest: AudioNode | null = null;
+export function spatial(listener: { x: number; z: number; yaw: number }, src: { x: number; z: number }, play: () => void) {
+  const c = ac();
+  if (!c || !master) return;
+  const dx = src.x - listener.x;
+  const dz = src.z - listener.z;
+  const d = Math.hypot(dx, dz);
+  // 시점의 오른쪽 방향 (yaw 0이면 −z를 본다)
+  const rx = Math.cos(listener.yaw);
+  const rz = -Math.sin(listener.yaw);
+  const pan = d < 0.5 ? 0 : Math.max(-1, Math.min(1, ((dx * rx + dz * rz) / d) * 0.85));
+  const g = c.createGain();
+  g.gain.value = 1 / (1 + Math.max(0, d - 1.5) * 0.18);
+  let node: AudioNode = g;
+  if (c.createStereoPanner) {
+    const p = c.createStereoPanner();
+    p.pan.value = pan;
+    p.connect(g);
+    node = p;
+  }
+  g.connect(master);
+  dest = node;
+  try {
+    play();
+  } finally {
+    dest = null;
+  }
+  setTimeout(() => g.disconnect(), 4000);
+}
 // 음 하나: 주파수 f(끝 f2로 미끄러짐), 길이 d초, 시작 지연 at초
 function tone(f: number, d: number, { type = "sine" as Wave, f2 = f, vol = 0.5, at = 0, attack = 0.005 } = {}) {
   const c = ac();
@@ -44,23 +98,31 @@ function tone(f: number, d: number, { type = "sine" as Wave, f2 = f, vol = 0.5, 
   o.frequency.setValueAtTime(f, t);
   if (f2 !== f) o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), t + d);
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(vol, t + attack);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + attack);
   g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  o.connect(g).connect(master);
+  o.connect(g).connect(dest ?? master);
   o.start(t);
   o.stop(t + d + 0.02);
+}
+// 잡음 버퍼는 한 번만 만들어 두고 매번 다른 자리부터 꺼내 쓴다 (발소리처럼 자주 나는 소리도 가볍게)
+let noiseBuf: AudioBuffer | null = null;
+function nbuf(c: AudioContext) {
+  if (!noiseBuf || noiseBuf.sampleRate !== c.sampleRate) {
+    const len = Math.ceil(c.sampleRate * 3);
+    noiseBuf = c.createBuffer(1, len, c.sampleRate);
+    const data = noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+  }
+  return noiseBuf;
 }
 // 잡음: 바람, 문, 지직거림
 function noise(d: number, { vol = 0.3, at = 0, from = 1800, to = 300, q = 0.8 } = {}) {
   const c = ac();
   if (!c || !master) return;
   const t = c.currentTime + at;
-  const len = Math.ceil(c.sampleRate * d);
-  const buf = c.createBuffer(1, len, c.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
   const src = c.createBufferSource();
-  src.buffer = buf;
+  src.buffer = nbuf(c);
+  src.loop = true;
   const bp = c.createBiquadFilter();
   bp.type = "bandpass";
   bp.Q.value = q;
@@ -68,11 +130,123 @@ function noise(d: number, { vol = 0.3, at = 0, from = 1800, to = 300, q = 0.8 } 
   bp.frequency.exponentialRampToValueAtTime(Math.max(40, to), t + d);
   const g = c.createGain();
   g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(vol, t + d * 0.15);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + Math.min(d * 0.15, 0.03 + d * 0.1));
   g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  src.connect(bp).connect(g).connect(master);
-  src.start(t);
+  src.connect(bp).connect(g).connect(dest ?? master);
+  src.start(t, Math.random() * 2);
   src.stop(t + d + 0.02);
+}
+
+// 휴대폰 진동 (지원하는 기기에서만, 효과음을 꺼 두면 함께 꺼진다)
+function buzz(p: number | number[]) {
+  if (!on || typeof navigator === "undefined" || !navigator.vibrate) return;
+  try {
+    navigator.vibrate(p);
+  } catch {}
+}
+
+// 구역의 바탕 소리: 방공호는 환기구의 낮은 바람과 전원 웅웅거림, 가끔 떨어지는 물방울.
+// 지상은 높은 곳의 바람이 천천히 불었다 잦아든다. 음악 밑에 깔릴 만큼만 작게
+export type Amb = "bunker" | "city" | null;
+type AmbNodes = { kind: "bunker" | "city"; g: GainNode; stop: () => void };
+let amb: AmbNodes | null = null;
+let ambWant: Amb = null;
+let ambLevel = 1;
+let dripTimer: ReturnType<typeof setTimeout> | undefined;
+const AMB_GAIN = { bunker: 0.75, city: 0.6 };
+function buildAmb(c: AudioContext, kind: "bunker" | "city"): AmbNodes {
+  const g = c.createGain();
+  g.gain.value = 0;
+  g.connect(ambBus!);
+  const src = c.createBufferSource();
+  src.buffer = nbuf(c);
+  src.loop = true;
+  const nodes: AudioScheduledSourceNode[] = [src];
+  if (kind === "bunker") {
+    const lp = c.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 240;
+    lp.Q.value = 0.6;
+    src.connect(lp).connect(g);
+    // 전원 웅웅거림: 아주 작게
+    const hum = c.createOscillator();
+    hum.frequency.value = 60;
+    const hg = c.createGain();
+    hg.gain.value = 0.05;
+    hum.connect(hg).connect(g);
+    nodes.push(hum);
+  } else {
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = 380;
+    bp.Q.value = 0.5;
+    const gust = c.createGain();
+    gust.gain.value = 0.6;
+    // 바람이 12초쯤마다 불었다 잦아든다 (세기와 높이가 함께 출렁인다)
+    const lfo = c.createOscillator();
+    lfo.frequency.value = 0.083;
+    const depth = c.createGain();
+    depth.gain.value = 0.4;
+    lfo.connect(depth).connect(gust.gain);
+    const fd = c.createGain();
+    fd.gain.value = 160;
+    lfo.connect(fd).connect(bp.frequency);
+    src.connect(bp).connect(gust).connect(g);
+    nodes.push(lfo);
+  }
+  nodes.forEach((n) => n.start());
+  return {
+    kind,
+    g,
+    stop: () => {
+      const t = c.currentTime;
+      g.gain.cancelScheduledValues(t);
+      g.gain.setTargetAtTime(0, t, 0.5);
+      nodes.forEach((n) => {
+        try {
+          n.stop(t + 2.5);
+        } catch {}
+      });
+      setTimeout(() => g.disconnect(), 2700);
+    },
+  };
+}
+function drip() {
+  clearTimeout(dripTimer);
+  if (!on || ambWant !== "bunker") return;
+  dripTimer = setTimeout(() => {
+    if (ambWant === "bunker" && ambLevel > 0.5) {
+      const f = 1300 + Math.random() * 700;
+      tone(f, 0.09, { f2: f * 0.6, vol: 0.05 * ambLevel * vol.amb, attack: 0.002 });
+      tone(f * 1.5, 0.05, { vol: 0.015 * ambLevel * vol.amb, at: 0.01, attack: 0.002 });
+    }
+    drip();
+  }, 5000 + Math.random() * 9000);
+}
+function applyAmb() {
+  if (!on || !ambWant) {
+    amb?.stop();
+    amb = null;
+    clearTimeout(dripTimer);
+    return;
+  }
+  const c = ac();
+  if (!c || !master) return;
+  if (amb && amb.kind !== ambWant) {
+    amb.stop();
+    amb = null;
+  }
+  const fresh = !amb;
+  if (!amb) amb = buildAmb(c, ambWant);
+  amb.g.gain.setTargetAtTime(AMB_GAIN[amb.kind] * ambLevel, c.currentTime, fresh ? 1.2 : 0.4);
+  if (fresh && ambWant === "bunker") drip();
+}
+// kind가 없으면 서서히 사라진다. level은 0~1 (설정창, 대화 중에는 낮춘다)
+export function ambience(kind: Amb, level = 1) {
+  if (kind === ambWant && Math.abs(level - ambLevel) < 0.03 && (!!amb || !on || !kind)) return;
+  ambWant = kind;
+  ambLevel = level;
+  applyAmb();
 }
 
 // 대자비 게이지 긴장음: 게이지가 차오를수록 심장 박동이 빨라지고, 낮은 웅웅거림이 커지며 높아진다.
@@ -120,9 +294,11 @@ export function tension(m: number) {
   }
 }
 
+export type Voice = "san" | "robot" | "radio" | "person" | "none";
+const blip = () => tone(1180, 0.05, { type: "square", vol: 0.08 });
 export const sfx = {
   // 대화 넘김, 작은 버튼
-  blip: () => tone(1180, 0.05, { type: "square", vol: 0.08 }),
+  blip,
   // 터미널·패널 열기
   open: () => {
     tone(520, 0.08, { type: "triangle", vol: 0.25 });
@@ -157,10 +333,12 @@ export const sfx = {
   },
   // 조준 고정: 짧고 빠른 경보
   lock: () => {
+    buzz([60, 50, 60]);
     for (let i = 0; i < 4; i++) tone(1500, 0.07, { type: "square", vol: 0.12, at: i * 0.11 });
     tone(80, 0.5, { type: "sawtooth", f2: 50, vol: 0.25 });
   },
   beam: () => {
+    buzz(320);
     tone(900, 1.4, { type: "sawtooth", f2: 60, vol: 0.18 });
     noise(1.4, { vol: 0.25, from: 3000, to: 200 });
   },
@@ -243,8 +421,75 @@ export const sfx = {
   },
   droneLost: () => tone(1800, 0.18, { type: "triangle", f2: 900, vol: 0.05 }),
   droneId: () => {
+    buzz([40, 80, 40]);
     tone(2400, 0.08, { type: "square", vol: 0.07 });
     tone(2400, 0.08, { type: "square", vol: 0.07, at: 0.12 });
     tone(2400, 0.22, { type: "square", f2: 1200, vol: 0.07, at: 0.24 });
+  },
+  // 발소리: 방공호는 콘크리트(낮고 둔하게), 지상은 돌 포장(조금 더 또렷하게). 걸음마다 높이를 조금씩 흔든다
+  step: (where: "bunker" | "city" | "stair", run: boolean) => {
+    const v = run ? 1 : 0.72;
+    const r = 0.88 + Math.random() * 0.24;
+    if (where === "bunker") {
+      tone(92 * r, 0.08, { type: "triangle", f2: 58, vol: 0.28 * v, attack: 0.002 });
+      noise(0.07, { vol: 0.15 * v, from: 1300 * r, to: 420, q: 1.1 });
+    } else {
+      tone(120 * r, 0.06, { type: "triangle", f2: 70, vol: 0.22 * v, attack: 0.002 });
+      noise(0.06, { vol: 0.19 * v, from: 2600 * r, to: 900, q: 1.4 });
+      // 계단: 텅 빈 아래에서 한 박 늦게 되돌아온다
+      if (where === "stair") noise(0.08, { vol: 0.06 * v, from: 1800 * r, to: 700, q: 1.4, at: 0.19 });
+    }
+  },
+  // 점프 뒤 착지
+  land: (where: "bunker" | "city" | "stair") => {
+    tone(where === "bunker" ? 78 : 96, 0.14, { type: "triangle", f2: 48, vol: 0.26, attack: 0.002 });
+    noise(0.11, { vol: 0.12, from: where === "bunker" ? 1000 : 1800, to: 360, q: 1 });
+  },
+  // 말하는 이의 목소리 대신 짧은 소리 (대사가 한 줄 뜰 때마다)
+  voice: (k: Voice) => {
+    const r = 0.94 + Math.random() * 0.12;
+    if (k === "san") {
+      tone(587 * r, 0.1, { vol: 0.07, attack: 0.012 });
+      tone(784 * r, 0.14, { vol: 0.05, at: 0.07, attack: 0.012 });
+    } else if (k === "robot") {
+      for (let i = 0; i < 3; i++) tone((1100 + Math.random() * 700) * r, 0.035, { type: "square", vol: 0.05, at: i * 0.06 });
+    } else if (k === "radio") {
+      noise(0.16, { vol: 0.1, from: 3200, to: 1600, q: 3 });
+      tone(1000, 0.04, { type: "square", vol: 0.03, at: 0.15 });
+    } else if (k === "person") {
+      tone((330 + Math.random() * 90) * r, 0.09, { type: "triangle", vol: 0.09, attack: 0.01 });
+      tone((440 + Math.random() * 90) * r, 0.1, { type: "triangle", vol: 0.06, at: 0.07, attack: 0.01 });
+    } else blip();
+  },
+  // 대사가 써지는 동안 몇 글자마다: 목소리 소리의 아주 작은 조각
+  tick: (k: Voice) => {
+    const r = 0.92 + Math.random() * 0.16;
+    if (k === "san") tone(660 * r, 0.04, { vol: 0.03, attack: 0.006 });
+    else if (k === "robot") tone((1200 + Math.random() * 600) * r, 0.025, { type: "square", vol: 0.025 });
+    else if (k === "radio") noise(0.04, { vol: 0.04, from: 3000, to: 2000, q: 3 });
+    else if (k === "person") tone((360 + Math.random() * 80) * r, 0.04, { type: "triangle", vol: 0.04, attack: 0.006 });
+  },
+  // 로봇 스님의 목탁: 마른 나무 두 번
+  moktak: () => {
+    tone(860, 0.07, { type: "triangle", f2: 640, vol: 0.2, attack: 0.002 });
+    tone(860, 0.07, { type: "triangle", f2: 640, vol: 0.16, at: 0.42, attack: 0.002 });
+  },
+  // 망원경: 초점 고리가 돌아가며 렌즈가 당겨진다 / 눈을 떼면 풀린다
+  scopeIn: () => {
+    for (let i = 0; i < 5; i++) tone(2300 + i * 60, 0.02, { type: "square", vol: 0.03, at: 0.05 + i * 0.07 });
+    noise(0.55, { vol: 0.07, from: 500, to: 2200, q: 4 });
+  },
+  scopeOut: () => noise(0.35, { vol: 0.06, from: 2200, to: 500, q: 4 }),
+  // 수락 결말: 이산이 돌처럼 굳는다. 낮게 갈리는 소리 위로 잔금이 가는 소리
+  stone: () => {
+    tone(52, 3.2, { type: "sine", f2: 40, vol: 0.22, attack: 0.6 });
+    noise(3.2, { vol: 0.12, from: 420, to: 140, q: 2 });
+    for (let i = 0; i < 12; i++) tone(1800 + Math.random() * 2400, 0.012, { type: "square", vol: 0.025, at: 0.3 + Math.random() * 2.8, attack: 0.001 });
+  },
+  // 거부 결말: 화면이 하얗게 멎는 순간. 높은 음이 솟다가 뚝 끊긴다
+  freeze: () => {
+    buzz(200);
+    tone(1320, 0.7, { f2: 2640, vol: 0.08, attack: 0.4 });
+    noise(0.7, { vol: 0.08, from: 1200, to: 6000, q: 0.7 });
   },
 };

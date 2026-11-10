@@ -44,7 +44,6 @@ export const ui = {
   talk: { ko: "이야기 듣기", en: "Listen" },
   view: { ko: "보기", en: "View" },
   back: { ko: "닫기", en: "Close" },
-  normalPage: { ko: "웹사이트에서 보기 ↗", en: "View on the website ↗" },
   next: { ko: "계속", en: "Continue" },
   close: { ko: "닫기", en: "Close" },
   home: { ko: "← 웹사이트로", en: "← To the website" },
@@ -57,7 +56,6 @@ export const ui = {
   popup: { ko: "이 도시는 시민을 추적하기 위해 쿠키를 사용합니다.", en: "This city uses cookies to track its citizens." },
   accept: { ko: "모두 수락", en: "Accept all" },
   reject: { ko: "모두 거부", en: "Reject all" },
-  plaqueShort: { ko: "끝까지 '모두 거부'를 누른 사람", en: "The One Who Rejected All" },
   terminalLocked: [
     { ko: "열람 전", en: "Not yet viewed" },
     { ko: "먼저 방 한가운데 앉아 있는 사람에게 다가가세요.", en: "First, go to the person sitting in the middle of the room." },
@@ -77,13 +75,6 @@ export const ui = {
   tracked: { ko: "● 감시 중", en: "● TRACKED" },
   // 저장된 방문 기록이 없는 방문자: 도시가 위치를 추적할 기록이 없다
   unresolved: { ko: "○ 방문자 기록 없음", en: "○ NO VISITOR RECORD" },
-  cookieTitle: { ko: "SEOUL.SYS · 쿠키 동의", en: "SEOUL.SYS · COOKIE CONSENT" },
-  cookieBody: {
-    ko: "도시는 쿠키로 시민의 활동을 기록합니다. 추적에 동의하시겠습니까?",
-    en: "The city records citizens' activity with cookies. Do you consent to tracking?",
-  },
-  processing: { ko: "처리 중…", en: "Processing…" },
-  acceptedAll: { ko: "동의 처리 완료", en: "Consent processed" },
   startLine: { ko: "줄로 돌아가기", en: "Return to the line" },
   savedHint: { ko: "연결이 끊기면 저장된 지점에서 다시 시작합니다.", en: "If the connection drops, you restart from the saved point." },
   // 처음 지상에 나설 때(추적되는 방문자만) 한 번: 이 도시의 규칙
@@ -97,6 +88,8 @@ export const ui = {
   // 그 앞, 이산이 먼저 계단참으로 걸어가는 동안
   followHint: { ko: "이산을 따라 다리 건너기", en: "Follow San across the bridge" },
   notRecorded: { ko: "이 결말은 저장되지 않습니다.", en: "This ending is not saved." },
+  share: { ko: "결말 공유하기", en: "Share this ending" },
+  shared: { ko: "링크를 복사했습니다", en: "Link copied" },
   welcomeB: { ko: "다시 오셨군요.", en: "Welcome back." },
   // 남쪽 망원경으로 볼 때: 방문자가 보는 것만 적는다 (이산이 본 것은 이산의 말로만 나온다)
   scopeSees: { ko: "구름에 가려 아래는 보이지 않는다.", en: "Clouds hide everything below." },
@@ -122,9 +115,6 @@ export const droneUi = {
 
 // 위치 저장 상태 (구역 이름 아래 한 줄)
 export const backupUi = {
-  noSignal: { ko: "저장 신호 없음", en: "NO SAVE SIGNAL" },
-  none: { ko: "저장 대기 중", en: "WAITING TO SAVE" },
-  deleted: { ko: "저장된 위치 없음", en: "NO SAVED LOCATION" },
   saved: { ko: "● 위치 저장됨", en: "● LOCATION SAVED" },
 };
 
@@ -136,7 +126,12 @@ export const pause = {
   sens: { ko: "마우스 감도", en: "Mouse sensitivity" },
   sensNote: { ko: "마우스를 움직일 때 시점이 돌아가는 속도입니다.", en: "How fast the view turns when you move the mouse." },
   bob: { ko: "걷기 화면 흔들림", en: "Walking camera bob" },
-  sound: { ko: "효과음", en: "Sound effects" },
+  sound: { ko: "소리", en: "Sound" },
+  music: { ko: "음악", en: "Music" },
+  sfx: { ko: "효과음", en: "Sound effects" },
+  amb: { ko: "주변 소리", en: "Ambience" },
+  calm: { ko: "화면 효과 줄이기", en: "Reduce screen effects" },
+  calmNote: { ko: "흔들림, 번쩍임, 화면 찢김을 약하게 합니다.", en: "Softens shaking, flashes and screen tearing." },
   lang: { ko: "언어", en: "Language" },
   humanity: { ko: "인간성", en: "Humanity" },
   humanityNote: { ko: "변경할 수 없습니다.", en: "Cannot be changed." },
@@ -198,7 +193,6 @@ export const jabiUi = {
     { src: "/deleteseoul/jabi-fire.webp", cap: { ko: "빛이 내려오면: 연결 끊김", en: "The light comes down: disconnected" } },
   ] as { src: string; cap: L }[],
   deadTitle: { ko: "연결이 끊겼습니다", en: "CONNECTION LOST" },
-  deadSub: { ko: "큰길 입구에서 다시 시작합니다.", en: "Restarting at the avenue entrance." },
   restoreStart: { ko: "큰길 입구로 돌아왔습니다.", en: "Back at the avenue entrance." },
   cost: { ko: "도시가 저장된 기록에서 당신을 다시 불러냈습니다.", en: "The city called you back from your saved record." },
   noBackup: { ko: "저장된 위치가 없습니다.", en: "No saved location." },
@@ -264,6 +258,16 @@ export const faceTalk = {
   exception: {
     joke: { ko: "비표준 얼굴로 등록됐네. 뭐, 표준이었던 적도 없으니까.", en: "Registered as a non-standard face, huh. Well, I was never standard anyway." } as Line,
   },
+  // 망원경 장면 뒤 "방금 본 건 내 기억이야." 다음에 끼어드는 한 줄: 처음으로 스스로 웃고 싶어지는 순간
+  scope: {
+    standard: { ko: "…이상하지. 얼굴은 내내 웃고 있었는데, 지금은 처음으로 진짜 웃고 싶어.", en: "…Strange. My face has been smiling all along, but now, for the first time, I actually want to smile." } as Line,
+    exception: { ko: "…나 지금 웃고 있지? 누가 시킨 게 아니라, 그냥 웃음이 나.", en: "…I'm smiling right now, aren't I? Nobody told me to. It just came." } as Line,
+  },
+  // 이산과 처음 지상에 올라섰을 때 첫 도시 방송
+  broadcast: {
+    standard: { ko: "[도시 방송] 표준 미소 시민 1명이 확인됐습니다. 협조에 감사드립니다.", en: "[CITY BROADCAST] One citizen with a standard smile confirmed. Thank you for your cooperation." } as L,
+    exception: { ko: "[도시 방송] 비표준 얼굴이 감지됐습니다. 가까운 복원 장치를 이용해 주십시오.", en: "[CITY BROADCAST] A non-standard face has been detected. Please use the nearest restoration machine." } as L,
+  },
 };
 
 // 기록을 지우고 돌아온 방문자: 이산은 처음 보는 사람처럼 대한다
@@ -277,6 +281,8 @@ export const sanCity = {
   scope: [
     { ko: "남쪽 전망대까지만 가 보자. 망원경이 거기 있대.", en: "Let's just go as far as the south lookout. They say the scope is there." },
     { ko: "광장 서쪽에 돌아가는 길이 있어. 빛이 지나가면 같이 건너자.", en: "There's a way round on the west side of the plaza. When the light passes, let's cross together." },
+    // 말하지 않는 방문자에게: 대답을 기다리지 않는다
+    { ko: "근데 넌 어디서 왔어? …아니, 대답 안 해도 돼. 와 줘서 다행이라는 것만 알면 돼.", en: "Where did you come from, anyway? …No, you don't have to answer. It's enough to know I'm glad you came." },
   ] as Line[],
   descent: [
     { ko: "아래로 가는 승강장은 검문소 너머에 있어. 큰길로 가자. 아까 반짝인 게 뭔지, 가까이서 보고 싶어.", en: "The platform going down is past the checkpoint. Let's take the avenue. I want to see up close what that glimmer was." },
@@ -313,8 +319,8 @@ export const encounters: Record<"grandma" | "courier" | "edgekid", { who: "san" 
     { who: "npc", ko: "보기만 했겠어, 거기서 살았지. 요샌 남쪽 전망대에서나 가끔 보인다더라.", en: "Seen it? I lived there. These days, they say you only catch a glimpse from the south lookout." },
   ],
   courier: [
-    { who: "npc", ko: "경로를 찾을 수 없습니다. 지도에 없는 길입니다.", en: "Route not found. This path is not on the map." },
-    { who: "san", ko: "아직도 배송 중이라고 뜨네.", en: "It still says 'delivering'." },
+    { who: "npc", ko: "배송 지연 412일째. 수령인 주소를 찾을 수 없습니다.", en: "Delivery delayed: day 412. Recipient address not found." },
+    { who: "san", ko: "추적을 거부한 사람한테 가는 소포인가 봐. 그러면 지도에서 집도 지워지거든.", en: "Must be for someone who refused tracking. Their home gets wiped off the map, too." },
   ],
   edgekid: [
     { who: "npc", ko: "저 구름 아래에도 동네가 있어요?", en: "Is there a town under those clouds too?" },
@@ -351,6 +357,8 @@ export const sanCue = {
   // 골목 입구에서 처음 (허공 너머로 남쪽 전망대의 망원경이 보인다)
   // 배송 대기소 처마 밑
   shelter: { ko: "여긴 지붕이 가려 줘. 잠깐 쉬자.", en: "The roof covers us here. Let's rest a moment." } as L,
+  // 처음 지상에 올라섰을 때 (방공호를 나선 첫 지상, 이번 방문에 한 번)
+  surface: { ko: "밖은 오랜만이야. 바닥에 분필 화살표 보이지? 저걸 따라가면 광장이 나와.", en: "It's been a while since I was outside. See the chalk arrows on the ground? Follow them to the plaza." } as L,
   // 망원경 전에 큰길 차단막 앞에 서면 (곁에 있을 때만)
   avenue: { ko: "이쪽은 막혀 있네. 망원경부터 보러 가자.", en: "This way's blocked. Let's go see the scope first." } as L,
   // 망원경 뒤 결정을 미룬 채 큰길로 들어서면
@@ -384,7 +392,7 @@ export const reunion = {
   awakeLine: { ko: "검문소 너머 승강장까지 같이 가자.", en: "Let's go together, to the platform past the checkpoint." } as Line,
 };
 // 연결이 끊긴 적이 있다면 지상의 이산이 덧붙이는 말 (선택 대화)
-export const sanAfterDeath: L = { ko: "방금 쓰러졌는데… 도시가 널 다시 불러냈어.", en: "You just went down… and the city called you back." };
+export const sanAfterDeath: L = { ko: "방금 쓰러졌는데… 도시가 저장해 둔 너를 다시 불러냈어. 괜찮은 거 맞지?", en: "You just went down… and the city called back the you it had saved. You're all right, aren't you?" };
 
 export const keeperAfterDeath: L = { ko: "돌아왔구나. 다친 데도 없네. 아까 그 일은 없었던 것처럼.", en: "You're back. Not a scratch. As if it never happened." };
 
@@ -451,12 +459,18 @@ export const checkpoint = {
     { ko: "기기를 등록했습니다. 다음 방문부터 자동으로 접속됩니다.", en: "Device registered. You will be signed in automatically from your next visit." },
     { ko: "승강장 대기열에 등록됐습니다. 출발 시각은 정해지지 않았습니다.", en: "You are registered for the platform queue. No departure time has been set." },
     { ko: "동행인 이산: 추적 거부 기록으로 등록 불가. 정지 처분합니다. (연결 중단 {a}회 · 복원 {r}회)", en: "Companion San: cannot be registered due to a record of refusing tracking. Suspending. (Disconnected {a} times · restored {r} times)" },
+    // 시점이 이산 쪽으로 돌아간다. 이산은 이 두 줄 동안 천천히 돌처럼 굳는다 (방공호에서 처음 만났을 때의 그 모습으로)
     { ko: "결국 이렇게 되는구나.", en: "So this is how it ends.", say: true },
+    // 망원경에서 본 것을 방문자에게 맡긴다. 출발 시각이 정해지지 않은 줄에 선 사람에게 (작은 아이러니로 남긴다)
+    { ko: "먼저 가. 아까 반짝이던 게 뭐였는지, 네가 대신 보고 와.", en: "Go on ahead. Whatever that glimmer was, go and see it for me.", say: true },
+    // 시점이 다시 줄 앞쪽(성문)으로
     { ko: "뒤따라오던 발소리가 더는 들리지 않는다.", en: "The footsteps that followed you can no longer be heard." },
   ] as Beat[],
   reject: [
     { ko: "거부 선택을 기록했습니다. 쿠키 1개가 저장됐습니다.", en: "Your refusal has been recorded. 1 cookie was saved." },
     { ko: "추적 거부 확인. 방문자와 동행인 이산의 활동을 정지합니다.", en: "Refusal confirmed. Suspending the activity of the visitor and companion San." },
+    // 화면이 하얗게 멎은 뒤, 굳어 가는 이산의 마지막 말 (처음엔 혼자 거부했던 사람이다)
+    { ko: "…괜찮아. 이번엔 나 혼자가 아니네.", en: "…It's all right. This time I'm not the only one.", say: true },
     { ko: "", en: "", slots: true },
     { ko: "끝까지 '모두 거부'를 누른 두 번째 사람.", en: "The second person who pressed 'Reject all' to the end.", plaque: true },
     { ko: "누군가 두 사람 사이에 작은 등 하나를 놓고 갔다.", en: "Someone has left a small lamp between the two of them." },
@@ -485,10 +499,11 @@ export const checkpoint = {
 export const MUSIC_URL = "https://soundcloud.com/user-787015749";
 export const credits = {
   music: { ko: "음악 · Jinseong Baek", en: "Music · Jinseong Baek" },
-  listen: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" },
 };
 
-export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link?: { href: string; label: L } }> = {
+// lines = 처음 / after = 이산이 깨어난 뒤 / descent = 망원경을 보고 아래로 가기로 한 뒤 / ghost = 기록을 지우고 돌아와 기억으로 깨어난 이산과 함께일 때
+// face = 이산이 깨어난 뒤, 얼굴 맞추기에서 고른 것(표준 미소 / 원본 얼굴)에 따라 맨 앞에 붙는 말
+export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; descent?: Line[]; ghost?: Line[]; face?: Record<"standard" | "exception", Line[]>; link?: { href: string; label: L } }> = {
   dj: {
     name: { ko: "음향 담당 진성", en: "Jinseong, on sound" },
     lines: [
@@ -517,22 +532,48 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
       { ko: "광장부터는 드론을 조심해. 빛이 다가오면 지붕 있는 곳으로 숨어.", en: "Watch out for drones from the plaza on. If the light comes near, hide somewhere with a roof." },
       { ko: "저 문으로 올라가면 배전실이 나와. 바닥의 분필 표시를 따라가.", en: "Go up through that door and you'll come out in a substation. Follow the chalk marks on the ground." },
     ],
+    face: {
+      standard: [{ ko: "웃는 얼굴로 돌아왔네. …지상 사람들 얼굴이랑 똑같아서, 잠깐 못 알아봤어.", en: "Back with a smile. …It looks so like the faces up top, I didn't recognise them for a second." }],
+      exception: [{ ko: "얼굴이 그대로네. 다행이다. 그 비뚤어진 입꼬리, 여기 사람들은 다 기억해.", en: "Their face is the same. Thank goodness. That crooked mouth, everyone down here remembers it." }],
+    },
+    descent: [
+      { ko: "아래까지 내려가 보기로 했다고? …이산 얼굴을 보니 말려도 소용없겠네.", en: "You've decided to go all the way down? …Looking at San's face, there's no talking them out of it." },
+      { ko: "검문소는 큰길 끝이야. 그 큰 불상 앞에서는 엄폐물에서 엄폐물로 움직여.", en: "The checkpoint is at the end of the avenue. In front of that giant Buddha, move from cover to cover." },
+      { ko: "무사히 돌아오라는 말은 안 할게. 여기 사람들은 다 그 말을 듣고 나갔다가 줄에 남았거든.", en: "I won't tell you to come back safe. Everyone here heard that on the way out, and stayed in the line." },
+    ],
+    ghost: [
+      { ko: "이산이 일어났네. 터미널엔 손도 안 댔는데… 어떻게 한 거야?", en: "San is up. You didn't even touch the terminals… How did you do it?" },
+      { ko: "…아니, 말 안 해도 돼. 여기선 이유를 적어 두지 않으니까.", en: "…No, you don't have to say. We don't write reasons down here." },
+      { ko: "검문소로 간다고? 그래. 이번엔 너희를 막을 이름이 없을지도 모르지.", en: "To the checkpoint? Go on. This time there may be no name for them to stop." },
+    ],
   },
   r07: {
     name: { ko: "R-07", en: "R-07" },
     lines: [
-      { ko: "저는 R-07입니다. 예전에는 하루 종일 ‘모두 수락’을 눌렀습니다.", en: "I am R-07. I used to press 'Accept all' all day long." },
-      { ko: "어느 날 손가락이 멈췄습니다. 이유는 찾지 못했습니다.", en: "One day my finger stopped. I never found out why." },
-      { ko: "지금은 바닥을 닦습니다. 여기는 제가 닦고 싶어서 닦습니다.", en: "Now I mop the floor. Here, I mop because I want to." },
-      { ko: "저랑 친구 하실래요?", en: "Would you like to be my friend?" },
+      { ko: "삐. 발밑을 조심하십시오. 방금 닦은 자리입니다.", en: "Beep. Mind your step. I've just mopped there." },
+      { ko: "저는 청소 로봇 R-07입니다. 지상에서는 거리를 닦을 때마다 어디를 몇 번 닦았는지 도시에 보고했습니다.", en: "I am cleaning robot R-07. On the surface, every time I cleaned a street, I reported to the city where and how many times." },
+      { ko: "어느 날 보고 기능이 고장 났습니다. 보고하지 않는 로봇은 불량품이라, 이 아래로 버려졌습니다.", en: "One day my reporting function broke. A robot that doesn't report is defective, so I was thrown down here." },
+      { ko: "여기서는 닦아도 아무도 확인하지 않습니다. 그런데 바닥은 똑같이 깨끗해집니다. 아직도 이상합니다.", en: "Here, nobody checks what I clean. Yet the floor gets just as clean. I still find that strange." },
+      { ko: "요즘은 기록 말고 다른 것을 모아 보려고 합니다. 친구입니다. 지금까지 0명입니다.", en: "Lately I've been trying to collect something other than records. Friends. So far I have zero." },
+      { ko: "…저와 친구가 되어 주시겠습니까?", en: "…Would you be my friend?" },
     ],
+    // 이산이 깨어난 뒤에는 첫 줄만 바뀐다 (나머지는 같고, 마지막 줄에서 친구를 묻는다)
+    after: [
+      { ko: "삐. 이산 님이 일어났군요. 받침대 둘레를 닦아 두었습니다. 이제 앉아 있는 사람이 없으니까요.", en: "Beep. San is up. I've mopped around the pedestal. Nobody is sitting there anymore." },
+    ],
+    // 얼굴 맞추기에서 고른 것이 있으면 첫 줄이 이것으로 바뀐다
+    face: {
+      standard: [{ ko: "삐. 이산 님이 일어났군요. 표준 미소 확인. 지상 기준으로 ‘정상’ 얼굴입니다. …축하드려야 하는지는 모르겠습니다.", en: "Beep. San is up. Standard smile confirmed. A 'normal' face by surface standards. …I'm not sure whether to congratulate them." }],
+      exception: [{ ko: "삐. 이산 님이 일어났군요. 비표준 얼굴. 지상이었다면 신고 대상입니다. 여기서는 신고할 곳이 없습니다. 다행입니다.", en: "Beep. San is up. Non-standard face. On the surface that would be reported. Down here there's nowhere to report it. Fortunately." }],
+    },
   },
   vendor: {
     name: { ko: "우산 장수", en: "Umbrella seller" },
     lines: [
       { ko: "우산 하나 보고 가. 구름 위에 살아도 비는 맞더라.", en: "Have a look at the umbrellas. Even above the clouds, the rain still finds you." },
-      { ko: "다들 젖는 줄도 모르고 줄만 서 있어.", en: "Everyone just stands in line, never noticing they're getting soaked." },
-      { ko: "그래도 넌 비를 피하려고 하네. 그거면 됐어.", en: "But you still try to keep out of the rain. That's enough." },
+      { ko: "구름보다 높이 떠 있는데 비가 어디서 오는지는 아무도 몰라. 방송은 맨날 ‘맑음’이라고만 하고.", en: "We float above the clouds, and nobody knows where the rain comes from. The broadcast always just says 'clear'." },
+      { ko: "줄 선 사람들은 젖어도 안 움직여. 움직이면 저 큰 눈이 보거든.", en: "The people in line won't move even when they're soaked. Move, and that big eye sees you." },
+      { ko: "돈은 됐어. 여기서 결제하면 기록이 남으니까. 그냥 구경만 해도 돼.", en: "Keep your money. Pay here and it leaves a record. You can just look." },
     ],
   },
   whisper: {
@@ -540,6 +581,7 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
     lines: [
       { ko: "쉿. 움직이지 마세요. 저 눈이 보고 있어요.", en: "Shh. Don't move. Those eyes are watching." },
       { ko: "승강장에 타려고 섰는데… 언제 출발하는지는 아무도 몰라요.", en: "I'm in line for the platform… but nobody knows when it leaves." },
+      { ko: "저도 처음엔 남쪽 망원경을 보러 가려고 했어요. 그런데 줄에서 빠지면 순서가 지워진대서…", en: "At first I meant to go and see the south scope too. But they said if I leave the line, my place gets erased…" },
       { ko: "방공호에서 왔어요? 거긴 줄을 안 서도 된다던데.", en: "Did you come from the shelter? I heard you don't have to queue there." },
     ],
   },
@@ -548,7 +590,7 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
     lines: [
       { ko: "앉게. 여기서는 아무도 재촉하지 않네.", en: "Sit. No one hurries you here." },
       { ko: "위에서는 이름 옆에 적힌 것만 보고 사람을 판단하지.", en: "Up there, they judge a person only by what's written beside their name." },
-      { ko: "여기 사람들은 저 사람을 업고 내려왔네. 이름도 모르면서.", en: "The people here carried that one down without even knowing their name." },
+      { ko: "여기 사람들은 저 사람이 무엇을 거부했는지 따지지 않고 업고 내려왔네.", en: "The people here carried that one down without asking what they had refused." },
       { ko: "가운데 앉아 있는 사람에게 가 보게. 곁에 있어 주는 것도 도움이 될 테니.", en: "Go to the one sitting in the middle. Simply being beside them may help." },
     ],
     after: [
@@ -556,22 +598,37 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
       { ko: "일어났군. 자네가 와 준 덕분이겠지.", en: "They're up. Thanks to you coming, I'd say." },
       { ko: "같이 나가려거든 서두르지 말게. 이제 막 걷기 시작한 사람이니.", en: "If you're going out together, don't rush. They've only just started walking." },
     ],
+    face: {
+      standard: [{ ko: "웃고 있군. 그 웃음이 누구 것인지는 천천히 알게 되겠지.", en: "They're smiling. Whose smile it is, they'll learn in time." }],
+      exception: [{ ko: "도시의 웃음을 받지 않았군. 제 얼굴로 걷는 것도 수행이라네.", en: "They didn't take the city's smile. Walking with one's own face is a practice too." }],
+    },
+    ghost: [
+      { ko: "앉게. 여기서는 아무도 재촉하지 않네.", en: "Sit. No one hurries you here." },
+      { ko: "기록 하나 없이 일어났군. 적어 둔 것은 지워져도, 마음에 새긴 것은 남는 법이지.", en: "They rose without a single record. What is written can be erased; what is carved in the heart stays." },
+      { ko: "가게. 이번 걸음은 아무 데도 남지 않을 테니, 잘 보고 오게.", en: "Go. This time your steps will be left nowhere, so look well." },
+    ],
   },
   radio: {
     name: { ko: "무전수", en: "Radio operator" },
     lines: [
       { ko: "잠깐만. 지상 방송 듣고 있어. 오늘도 같은 말이네. ‘동의가 처리됐습니다.’", en: "Hold on. I'm listening to the surface broadcast. Same words again today: 'Your consent has been processed.'" },
       { ko: "가끔은 노랫소리도 잡혀. 구름 아래에서 오는 것 같은데, 어디인지는 모르겠어.", en: "Sometimes I catch singing, too. It seems to come from below the clouds, but I can't tell where." },
-      { ko: "들릴 때마다 녹음해 둬. 누가 부르는지 언젠가는 알겠지.", en: "I record it whenever I hear it. Someday I'll know who's singing." },
+      { ko: "들릴 때마다 녹음해 두고 있어. 누가 부르는지 언젠가는 알겠지.", en: "I record it whenever I hear it. Someday I'll know who's singing." },
+      { ko: "도시 방송은 다 똑같은데, 그 노래는 매번 조금씩 달라. 살아 있는 사람이 부르는 거야.", en: "The city broadcasts are always the same, but that song is a little different every time. Someone alive is singing it." },
     ],
   },
   kid: {
     name: { ko: "그림 그리는 아이", en: "Child drawing" },
     lines: [
       { ko: "아직 다 안 그렸어요. 그래도 봐도 돼요.", en: "It's not finished yet. You can still look." },
-      { ko: "이 그림은 이산한테 보여 줄 거예요.", en: "I'm going to show this drawing to San." },
+      { ko: "이건 이산이에요. ‘모두 거부’ 누르는 거요. 다들 그 얘기만 하니까 그렸어요.", en: "This is San. Pressing 'Reject all'. Everyone keeps talking about it, so I drew it." },
+      { ko: "이 그림은 이산한테 보여 줄 거예요. 일어나면요.", en: "I'm going to show this drawing to San. When they wake up." },
       { ko: "위에서는 벽에 그리면 지워 버려요. 여기서는 그냥 둬요.", en: "Up there, if you draw on a wall they wipe it off. Here they leave it." },
     ],
+    face: {
+      standard: [{ ko: "이산이 웃는다! …근데 원래도 저렇게 웃었어요? 볼이 하나도 안 움직여요.", en: "San is smiling! …But did they always smile like that? Their cheeks don't move at all." }],
+      exception: [{ ko: "이산 얼굴, 제 그림이랑 똑같아요! 웃지는 않네요. 그래도 딱 이산 같아요.", en: "San's face looks just like my drawing! They're not smiling. But they look exactly like San." }],
+    },
     after: [
       { ko: "이산이 일어났어요! 이제 제 그림도 보러 올 수 있겠죠?", en: "San is up! Now they can come and see my drawing, right?" },
       { ko: "밖에 나가는 거예요? 돌아오면 이것도 봐 주세요.", en: "Are you going outside? Look at this when you come back." },
@@ -609,14 +666,15 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
   // 골목에 굳어 선 사람들 (말을 걸면 지문 한 줄)
   frozen: {
     name: { ko: "정지된 시민", en: "Suspended citizen" },
-    lines: [{ ko: "정지된 시민이다.", en: "A suspended citizen.", who: "narr" }],
+    lines: [{ ko: "추적을 거부한 채 굳은 시민이다. 손끝이 아직 무언가를 누르려는 모양 그대로다.", en: "A citizen frozen after refusing tracking. Their fingertip is still poised to press something.", who: "narr" }],
   },
   courier: {
     name: { ko: "배달 로봇 D-12", en: "Courier bot D-12" },
     lines: [
-      { ko: "경로를 찾을 수 없습니다. 지도에 없는 길입니다.", en: "Route not found. This path is not on the map." },
-      { ko: "배달은 멈췄는데, 화면에는 계속 배송 중이라고 나옵니다.", en: "My delivery has stopped, but my screen still says 'delivering'." },
-      { ko: "조금만 쉬겠습니다. 어차피 늦었습니다.", en: "I'll rest a little. I'm late anyway." },
+      { ko: "배달 로봇 D-12입니다. 소포 하나를 412일째 들고 있습니다.", en: "Courier bot D-12. I have been carrying one parcel for 412 days." },
+      { ko: "수령인이 추적을 거부한 날, 주소가 지도에서 사라졌습니다. 경로를 다시 계산해도 ‘없는 곳’으로만 나옵니다.", en: "The day the recipient refused tracking, their address vanished from the map. Every time I recalculate, the route ends at 'nowhere'." },
+      { ko: "돌아가면 반송 처리되고, 반송된 소포는 폐기됩니다. 그래서 드론이 내려다보지 않는 이 처마 밑에서 기다립니다.", en: "If I go back, it's marked returned, and returned parcels are destroyed. So I wait here, under the eaves, where the drones don't look." },
+      { ko: "제 화면에는 아직 ‘배송 중’이라고 떠 있습니다. 거짓말은 아닙니다. 아직 포기하지 않았으니까요.", en: "My screen still says 'delivering'. It isn't a lie. I haven't given up yet." },
     ],
   },
   // 망원경은 말하지 않는다: 보이는 것만 지문으로
@@ -644,6 +702,10 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; link
   },
   patrol: {
     name: { ko: "순찰 기계 P-3", en: "Patrol unit P-3" },
+    face: {
+      standard: [{ ko: "동행인 얼굴 확인. 표준 미소. 이상 없음.", en: "Companion's face checked. Standard smile. No issues." }],
+      exception: [{ ko: "동행인 얼굴 확인. 표준과 다릅니다. 기록합니다.", en: "Companion's face checked. Deviates from standard. Recording." }],
+    },
     lines: [
       { ko: "시민 기록을 조회합니다.", en: "Looking up citizen record." },
       { ko: "방문자 등록은 큰길 끝 검문소에서 진행하십시오.", en: "Visitor registration takes place at the checkpoint at the end of the avenue." },
@@ -661,11 +723,11 @@ export const patrolNoRecord: Line[] = [
 export const r07Friend = {
   yes: { ko: "고개를 끄덕인다", en: "Nod" } as L,
   no: { ko: "가볍게 손을 흔들고 돌아선다", en: "Wave lightly and turn away" } as L,
-  knock: { ko: "고맙습니다. 다음엔 두 번 두드려 주세요. 똑똑. 그렇게요.", en: "Thank you. Next time, knock twice. Knock knock. Like that." } as L,
+  knock: { ko: "친구 1명. 기록하지 않고 기억해 두겠습니다. 다음에 만나면 두 번 두드려 주십시오. 똑똑. 친구끼리의 인사입니다.", en: "One friend. I won't record it; I'll remember it. When we meet again, knock twice. Knock knock. That's how friends say hello." } as L,
   again: { ko: "똑똑. 오늘은 제가 먼저 인사했습니다.", en: "Knock knock. I said hello first today." } as L,
   // 기록을 지우고 돌아온 방문자가 먼저 건네는 행동 (실제로 두 번 두드리는 소리가 난다)
   you: { ko: "두 번 두드린다", en: "Knock twice" } as L,
-  answer: { ko: "두 번. …저도 그렇게 인사합니다.", en: "Twice. …That's how I say hello, too." } as L,
+  answer: { ko: "두 번. …제 친구 목록은 비어 있는데, 이 인사는 압니다. 어디서 배웠을까요.", en: "Twice. …My friend list is empty, but I know this greeting. Where did I learn it?" } as L,
 };
 
 npcs.patrol2 = {
@@ -768,6 +830,12 @@ export const faceUi = {
   // 장치 근처 안내 (PC·휴대폰)
   hintPc: { ko: "원통을 바라보고 E 또는 클릭으로 돌립니다.", en: "Look at a drum and press E or click to turn it." } as L,
   hintTouch: { ko: "원통을 눌러 돌립니다.", en: "Tap a drum to turn it." } as L,
+  // 얼굴이 맞은 뒤: 도시와 장치가 각자 아래쪽 조작부를 가리킨다 (도시는 분홍 버튼을, 낡은 장치는 나무 레버를)
+  offerStandard: { ko: "아래의 분홍 버튼을 누르면 표준 미소가 적용됩니다. 권장 사항입니다.", en: "Press the pink button below to apply the standard smile. Recommended." } as L,
+  offerKeep: { ko: "…원본을 그대로 두려면, 옆의 나무 레버를 당기십시오.", en: "…To keep the original as it is, pull the wooden lever beside it." } as L,
+  questChoose: { ko: "분홍 버튼 또는 나무 레버", en: "Pink button or wooden lever" } as L,
+  hintChoosePc: { ko: "장치 아래쪽의 분홍 버튼(표준 미소)이나 나무 레버(원본 얼굴)를 바라보고 E 또는 클릭.", en: "Look at the pink button (standard smile) or the wooden lever (original face) below and press E or click." } as L,
+  hintChooseTouch: { ko: "장치 아래쪽의 분홍 버튼이나 나무 레버를 누릅니다.", en: "Tap the pink button or the wooden lever below the machine." } as L,
 };
 
 
@@ -795,3 +863,74 @@ export const replayUi = {
   woke: { ko: "……또 와 줬네. 이번엔 같이 갈 수 있을까?", en: "……You came back. Can we go together this time?" } as L,
   quest: { ko: "굳은 이산에게 가기", en: "Go to the frozen San" } as L,
 };
+
+// 다시 온 방문자 (결말을 하나라도 본 기기): 이산이 깨어나기 전, 몇몇이 첫마디 다음에 기억하는 듯한 한 줄을 흘린다.
+// 기록은 지워졌어도 무언가 남아 있다는 느낌만. 결말을 설명하지 않는다
+export const echoLines: Record<string, Line> = {
+  keeper: { ko: "…이상하네. 처음 보는 얼굴인데, 어디서 본 것 같아.", en: "…Strange. I've never seen your face, but it feels like I have." },
+  r07: { ko: "처음 뵙는 분입니다. 그런데 제 바퀴가 당신 쪽으로 먼저 돌았습니다. 기록에는 없는 일입니다.", en: "We have not met. Yet my wheels turned toward you first. That is not in any record." },
+  monk: { ko: "지운다고 다 지워지지는 않지. 그대 발소리가 그렇네.", en: "Erasing doesn't erase everything. Your footsteps say as much." },
+  kid: { ko: "이 그림, 전에 보여 준 적 있어요? …아닌가.", en: "Did I show you this drawing before? …Maybe not." },
+  radio: { ko: "지상 주파수에서 가끔 너 같은 사람 얘기가 들려. 아니, 내가 잘못 들었겠지.", en: "Sometimes the surface frequency talks about someone like you. No, I must have misheard." },
+};
+
+// 방공호의 쪽지 다섯 장 (지워진 사람들이 남긴 것). 이 기기에 모인다: 도시의 기록이 아니라서 기록 지우기로도 지워지지 않는다
+export const notes: L[] = [
+  { ko: "엄마 생일은 3월 9일. 도시가 지워도 내가 기억하면 된다.", en: "Mum's birthday is March 9. The city can erase it. I'll remember." },
+  { ko: "동의서에 서명하지 않은 날, 문패에서 내 이름이 사라졌다. 여기 다시 적는다. ■■■.", en: "The day I didn't sign the consent form, my name vanished from my door. I'm writing it here again: ■■■." },
+  { ko: "꿈은 기록되지 않는다. 그래서 여기 사람들은 잠을 많이 잔다.", en: "Dreams aren't recorded. That's why people down here sleep so much." },
+  { ko: "R-07에게. 바닥 닦아 줘서 고마워. 친구 목록에 내 이름도 넣어 줘. 이름은 네가 지어 줘.", en: "To R-07. Thanks for cleaning the floor. Put me on your friends list too. You can choose my name." },
+  { ko: "구름 아래로 내려간 언니가 돌아오면 이 벽 그림부터 보여 줄 거야.", en: "When my sister comes back from below the clouds, I'll show her this wall first." },
+];
+export const notesUi = {
+  title: { ko: "쪽지 {n}/5", en: "Note {n}/5" } as L,
+  found: { ko: "방공호의 쪽지 {n}/5", en: "Notes from the shelter {n}/5" } as L,
+  // 다섯 장을 다 모았을 때 (지문)
+  all: { ko: "쪽지 다섯 장. 도시의 기록 어디에도 없는 이름들이 이제 당신에게 있다.", en: "Five notes. Names that appear nowhere in the city's records are now with you." } as L,
+  missing: { ko: "아직 찾지 못한 쪽지", en: "A note not yet found" } as L,
+};
+
+// 결말 모음 (첫 화면의 버튼). 도시의 저장과 따로, 이 기기가 '기억'하는 결말. 기록 지우기로도 지워지지 않는다
+export const galleryUi = {
+  open: { ko: "기억된 결말 {n}/3", en: "Remembered endings {n}/3" } as L,
+  title: { ko: "기억된 결말", en: "Remembered endings" } as L,
+  sub: {
+    ko: "도시는 하나만 저장했습니다. 나머지는 당신이 기억합니다.",
+    en: "The city saved only one. You remember the rest.",
+  } as L,
+  unknown: { ko: "아직 보지 못한 결말", en: "An ending not yet seen" } as L,
+  close: { ko: "닫기", en: "Close" } as L,
+  tracks: { ko: "수록곡 · 음악 백진성", en: "Tracks · Music by Jinseong Baek" } as L,
+  hidden: { ko: "아직 들리지 않은 곡", en: "Not heard yet" } as L,
+  listen: { ko: "사운드클라우드에서 듣기 ↗", en: "Listen on SoundCloud ↗" } as L,
+  endings: {
+    accept: {
+      name: { ko: "수락 — 안전한 이별", en: "Accept — A safe farewell" } as L,
+      line: { ko: "뒤따라오던 발소리가 더는 들리지 않는다.", en: "The footsteps that followed you can no longer be heard." } as L,
+      status: { ko: "도시에 저장됨", en: "Saved by the city" } as L,
+      hint: { ko: "검문소의 조건을 받아들이면", en: "If you accept the checkpoint's terms" } as L,
+    },
+    reject: {
+      name: { ko: "거부 — 두 번째 정지 시민", en: "Reject — The second suspended citizen" } as L,
+      line: { ko: "누군가 두 사람 사이에 작은 등 하나를 놓고 갔다.", en: "Someone has left a small lamp between the two of them." } as L,
+      status: { ko: "저장되지 않음", en: "Not saved" } as L,
+      hint: { ko: "끝까지 거부하면", en: "If you refuse to the end" } as L,
+    },
+    ghost: {
+      name: { ko: "空 — 다음 한 걸음", en: "空 — The next step" } as L,
+      line: { ko: "구름 아래에 무엇이 있었는지는 어디에도 기록되지 않았다.", en: "What lay beneath the clouds was never recorded anywhere." } as L,
+      status: { ko: "기록 없음", en: "No record" } as L,
+      hint: { ko: "도시 밖에서 무언가를 지우고 돌아오면", en: "If you erase something outside the city and come back" } as L,
+    },
+  },
+};
+// 백진성의 곡: 어디서 나오는지. need = 그 결말을 봐야 제목이 보인다
+export const TRACKS: { title: string; where: L; need?: "accept" | "reject" | "ghost" }[] = [
+  { title: "D!mple", where: { ko: "방공호", en: "The shelter" } },
+  { title: "0x48 0x4F 0x50 0x45", where: { ko: "지상", en: "The surface" } },
+  { title: "Sti그ma", where: { ko: "대자비의 큰길", en: "The Great Mercy's avenue" } },
+  { title: "Habitual Suffering", where: { ko: "수락", en: "Accept" }, need: "accept" },
+  { title: "an open ended promise", where: { ko: "거부", en: "Reject" }, need: "reject" },
+  { title: "f-ALL", where: { ko: "기억으로 깨어난 길, 空", en: "The path woken by memory, 空" }, need: "ghost" },
+  { title: "空", where: { ko: "기억된 결말", en: "Remembered endings" } },
+];
