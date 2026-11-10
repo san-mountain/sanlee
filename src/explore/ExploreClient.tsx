@@ -396,7 +396,9 @@ export default function ExploreClient() {
   // 기록을 지우고 돌아와 이산과 재회한 뒤의 지상은 올라서자마자 f-ALL이 아주 작게 시작해 서서히 커지고, 空 결말도 그 곡을 끝까지 잇는다
   const endTrack: Track | null = ending ? (ending.kind === "accept" ? "accept" : ending.kind === "reject" ? "reject" : "fall") : null;
   // 수락: 돌아서서 이산의 말("…그래.")을 듣는 줄부터 결말 곡이 겹쳐 들어와 줄까지 걷는 길을 받친다 (예전엔 이산의 마지막 말에서야 들어왔다)
-  const END_CUE: Record<EndKind, number> = { accept: ACCEPT_TURN, reject: REJECT_BUNKER, ghost: 0 };
+  // 결말 곡이 들어오는 줄. 수락: 줄의 빈자리에 다 들어서서 돌아보면 이산이 굳어 가는 순간("결국 이렇게 되는구나").
+  // 줄까지 걸어가는 동안은 도시(대자비)의 곡이 그대로 흐른다: 등록·정지 처분 방송까지가 도시의 시간이고, 결말 곡은 남겨진 둘의 시간이다
+  const END_CUE: Record<EndKind, number> = { accept: ACCEPT_SAY, reject: REJECT_BUNKER, ghost: 0 };
   const cityTrack: Track = jabiStage ? "jabi" : "ground";
   // 거부 결말: 화면이 하얗게 멎는 순간 듣던 곡도 짧게 끊긴다(정지). 방공호로 넘어가면 결말 곡이 천천히 들어온다
   const frozenQuiet = ending?.kind === "reject" && flash;
@@ -1121,6 +1123,7 @@ export default function ExploreClient() {
       gaze,
       sanWalk,
       end: (k: EndKind) => startEndingRef.current(k),
+      thaw: () => thawRef.current(),
     };
   }, [goTo]);
 

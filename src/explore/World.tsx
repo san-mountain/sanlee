@@ -62,6 +62,9 @@ export default function World({ zone, lang, visited, onTap, onNear, onTracked, l
             {complete && !hideSan && (
               <SanNPC smile={face.method === "standard"} mode="follow" item={CITY.items.find((i) => i.id === "san")!} onTap={onTap} start={sanStart ?? [CITY.spawn.pos[0], CITY.spawn.pos[2] + 2.2]} path={sanPath} stone={sanStone} />
             )}
+            {/* 이산이 없을 때도 이산의 빛 자리를 꺼 둔 채 남겨 둔다. 장면의 빛 개수가 바뀌면 모든 재질의 셰이더를 한꺼번에 다시 만들어서
+                (수락 뒤 이산을 풀어 줄 때) 화면이 몇 초씩 멈췄다 */}
+            {!(complete && !hideSan) && <pointLight position={[0, -50, 0]} intensity={0} distance={4} color="#ffd6f4" />}
             {frozenSan && (
               <group position={[FROZEN_SAN.x, 0, FROZEN_SAN.z]}>
                 <Tap id="frozen-san" onTap={onTap}>
