@@ -662,8 +662,6 @@ body.restoring-light .nav-logo .han, body.restoring-light .page .han { transitio
 /* ---------- 다듬기: About, 언어 버튼, 404, 페이지 전환 ---------- */
 /* 영어 기기: 언어가 정해질 때까지 잠깐 가려 둔다 (layout.tsx의 스크립트와 LangProvider가 켜고 끈다) */
 html[data-lang-wait] body { visibility: hidden; }
-/* About: 첫 문단(약력)은 작고 옅게, 그 아래 작가 노트가 본문 */
-.section-body .bio { color: var(--muted); font-size: var(--fs-meta); margin: 0 0 var(--s3); }
 /* 언어 버튼: 상자 없이 메뉴와 같은 글자로 */
 .nav .lang-toggle { border: 0; padding: 3px 0; border-radius: 0; }
 .nav .lang-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
