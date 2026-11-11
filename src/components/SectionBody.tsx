@@ -16,8 +16,7 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
     return (
       <div className="section-body">
         {about.paragraphs.map((p, i) => (
-          // 첫 문단은 약력(작게, 옅게), 그 아래가 작가 노트
-          <p key={i} className={i === 0 ? "bio" : undefined}>
+          <p key={i}>
             {t(p)}
           </p>
         ))}
