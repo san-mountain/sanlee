@@ -99,6 +99,7 @@ export function forgetCityRecords() {
   wipeBackup();
   try {
     [
+      "sanlee-chalk",
       "sanlee-promise",
       "sanlee-last-login",
       "sanlee-visited",
@@ -106,6 +107,7 @@ export function forgetCityRecords() {
       "sanlee-san-talked",
       "sanlee-face",
       "sanlee-ending",
+      "sanlee-queue-no",
       "sanlee-endings-found",
       "sanlee-jabi-intro",
       "sanlee-scope",

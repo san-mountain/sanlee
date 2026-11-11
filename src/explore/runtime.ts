@@ -20,6 +20,14 @@ export const runtime = {
   },
 };
 
+// 장면 준비 상태: 구역이 바뀌면 World의 Warm이 셰이더·텍스처·모양을 미리 올리고, 끝나면 ready를 켠다.
+// 화면 전환(검은 화면)은 이것을 기다렸다가 걷힌다
+export const warm = { ready: true, id: 0 };
+
+// 이번 방문 동안 방문자가 한 사소한 일들. 검문소의 '도시가 저장한 기록'과 이산의 가벼운 말이 읽는다 (어디에도 저장하지 않는다)
+export const tally = { jumps: 0, ran: false, caught: 0, lost: 0, r07: 0, withdraw: 0, sat: false, look: {} as Record<number, number> };
+export const resetTally = () => Object.assign(tally, { jumps: 0, ran: false, caught: 0, lost: 0, r07: 0, withdraw: 0, sat: false, look: {} });
+
 // Explicit advancement makes cancellation and pause behavior independently testable.
 export class GameTimers {
   private time = 0;

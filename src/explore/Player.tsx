@@ -1,6 +1,6 @@
 "use client";
 
-import { runtime } from "./runtime";
+import { tally, runtime } from "./runtime";
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
@@ -72,6 +72,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
   const fwd = useRef(new THREE.Vector3());
   const tmp = useRef(new THREE.Vector3());
   const jumpBuf = useRef(0);
+  const sitY = useRef(0);
   // 발소리: 화면이 한 번 내려앉을 때마다(걸음마다) 한 번. 점프 뒤에는 착지 소리
   // 지난 발소리 뒤로 걸은 거리. 보폭만큼 걸을 때마다 한 걸음 (걷기 초당 약 2걸음, 뛰기 약 2.8걸음)
   const stepDist = useRef(0);
@@ -189,6 +190,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
       }
     }
     const moved = Math.hypot(p.x - s.x, p.z - s.z);
+    if (mv.run && moved > 0.01) tally.ran = true;
     s.x = p.x;
     s.z = p.z;
     // 점프: 달리거나 걷는 중에도 언제든. 착지 직전에 누른 것도 0.15초 동안 기억했다가 닿자마자 뛰고,
@@ -199,6 +201,7 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
     if ((jumpBuf.current > 0 || input.jumpHeld) && s.y <= 0 && s.vy <= 0 && input.enabled) {
       s.vy = JUMP_V;
       jumpBuf.current = 0;
+      tally.jumps++;
     }
     if (s.y > 0 || s.vy > 0) {
       s.vy -= GRAVITY * dt;
@@ -227,7 +230,9 @@ export default function Player({ zone, zoneKey, onNear, arrived }: Props) {
 
     const bobY = input.bob && grounded ? Math.sin(s.bob * 2) * 0.035 * Math.min(1, moved / (dt * 2 + 1e-4)) : 0;
     const floorY = walkArea.floor ? walkArea.floor(s.x, s.z) : 0;
-    camera.position.set(s.x, EYE + floorY + s.y + bobY, s.z);
+    // 곁에 앉으면 시점이 천천히 내려앉고, 일어서면 돌아온다
+    sitY.current += ((gaze.sit ? -0.62 : 0) - sitY.current) * Math.min(1, dt * 2.2);
+    camera.position.set(s.x, EYE + floorY + s.y + bobY + sitY.current, s.z);
     camera.rotation.set(s.pitch, s.yaw, 0, "YXZ");
     // 대자비가 분노하면 화면이 흔들린다
     const sh = gaze.shake * (input.calm ? 0.2 : 1);

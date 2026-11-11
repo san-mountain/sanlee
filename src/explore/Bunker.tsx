@@ -1,13 +1,14 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { tally } from "./runtime";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles, useTexture, RoundedBox } from "@react-three/drei";
 import type { Lang, SectionId } from "@/data/site";
 import { works } from "@/data/site";
 import { concreteTexture, glowTexture, hazardTexture } from "./textures";
-import { BACKUP_RACK, BUNKER_H, BUNKER_NPCS, BUNKER_Z0, BUNKER_Z1, NOTES, PAINTINGS, PILLARS, TERMINALS } from "./zones";
+import { BACKUP_RACK, BUNKER_H, BUNKER_NPCS, BUNKER_Z0, BUNKER_Z1, NOTES, PAINTING_SLOTS, paintPage, PILLARS, TERMINALS } from "./zones";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import Statue, { Pedestal } from "./Statue";
 import SanNPC from "./SanNPC";
@@ -239,32 +240,64 @@ function shrinkTexture(src: THREE.Texture, max: number): THREE.Texture {
 }
 
 function Paintings({ lang }: { lang: Lang }) {
-  const full = useTexture(PAINTINGS.map((p) => p.w.image!));
+  // 처음에는 칸마다 첫 장만 올린다. 넘긴 그림은 그때 불러온다
+  const full = useTexture(PAINTING_SLOTS.map((p) => works[p.works[0]].image!));
   const wallWash = useLightPool("#ffe6c0", 2.4, "top");
   const paintWash = useLightPool("#fff0d8", 0.3, "top");
   // 벽에 걸린 그림은 2m 남짓이라 원본(긴 변 1400px)을 그대로 올리면 그림 여덟 점에 GPU 메모리를 60MB 가까이 쓴다.
-  // 긴 변 768px로 줄인 사본만 GPU에 올린다(약 3분의 1). 원본은 그림을 열어 볼 때 그대로 쓴다
-  const tex = useMemo(() => full.map((t) => shrinkTexture(t, 768)), [full]);
-  useEffect(() => () => tex.forEach((t) => t.dispose()), [tex]);
+  // 긴 변 768px로 줄인 사본만 GPU에 올린다(약 3분의 1)
+  const first = useMemo(() => full.map((t) => shrinkTexture(t, 768)), [full]);
+  useEffect(() => () => first.forEach((t) => t.dispose()), [first]);
+  // 넘겨서 불러온 그림 (작업 번호 → 줄인 사본). 다 불러온 뒤에야 벽의 그림이 바뀐다
+  const extra = useRef(new Map<number, THREE.Texture>());
+  const [shown, setShown] = useState(() => PAINTING_SLOTS.map((p) => p.works[paintPage.at[p.slot]] ?? p.works[0]));
+  useEffect(() => {
+    const cache = extra.current;
+    let alive = true;
+    const sync = () => {
+      PAINTING_SLOTS.forEach((p, i) => {
+        const w = p.works[paintPage.at[p.slot]] ?? p.works[0];
+        const put = () => alive && setShown((prev) => (prev[i] === w ? prev : prev.map((x, j) => (j === i ? w : x))));
+        if (w === p.works[0] || cache.has(w)) return put();
+        new THREE.TextureLoader().load(works[w].image!, (t) => {
+          if (!alive) return t.dispose();
+          cache.set(w, shrinkTexture(t, 768));
+          t.dispose();
+          put();
+        });
+      });
+    };
+    sync();
+    window.addEventListener("sanlee-paint", sync);
+    return () => {
+      alive = false;
+      window.removeEventListener("sanlee-paint", sync);
+      cache.forEach((t) => t.dispose());
+      cache.clear();
+    };
+  }, []);
   return (
     <group>
-      {PAINTINGS.map((p, i) => {
-        const w = works[p.work];
+      {PAINTING_SLOTS.map((p, i) => {
+        const work = shown[i];
+        const map = work === p.works[0] ? first[i] : (extra.current.get(work) ?? first[i]);
+        const page = p.works.length > 1 ? `${p.works.indexOf(work) + 1} / ${p.works.length}` : "";
+        const w = works[work];
         const ratio = (w.width ?? 4) / (w.height ?? 3);
         const max = 2.1;
         const pw = ratio >= 1 ? max : max * ratio;
         const ph = ratio >= 1 ? max / ratio : max;
         return (
-          <group key={p.work}>
+          <group key={p.slot}>
             <group position={p.pos} rotation={[0, p.rotY, 0]}>
-              <HoloCaption work={p.work} lang={lang} x={pw / 2 + 0.85} />
+              <HoloCaption work={work} page={page} lang={lang} x={pw / 2 + 0.85} />
               <mesh position={[0, 0, 0.03]}>
                 <boxGeometry args={[pw + 0.16, ph + 0.16, 0.06]} />
                 <meshStandardMaterial color="#141414" roughness={0.6} metalness={0.3} />
               </mesh>
               <mesh position={[0, 0, 0.065]}>
                 <planeGeometry args={[pw, ph]} />
-                <meshBasicMaterial map={tex[i]} color="#d8d8d8" toneMapped={false} />
+                <meshBasicMaterial map={map} color="#d8d8d8" toneMapped={false} />
               </mesh>
               {/* 그림등 */}
               <mesh position={[0, ph / 2 + 0.35, 0.28]}>
@@ -291,7 +324,7 @@ function Paintings({ lang }: { lang: Lang }) {
 }
 
 // 그림 옆 벽에 떠오르는 홀로그램 캡션: 가까이 가면 켜지고, 멀어지면 꺼진다
-function captionTexture(work: number, lang: Lang) {
+function captionTexture(work: number, lang: Lang, page = "") {
   const w = works[work];
   const c = document.createElement("canvas");
   c.width = 512;
@@ -317,6 +350,12 @@ function captionTexture(work: number, lang: Lang) {
   g.fillText(`${w.date.slice(0, 4)}`, 30, 128, 452);
   g.fillText(w.medium[lang], 30, 172, 452);
   g.fillText(w.size[lang], 30, 216, 452);
+  // 여러 점을 맡은 칸: 몇 번째 장인지
+  if (page) {
+    g.textAlign = "right";
+    g.fillText(page, 482, 264, 200);
+    g.textAlign = "left";
+  }
   g.shadowBlur = 0;
   g.fillStyle = "rgba(127,246,255,0.08)";
   for (let y = 0; y < 320; y += 4) g.fillRect(0, y, 512, 1);
@@ -325,8 +364,9 @@ function captionTexture(work: number, lang: Lang) {
   return t;
 }
 
-function HoloCaption({ work, lang, x }: { work: number; lang: Lang; x: number }) {
-  const tex = useMemo(() => captionTexture(work, lang), [work, lang]);
+function HoloCaption({ work, lang, x, page = "" }: { work: number; lang: Lang; x: number; page?: string }) {
+  const tex = useMemo(() => captionTexture(work, lang, page), [work, lang, page]);
+  useEffect(() => () => tex.dispose(), [tex]);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const beam = useRef<THREE.MeshBasicMaterial>(null);
   const ref = useRef<THREE.Group>(null);
@@ -338,6 +378,8 @@ function HoloCaption({ work, lang, x }: { work: number; lang: Lang; x: number })
     g.getWorldPosition(wp);
     const d = Math.hypot(wp.x - player.pos.x, wp.z - player.pos.z);
     const target = d < 4.2 ? 1 : 0;
+    // 그림 앞에 머문 시간 (검문소의 기록에 가장 오래 본 그림이 적힌다)
+    if (target) tally.look[work] = (tally.look[work] ?? 0) + dt * 1000;
     k.current += (target - k.current) * Math.min(1, dt * 5);
     const flick = k.current > 0.05 && Math.random() < 0.04 ? 0.45 : 1;
     if (mat.current) mat.current.opacity = k.current * 0.95 * flick;
@@ -925,8 +967,14 @@ function WallText({ lang }: { lang: Lang }) {
     ],
     { color: "#c9a227", w: 1024, h: 256 }
   );
+  // 누군가 손으로 써 둔 한 줄 (도시의 간판들과 반대되는 말)
+  const hand = useSign([[lang === "ko" ? "여기서는 아무도 당신을 최적화하지 않습니다" : "NOBODY OPTIMISES YOU HERE", 1]], { color: "#e8e2c8", w: 1024, h: 128 });
   return (
     <group>
+      <mesh position={[11.97, 3.9, -1]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[5.6, 0.7]} />
+        <meshBasicMaterial map={hand} transparent opacity={0.5} />
+      </mesh>
       <mesh position={[-6.6, 3.6, BUNKER_Z0 + 0.03]}>
         <planeGeometry args={[4, 1]} />
         <meshBasicMaterial map={old} transparent opacity={0.45} />
@@ -1039,6 +1087,8 @@ function Bunker({ lang, visited, onTap, secondStatue, awake, face, notesRead = [
           <FaceConduit />
         </>
       )}
+      {/* 이산이 깨어나기 전에도 이산의 빛 자리를 꺼 둔 채 둔다: 깨어나는 순간 빛 개수가 바뀌면 방공호의 모든 셰이더를 다시 만들어 화면이 멈춘다 */}
+      {!(awake && !secondStatue) && <pointLight position={[0, -50, 0]} intensity={0} distance={4} color="#ffd6f4" />}
       {secondStatue ? (
         <>
           {/* 거부 결말: 이산도 다시 보관 처리되어 굳었다. 그 곁에 두 번째 동상이 나란히 앉아 있다 */}

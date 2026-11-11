@@ -1,6 +1,6 @@
 "use client";
 
-import { runtime } from "./runtime";
+import { runtime, tally } from "./runtime";
 import { useGameTimers } from "./useGameTimers";
 
 import { useEffect, useRef, useState } from "react";
@@ -25,6 +25,8 @@ export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
   // 화면 낭독기용: 상태가 바뀔 때만 한 번 읽는다
   const [say, setSay] = useState("");
   const [out, setOut] = useState(false);
+  // 여러 번 식별되면 도시의 인사가 달라진다 (-1이면 없음)
+  const [again, setAgain] = useState(-1);
 
   useEffect(() => {
     let raf = 0;
@@ -56,12 +58,14 @@ export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
       }
       if (key !== prev) {
         prev = key;
-        const s = key ? tRef.current(droneUi[key as keyof typeof droneUi]) : "";
+        const s = key ? tRef.current(droneUi[key as "caught" | "lit" | "shape" | "lost"]) : "";
         if (label.current) label.current.textContent = s;
         setSay(s);
       }
       if (drone.caught && !handled) {
         handled = true;
+        tally.caught++;
+        setAgain(tally.caught >= 7 ? 2 : tally.caught >= 4 ? 1 : tally.caught >= 2 ? 0 : -1);
         // 식별된 순간부터 화면이 돌아갈 때까지 걷기를 멈춘다 (onCaught에서 푼다)
         gaze.still = true;
         setOut(true);
@@ -100,6 +104,7 @@ export default function DroneHUD({ onCaught }: { onCaught: () => void }) {
       {out && (
         <div className="drone-out">
           <p>{t(droneUi.caughtTitle)}</p>
+          {again >= 0 && <small>{t(droneUi.caughtAgain[again])}</small>}
           <small>{t(droneUi.caughtSub)}</small>
         </div>
       )}

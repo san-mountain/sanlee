@@ -43,6 +43,7 @@ export const ui = {
   open: { ko: "열기", en: "Open" },
   talk: { ko: "이야기 듣기", en: "Listen" },
   view: { ko: "보기", en: "View" },
+  nextPainting: { ko: "다음 그림으로 넘기기", en: "Turn to the next painting" },
   back: { ko: "닫기", en: "Close" },
   next: { ko: "계속", en: "Continue" },
   close: { ko: "닫기", en: "Close" },
@@ -111,6 +112,12 @@ export const droneUi = {
   shape: { ko: "방문자 기록 없음 · 추적 불가", en: "No visitor record · cannot track" },
   caughtTitle: { ko: "드론에 발각됐습니다.", en: "A drone spotted you." },
   caughtSub: { ko: "직전 안전 지점에서 다시 시작합니다.", en: "Restarting from the last safe spot." },
+  // 여러 번 식별될수록 도시가 다정해진다 (2번째부터 / 4번째부터 / 7번째부터)
+  caughtAgain: [
+    { ko: "다시 만나 반갑습니다.", en: "How nice to see you again." },
+    { ko: "자주 뵙네요. 동선을 저장해 두었습니다.", en: "We keep meeting. Your route has been saved." },
+    { ko: "숨는 곳이 늘 같으시네요. 취향을 존중합니다.", en: "You always hide in the same place. We respect your taste." },
+  ] as L[],
 };
 
 // 위치 저장 상태 (구역 이름 아래 한 줄)
@@ -329,6 +336,33 @@ export const encounters: Record<"grandma" | "courier" | "edgekid", { who: "san" 
   ],
 };
 
+// 망원경을 본 뒤 같은 사람들을 다시 지나칠 때 (각각 한 번). 길은 같은데 이산이 달라져 있다
+export const encountersBack: Record<"grandma" | "courier" | "edgekid", { who: "san" | "npc"; ko: string; en: string }[]> = {
+  grandma: [{ who: "npc", ko: "보고 왔구나. 얼굴에 써 있다.", en: "So you saw it. It's written on your face." }],
+  courier: [{ who: "san", ko: "주소가 다시 생기면 좋겠다. …나도 지워진 주소 같은 거니까.", en: "I hope it gets its address back. …I'm a kind of erased address myself." }],
+  edgekid: [
+    { who: "npc", ko: "봤어요?", en: "Did you see it?" },
+    { who: "san", ko: "응. 반짝였어.", en: "Yes. It glimmered." },
+    { who: "npc", ko: "거 봐요! 있다니까요.", en: "See! I told you it's there." },
+  ],
+};
+// 표준 미소를 붙인 얼굴이라면 할머니가 한마디 덧붙인다
+// 할머니의 국물 (이산과 함께일 때만 받는다): 기록에는 맛이 없다
+export const grandmaBroth = {
+  take: { ko: "종이컵을 받아 든다", en: "Take the paper cup" } as L,
+  pass: { ko: "사양한다", en: "Decline" } as L,
+  gran: { ko: "값은 됐다. 식기 전에 마셔라.", en: "No charge. Drink it before it cools." } as L,
+  san: { ko: "뜨거워. …뜨거운 게 이런 거였구나.", en: "It's hot. …So this is what hot is." } as L,
+};
+// D-12의 송장: 수령인 칸은 번져 있고 한 글자만 읽힌다 (누구의 소포인지는 끝까지 확인해 주지 않는다)
+export const courierWaybill = {
+  look: { ko: "송장을 들여다본다", en: "Look at the waybill" } as L,
+  line: { who: "narr", ko: "수령인: 이■ · 배송 412일째. 나머지 글자는 번져서 읽을 수 없다.", en: "Recipient: LEE ■ · day 412. The rest has run and cannot be read." } as Line,
+};
+// 줄 속에 처음 숨었을 때 옆의 시민이 입만 움직여 건네는 말 (이번 방문에 한 번)
+export const lineWhisper: L = { ko: "돌아보지 마세요. …저도 옛날엔 누구랑 같이 왔어요.", en: "Don't look back. …I came here with someone too, once." };
+export const grandmaBackStd = { who: "npc" as const, ko: "…아니, 그 얼굴엔 뭐가 써 있는지 모르겠다만.", en: "…Though I can't tell what's written on that face." };
+
 // 검문소에서 물러난 뒤 이산과의 대화 (처음 한 번). 다른 방송은 뜨지 않는다
 // 마지막 페이지(memory)가 뜬 기기에 웹사이트 꼬리말의 'delete seoul'이 켜진다
 export const sanAfterCheckpoint = {
@@ -365,6 +399,24 @@ export const sanCue = {
   // 망원경 뒤 결정을 미룬 채 큰길로 들어서면
   avenueDecide: { ko: "난 아래로 가 보고 싶어. 같이 갈 거면 이쪽이야.", en: "I want to go down. If you're coming, it's this way." } as L,
   agree: { ko: "고마워. 검문소까지 같이 가자.", en: "Thank you. Let's go to the checkpoint together." } as L,
+  // 길 위의 가벼운 말 (이번 방문에 한 번씩): 처음 달렸을 때 / 드론 빛을 벗어난 뒤 / 여러 번 뛰어올랐을 때 / 식별되어 되돌아온 뒤
+  ran: { ko: "잘 달리네. 난 방금 걷는 것부터 다시 배웠는데.", en: "You run well. I only just relearned how to walk." } as L,
+  droneLight: { ko: "저 빛 밑에서는 그림자가 안 생겨. 그림 그리기엔 최악이야.", en: "Nothing casts a shadow under that light. Terrible for drawing." } as L,
+  jump: { ko: "그건 왜 하는 거야? …아니, 좋아 보여서.", en: "Why do you do that? …No, it just looks nice." } as L,
+  caught: { ko: "도시가 널 제자리에 돌려놨네. 친절하기도 하지.", en: "The city put you right back where you were. How kind of it." } as L,
+  // 空 결말의 다리 위에서 방문자가 도시를 돌아보면
+  lookBack: { ko: "저기서는 우리가 안 보이겠지. …처음으로, 안 보이는 게 외롭지 않네.", en: "They can't see us from there. …For the first time, being unseen isn't lonely." } as L,
+  // 검문소 직전, 마지막 엄폐물 뒤에서 (이번 방문에 한 번). 재회의 '곁에 앉아 기다린다'를 평범한 길에서 미리 한 번 한다
+  sitAsk: { ko: "여기 앉으면 대자비가 안 보여. 줄만 보이지. …잠깐만 이러고 있자.", en: "Sit here and you can't see the Great Compassion. Only the line. …Let's stay like this a moment." } as Line,
+  sitYes: { ko: "곁에 앉는다", en: "Sit beside them" } as L,
+  sitNo: { ko: "서서 기다린다", en: "Wait standing" } as L,
+  sitAfter: { ko: "아무것도 안 하는 것도 기록될까.", en: "I wonder if doing nothing gets recorded too." } as L,
+  // 깨어난 이산의 첫 대화: 방문자가 가장 먼저 연 기록에 따라 한 줄
+  first: {
+    about: { ko: "소개부터 열었지. 예의 바른 사람이구나.", en: "You opened the introduction first. You're a polite one." },
+    works: { ko: "그림부터 봤지. 설명보다 그림이 먼저인 사람이네.", en: "You looked at the pictures first. Pictures before explanations, then." },
+    writing: { ko: "글부터 읽었지. 나라도 그랬을 거야.", en: "You read the writing first. I would have too." },
+  } as Record<string, L>,
   later: { ko: "응. 여기서 기다릴게.", en: "Okay. I'll wait here." } as L,
   // 기록을 지우고 돌아온 空 경로: 대자비 구역에 처음 들어섰는데 대자비가 둘을 보지 못할 때 (방공호에서 한 짐작이 맞았다)
   blind: { ko: "…정말 우릴 못 보네. 우린 이제 어디에도 적혀 있지 않은 거야.", en: "…It really can't see us. We're not written down anywhere anymore." } as L,
@@ -413,6 +465,22 @@ export const checkpoint = {
   evOrder: { ko: "기록 열람 · {order} ({n}/3)", en: "Records viewed · {order} ({n}/3)" },
   evScope: { ko: "남쪽 망원경 · 이용 {n}회", en: "South scope · used {n} time(s)" },
   evScopeDone: { ko: "남쪽 망원경 · 이용 기록 있음", en: "South scope · use recorded" },
+  // 이번 방문에 방문자가 실제로 한 사소한 일들 (관료의 말투로)
+  evJump: { ko: "점프 · {n}회 · 사유 미상", en: "Jumps · {n} · reason unknown" },
+  evLook: { ko: "그림 〈{title}〉 앞 체류 · {n}초 · 감상으로 분류", en: "Time before the painting “{title}” · {n}s · classified as appreciation" },
+  evR07: { ko: "청소 로봇과의 접촉 · {n}회 · 친구 등록 0명", en: "Contact with a cleaning robot · {n} · friends registered: 0" },
+  evCaught: { ko: "위치 확인 · {n}회 · 매번 안전하게 복귀 처리", en: "Location confirmed · {n} · safely returned each time" },
+  sanAlone: { ko: "난 이걸 혼자 눌렀어. 그때는 무서웠는데.", en: "I pressed this alone. I was scared, back then." },
+  evSat: { ko: "동행인과 앉아 있던 시간 · 기록 없음 · 활동 없음으로 분류", en: "Time spent sitting with companion · no record · classified as no activity" },
+  evWithdraw: { ko: "결정 보류 · {n}회", en: "Decisions postponed · {n}" },
+  // 물러났다가 다시 온 방문자에게 (두 번째 / 세 번째부터)
+  returned: [
+    { ko: "다시 오셨습니다. 신중하신 분이군요.", en: "You have returned. How careful of you." },
+    { ko: "결정하지 않는 것도 기록됩니다.", en: "Not deciding is also recorded." },
+  ] as L[],
+  // 대기 번호: 수락하면 받는다. 줄에서 다시 시작할 때마다 하나씩 밀린다
+  queueNo: { ko: "대기 번호 {n}번 · 예상 출발: 미정", en: "Queue number {n} · estimated departure: not set" },
+  queueBump: { ko: "우선 등록자가 발생했습니다. 대기 번호가 {n}번으로 조정됐습니다. 양해에 감사드립니다.", en: "A priority registrant has appeared. Your queue number is now {n}. Thank you for your understanding." },
   // 기록 열람 순서를 한국어로 (실제 연 순서 그대로)
   sectionKo: { about: "소개", works: "작업", writing: "글" } as Record<string, string>,
   // 상세 안의 상태
@@ -506,7 +574,7 @@ export const credits = {
 
 // lines = 처음 / after = 이산이 깨어난 뒤 / descent = 망원경을 보고 아래로 가기로 한 뒤 / ghost = 기록을 지우고 돌아와 기억으로 깨어난 이산과 함께일 때
 // face = 이산이 깨어난 뒤, 얼굴 맞추기에서 고른 것(표준 미소 / 원본 얼굴)에 따라 맨 앞에 붙는 말
-export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; descent?: Line[]; ghost?: Line[]; face?: Record<"standard" | "exception", Line[]>; faceAt?: number; link?: { href: string; label: L } }> = {
+export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; descent?: Line[]; ghost?: Line[]; queued?: Line[]; face?: Record<"standard" | "exception", Line[]>; faceAt?: number; link?: { href: string; label: L } }> = {
   dj: {
     name: { ko: "음향 담당 진성", en: "Jinseong, on sound" },
     lines: [
@@ -581,11 +649,17 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
   },
   whisper: {
     name: { ko: "줄 선 시민", en: "Citizen in line" },
+    // 방문자도 수락하고 줄에 선 뒤
+    queued: [
+      { ko: "…결국 서셨네요. 저처럼요.", en: "…So you joined the line after all. Like me." },
+      { ko: "같이 오던 분은 줄 밖에 서 계시던데요. 저도 처음엔 자꾸 돌아봤어요.", en: "The one you came with is standing outside the line. I kept looking back at first, too." },
+    ],
     lines: [
       { ko: "쉿. 움직이지 마세요. 저 눈이 보고 있어요.", en: "Shh. Don't move. Those eyes are watching." },
       { ko: "승강장에 타려고 섰는데… 언제 출발하는지는 아무도 몰라요.", en: "I'm in line for the platform… but nobody knows when it leaves." },
       { ko: "저도 처음엔 남쪽 망원경을 보러 가려고 했어요. 그런데 줄에서 빠지면 순서가 지워진대서…", en: "At first I meant to go and see the south scope too. But they said if I leave the line, my place gets erased…" },
       { ko: "방공호에서 왔어요? 거긴 줄을 안 서도 된다던데.", en: "Did you come from the shelter? I heard you don't have to queue there." },
+      { ko: "제 앞사람도 누가 출발하는 건 본 적이 없대요. 그 앞사람도요.", en: "The person ahead of me has never seen anyone depart. Neither has the one ahead of them." },
     ],
   },
   monk: {
@@ -677,6 +751,11 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
   },
   courier: {
     name: { ko: "배달 로봇 D-12", en: "Courier bot D-12" },
+    // 기록 없는 둘 앞에서: 처음으로 경로가 잡힌다
+    ghost: [
+      { ko: "배달 로봇 D-12입니다. 수령인 조회 불가.", en: "Courier bot D-12. Recipient lookup failed." },
+      { ko: "…처음으로 경로가 하나 잡힙니다. 아래쪽입니다.", en: "…For the first time, a route resolves. It points down." },
+    ],
     lines: [
       { ko: "배달 로봇 D-12입니다. 소포 하나를 412일째 들고 있습니다.", en: "Courier bot D-12. I have been carrying one parcel for 412 days." },
       { ko: "수령인이 추적을 거부한 날, 주소가 지도에서 사라졌습니다. 경로를 다시 계산해도 ‘없는 곳’으로만 나옵니다.", en: "The day the recipient refused tracking, their address vanished from the map. Every time I recalculate, the route ends at 'nowhere'." },
@@ -756,6 +835,17 @@ export const announcements: L[] = [
   { ko: "[도시 방송] 연결이 끊긴 시민은 저장된 위치에서 복원됩니다.", en: "[CITY BROADCAST] Disconnected citizens are restored at their saved location." },
   { ko: "[도시 방송] 질서를 위해 줄을 유지해 주십시오.", en: "[CITY BROADCAST] For the sake of order, please keep the line." },
   { ko: "[도시 방송] 대자비가 여러분의 안전을 지킵니다.", en: "[CITY BROADCAST] The Great Compassion keeps you safe." },
+  // 친절한 말투의 풍자: 위협하지 않고 응대한다
+  { ko: "[도시 방송] 시민 여러분의 표정은 서비스 품질 향상을 위해 녹화될 수 있습니다.", en: "[CITY BROADCAST] Your facial expressions may be recorded to improve our service." },
+  { ko: "[도시 방송] 오늘의 자유 시간은 14시부터 14시 03분까지입니다. 위치는 그대로 유지해 주십시오.", en: "[CITY BROADCAST] Today's free time runs from 14:00 to 14:03. Please remain where you are." },
+  { ko: "[도시 방송] 분실물 안내입니다. 3구역에서 사생활 한 점이 습득되었습니다. 찾아가실 필요는 없습니다. 도시가 보관하겠습니다.", en: "[CITY BROADCAST] Lost and found: one item of privacy was recovered in Zone 3. There is no need to collect it. The city will keep it." },
+  { ko: "[도시 방송] 혼자 걷는 시민이 감지되었습니다. 외로움은 추적으로 해결됩니다.", en: "[CITY BROADCAST] A citizen walking alone has been detected. Loneliness is solved by tracking." },
+  { ko: "[도시 방송] 대자비는 여러분을 감시하지 않습니다. 지켜보고 있습니다.", en: "[CITY BROADCAST] The Great Compassion is not surveilling you. It is watching over you." },
+  { ko: "[도시 방송] 구름 아래에 대한 문의는 접수되지 않습니다. 구름 아래는 없습니다. 감사합니다.", en: "[CITY BROADCAST] Enquiries about what lies below the clouds are not accepted. There is nothing below the clouds. Thank you." },
+  { ko: "[도시 방송] 웃지 않는 시민을 발견하시면 가까운 복원 장치로 안내해 주십시오. 신고가 아니라 배려입니다.", en: "[CITY BROADCAST] If you see a citizen who is not smiling, please guide them to the nearest restoration unit. This is not reporting. It is kindness." },
+  { ko: "[도시 방송] 오늘 삭제된 시민은 0명입니다. 삭제된 시민은 집계에 포함되지 않습니다.", en: "[CITY BROADCAST] Zero citizens were deleted today. Deleted citizens are not included in the count." },
+  { ko: "[도시 방송] 쿠키를 거부하신 시민께 알립니다. 거부 의사는 소중히 기록되었습니다.", en: "[CITY BROADCAST] To citizens who refused cookies: your refusal has been carefully recorded." },
+  { ko: "[도시 방송] 출발 시각은 정해지면 알려 드리겠습니다. 아직 정해진 적은 없습니다.", en: "[CITY BROADCAST] The departure time will be announced once it is set. It has never been set." },
 ];
 
 // 지상 전광판 문구 [큰 글씨, 작은 글씨, 색]
@@ -768,6 +858,8 @@ export const billboards: { ko: [string, string]; en: [string, string]; color: st
   { ko: ["줄은 질서입니다", "THE LINE IS ORDER"], en: ["THE LINE IS ORDER", "줄은 질서입니다"], color: "#ff8a2a" },
   { ko: ["보는 것은 보호입니다", "TO WATCH IS TO PROTECT"], en: ["TO WATCH IS TO PROTECT", "보는 것은 보호입니다"], color: "#ff2a4d" },
   { ko: ["꿈은 유료 구독입니다", "DREAMS™ NOW BY SUBSCRIPTION"], en: ["DREAMS™ BY SUBSCRIPTION", "꿈은 유료 구독입니다"], color: "#a77bff" },
+  { ko: ["대기 인원은 표시하지 않습니다", "FOR YOUR PEACE OF MIND"], en: ["QUEUE LENGTH HIDDEN", "불안 방지를 위해 표시하지 않습니다"], color: "#ffe14d" },
+  { ko: ["외로움은 추적으로 해결됩니다", "NEVER ALONE AGAIN"], en: ["NEVER ALONE AGAIN", "외로움은 추적으로 해결됩니다"], color: "#22f0ff" },
 ];
 
 export const ticker: L = {

@@ -24,6 +24,9 @@ export const sanHold: { at: { x: number; z: number; cover: number; manual?: bool
 // vanish: 마지막 몇 미터에서 신호가 끊기듯 깜빡이다 끝점에서 사라진다 (空 결말의 계단)
 export type SanPath = { pts: [number, number][]; yaw: number; speed?: number; vanish?: boolean };
 export const sanWalk: { arrived: boolean; path: SanPath | null } = { arrived: false, path: null };
+// 방문자 눈앞에서 풀려날 때만 켠다: 다음에 나타나는 이산이 받침대 위에서 몸을 펴고 걸어 내려온다 (끝나면 스스로 꺼진다)
+export const sanRise = { on: false };
+const RISE_TOP = 1.2; // 받침대 높이
 
 // 복원된 산: 방공호에서는 동상 주위를 거닐고, 지상에서는 방문자 곁을 따라 걷는다
 const PATH: [number, number][] = [
@@ -79,6 +82,17 @@ export default function SanNPC({ mode, item, onTap, start, path, smile, stone }:
   const stoneK = useRef(0);
   const tints = useRef<Tint[] | null>(null);
   const st = useRef({ x: start[0], z: start[1], wp: 0, yaw: 0, bob: 0 });
+  // 받침대에서 내려오는 장면: 지난 시간(초)과 내려설 방향. -1이면 하지 않는다
+  const rise = useRef<{ t: number; dx: number; dz: number } | null>(null);
+  useEffect(() => {
+    if (mode !== "wander" || !sanRise.on) return;
+    // 방문자 쪽으로 내려서되, 방문자 바로 위에 서지 않게 옆으로 비켜 내려온다
+    const a = Math.atan2(player.pos.x, player.pos.z) + (player.pos.x >= 0 ? -0.9 : 0.9);
+    rise.current = { t: 0, dx: Math.sin(a), dz: Math.cos(a) };
+    return () => {
+      sanRise.on = false;
+    };
+  }, [mode]);
   // 이산이 사라지면(다시 시작 등) 상호작용 위치를 원래 자리로 되돌린다. 안 그러면 동상에게 말을 걸 수 없다.
   useEffect(() => {
     const home = item.pos.clone();
@@ -119,6 +133,34 @@ export default function SanNPC({ mode, item, onTap, start, path, smile, stone }:
         if (t.rim && t.rim0) t.rim.copy(t.rim0).lerp(STONE_RIM, e);
       }
       if (light.current) light.current.intensity = 2.5 * (1 - e);
+    }
+    const R = rise.current;
+    if (R) {
+      // 0~1.1초: 웅크린 채 굳어 있던 몸을 편다. ~2.1초: 받침대 끝으로 걷는다. ~2.7초: 내려선다. ~3.1초: 무릎을 굽혔다 편다
+      const t = (R.t += dt);
+      const ease = (u: number) => u * u * (3 - 2 * u);
+      const up = ease(Math.min(1, t / 1.1));
+      const walk = ease(Math.max(0, Math.min(1, (t - 1.1) / 1.0)));
+      const hop = Math.max(0, Math.min(1, (t - 2.1) / 0.6));
+      const land = Math.max(0, Math.min(1, (t - 2.7) / 0.4));
+      const r = 0.15 + walk * 1.15 + hop * 1.45;
+      S.x = R.dx * r;
+      S.z = R.dz * r;
+      S.yaw = Math.atan2(R.dx, R.dz);
+      const y = RISE_TOP * (1 - hop * hop) + Math.sin(hop * Math.PI) * 0.18 + (walk > 0 && walk < 1 ? Math.abs(Math.sin(walk * 9)) * 0.04 : 0);
+      // 동상은 사람보다 크게 굳어 있었다: 몸을 펴면서 제 크기로 돌아온다
+      const big = 1 + (1 - up) * 0.5;
+      g.scale.set(big, big * (0.6 + up * 0.4) * (1 - Math.sin(land * Math.PI) * 0.1), big);
+      g.position.set(S.x, y, S.z);
+      g.rotation.y = S.yaw;
+      item.pos.set(S.x, y + 1.5, S.z);
+      if (t >= 3.1) {
+        g.scale.set(1, 1, 1);
+        rise.current = null;
+        sanRise.on = false;
+        window.dispatchEvent(new Event("sanlee-rise-done"));
+      }
+      return;
     }
     const dp = Math.hypot(player.pos.x - S.x, player.pos.z - S.z);
     let tx = S.x;
