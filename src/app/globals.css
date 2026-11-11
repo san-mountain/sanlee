@@ -99,7 +99,7 @@ img { max-width: 100%; height: auto; display: block; }
 .mcol { list-style: none; padding: 0; margin: 0; flex: 1 1 0; min-width: 0; }
 .mcol li { margin: 0 0 var(--s3); }
 .mgrid-1 { display: flex; }
-.grid-item { all: unset; display: block; cursor: zoom-in; width: 100%; }
+.grid-item { all: unset; display: block; cursor: zoom-in; width: 100%; background-color: var(--ph, transparent); }
 /* 종이가 흰 작품은 종이의 끝이 바탕에 묻히므로, 모든 그림에 아주 옅은 선 한 줄을 두른다 */
 .grid-item img { width: 100%; transition: opacity .2s; outline: 1px solid #00000012; outline-offset: -1px; }
 .grid-item:hover img { opacity: .85; }
@@ -327,6 +327,8 @@ html:has(body.deleting), body.deleting { background: #07030f; transition: backgr
 body.deleting .page, body.deleting .nav-logo, body.deleting .nav-links > a, body.deleting .site-footer { color: #6b6385; transition: color .6s ease; }
 body.deleting .nav { background: transparent; }
 body.deleting .page img, body.deleting .feature-art { opacity: 0; transition: opacity .7s ease .15s; }
+/* 사진 밑에 깔린 평균색 자리도 그림과 함께 사라진다 (안 그러면 어두운 바탕에 색 상자만 남는다) */
+body.deleting .grid-item { background-color: transparent; transition: background-color .7s ease .15s; }
 body.deleting .page *, body.deleting .site-footer { border-color: transparent !important; transition: border-color .4s; }
 body.deleting .lang-toggle { border-color: transparent; }
 body.deleting .nav-explore { box-shadow: 0 0 10px #22f0ff, 0 0 30px #22f0ffaa, inset 0 0 8px #22f0ff88; }
