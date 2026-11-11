@@ -13,7 +13,6 @@ import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
 import { MUSIC_URL, echoLines, galleryUi, notes, notesUi, faceTalk, credits, announcements, checkpoint, encounters, encountersBack, grandmaBackStd, grandmaBroth, courierWaybill, lineWhisper, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
 import { AVENUE_EDGE_Z, BAY, BUNKER, BUNKER_NPCS, EDGE, machinePoint, flipPainting, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
-import { CHALK_SPOTS, clearChalk, drawChalk, offerChalk, readChalk } from "./chalk";
 import { sanHold, sanRise, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -2003,43 +2002,6 @@ export default function ExploreClient() {
           break;
         }
       }
-      // 분필: 가는 길 세 곳에서 이산이 선을 하나 긋고 분필을 내민다 (이산이 곁에 있고, 다른 말·위험이 없을 때. 이미 그은 자리는 묻지 않는다)
-      if (ph === "scope" && withSan && !speaking() && drone.lit < 0 && !panelRef.current) {
-        const ck = readChalk();
-        for (let i = 0; i < CHALK_SPOTS.length; i++) {
-          const s = CHALK_SPOTS[i];
-          if (ck.seen.includes(i) || Math.hypot(px - s.x, pz - s.z) > 2.4) continue;
-          const sp = sanPos();
-          if (Math.hypot(sp.x - px, sp.z - pz) > 5) continue;
-          offerChalk(i);
-          const order = ck.seen.length;
-          setPanel({
-            kind: "dialog",
-            name: SAN,
-            lines: [sanCue.chalk[Math.min(order, sanCue.chalk.length - 1)]],
-            step: 0,
-            choices: [
-              {
-                at: 0,
-                label: sanCue.chalkYes,
-                go: () => {
-                  drawChalk(i);
-                  sfx.chalk();
-                  closePanelRef.current();
-                  if (readChalk().mine.length === 1) say(sanCue.chalkDrawn, 3800);
-                },
-              },
-              { at: 0, label: sanCue.chalkNo, go: () => closePanelRef.current() },
-            ],
-          });
-          break;
-        }
-      }
-      // 기록을 지우고 돌아온 길: 골목에 남은 선 하나 앞에서 이산이 한 줄 (이번 방문에 한 번)
-      if (ghostRef.current && !metRef.current.trace && !speaking() && readChalk().trace && Math.hypot(px - CHALK_SPOTS[0].x, pz - CHALK_SPOTS[0].z) < 3) {
-        metRef.current.trace = true;
-        say(sanCue.chalkTrace, 4200);
-      }
       // 줄 속에 처음 숨었을 때 옆의 시민이 건네는 말 (이번 방문에 한 번)
       if (!metRef.current.line && gaze.inZone && gaze.hiddenBy === "line" && !speaking() && !ghostRef.current) {
         metRef.current.line = true;
@@ -2196,7 +2158,6 @@ export default function ExploreClient() {
     setGhost(false);
     setEnding(null);
     resetTally();
-    clearChalk();
     goTo("bunker", false);
     lock();
   };
@@ -2291,11 +2252,6 @@ export default function ExploreClient() {
   // 입장: 수락한 시민은 곧장 줄 속에서 깨어난다
   const enter = () => {
     setIntro(false);
-    // 열람 기록이 하나도 없는 새 길(거부 뒤 등)에서는 지난 길의 분필 선을 거둔다. 기록을 지우고 온 사람의 흔적(trace)은 남긴다
-    if (!visited.length) {
-      const ck = readChalk();
-      if (ck.seen.length || ck.mine.length) clearChalk();
-    }
     // 접속 기록: 들어오기만 해도 남는다. 웹사이트 꼬리말의 'delete seoul'은 이 기록이 있는 기기에만 나타난다.
     // 꼬리말에서 일부러 기록을 지우고 돌아온 사람에게는 새 접속 기록을 만들지 않는다 (재회 전까지 추적할 방문자가 없다)
     try {

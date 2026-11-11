@@ -404,17 +404,6 @@ export const sanCue = {
   droneLight: { ko: "저 빛 밑에서는 그림자가 안 생겨. 그림 그리기엔 최악이야.", en: "Nothing casts a shadow under that light. Terrible for drawing." } as L,
   jump: { ko: "그건 왜 하는 거야? …아니, 좋아 보여서.", en: "Why do you do that? …No, it just looks nice." } as L,
   caught: { ko: "도시가 널 제자리에 돌려놨네. 친절하기도 하지.", en: "The city put you right back where you were. How kind of it." } as L,
-  // 분필: 가는 길 세 곳에서 이산이 선을 하나 긋고 분필을 내민다 (도시가 적지 못하는, 둘만의 것)
-  chalk: [
-    { ko: "기록은 도시가 다 가져가니까. 이건 비 오면 지워지는 거야. 그래서 좋아. 너도 하나 그을래?", en: "The city takes every record. This washes off in the rain. That's why I like it. Want to draw one too?" },
-    { ko: "여기도 하나 그어 둘게. 너도.", en: "I'll leave one here too. You too." },
-    { ko: "마지막으로 하나 더. 돌아올 때 보이게.", en: "One last one. So we see it on the way back." },
-  ] as Line[],
-  chalkYes: { ko: "분필을 받아 옆에 선을 하나 긋는다", en: "Take the chalk and draw a line beside it" } as L,
-  chalkNo: { ko: "고개를 젓는다", en: "Shake your head" } as L,
-  chalkDrawn: { ko: "…삐뚤네. 좋아. 삐뚠 건 도시가 못 따라 그려.", en: "…It's crooked. Good. The city can't copy crooked." } as L,
-  // 기록을 지우고 돌아온 길: 골목에 선 하나만 흐릿하게 남아 있다
-  chalkTrace: { ko: "누가 그은 거지. …이상하게 내 손버릇 같네.", en: "Who drew this? …Strange. It looks like my own hand." } as L,
   // 空 결말의 다리 위에서 방문자가 도시를 돌아보면
   lookBack: { ko: "저기서는 우리가 안 보이겠지. …처음으로, 안 보이는 게 외롭지 않네.", en: "They can't see us from there. …For the first time, being unseen isn't lonely." } as L,
   // 검문소 직전, 마지막 엄폐물 뒤에서 (이번 방문에 한 번). 재회의 '곁에 앉아 기다린다'를 평범한 길에서 미리 한 번 한다

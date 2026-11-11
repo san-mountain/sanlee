@@ -2,7 +2,6 @@
 
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { tally } from "./runtime";
-import { readChalk } from "./chalk";
 import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles, useTexture, RoundedBox } from "@react-three/drei";
@@ -1100,13 +1099,6 @@ function Bunker({ lang, visited, onTap, secondStatue, awake, face, notesRead = [
             <Statue restored={0} lang={lang} second />
           </group>
           <SmallLamp />
-          {/* 방문자가 길에서 그은 분필 선만큼, 두 사람 사이 바닥에 선이 나란히 그어져 있다 */}
-          {readChalk().mine.map((_, i, a) => (
-            <mesh key={i} position={[(i - (a.length - 1) / 2) * 0.22, 0.012, 3.1 + (i % 2) * 0.05]} rotation={[-Math.PI / 2, 0, Math.PI / 2 + (i - 1) * 0.07]}>
-              <planeGeometry args={[0.55, 0.035]} />
-              <meshBasicMaterial color="#ece8dc" transparent opacity={0.85} toneMapped={false} />
-            </mesh>
-          ))}
         </>
       ) : awake ? (
         <>

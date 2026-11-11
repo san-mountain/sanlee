@@ -97,15 +97,9 @@ export function wipeBackup() {
 // 도시 밖에서 기록을 지운다. 언어·효과음 설정과 기존 숨은 결말의 표시는 유지한다.
 export function forgetCityRecords() {
   wipeBackup();
-  // 분필: 방문자가 그은 선이 하나라도 있었다면 골목의 선 하나만 흐릿하게 남는다 (기록이 아니라 흔적. chalk.ts의 fadeChalk와 같다.
-  // 웹사이트 꼬리말이 3D 쪽 코드를 끌어오지 않도록 여기 따로 적는다)
-  try {
-    const c = JSON.parse(localStorage.getItem("sanlee-chalk") ?? "null");
-    if (c && ((Array.isArray(c.mine) && c.mine.length) || c.trace)) localStorage.setItem("sanlee-chalk", JSON.stringify({ seen: [], mine: [], trace: true }));
-    else localStorage.removeItem("sanlee-chalk");
-  } catch {}
   try {
     [
+      "sanlee-chalk",
       "sanlee-promise",
       "sanlee-last-login",
       "sanlee-visited",
