@@ -1,6 +1,44 @@
 [
   {
     "title": {
+      "ko": "무제",
+      "en": "Untitled"
+    },
+    "date": "2026. 11.",
+    "medium": {
+      "ko": "종이에 지점토, 수채화, 오일파스텔, 콜라주",
+      "en": "Paper clay, watercolor, oil pastel and collage on paper"
+    },
+    "size": {
+      "ko": "8절, 39.4 × 27.2 cm",
+      "en": "39.4 × 27.2 cm"
+    },
+    "image": "/works/sanlee_2026_untitled.webp",
+    "width": 953,
+    "height": 1400,
+    "color": "#878286"
+  },
+  {
+    "title": {
+      "ko": "병아리",
+      "en": "Chick"
+    },
+    "date": "2026. 11.",
+    "medium": {
+      "ko": "종이에 수채화, 오일파스텔",
+      "en": "Watercolor and oil pastel on paper"
+    },
+    "size": {
+      "ko": "A4, 29.7 × 21.0 cm",
+      "en": "29.7 × 21.0 cm"
+    },
+    "image": "/works/sanlee_2026_chick.webp",
+    "width": 1038,
+    "height": 1400,
+    "color": "#9b8480"
+  },
+  {
+    "title": {
       "ko": "DELETE SEOUL",
       "en": "DELETE SEOUL"
     },
