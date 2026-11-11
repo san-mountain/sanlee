@@ -1032,9 +1032,7 @@ export default function ExploreClient() {
             // 얼굴 맞추기에서 고른 것에 따라 가벼운 말 한 줄이 끼어든다 (표준 미소면 의구심 줄도 그 얼굴에 맞게)
             const [first, doubt, ...rest] = statueLines[statueLines.length - 1];
             const m = faceRef.current.method;
-            // 가장 먼저 연 기록에 따라 한 줄 (도시도 이 순서를 적어 두었다: 검문소의 기록)
-            const opened = sanCue.first[visited[0]];
-            const head = opened ? [first, opened] : [first];
+            const head = [first];
             const lines = m === "standard" ? [...head, faceTalk.standard.joke, faceTalk.standard.doubt, ...rest] : m === "exception" ? [...head, faceTalk.exception.joke, doubt, ...rest] : [...head, doubt, ...rest];
             setPanel({ kind: "dialog", name: SAN, lines, step: 0 });
             setTalked(true);
