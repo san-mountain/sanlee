@@ -347,6 +347,20 @@ export const encountersBack: Record<"grandma" | "courier" | "edgekid", { who: "s
   ],
 };
 // 표준 미소를 붙인 얼굴이라면 할머니가 한마디 덧붙인다
+// 할머니의 국물 (이산과 함께일 때만 받는다): 기록에는 맛이 없다
+export const grandmaBroth = {
+  take: { ko: "종이컵을 받아 든다", en: "Take the paper cup" } as L,
+  pass: { ko: "사양한다", en: "Decline" } as L,
+  gran: { ko: "값은 됐다. 식기 전에 마셔라.", en: "No charge. Drink it before it cools." } as L,
+  san: { ko: "뜨거워. …뜨거운 게 이런 거였구나.", en: "It's hot. …So this is what hot is." } as L,
+};
+// D-12의 송장: 수령인 칸은 번져 있고 한 글자만 읽힌다 (누구의 소포인지는 끝까지 확인해 주지 않는다)
+export const courierWaybill = {
+  look: { ko: "송장을 들여다본다", en: "Look at the waybill" } as L,
+  line: { who: "narr", ko: "수령인: 이■ · 배송 412일째. 나머지 글자는 번져서 읽을 수 없다.", en: "Recipient: LEE ■ · day 412. The rest has run and cannot be read." } as Line,
+};
+// 줄 속에 처음 숨었을 때 옆의 시민이 입만 움직여 건네는 말 (이번 방문에 한 번)
+export const lineWhisper: L = { ko: "돌아보지 마세요. …저도 옛날엔 누구랑 같이 왔어요.", en: "Don't look back. …I came here with someone too, once." };
 export const grandmaBackStd = { who: "npc" as const, ko: "…아니, 그 얼굴엔 뭐가 써 있는지 모르겠다만.", en: "…Though I can't tell what's written on that face." };
 
 // 검문소에서 물러난 뒤 이산과의 대화 (처음 한 번). 다른 방송은 뜨지 않는다
@@ -390,6 +404,19 @@ export const sanCue = {
   droneLight: { ko: "저 빛 밑에서는 그림자가 안 생겨. 그림 그리기엔 최악이야.", en: "Nothing casts a shadow under that light. Terrible for drawing." } as L,
   jump: { ko: "그건 왜 하는 거야? …아니, 좋아 보여서.", en: "Why do you do that? …No, it just looks nice." } as L,
   caught: { ko: "도시가 널 제자리에 돌려놨네. 친절하기도 하지.", en: "The city put you right back where you were. How kind of it." } as L,
+  // 분필: 가는 길 세 곳에서 이산이 선을 하나 긋고 분필을 내민다 (도시가 적지 못하는, 둘만의 것)
+  chalk: [
+    { ko: "기록은 도시가 다 가져가니까. 이건 비 오면 지워지는 거야. 그래서 좋아. 너도 하나 그을래?", en: "The city takes every record. This washes off in the rain. That's why I like it. Want to draw one too?" },
+    { ko: "여기도 하나 그어 둘게. 너도.", en: "I'll leave one here too. You too." },
+    { ko: "마지막으로 하나 더. 돌아올 때 보이게.", en: "One last one. So we see it on the way back." },
+  ] as Line[],
+  chalkYes: { ko: "분필을 받아 옆에 선을 하나 긋는다", en: "Take the chalk and draw a line beside it" } as L,
+  chalkNo: { ko: "고개를 젓는다", en: "Shake your head" } as L,
+  chalkDrawn: { ko: "…삐뚤네. 좋아. 삐뚠 건 도시가 못 따라 그려.", en: "…It's crooked. Good. The city can't copy crooked." } as L,
+  // 기록을 지우고 돌아온 길: 골목에 선 하나만 흐릿하게 남아 있다
+  chalkTrace: { ko: "누가 그은 거지. …이상하게 내 손버릇 같네.", en: "Who drew this? …Strange. It looks like my own hand." } as L,
+  // 空 결말의 다리 위에서 방문자가 도시를 돌아보면
+  lookBack: { ko: "저기서는 우리가 안 보이겠지. …처음으로, 안 보이는 게 외롭지 않네.", en: "They can't see us from there. …For the first time, being unseen isn't lonely." } as L,
   // 검문소 직전, 마지막 엄폐물 뒤에서 (이번 방문에 한 번). 재회의 '곁에 앉아 기다린다'를 평범한 길에서 미리 한 번 한다
   sitAsk: { ko: "여기 앉으면 대자비가 안 보여. 줄만 보이지. …잠깐만 이러고 있자.", en: "Sit here and you can't see the Great Compassion. Only the line. …Let's stay like this a moment." } as Line,
   sitYes: { ko: "곁에 앉는다", en: "Sit beside them" } as L,
@@ -558,7 +585,7 @@ export const credits = {
 
 // lines = 처음 / after = 이산이 깨어난 뒤 / descent = 망원경을 보고 아래로 가기로 한 뒤 / ghost = 기록을 지우고 돌아와 기억으로 깨어난 이산과 함께일 때
 // face = 이산이 깨어난 뒤, 얼굴 맞추기에서 고른 것(표준 미소 / 원본 얼굴)에 따라 맨 앞에 붙는 말
-export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; descent?: Line[]; ghost?: Line[]; face?: Record<"standard" | "exception", Line[]>; faceAt?: number; link?: { href: string; label: L } }> = {
+export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; descent?: Line[]; ghost?: Line[]; queued?: Line[]; face?: Record<"standard" | "exception", Line[]>; faceAt?: number; link?: { href: string; label: L } }> = {
   dj: {
     name: { ko: "음향 담당 진성", en: "Jinseong, on sound" },
     lines: [
@@ -633,6 +660,11 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
   },
   whisper: {
     name: { ko: "줄 선 시민", en: "Citizen in line" },
+    // 방문자도 수락하고 줄에 선 뒤
+    queued: [
+      { ko: "…결국 서셨네요. 저처럼요.", en: "…So you joined the line after all. Like me." },
+      { ko: "같이 오던 분은 줄 밖에 서 계시던데요. 저도 처음엔 자꾸 돌아봤어요.", en: "The one you came with is standing outside the line. I kept looking back at first, too." },
+    ],
     lines: [
       { ko: "쉿. 움직이지 마세요. 저 눈이 보고 있어요.", en: "Shh. Don't move. Those eyes are watching." },
       { ko: "승강장에 타려고 섰는데… 언제 출발하는지는 아무도 몰라요.", en: "I'm in line for the platform… but nobody knows when it leaves." },
@@ -730,6 +762,11 @@ export const npcs: Record<string, { name: L; lines: Line[]; after?: Line[]; desc
   },
   courier: {
     name: { ko: "배달 로봇 D-12", en: "Courier bot D-12" },
+    // 기록 없는 둘 앞에서: 처음으로 경로가 잡힌다
+    ghost: [
+      { ko: "배달 로봇 D-12입니다. 수령인 조회 불가.", en: "Courier bot D-12. Recipient lookup failed." },
+      { ko: "…처음으로 경로가 하나 잡힙니다. 아래쪽입니다.", en: "…For the first time, a route resolves. It points down." },
+    ],
     lines: [
       { ko: "배달 로봇 D-12입니다. 소포 하나를 412일째 들고 있습니다.", en: "Courier bot D-12. I have been carrying one parcel for 412 days." },
       { ko: "수령인이 추적을 거부한 날, 주소가 지도에서 사라졌습니다. 경로를 다시 계산해도 ‘없는 곳’으로만 나옵니다.", en: "The day the recipient refused tracking, their address vanished from the map. Every time I recalculate, the route ends at 'nowhere'." },

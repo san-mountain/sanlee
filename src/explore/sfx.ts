@@ -479,6 +479,13 @@ export const sfx = {
     tone(860, 0.07, { type: "triangle", f2: 640, vol: 0.2, attack: 0.002 });
     tone(860, 0.07, { type: "triangle", f2: 640, vol: 0.16, at: 0.42, attack: 0.002 });
   },
+  // 분필: 거친 바닥을 긁는 짧은 소리
+  chalk: () => {
+    noise(0.28, { vol: 0.09, from: 3200, to: 2400, q: 2.5 });
+    noise(0.12, { vol: 0.05, from: 5200, to: 4200, q: 4, at: 0.05 });
+  },
+  // 벽의 그림을 넘긴다: 틀이 미끄러지는 낮은 소리
+  page: () => noise(0.3, { vol: 0.07, from: 700, to: 1500, q: 3 }),
   // 망원경: 초점 고리가 돌아가며 렌즈가 당겨진다 / 눈을 떼면 풀린다
   scopeIn: () => {
     for (let i = 0; i < 5; i++) tone(2300 + i * 60, 0.02, { type: "square", vol: 0.03, at: 0.05 + i * 0.07 });

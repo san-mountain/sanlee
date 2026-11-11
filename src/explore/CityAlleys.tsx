@@ -1,16 +1,20 @@
 "use client";
 
 // 지상의 사람 사는 쪽: 골목 장식, 골목 사람들, 숨겨진 방공호 입구, 포장마차, 범종각과 석탑, 망원경, 새 NPC들
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { addRim } from "./rim";
 import { useFrame } from "@react-three/fiber";
 import { Sparkles } from "@react-three/drei";
 import type { Lang } from "@/data/site";
-import { ALLEYS, ALLEY_PEOPLE, AVENUE, AVENUE_HOLO, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOOKOUT_PATH, LOTS, PAGODA, SCOPES } from "./zones";
+import { ALLEYS, ALLEY_PEOPLE, AVENUE, AVENUE_HOLO, BELL, CHALK, CITY_NPCS, HATCH, JUNK, LOOKOUT_PATH, LOTS, PAGODA, QUEUE_Z, SCOPES } from "./zones";
 import { citizenGeometry, roofGeometry } from "./models";
 import { chalkArrowTexture, concreteTexture, glowTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
+import { CHALK_SPOTS, readChalk } from "./chalk";
+
+// 수락 결말에서 서는 줄의 빈자리 (ExploreClient의 LINE_SPOT과 같은 자리)
+const OLD_SPOT = { x: 3.6, z: (QUEUE_Z[44] + QUEUE_Z[45]) / 2 };
 import { player } from "./Player";
 import { gaze, route } from "./gaze";
 
@@ -31,10 +35,85 @@ const lotAt = (x: number, z: number) => LOTS.some((l) => x > l.x0 && x < l.x1 &&
 export const LOTUS_COLORS = ["#ff5a8a", "#ffd23f", "#6dff8a", "#ff4040", "#f4f0ff", "#4fb0ff"];
 
 /* ---------- 분필 화살표: 방공호 골목에서 광장까지, 골목 사람들이 바닥에 그려 둔 길 ---------- */
+// 분필 선 하나: 손으로 그은 듯 조금 떨리고 군데군데 끊긴다
+function chalkLineTexture(seed: number) {
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 64;
+  const g = c.getContext("2d")!;
+  let r = seed * 9301 + 49297;
+  const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+  g.strokeStyle = "rgba(236,232,220,0.92)";
+  g.lineCap = "round";
+  for (let pass = 0; pass < 3; pass++) {
+    g.lineWidth = 5 - pass;
+    g.globalAlpha = 0.55 - pass * 0.12;
+    g.beginPath();
+    for (let x = 14; x <= 242; x += 6) {
+      const y = 32 + (rnd() - 0.5) * 7 + Math.sin(x * 0.02 + seed) * 4;
+      if (x === 14 || rnd() < 0.06) g.moveTo(x, y);
+      else g.lineTo(x, y);
+    }
+    g.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+// 줄의 빈자리(수락 결말에서 서는 곳) 발밑에 먼저 줄에 선 사람들이 남긴 낡은 선들
+const OLD_LINES: [number, number, number][] = [
+  [-0.55, 0.5, 0.15],
+  [-0.2, 0.62, -0.1],
+  [0.2, 0.48, 0.3],
+  [0.5, 0.7, 0.05],
+  [0.05, 0.95, 1.4],
+];
 export function ChalkMarks() {
   const tex = useMemo(() => ({ straight: chalkArrowTexture(false), turn: chalkArrowTexture(true) }), []);
+  const lines = useMemo(() => [chalkLineTexture(1), chalkLineTexture(2), chalkLineTexture(3)], []);
+  useEffect(
+    () => () => {
+      lines.forEach((t) => t.dispose());
+    },
+    [lines]
+  );
+  // 이산이 그은 선(seen)과 방문자가 옆에 그은 선(mine). 기록을 지우고 돌아오면 골목의 선 하나만 흐릿하게 남는다(trace)
+  const [ck, setCk] = useState(readChalk);
+  useEffect(() => {
+    const on = () => setCk(readChalk());
+    window.addEventListener("sanlee-chalk", on);
+    return () => window.removeEventListener("sanlee-chalk", on);
+  }, []);
   return (
     <group>
+      {CHALK_SPOTS.map((s, i) => (
+        <group key={`c${i}`} position={[s.x, 0.026, s.z]} rotation={[0, s.rotY, 0]}>
+          {(ck.seen.includes(i) || ck.mine.includes(i)) && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
+              <planeGeometry args={[0.9, 0.22]} />
+              <meshBasicMaterial map={lines[0]} transparent depthWrite={false} toneMapped={false} />
+            </mesh>
+          )}
+          {ck.mine.includes(i) && (
+            <mesh position={[0.06, 0, 0.24]} rotation={[-Math.PI / 2, 0, 0.09]} renderOrder={1}>
+              <planeGeometry args={[0.8, 0.22]} />
+              <meshBasicMaterial map={lines[1]} transparent depthWrite={false} toneMapped={false} />
+            </mesh>
+          )}
+          {i === 0 && ck.trace && !ck.seen.includes(0) && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]} renderOrder={1}>
+              <planeGeometry args={[0.9, 0.22]} />
+              <meshBasicMaterial map={lines[2]} transparent opacity={0.35} depthWrite={false} toneMapped={false} />
+            </mesh>
+          )}
+        </group>
+      ))}
+      {OLD_LINES.map(([dx, dz, rot], i) => (
+        <mesh key={`o${i}`} position={[OLD_SPOT.x + dx, 0.026, OLD_SPOT.z + dz]} rotation={[-Math.PI / 2, 0, rot]} renderOrder={1}>
+          <planeGeometry args={[0.5, 0.14]} />
+          <meshBasicMaterial map={lines[i % 3]} transparent opacity={0.3} depthWrite={false} toneMapped={false} />
+        </mesh>
+      ))}
       {CHALK.map((m, i) => (
         <mesh key={i} position={[m.x, 0.025, m.z]} rotation={[-Math.PI / 2, 0, m.rotY]} renderOrder={1}>
           <planeGeometry args={[2.2, 2.2]} />

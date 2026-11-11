@@ -11,8 +11,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, echoLines, galleryUi, notes, notesUi, faceTalk, credits, announcements, checkpoint, encounters, encountersBack, grandmaBackStd, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
+import { MUSIC_URL, echoLines, galleryUi, notes, notesUi, faceTalk, credits, announcements, checkpoint, encounters, encountersBack, grandmaBackStd, grandmaBroth, courierWaybill, lineWhisper, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
 import { AVENUE_EDGE_Z, BAY, BUNKER, BUNKER_NPCS, EDGE, machinePoint, flipPainting, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
+import { CHALK_SPOTS, clearChalk, drawChalk, offerChalk, readChalk } from "./chalk";
 import { sanHold, sanRise, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -982,7 +983,7 @@ export default function ExploreClient() {
         case "painting":
           // 여러 점을 맡은 칸: 다음 그림으로 넘긴다
           flipPainting(it.work!);
-          sfx.scopeIn();
+          sfx.page();
           break;
         case "face":
           // PC: 바라보는 원통 / 휴대폰: 상호작용 버튼은 마지막으로 바라본 원통 (원통을 직접 누를 수도 있다)
@@ -1092,7 +1093,7 @@ export default function ExploreClient() {
           }
           // 진행에 따라 말이 바뀐다: 기억으로 깨어난 이산과 함께 / 아래로 가기로 한 뒤 / 이산이 깨어난 뒤 / 처음
           const fm = faceRef.current.method;
-          const byPhase = ghost && n.ghost ? n.ghost : phase === "descent" && n.descent ? n.descent : complete && n.after ? n.after : n.lines;
+          const byPhase = accepted && n.queued ? n.queued : ghost && n.ghost ? n.ghost : phase === "descent" && n.descent ? n.descent : complete && n.after ? n.after : n.lines;
           // 이산이 깨어난 뒤에는 첫마디 다음에 얼굴 맞추기에서 고른 것에 대한 한마디가 붙는다 (기억으로 깨어난 길에서는 고른 적이 없다)
           const at = n.faceAt ?? 1;
           const faced = complete && !ghost && fm && n.face ? [...byPhase.slice(0, at), ...n.face[fm], ...byPhase.slice(at)] : byPhase;
@@ -1102,7 +1103,28 @@ export default function ExploreClient() {
           // 한 번이라도 보관 처리됐다면 관리인은 알아본다
           const bk = getBackup();
           const lines = it.npc === "keeper" && bk.deaths > 0 ? [keeperAfterDeath, ...base] : base;
-          setPanel({ kind: "dialog", name: n.name, lines, step: 0, link: n.link });
+          // 작은 행동: 할머니의 국물(이산과 함께일 때), D-12의 송장
+          const extra =
+            it.npc === "grandma" && sanWithYouRef.current && !metRef.current.broth
+              ? [
+                  {
+                    at: lines.length - 1,
+                    label: grandmaBroth.take,
+                    go: () => {
+                      metRef.current.broth = true;
+                      closePanelRef.current();
+                      speak([
+                        { who: n.name, line: grandmaBroth.gran, ms: 3000 },
+                        { who: SAN, line: grandmaBroth.san, ms: 3800 },
+                      ]);
+                    },
+                  },
+                  { at: lines.length - 1, label: grandmaBroth.pass, go: () => closePanelRef.current() },
+                ]
+              : it.npc === "courier" && !ghost
+                ? [{ at: lines.length - 1, label: courierWaybill.look, go: () => setPanel({ kind: "dialog", name: n.name, lines: [courierWaybill.line], step: 0 }) }]
+                : undefined;
+          setPanel({ kind: "dialog", name: n.name, lines, step: 0, link: n.link, choices: extra });
           break;
         }
         case "door":
@@ -1581,6 +1603,24 @@ export default function ExploreClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [endStep]);
 
+  // 空 결말의 다리 위: 방문자가 스스로 도시 쪽을 돌아보면 이산이 한 줄 (묻지 않는다. 돌아보는 것이 선택이다)
+  useEffect(() => {
+    if (!walkable || ending?.step !== GHOST_WALK) return;
+    let held = 0;
+    let said = false;
+    const iv = setInterval(() => {
+      if (said) return;
+      const onBridge = player.pos.z < -134 && player.pos.z > -152;
+      held = onBridge && Math.cos(player.yaw) < -0.55 ? held + 1 : 0;
+      if (held >= 5) {
+        said = true;
+        sayRef.current(sanCue.lookBack, 5200);
+      }
+    }, 300);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walkable, ending?.step]);
+
   // 空 결말의 마지막 걸음: 이산이 먼저 계단을 내려가 사라지면 계단이 열리고, 방문자가 평소 조작으로 스무 단쯤 걸어 내려가면 끝난다.
   // 다 내려서면 조작을 거두고, 신호가 끊긴 검은 화면에 마지막 문장이 남은 뒤 버튼이 나온다 (endGate)
   useEffect(() => {
@@ -1963,6 +2003,48 @@ export default function ExploreClient() {
           break;
         }
       }
+      // 분필: 가는 길 세 곳에서 이산이 선을 하나 긋고 분필을 내민다 (이산이 곁에 있고, 다른 말·위험이 없을 때. 이미 그은 자리는 묻지 않는다)
+      if (ph === "scope" && withSan && !speaking() && drone.lit < 0 && !panelRef.current) {
+        const ck = readChalk();
+        for (let i = 0; i < CHALK_SPOTS.length; i++) {
+          const s = CHALK_SPOTS[i];
+          if (ck.seen.includes(i) || Math.hypot(px - s.x, pz - s.z) > 2.4) continue;
+          const sp = sanPos();
+          if (Math.hypot(sp.x - px, sp.z - pz) > 5) continue;
+          offerChalk(i);
+          const order = ck.seen.length;
+          setPanel({
+            kind: "dialog",
+            name: SAN,
+            lines: [sanCue.chalk[Math.min(order, sanCue.chalk.length - 1)]],
+            step: 0,
+            choices: [
+              {
+                at: 0,
+                label: sanCue.chalkYes,
+                go: () => {
+                  drawChalk(i);
+                  sfx.chalk();
+                  closePanelRef.current();
+                  if (readChalk().mine.length === 1) say(sanCue.chalkDrawn, 3800);
+                },
+              },
+              { at: 0, label: sanCue.chalkNo, go: () => closePanelRef.current() },
+            ],
+          });
+          break;
+        }
+      }
+      // 기록을 지우고 돌아온 길: 골목에 남은 선 하나 앞에서 이산이 한 줄 (이번 방문에 한 번)
+      if (ghostRef.current && !metRef.current.trace && !speaking() && readChalk().trace && Math.hypot(px - CHALK_SPOTS[0].x, pz - CHALK_SPOTS[0].z) < 3) {
+        metRef.current.trace = true;
+        say(sanCue.chalkTrace, 4200);
+      }
+      // 줄 속에 처음 숨었을 때 옆의 시민이 건네는 말 (이번 방문에 한 번)
+      if (!metRef.current.line && gaze.inZone && gaze.hiddenBy === "line" && !speaking() && !ghostRef.current) {
+        metRef.current.line = true;
+        speak([{ who: npcs.whisper.name, line: lineWhisper, ms: 4200 }]);
+      }
       // 망원경을 본 뒤 같은 사람들을 다시 지나치면 한 번씩: 같은 길인데 이산이 달라져 있다
       if (ph !== "scope" && ph !== "restore" && ph !== "talk" && withSan && !ghostRef.current && !speaking() && (sc.stage === "idle" || sc.stage === "done")) {
         for (const e of ENCOUNTER_SPOTS) {
@@ -2114,6 +2196,7 @@ export default function ExploreClient() {
     setGhost(false);
     setEnding(null);
     resetTally();
+    clearChalk();
     goTo("bunker", false);
     lock();
   };
@@ -2208,6 +2291,11 @@ export default function ExploreClient() {
   // 입장: 수락한 시민은 곧장 줄 속에서 깨어난다
   const enter = () => {
     setIntro(false);
+    // 열람 기록이 하나도 없는 새 길(거부 뒤 등)에서는 지난 길의 분필 선을 거둔다. 기록을 지우고 온 사람의 흔적(trace)은 남긴다
+    if (!visited.length) {
+      const ck = readChalk();
+      if (ck.seen.length || ck.mine.length) clearChalk();
+    }
     // 접속 기록: 들어오기만 해도 남는다. 웹사이트 꼬리말의 'delete seoul'은 이 기록이 있는 기기에만 나타난다.
     // 꼬리말에서 일부러 기록을 지우고 돌아온 사람에게는 새 접속 기록을 만들지 않는다 (재회 전까지 추적할 방문자가 없다)
     try {
@@ -2490,7 +2578,7 @@ export default function ExploreClient() {
       {toast && <div className="toast">{toast}</div>}
       {!intro && !ending && !accepted && <SaveToast />}
       {notice && !panel && !sanSay && !scopeView && !beat && <div className="notice">{t(notice)}</div>}
-      {sanSay && !panel && !ending && (
+      {sanSay && !panel && (!ending || walkable) && (
         <div className="notice san-say" role="status">
           <b>{t(sanSay.who)}</b> {t(sanSay.line)}
         </div>

@@ -39,6 +39,8 @@ function describe(ko: boolean): Line[] {
   const found = read<string[]>("sanlee-endings-found", []);
   if (Array.isArray(found) && found.length) lines.push({ text: ko ? `발견한 결말 ${found.length}개` : `${found.length} endings found` });
   if (read<string | null>("sanlee-ending", null) === "accept") lines.push({ text: ko ? "자동 접속 설정" : "Automatic sign-in setting" });
+  const queueNo = read<number>("sanlee-queue-no", 0);
+  if (queueNo) lines.push({ text: ko ? `대기 번호 ${queueNo.toLocaleString("en-US")}번` : `Queue number ${queueNo.toLocaleString("en-US")}` });
   const scope = read<{ uses?: number } | null>("sanlee-scope", null);
   if (scope?.uses) lines.push({ text: ko ? `남쪽 망원경 이용 ${scope.uses}회` : `South scope used ${scope.uses} time(s)` });
   if (String(read<unknown>(PROMISE_KEY, null)) === PROMISE_NOW) lines.push({ text: ko ? "이산의 부탁을 들은 기록" : "Record of hearing San's request" });
