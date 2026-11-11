@@ -24,6 +24,7 @@ type Work = {
   link?: string;
   credit?: L;
   image?: string;
+  color?: string;
   category?: "painting" | "sculpture";
   width?: number;
   height?: number;
@@ -158,6 +159,7 @@ export function cleanWorks(v: unknown): Work[] {
         fail(`${where} 사진 크기 값이 맞지 않아요`);
       w.width = width;
       w.height = height;
+      if (typeof o.color === "string" && /^#[0-9a-f]{6}$/.test(o.color)) w.color = o.color;
     }
     if (!w.image && !w.link) fail(`${where}: 사진이나 링크 중 하나는 있어야 해요`);
     return w;

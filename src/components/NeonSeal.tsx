@@ -1,5 +1,6 @@
 "use client";
 
+import Han from "./Han";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteCrossing } from "./deleteCrossing";
@@ -44,6 +45,21 @@ export default function NeonSeal() {
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
+  }, []);
+
+  // 스크롤하는 동안은 작고 흐리게 물러나 그림을 가리지 않는다. 멈추면 돌아온다
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      ref.current?.classList.add("moving");
+      clearTimeout(t);
+      t = setTimeout(() => ref.current?.classList.remove("moving"), 320);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(t);
+    };
   }, []);
 
   // Esc면 다시 접힌다. 바깥 터치는 아래의 투명한 막이 받아서 접기만 한다
@@ -108,10 +124,10 @@ export default function NeonSeal() {
         </text>
       </svg>
       <span className="seal-han" aria-hidden>
-        空
+        <Han ch="空" />
       </span>
       <span className="seal-full" ref={fullRef} aria-hidden>
-        <span className="ne-han">空</span>
+        <span className="ne-han"><Han ch="空" /></span>
         <span className="ne-text" data-text="DELETE SEOUL">
           DELETE SE<span className="ne-dead">O</span>UL
         </span>

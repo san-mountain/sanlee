@@ -1,34 +1,35 @@
 import type { Metadata, Viewport } from "next";
-import { Gowun_Batang, Inter, Noto_Serif_KR } from "next/font/google";
+import { sans, serif } from "./fonts";
 import "./globals.css";
 import { LangProvider } from "@/components/LangProvider";
 import RestoreCrossing from "@/components/RestoreCrossing";
 
+const DESCRIPTION = "이산(San Lee)의 그림, 조각, 시. Paintings, sculpture and poems by San Lee.";
 export const metadata: Metadata = {
+  metadataBase: new URL("https://sanlee.kr"),
   title: "SAN LEE",
-  description: "이산(San Lee) 포트폴리오",
+  description: DESCRIPTION,
+  // 링크를 공유했을 때의 미리보기 카드 (DELETE SEOUL은 제 카드를 따로 갖는다)
+  openGraph: { title: "SAN LEE", description: DESCRIPTION, siteName: "SAN LEE", type: "website", images: [{ url: "/og.jpg", width: 1200, height: 630, alt: "SAN LEE" }] },
+  twitter: { card: "summary_large_image", title: "SAN LEE", description: DESCRIPTION, images: ["/og.jpg"] },
 };
 
-// 시 본문과 작품 제목에만 쓰는 명조. 한글은 글자 묶음별로 잘게 나뉘어 있어 쓰인 글자 묶음만 내려받는다
-const serif = Noto_Serif_KR({ weight: ["400", "600"], subsets: ["latin"], display: "swap", preload: false, variable: "--font-serif" });
-
-// 영문·숫자 전용 고딕. 한글은 이 글꼴에 없어 기기의 한글 글꼴로 넘어간다.
-// 시스템 글꼴을 맨 앞에 두면 페이지 언어(ko/en)에 따라 영문 글자 모양까지 바뀌어서, 영문은 이 글꼴로 고정한다.
-const sans = Inter({ subsets: ["latin"], display: "swap", variable: "--font-sans" });
-
-// 시와 일기에만 쓰는 고운바탕: 붓으로 쓴 듯한 획 끝이 있는 바탕체
-const brush = Gowun_Batang({ weight: ["400", "700"], subsets: ["latin"], display: "swap", preload: false, variable: "--font-brush" });
+// 영어 기기: 서버는 늘 한국어로 그려 보내므로, 화면이 뜨기 전에 언어를 정하고 React가 영어로 바꿀 때까지 잠깐 가려 둔다.
+// (쿠키는 쓰지 않는다. 고른 언어는 이 기기의 localStorage에만 있다.) 1.5초 안에 바뀌지 않으면 그냥 보여 준다
+const LANG_SCRIPT = `try{var s=localStorage.getItem("sanlee-lang"),l=s==="ko"||s==="en"?s:((navigator.languages&&navigator.languages[0])||navigator.language||"ko").toLowerCase().indexOf("ko")===0?"ko":"en";if(l==="en"){var d=document.documentElement;d.lang="en";d.setAttribute("data-lang-wait","");setTimeout(function(){d.removeAttribute("data-lang-wait")},1500)}}catch(e){}`;
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#07030f",
+  // 휴대폰 브라우저의 주소창 색: 일반 페이지는 종이색. DELETE SEOUL만 제 페이지에서 어두운 색으로 바꾼다
+  themeColor: "#fafaf8",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className={`${sans.variable} ${serif.variable} ${brush.variable}`}>
+    <html lang="ko" className={`${sans.variable} ${serif.variable}`} suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: LANG_SCRIPT }} />
         <LangProvider>
           {children}
           <RestoreCrossing />

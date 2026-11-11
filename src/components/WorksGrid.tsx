@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { deleteCrossing } from "./deleteCrossing";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { ui, works, type Work } from "@/data/site";
+import { thumbOf, ui, works, type Work } from "@/data/site";
 import { useLang } from "./LangProvider";
 
 function Caption({ w }: { w: Work }) {
@@ -168,6 +168,22 @@ function morph(update: () => void, from?: HTMLElement | null, to?: () => HTMLEle
   });
 }
 
+// 그리드: 그림을 가로 순서(최근 것이 첫 줄 왼쪽부터)로 놓되, 높이가 제각각이라 가장 짧은 단에 다음 그림을 넣는다.
+// 단 수는 화면 폭에 따라 다르고 서버는 화면 폭을 모르므로, 1·2·3단 배치를 모두 그려 두고 CSS가 하나만 보여 준다
+// (가려진 배치의 사진은 내려받지 않는다). 캡션 높이는 단 폭의 절반쯤으로 어림한다.
+const CAPTION = 0.5;
+function columns<T extends Work>(list: T[], n: number): { w: T; i: number }[][] {
+  const cols: { w: T; i: number }[][] = Array.from({ length: n }, () => []);
+  const h = new Array<number>(n).fill(0);
+  list.forEach((w, i) => {
+    let k = 0;
+    for (let c = 1; c < n; c++) if (h[c] < h[k] - 0.001) k = c;
+    cols[k].push({ w, i });
+    h[k] += (w.width && w.height ? w.height / w.width : 1.4) + CAPTION;
+  });
+  return cols;
+}
+
 // 일반 Works 페이지: 그리드 / 목록 / 벽 세 가지 보기, 사진을 누르면 크게 보기
 export default function WorksGrid({ limit }: { limit?: number }) {
   const { t } = useLang();
@@ -183,7 +199,11 @@ export default function WorksGrid({ limit }: { limit?: number }) {
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const lbImg = useRef<HTMLImageElement>(null);
-  const thumb = (i: number) => root.current?.querySelector<HTMLElement>(`[data-art="${i}"]`) ?? null;
+  // 같은 그림이 1·2·3단 배치에 하나씩 있으므로, 지금 화면에 보이는 것을 고른다
+  const thumb = (i: number) =>
+    [...(root.current?.querySelectorAll<HTMLElement>(`[data-art="${i}"]`) ?? [])].find((el) => el.offsetParent !== null) ?? null;
+  const lb = useRef<HTMLDivElement>(null);
+  const swipe = useRef<{ x: number; y: number } | null>(null);
 
   // 주소 끝의 #sculpture, #wall 같은 해시로 탭과 보기를 바로 열 수 있게
   useEffect(() => {
@@ -211,7 +231,10 @@ export default function WorksGrid({ limit }: { limit?: number }) {
   const close = useCallback(() => {
     // 닫을 때는 지금 보던 그림의 제자리로 돌아간다
     const cur = openRef.current;
-    morph(() => setOpen(null), lbImg.current, () => (cur === null ? null : thumb(cur)));
+    const back = cur === null ? null : thumb(cur);
+    morph(() => setOpen(null), lbImg.current, () => back);
+    // 포커스는 눌렀던(또는 넘겨서 보던) 그림으로 돌아간다
+    back?.closest("button")?.focus({ preventScroll: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -229,6 +252,8 @@ export default function WorksGrid({ limit }: { limit?: number }) {
     };
     window.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
+    // 열리면 포커스를 창 안(닫기 버튼)으로 옮긴다. 이미 창 안에 있으면(좌우로 넘기는 중) 그대로 둔다
+    if (!lb.current?.contains(document.activeElement)) lb.current?.querySelector<HTMLElement>(".lb-close")?.focus({ preventScroll: true });
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
@@ -263,17 +288,35 @@ export default function WorksGrid({ limit }: { limit?: number }) {
       )}
 
       {gallery && v === "grid" && (
-        <ul className="grid">
-          {shown.map((w, i) => (
-            <li key={w.title.en}>
-              <button type="button" className="grid-item" onClick={() => openAt(i)} aria-label={t(w.title)}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img data-art={i} src={w.image} alt={t(w.title)} width={w.width} height={w.height} loading="lazy" decoding="async" />
-              </button>
-              <Caption w={w} />
-            </li>
+        <div className="mgrid">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className={`mgrid-n mgrid-${n}`}>
+              {columns(shown, n).map((col, c) => (
+                <ul key={c} className="mcol">
+                  {col.map(({ w, i }) => (
+                    <li key={w.title.en}>
+                      <button type="button" className="grid-item" onClick={() => openAt(i)} aria-label={t(w.title)} style={{ background: w.color }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          data-art={i}
+                          src={thumbOf(w.image!)}
+                          srcSet={`${thumbOf(w.image!)} 600w, ${w.image} ${w.width}w`}
+                          sizes={limit ? "(min-width: 1080px) 300px, 46vw" : "(min-width: 1080px) 300px, (min-width: 720px) 46vw, 92vw"}
+                          alt={t(w.title)}
+                          width={w.width}
+                          height={w.height}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      </button>
+                      <Caption w={w} />
+                    </li>
+                  ))}
+                </ul>
+              ))}
+            </div>
           ))}
-        </ul>
+        </div>
       )}
 
       {gallery && v === "index" && (
@@ -294,7 +337,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
           {hover && (
             // 제목 위에 마우스를 올리면 작은 그림이 따라 뜬다
             // eslint-disable-next-line @next/next/no-img-element
-            <img className="wi-peek" data-art={hover.i} src={shown[hover.i].image} alt="" style={{ left: hover.x + 18, top: hover.y - 60 }} />
+            <img className="wi-peek" data-art={hover.i} src={thumbOf(shown[hover.i].image!)} alt="" style={{ left: hover.x + 18, top: hover.y - 60 }} />
           )}
         </ol>
       )}
@@ -309,6 +352,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
             <Link
               key={w.title.en}
               href={w.link ?? "#"}
+              prefetch={false}
               className="feature-card"
               onClick={(e) => {
                 // 왼쪽 네온사인과 같은 진입: 페이지 글자가 지워지고 어두워진 뒤 들어간다
@@ -332,7 +376,33 @@ export default function WorksGrid({ limit }: { limit?: number }) {
       )}
 
       {cur && (
-        <div className="lightbox" role="dialog" aria-modal="true" aria-label={t(cur.title)} onClick={close}>
+        <div
+          ref={lb}
+          className="lightbox"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t(cur.title)}
+          onClick={close}
+          // 손가락으로: 좌우로 밀면 넘기고, 아래로 밀면 닫는다
+          onTouchStart={(e) => (swipe.current = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null)}
+          onTouchEnd={(e) => {
+            const from = swipe.current;
+            swipe.current = null;
+            if (!from) return;
+            const dx = e.changedTouches[0].clientX - from.x;
+            const dy = e.changedTouches[0].clientY - from.y;
+            if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4 && shown.length > 1) step(dx < 0 ? 1 : -1);
+            else if (dy > 90 && dy > Math.abs(dx) * 1.4) close();
+          }}
+          // Tab은 창 안의 버튼들만 돈다
+          onKeyDown={(e) => {
+            if (e.key !== "Tab") return;
+            const f = [...e.currentTarget.querySelectorAll<HTMLElement>("button")];
+            const at = f.indexOf(document.activeElement as HTMLElement);
+            e.preventDefault();
+            f[(at + (e.shiftKey ? -1 : 1) + f.length) % f.length]?.focus();
+          }}
+        >
           <figure onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img ref={lbImg} src={cur.image} alt={t(cur.title)} width={cur.width} height={cur.height} />
@@ -353,6 +423,11 @@ export default function WorksGrid({ limit }: { limit?: number }) {
           <button type="button" className="lb-close" aria-label={t(ui.close)} onClick={(e) => { e.stopPropagation(); close(); }}>
             ×
           </button>
+          {/* 다음 그림을 미리 받아 둔다 */}
+          {shown.length > 1 && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="viewer-preload" src={shown[(open! + 1) % shown.length].image} alt="" aria-hidden />
+          )}
         </div>
       )}
     </div>
@@ -405,7 +480,7 @@ function Wall({ works: list, onOpen }: { works: Work[]; onOpen: (i: number) => v
               aria-label={t(w.title)}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img data-art={i} src={w.image} alt="" loading="lazy" decoding="async" />
+              <img data-art={i} src={thumbOf(w.image!)} alt="" loading="lazy" decoding="async" />
               <span className="wall-label">{t(w.title)}</span>
             </button>
           ))}

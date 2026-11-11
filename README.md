@@ -13,6 +13,7 @@ San Lee 포트폴리오 사이트.
 - 시: `src/content/poems.json` (원문 한국어, 최근 것이 위)
 - 일기: `src/content/diary.json` (오래된 것이 위). `/admin`에서 `{중괄호}`로 감싼 곳은 저장할 때 `⟦글자 수⟧`로 바뀌어 원문이 남지 않아요
 - 작업: `src/content/works.json` + 사진 `public/works/*.webp` (최근 것이 위)
+  - 사진을 올리면 그리드용 작은 사진(`public/works/thumb/`, 폭 600px)과 사진의 평균색(`color`)도 같이 만들어져요. 사진을 손으로 넣을 때는 이 둘도 같이 넣어야 해요
 - 소개, 연락처, 화면 문구: `src/data/site.ts` (한국어/영어 쌍으로)
 - 동상 스토리와 대사: `src/explore/story.ts`
 
