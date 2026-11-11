@@ -249,7 +249,7 @@ export const statueLines: L[][] = [
     { ko: "저 그림, 내가 그렸던 게 기억나. 그런데 옆에 적힌 연도는 2026년이네.", en: "That painting. I remember painting it. But the year written beside it is 2026." },
     // 방공호를 나서는 동기: 데이터 이산의 존재에 대한 회의 → 쿠키를 거부한 진짜 이유 → 기록이 아닌 경험 하나
     { ko: "내가 아는 건 전부 그 사람의 기록이야. 얼굴도, 그림도, 글도. 난 그걸 읽고 있을 뿐인지도 몰라.", en: "Everything I know is that person's record. The face, the paintings, the writing. Maybe I'm only reading them." },
-    { ko: "도시가 날 감시할수록, 나도 그냥 기록이 되어 가는 것 같았거든.", en: "The more the city watched me, the more I felt like I was turning into nothing but a record." },
+    { ko: "멈추기 전에도 그랬어. 도시가 날 감시할수록, 나도 그냥 기록이 되어 가는 것 같았어.", en: "It was like that before I stopped, too. The more the city watched me, the more I felt like I was turning into nothing but a record." },
     { ko: "그래서 쿠키를 전부 거부했고, 결국 이렇게 멈춰 버렸지.", en: "So I rejected every cookie, and in the end I stopped, like this." },
     { ko: "남쪽 망원경으로는 가끔 구름 아래가 보인다던데. 바깥은 위험해도, 들은 얘기 말고 내 눈으로 보고 싶어.", en: "I heard you can sometimes see below the clouds from the south scope. It's dangerous out there, but I want to see it with my own eyes, not just hear about it." },
     { ko: "기록이 아닌 걸 하나쯤은 갖고 싶으니까. 같이 가 줄래? 보고 돌아오자.", en: "Because I want at least one thing that isn't a record. Will you come with me? We'll look and come back." },
@@ -411,12 +411,6 @@ export const sanCue = {
   sitYes: { ko: "곁에 앉는다", en: "Sit beside them" } as L,
   sitNo: { ko: "서서 기다린다", en: "Wait standing" } as L,
   sitAfter: { ko: "아무것도 안 하는 것도 기록될까.", en: "I wonder if doing nothing gets recorded too." } as L,
-  // 깨어난 이산의 첫 대화: 방문자가 가장 먼저 연 기록에 따라 한 줄
-  first: {
-    about: { ko: "소개부터 열었지. 예의 바른 사람이구나.", en: "You opened the introduction first. You're a polite one." },
-    works: { ko: "그림부터 봤지. 설명보다 그림이 먼저인 사람이네.", en: "You looked at the pictures first. Pictures before explanations, then." },
-    writing: { ko: "글부터 읽었지. 나라도 그랬을 거야.", en: "You read the writing first. I would have too." },
-  } as Record<string, L>,
   later: { ko: "응. 여기서 기다릴게.", en: "Okay. I'll wait here." } as L,
   // 기록을 지우고 돌아온 空 경로: 대자비 구역에 처음 들어섰는데 대자비가 둘을 보지 못할 때 (방공호에서 한 짐작이 맞았다)
   blind: { ko: "…정말 우릴 못 보네. 우린 이제 어디에도 적혀 있지 않은 거야.", en: "…It really can't see us. We're not written down anywhere anymore." } as L,

@@ -287,7 +287,14 @@ export const JUNK = box(HATCH.alleyX, 13.3, ALLEY, 1.4);
 const NS1 = COLS[0][1] + ALLEY / 2; // 23.75: 방공호 골목
 const NS2 = COLS[1][1] + ALLEY / 2; // 37.75
 export const NS2_X = NS2;
-// 골목 사람들이 바닥에 남긴 분필 화살표: 방공호 골목에서 광장까지 (rotY 0 = 북쪽, π/2 = 서쪽, π = 남쪽)
+// 골목 사람들이 바닥에 남긴 분필 화살표: 방공호 골목에서 광장을 지나 배송 대기소 지붕 밑까지 (rotY 0 = 북쪽, π/2 = 서쪽, π = 남쪽)
+// 광장 구간(CHALK_PLAZA)은 이산이 걷는 길(LOOKOUT_PATH 0→1→2)을 따라 놓는다
+const chalkAlong = (a: [number, number], b: [number, number], ts: number[]) =>
+  ts.map((t) => ({ x: a[0] + (b[0] - a[0]) * t, z: a[1] + (b[1] - a[1]) * t, rotY: Math.atan2(-(b[0] - a[0]), -(b[1] - a[1])) }));
+const CHALK_PLAZA = [
+  ...chalkAlong([-NS2 + 0.5, 12.2], [-44, 17.2], [0.42, 0.85]),
+  ...chalkAlong([-44, 17.2], [-52.6, 29.6], [0.18, 0.4, 0.62, 0.84]),
+];
 export const CHALK: { x: number; z: number; rotY: number; turn?: boolean }[] = [
   { x: -NS1, z: 6.2, rotY: 0 },
   { x: -NS1 + 0.2, z: 2.2, rotY: 0, turn: true },
@@ -295,6 +302,7 @@ export const CHALK: { x: number; z: number; rotY: number; turn?: boolean }[] = [
   { x: -NS2 + 0.6, z: 1.0, rotY: Math.PI / 2, turn: true },
   { x: -NS2, z: 7.5, rotY: Math.PI },
   { x: -NS2, z: 12.8, rotY: Math.PI },
+  ...CHALK_PLAZA,
 ];
 
 // ---------- 남쪽 전망대 가는 길 ----------

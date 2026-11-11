@@ -43,6 +43,15 @@ const World = dynamic(() => import("./World"), { ssr: false });
 
 const KEY = "sanlee-visited";
 const END_KEY = "sanlee-ending";
+// 잠깐 뒤에 나타나는 자식 (처음 ms 동안은 아무것도 그리지 않는다)
+function Late({ ms, children }: { ms: number; children: React.ReactNode }) {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setOn(true), ms);
+    return () => clearTimeout(id);
+  }, [ms]);
+  return on ? <>{children}</> : null;
+}
 // 수락하면 받는 대기 번호. 줄에서 다시 시작할 때마다 하나씩 밀린다
 const QUEUE_KEY = "sanlee-queue-no";
 const QUEUE_FIRST = 1204118;
@@ -593,7 +602,11 @@ export default function ExploreClient() {
       // 방공호에서 방문 기록을 지웠다면 도시는 아무것도 기억하지 않고, 자비도 플레이어를 보지 못한다
       if (to === "city") {
         if (ghostRef.current) gaze.mood = "blind";
-        else if (viaDoor) later(700, () => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]));
+        else if (viaDoor) {
+          // 이산이 분필 화살표를 가리킬 참이면 그 말이 먼저다: 첫 기억(쿠키 안내)은 말이 끝난 뒤로 미룬다 (순찰 틱이 마저 한다)
+          if (phaseRef.current === "scope" && sanWithYouRef.current && !cueRef.current.surface) doorSave.current = true;
+          else later(700, () => saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]));
+        }
       }
       // 새 구역의 셰이더·그림이 다 준비된 뒤에 화면을 연다 (World의 Warm). 그 전에 열면 들어서자마자 몇 초씩 멈춘다. 길어도 8초
       const opened = performance.now();
@@ -881,6 +894,9 @@ export default function ExploreClient() {
   const faceWide = useRef(false);
   // 첫 쿠키 안내(저장 알림)가 떠 있는 동안에는 이산의 분필 안내를 미룬다 (같은 자리에 겹친다). 안내가 없으면 곧바로 말한다
   const cookieUntil = useRef(0);
+  // 배전실 문을 나선 직후의 위치 기억을 이산의 분필 안내 뒤로 미뤄 둔 상태 (doorSaveAt: 기억할 시각)
+  const doorSave = useRef(false);
+  const doorSaveAt = useRef(0);
   useEffect(() => {
     const on = (e: Event) => {
       const d = (e as CustomEvent).detail as { kind?: string; n?: number } | string;
@@ -1032,9 +1048,7 @@ export default function ExploreClient() {
             // 얼굴 맞추기에서 고른 것에 따라 가벼운 말 한 줄이 끼어든다 (표준 미소면 의구심 줄도 그 얼굴에 맞게)
             const [first, doubt, ...rest] = statueLines[statueLines.length - 1];
             const m = faceRef.current.method;
-            // 가장 먼저 연 기록에 따라 한 줄 (도시도 이 순서를 적어 두었다: 검문소의 기록)
-            const opened = sanCue.first[visited[0]];
-            const head = opened ? [first, opened] : [first];
+            const head = [first];
             const lines = m === "standard" ? [...head, faceTalk.standard.joke, faceTalk.standard.doubt, ...rest] : m === "exception" ? [...head, faceTalk.exception.joke, doubt, ...rest] : [...head, doubt, ...rest];
             setPanel({ kind: "dialog", name: SAN, lines, step: 0 });
             setTalked(true);
@@ -1983,10 +1997,20 @@ export default function ExploreClient() {
       if (ph === "scope" && withSan && !c.surface) {
         if (!c.surfaceAt) {
           if (Math.hypot(px - CITY.spawn.pos[0], pz - CITY.spawn.pos[2]) < 6) c.surfaceAt = now;
-        } else if (now - c.surfaceAt > 1800 && performance.now() > cookieUntil.current && !speaking()) {
+        } else if (Math.hypot(px - CITY.spawn.pos[0], pz - CITY.spawn.pos[2]) > 12) {
+          // 말할 틈이 나기 전에 이미 골목을 벗어났다면 굳이 말하지 않는다
           c.surface = true;
+          doorSaveAt.current = 0;
+        } else if (now - c.surfaceAt > 400 && performance.now() > cookieUntil.current && !speaking()) {
+          c.surface = true;
+          doorSaveAt.current = performance.now() + 4600;
           say(sanCue.surface, 4200);
         }
+      }
+      // 미뤄 둔 첫 기억: 이산의 말이 끝났거나, 말할 일이 없어졌을 때
+      if (doorSave.current && (ph !== "scope" || !withSan || (c.surface && performance.now() >= doorSaveAt.current))) {
+        doorSave.current = false;
+        saveBackup(CITY.spawn.pos[0], CITY.spawn.pos[2]);
       }
       if (ph === "scope" && withSan && !c.shelter && underRoof(px, pz)) {
         c.shelter = true;
@@ -2668,10 +2692,13 @@ export default function ExploreClient() {
               <button className="btn" onClick={closePanel}>
                 {t(ui.close)}
               </button>
+              {/* 로그아웃은 마지막 줄이 뜨고 1초 뒤에 나타난다: 대사를 넘기려고 연타하다가 못 보고 닫거나 잘못 누르지 않게 */}
               {panel.logout && panel.step === panel.lines.length - 1 && (
-                <Link className="btn primary" href="/" onClick={logout}>
-                  {t(ui.logout)}
-                </Link>
+                <Late ms={1000}>
+                  <Link className="btn primary late-in" href="/" onClick={logout}>
+                    {t(ui.logout)}
+                  </Link>
+                </Late>
               )}
               {panel.link && panel.step === panel.lines.length - 1 && (
                 <a className="btn primary" href={panel.link.href} target="_blank" rel="noopener noreferrer">
@@ -2870,10 +2897,18 @@ export default function ExploreClient() {
                   </small>
                 )}
                 <ShareEnding kind={ending.kind} />
+                {/* 설정창·첫 화면과 같은 '기억된 결말' 창 */}
+                <button type="button" className="intro-gallery ending-gallery" onClick={() => setGallery(true)}>
+                  {t(galleryUi.open).replace("{n}", String(seenCount))} →
+                </button>
                 <small className="ending-credit">
                   ♪ {ending.kind === "accept" ? "Habitual Suffering" : ending.kind === "reject" ? "an open ended promise" : "f-ALL"} · <a href={MUSIC_URL} target="_blank" rel="noopener noreferrer">{t(credits.music)}</a>
                 </small>
                 <div>
+                  {/* 웹사이트로는 왼쪽, 다시 하기는 오른쪽 (오른쪽이 먼저 눌린다). 수락 결말은 '줄로 돌아가기'가 주 버튼이고 웹사이트로는 보조 버튼이다 */}
+                  <Link className={ending.kind === "accept" ? "btn" : "btn primary"} href="/" onClick={logout}>
+                    {t(ending.kind === "accept" ? ui.toPortfolio : checkpoint.toPortfolio)}
+                  </Link>
                   {ending.kind === "accept" ? (
                     <button
                       className="btn primary"
@@ -2893,10 +2928,6 @@ export default function ExploreClient() {
                       {t(checkpoint.again)}
                     </button>
                   )}
-                  {/* 수락 결말은 '줄로 돌아가기'가 주 버튼이고 웹사이트로는 보조 버튼이다 */}
-                  <Link className={ending.kind === "accept" ? "btn" : "btn primary"} href="/" onClick={logout}>
-                    {t(ending.kind === "accept" ? ui.toPortfolio : checkpoint.toPortfolio)}
-                  </Link>
                 </div>
               </div>
             )}
