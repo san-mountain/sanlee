@@ -295,7 +295,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
                 <ul key={c} className="mcol">
                   {col.map(({ w, i }) => (
                     <li key={w.title.en}>
-                      <button type="button" className="grid-item" onClick={() => openAt(i)} aria-label={t(w.title)} style={{ background: w.color }}>
+                      <button type="button" className="grid-item" onClick={() => openAt(i)} aria-label={t(w.title)} style={{ "--ph": w.color } as React.CSSProperties}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           data-art={i}
