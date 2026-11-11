@@ -43,6 +43,7 @@ export const ui = {
   open: { ko: "열기", en: "Open" },
   talk: { ko: "이야기 듣기", en: "Listen" },
   view: { ko: "보기", en: "View" },
+  nextPainting: { ko: "다음 그림으로 넘기기", en: "Turn to the next painting" },
   back: { ko: "닫기", en: "Close" },
   next: { ko: "계속", en: "Continue" },
   close: { ko: "닫기", en: "Close" },
@@ -335,6 +336,19 @@ export const encounters: Record<"grandma" | "courier" | "edgekid", { who: "san" 
   ],
 };
 
+// 망원경을 본 뒤 같은 사람들을 다시 지나칠 때 (각각 한 번). 길은 같은데 이산이 달라져 있다
+export const encountersBack: Record<"grandma" | "courier" | "edgekid", { who: "san" | "npc"; ko: string; en: string }[]> = {
+  grandma: [{ who: "npc", ko: "보고 왔구나. 얼굴에 써 있다.", en: "So you saw it. It's written on your face." }],
+  courier: [{ who: "san", ko: "주소가 다시 생기면 좋겠다. …나도 지워진 주소 같은 거니까.", en: "I hope it gets its address back. …I'm a kind of erased address myself." }],
+  edgekid: [
+    { who: "npc", ko: "봤어요?", en: "Did you see it?" },
+    { who: "san", ko: "응. 반짝였어.", en: "Yes. It glimmered." },
+    { who: "npc", ko: "거 봐요! 있다니까요.", en: "See! I told you it's there." },
+  ],
+};
+// 표준 미소를 붙인 얼굴이라면 할머니가 한마디 덧붙인다
+export const grandmaBackStd = { who: "npc" as const, ko: "…아니, 그 얼굴엔 뭐가 써 있는지 모르겠다만.", en: "…Though I can't tell what's written on that face." };
+
 // 검문소에서 물러난 뒤 이산과의 대화 (처음 한 번). 다른 방송은 뜨지 않는다
 // 마지막 페이지(memory)가 뜬 기기에 웹사이트 꼬리말의 'delete seoul'이 켜진다
 export const sanAfterCheckpoint = {
@@ -376,6 +390,11 @@ export const sanCue = {
   droneLight: { ko: "저 빛 밑에서는 그림자가 안 생겨. 그림 그리기엔 최악이야.", en: "Nothing casts a shadow under that light. Terrible for drawing." } as L,
   jump: { ko: "그건 왜 하는 거야? …아니, 좋아 보여서.", en: "Why do you do that? …No, it just looks nice." } as L,
   caught: { ko: "도시가 널 제자리에 돌려놨네. 친절하기도 하지.", en: "The city put you right back where you were. How kind of it." } as L,
+  // 검문소 직전, 마지막 엄폐물 뒤에서 (이번 방문에 한 번). 재회의 '곁에 앉아 기다린다'를 평범한 길에서 미리 한 번 한다
+  sitAsk: { ko: "여기 앉으면 대자비가 안 보여. 줄만 보이지. …잠깐만 이러고 있자.", en: "Sit here and you can't see the Great Compassion. Only the line. …Let's stay like this a moment." } as Line,
+  sitYes: { ko: "곁에 앉는다", en: "Sit beside them" } as L,
+  sitNo: { ko: "서서 기다린다", en: "Wait standing" } as L,
+  sitAfter: { ko: "아무것도 안 하는 것도 기록될까.", en: "I wonder if doing nothing gets recorded too." } as L,
   // 깨어난 이산의 첫 대화: 방문자가 가장 먼저 연 기록에 따라 한 줄
   first: {
     about: { ko: "소개부터 열었지. 예의 바른 사람이구나.", en: "You opened the introduction first. You're a polite one." },
@@ -435,6 +454,8 @@ export const checkpoint = {
   evLook: { ko: "그림 〈{title}〉 앞 체류 · {n}초 · 감상으로 분류", en: "Time before the painting “{title}” · {n}s · classified as appreciation" },
   evR07: { ko: "청소 로봇과의 접촉 · {n}회 · 친구 등록 0명", en: "Contact with a cleaning robot · {n} · friends registered: 0" },
   evCaught: { ko: "위치 확인 · {n}회 · 매번 안전하게 복귀 처리", en: "Location confirmed · {n} · safely returned each time" },
+  sanAlone: { ko: "난 이걸 혼자 눌렀어. 그때는 무서웠는데.", en: "I pressed this alone. I was scared, back then." },
+  evSat: { ko: "동행인과 앉아 있던 시간 · 기록 없음 · 활동 없음으로 분류", en: "Time spent sitting with companion · no record · classified as no activity" },
   evWithdraw: { ko: "결정 보류 · {n}회", en: "Decisions postponed · {n}" },
   // 물러났다가 다시 온 방문자에게 (두 번째 / 세 번째부터)
   returned: [

@@ -11,8 +11,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { sections, works, type L, type SectionId } from "@/data/site";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import SectionBody from "@/components/SectionBody";
-import { MUSIC_URL, echoLines, galleryUi, notes, notesUi, faceTalk, credits, announcements, checkpoint, encounters, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
-import { AVENUE_EDGE_Z, BAY, BUNKER, BUNKER_NPCS, EDGE, machinePoint, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
+import { MUSIC_URL, echoLines, galleryUi, notes, notesUi, faceTalk, credits, announcements, checkpoint, encounters, encountersBack, grandmaBackStd, jabiUi, keeperAfterDeath, npcs, patrolNoRecord, plaque, quest, r07Friend, reunion, sanAfterCheckpoint, sanAfterDeath, sanCity, sanCue, sanReview, scopeScene, statueForgot, statueLines, ui, faceUi, routeUi, replayUi, type Beat, type Line } from "./story";
+import { AVENUE_EDGE_Z, BAY, BUNKER, BUNKER_NPCS, EDGE, machinePoint, flipPainting, FROZEN_SAN, CITY, CITY_NPCS, COVERS, DEPOT, DRONE_RAILS, JABI, LOOKOUT_PATH, QUEUE_Z, SCOPES, WALK, ZONES, type Interactable, type RoutePt, type Zone } from "./zones";
 import { sanHold, sanRise, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
@@ -451,6 +451,7 @@ export default function ExploreClient() {
       gaze.gateOpen = false;
       gaze.mood = "";
       gaze.still = false;
+    gaze.sit = false;
       gaze.zoom = 1;
       gaze.clamp = null;
       gaze.lookAt = null;
@@ -638,6 +639,7 @@ export default function ExploreClient() {
     scopeMove.current.back = null;
     setScopeView("");
     gaze.still = false;
+    gaze.sit = false;
     gaze.zoom = 1;
     gaze.clamp = null;
   };
@@ -776,6 +778,26 @@ export default function ExploreClient() {
       beatTimer.current = setTimeout(speak, 9000);
     }, 3000);
   };
+  // 검문소 직전의 마지막 엄폐물 뒤: 이산 곁에 잠깐 앉는다. 게이지도 목표도 없는 몇 초
+  const sitByCover = () => {
+    setPanel(null);
+    setBeat("sit");
+    gaze.still = true;
+    gaze.sit = true;
+    tally.sat = true;
+    clearTimeout(beatTimer.current);
+    beatTimer.current = setTimeout(() => {
+      gaze.sit = false;
+      beatTimer.current = setTimeout(() => {
+        setBeat("");
+        gaze.still = false;
+        lock();
+        sayRef.current(sanCue.sitAfter, 4200);
+      }, 900);
+    }, 6000);
+  };
+  const sitCoverRef = useRef(sitByCover);
+  sitCoverRef.current = sitByCover;
   const sitRef = useRef(sitBeside);
   sitRef.current = sitBeside;
   // 구절을 들려준다: 이산이 부탁한 구절이면 이산이 묻고, 아니면 모르는 구절이라고 한다 (다시 말을 걸면 또 고를 수 있다)
@@ -958,7 +980,9 @@ export default function ExploreClient() {
           break;
         }
         case "painting":
-          setPanel({ kind: "painting", work: it.work! });
+          // 여러 점을 맡은 칸: 다음 그림으로 넘긴다
+          flipPainting(it.work!);
+          sfx.scopeIn();
           break;
         case "face":
           // PC: 바라보는 원통 / 휴대폰: 상호작용 버튼은 마지막으로 바라본 원통 (원통을 직접 누를 수도 있다)
@@ -1651,6 +1675,8 @@ export default function ExploreClient() {
     run(0);
   }, []);
   const say = useCallback((l: L, ms = 3600) => speak([{ who: SAN, line: l, ms }]), [speak]);
+  const sayRef = useRef(say);
+  sayRef.current = say;
   const speaking = () => runtime.now() < speakUntil.current;
   useEffect(() => () => clearTimeout(sayTimer.current), []);
   // 처음 시선 구역: 대자비 소개가 닫힌 뒤 이산이 첫 엄폐물 뒤로 가서 기다린다 (탭마다 한 번 말하고, 재시도 때는 말없이 다시 기다린다)
@@ -1676,6 +1702,29 @@ export default function ExploreClient() {
   // 지상에 올라올 때마다 한 번. 창이 떠 있거나 멈춰 있으면 닫힌 뒤에
   // 길 위의 가벼운 말: 처음 달렸을 때, 드론 빛을 벗어난 뒤, 여러 번 뛰어올랐을 때, 식별되어 되돌아온 뒤 (이번 방문에 한 번씩).
   // 다른 말·창·방송이 없고 드론 빛 밖에 있을 때만, 서로 20초 넘게 띄워서 한다
+  // 검문소 직전(큰길 끝 엄폐물 뒤)에 이산과 함께 숨어 있으면 이산이 잠깐 앉자고 한다 (이번 방문에 한 번)
+  const sitAsked = useRef(false);
+  useEffect(() => {
+    if (!sanWithYou || phase !== "descent") return;
+    const iv = setInterval(() => {
+      if (sitAsked.current || quietRef.current || pausedRef.current || gaze.intro || gaze.hiddenBy !== "cover" || gaze.meter > 25 || player.pos.z > -100) return;
+      const sp = sanPos();
+      if (Math.hypot(sp.x - player.pos.x, sp.z - player.pos.z) > 5) return;
+      sitAsked.current = true;
+      setPanel({
+        kind: "dialog",
+        name: SAN,
+        lines: [sanCue.sitAsk],
+        step: 0,
+        choices: [
+          { at: 0, label: sanCue.sitYes, go: () => sitCoverRef.current() },
+          { at: 0, label: sanCue.sitNo, go: () => closePanelRef.current() },
+        ],
+      });
+    }, 400);
+    return () => clearInterval(iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sanWithYou, phase]);
   const lightSaid = useRef({ ran: false, droneLight: false, jump: false, caught: false, at: 0 });
   useEffect(() => {
     if (!sanWithYou) return;
@@ -1816,7 +1865,9 @@ export default function ExploreClient() {
           if (sanHold.at?.manual) sanHold.at = null;
           return;
         }
-        if (nh >= 0 && me.k >= nh) {
+        // 돌아오는 길에서는 이산이 앞장선다: 방문자가 곁에 오면 먼저 다음 자리로 건너가 기다린다 (가는 길 내내 뒤에서 따라오던 것과 반대)
+        const lead = list === BACK && Math.hypot(px - sp.x, pz - sp.z) < 5;
+        if (nh >= 0 && (me.k >= nh || lead)) {
           let clear = true;
           for (let j = run.hold + 1; j <= nh; j++) {
             const L = list[j].lane;
@@ -1912,6 +1963,20 @@ export default function ExploreClient() {
           break;
         }
       }
+      // 망원경을 본 뒤 같은 사람들을 다시 지나치면 한 번씩: 같은 길인데 이산이 달라져 있다
+      if (ph !== "scope" && ph !== "restore" && ph !== "talk" && withSan && !ghostRef.current && !speaking() && (sc.stage === "idle" || sc.stage === "done")) {
+        for (const e of ENCOUNTER_SPOTS) {
+          const key = `back-${e.id}`;
+          if (metRef.current[key]) continue;
+          if (Math.hypot(px - e.x, pz - e.z) > e.r) continue;
+          const sp = sanPos();
+          if (Math.hypot(sp.x - px, sp.z - pz) > 9) continue;
+          metRef.current[key] = true;
+          const seq = e.id === "grandma" && faceRef.current.method === "standard" ? [...encountersBack.grandma, grandmaBackStd] : encountersBack[e.id];
+          speak(seq.map((l) => ({ who: l.who === "san" ? SAN : npcs[e.id].name, line: l, ms: 3400 })));
+          break;
+        }
+      }
       // 큰길 입구에서 (이산이 곁에 있을 때만 한 줄): 망원경 전에는 차단막 앞에서 망원경부터, 결정을 미뤘다면 갈지 묻는다
       if (withSan && (ph === "scope" || ph === "decide") && Math.abs(px) < 12 && pz < AVENUE_EDGE_Z + 2.5 && pz > AVENUE_EDGE_Z - 4 && now - c.avenueAt > 12000 && !speaking()) {
         const sp = sanPos();
@@ -1961,6 +2026,7 @@ export default function ExploreClient() {
     }
     resetDrones();
     gaze.still = false;
+    gaze.sit = false;
     sfx.restore();
     if (sanWithYouRef.current && !cueRef.current.back) {
       cueRef.current.back = true;
@@ -2021,6 +2087,7 @@ export default function ExploreClient() {
     clearTimeout(beatTimer.current);
     setBeat("");
     gaze.still = false;
+    gaze.sit = false;
     drone.shapeSeen = false;
     heardRef.current = false;
     resetRoute();
@@ -2334,19 +2401,12 @@ export default function ExploreClient() {
     if (tally.jumps > 0) evidence.push(t(checkpoint.evJump).replace("{n}", String(tally.jumps)));
     if (tally.r07 > 0) evidence.push(t(checkpoint.evR07).replace("{n}", String(tally.r07)));
     if (tally.caught > 0) evidence.push(t(checkpoint.evCaught).replace("{n}", String(tally.caught)));
+    if (tally.sat) evidence.push(t(checkpoint.evSat));
     if (tally.withdraw > 0) evidence.push(t(checkpoint.evWithdraw).replace("{n}", String(tally.withdraw)));
   }
   const painting = panel?.kind === "painting" ? works[panel.work] : null;
-  // 그림을 열어 둔 시간을 그림별로 센다 (검문소의 기록에 가장 오래 본 그림이 적힌다)
-  const lookWork = panel?.kind === "painting" ? panel.work : -1;
-  useEffect(() => {
-    if (lookWork < 0) return;
-    const at = performance.now();
-    return () => {
-      tally.look[lookWork] = (tally.look[lookWork] ?? 0) + performance.now() - at;
-    };
-  }, [lookWork]);
-  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || scopeStage === "idle" || scopeStage === "done") ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "painting" || near.kind === "note" || near.npc === "frozen" ? ui.view : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
+
+  const verb = near ? (near.id === "scope-0" && !ghost && (scopeStage === "offer" || scopeStage === "idle" || scopeStage === "done") ? ui.scopeLook : near.id.startsWith("scope") || near.kind === "note" || near.npc === "frozen" ? ui.view : near.kind === "painting" ? ui.nextPainting : near.kind === "npc" || near.kind === "statue" ? ui.talk : near.id === "face-std" ? faceUi.press : near.id === "face-keep" ? faceUi.pull : near.kind === "face" ? faceUi.turn : ui.open) : null;
   quietRef.current = !!panel || !!scopeView || !!sanSay || !!toast || !!beat || paused;
   const rootClass = [
     "explore-root",
@@ -2646,6 +2706,12 @@ export default function ExploreClient() {
               <>
                 <h2>{t(checkpoint.confirm[panel.confirm].title)}</h2>
                 <p>{t(checkpoint.confirm[panel.confirm].body)}</p>
+                {/* 마지막 확인에서만: 처음엔 혼자 거부했던 이산의 한 줄 (결말의 "이번엔 나 혼자가 아니네."가 받는다) */}
+                {panel.confirm === 1 && !ghost && (
+                  <p className="cp-san">
+                    <span>{t(SAN)}</span>“{t(checkpoint.sanAlone)}”
+                  </p>
+                )}
                 <div className="choice-actions">
                   <button className="choice-accept" onClick={() => choose("accept")}>
                     {t(checkpoint.confirm[panel.confirm].stay)}

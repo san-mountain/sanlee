@@ -840,7 +840,15 @@ export function StonePagoda() {
 // 어두운 난간 앞에서도 멀리서 찾을 수 있게: 옆에 따뜻한 등 하나, 발밑에 둥근 불빛, 몸체의 금색 테와 렌즈가 은은히 빛난다.
 // 망원경을 보러 가는 단계(scope)에서는 남쪽 망원경 발밑의 고리가 퍼지듯 숨 쉬고, 위로 옅은 빛기둥이 선다 (실제 광원은 쓰지 않는다)
 const SCOPE_WARM = "#ffc46b";
-export function Scopes({ onTap }: { onTap: TapFn }) {
+export function Scopes({ onTap, lang }: { onTap: TapFn; lang: Lang }) {
+  // 기둥의 작은 요금 표지
+  const fee = useSign(
+    [
+      [lang === "ko" ? "관람 무료" : "VIEWING IS FREE", 1],
+      [lang === "ko" ? "관람 기록은 이미 납부되었습니다" : "YOUR VIEWING RECORD HAS ALREADY BEEN PAID", 0.5],
+    ],
+    { color: "#2a2206", bg: "#e2b836", w: 512, h: 200 }
+  );
   // 남쪽 망원경으로 들여다보는 동안(시야가 좁아진 동안)에는 망원경 몸체가 시야를 가리지 않게 감춘다 (눈 자리가 몸체 바로 뒤라서)
   const south = useRef<THREE.Group>(null);
   const glow = useMemo(glowTexture, []);
@@ -868,6 +876,10 @@ export function Scopes({ onTap }: { onTap: TapFn }) {
             <mesh position={[0, 0.55, 0]}>
               <cylinderGeometry args={[0.06, 0.12, 1.1, 8]} />
               <meshStandardMaterial color="#3a3d44" metalness={0.7} roughness={0.4} emissive="#3a2a10" emissiveIntensity={0.6} />
+            </mesh>
+            <mesh position={[0, 0.72, 0.125]}>
+              <planeGeometry args={[0.72, 0.28]} />
+              <meshBasicMaterial map={fee} />
             </mesh>
             <group position={[0, 1.25, 0]} rotation={[-0.15, 0, 0]}>
               <mesh>

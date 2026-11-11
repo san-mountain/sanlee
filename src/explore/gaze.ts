@@ -25,6 +25,8 @@ export const gaze = {
   droneLit: false,
   // 장면 연출: 걷기만 멈춘다 (고개는 돌릴 수 있다)
   still: false,
+  // 곁에 앉아 있는 동안 시점이 낮아진다 (Player가 읽는다)
+  sit: false,
   // 망원경: 시야 배율(1 = 보통)과 고개를 돌릴 수 있는 범위
   zoom: 1,
   clamp: null as { yaw: number; dy: number; p0: number; p1: number } | null,

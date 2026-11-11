@@ -25,8 +25,8 @@ export const runtime = {
 export const warm = { ready: true, id: 0 };
 
 // 이번 방문 동안 방문자가 한 사소한 일들. 검문소의 '도시가 저장한 기록'과 이산의 가벼운 말이 읽는다 (어디에도 저장하지 않는다)
-export const tally = { jumps: 0, ran: false, caught: 0, lost: 0, r07: 0, withdraw: 0, look: {} as Record<number, number> };
-export const resetTally = () => Object.assign(tally, { jumps: 0, ran: false, caught: 0, lost: 0, r07: 0, withdraw: 0, look: {} });
+export const tally = { jumps: 0, ran: false, caught: 0, lost: 0, r07: 0, withdraw: 0, sat: false, look: {} as Record<number, number> };
+export const resetTally = () => Object.assign(tally, { jumps: 0, ran: false, caught: 0, lost: 0, r07: 0, withdraw: 0, sat: false, look: {} });
 
 // Explicit advancement makes cancellation and pause behavior independently testable.
 export class GameTimers {

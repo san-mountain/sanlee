@@ -385,7 +385,15 @@ function useStoneTex() {
   }, []);
 }
 
-function Covers() {
+function Covers({ lang }: { lang: Lang }) {
+  // 벽 엄폐물 앞면의 안내: 숨지 말라면서 숨은 사람 수를 세고 있다
+  const hideSign = useSign(
+    [
+      [lang === "ko" ? "이 구조물 뒤에 숨지 마십시오" : "DO NOT HIDE BEHIND THIS STRUCTURE", 1],
+      [lang === "ko" ? "숨은 시민 수 집계 중" : "HIDDEN CITIZENS ARE BEING COUNTED", 0.6],
+    ],
+    { color: "#2a2206", bg: "#ffd23f", w: 1024, h: 200 }
+  );
   const stone = useStoneTex();
   const hazardStripe = useMemo(() => {
     const t = hazardTexture();
@@ -462,6 +470,10 @@ function Covers() {
                 <mesh position={[0, 0.5, c.d / 2 + 0.01]}>
                   <planeGeometry args={[c.w, 0.4]} />
                   <meshBasicMaterial color="#ffd23f" />
+                </mesh>
+                <mesh position={[0, 1.55, c.d / 2 + 0.012]}>
+                  <planeGeometry args={[c.w * 0.82, c.w * 0.82 * (200 / 1024)]} />
+                  <meshBasicMaterial map={hideSign} />
                 </mesh>
               </>
             )}
@@ -1043,7 +1055,7 @@ export default function Jabi({ lang }: { lang: Lang }) {
       <StandingBuddha />
       <GazeSystem />
       <Beam />
-      <Covers />
+      <Covers lang={lang} />
       <Barriers lang={lang} />
     </group>
   );

@@ -1291,7 +1291,7 @@ function City({ lang, onTap, onTracked }: { lang: Lang; onTap: TapFn; onTracked:
       <RoboMonk onTap={onTap} />
       <BellPavilion />
       <StonePagoda />
-      <Scopes onTap={onTap} />
+      <Scopes onTap={onTap} lang={lang} />
       <CookieHolo />
       <Rain />
       <Sparkles count={40} scale={[4, 3, 4]} position={[-5, 1.2, -20]} size={8} speed={0.4} color="#888" opacity={0.25} />

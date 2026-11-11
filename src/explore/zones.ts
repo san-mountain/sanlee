@@ -73,7 +73,17 @@ const SLOTS: { pos: Vec3; rotY: number }[] = [
   { pos: [-5.5, 2.6, 13.94], rotY: Math.PI },
   { pos: [5.5, 2.6, 13.94], rotY: Math.PI },
 ];
-export const PAINTINGS = imageWorks.slice(0, SLOTS.length).map(({ w, i }, k) => ({ work: i, w, ...SLOTS[k] }));
+// 벽은 여덟 칸 그대로다. 작업이 여덟 점을 넘으면 칸마다 여러 점을 나눠 맡고(최근 것이 각 칸의 첫 장), 그림 앞에서 넘겨 본다.
+// 처음 들어설 때 올리는 그림은 늘 칸마다 한 장이라 작업이 늘어도 느려지지 않는다
+export const PAINTING_SLOTS = SLOTS.map((s, k) => ({ ...s, slot: k, works: imageWorks.filter((_, j) => j % SLOTS.length === k).map(({ i }) => i) })).filter((s) => s.works.length > 0);
+// 칸마다 지금 걸린 장 (이번 방문 동안만). 넘기면 'sanlee-paint'로 알린다
+export const paintPage = { at: SLOTS.map(() => 0) };
+export function flipPainting(slot: number) {
+  const s = PAINTING_SLOTS.find((p) => p.slot === slot);
+  if (!s || s.works.length < 2) return;
+  paintPage.at[slot] = (paintPage.at[slot] + 1) % s.works.length;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("sanlee-paint"));
+}
 
 // 끊긴 백업 단말: 지상에서 만든 백업이 흘러드는 곳. 신호가 안 닿는 여기서만 지울 수 있다
 export const BACKUP_RACK = { pos: [11.3, 0, -7.6] as Vec3, rotY: -Math.PI / 2 };
@@ -153,7 +163,15 @@ export const BUNKER: ZoneDef = {
       color: t.color,
       label: { ko: `${t.id.toUpperCase()} 터미널`, en: `${t.id.toUpperCase()} terminal` },
     })),
-    // 그림은 상호작용 대신 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption)
+    // 그림은 가까이 가면 옆 벽에 홀로그램 캡션이 뜬다 (Bunker.tsx HoloCaption). 여러 점을 맡은 칸만 상호작용 대상이 된다: 다음 그림으로 넘긴다
+    ...PAINTING_SLOTS.filter((s) => s.works.length > 1).map((s) => ({
+      id: `painting-${s.slot}`,
+      kind: "painting" as const,
+      work: s.slot,
+      pos: v(s.pos[0] + Math.sin(s.rotY) * 1.2, 1.6, s.pos[2] + Math.cos(s.rotY) * 1.2),
+      radius: 2.6,
+      label: { ko: "그림", en: "Painting" },
+    })),
     { id: "statue", kind: "statue", pos: v(0, 1.5, 0), radius: 3.8, label: { ko: "정지 시민", en: "Suspended citizen" } },
     // 얼굴 복원 장치: 터미널 셋을 연 뒤 맞추는 동안만 대상이 된다 (바라보는 원통을 돌린다)
     { id: "face-machine", kind: "face", pos: machinePoint(0, 1.7, 0.35), radius: 3.2, label: faceUi.quest, when: () => faceRt.phase === "idle" },
