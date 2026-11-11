@@ -365,8 +365,9 @@ body.deleting .nav-explore { box-shadow: 0 0 10px #22f0ff, 0 0 30px #22f0ffaa, i
 
 /* 짧은 페이지에서도 꼬리말은 화면 맨 아래에 (일반 페이지만, 게임 화면은 제외) */
 body:not(:has(.explore-root)) { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
-body:not(:has(.explore-root)) > .page { flex: 1 0 auto; width: 100%; }
-body:not(:has(.explore-root)) > .site-footer { flex: none; }
+/* 라우트 레이아웃이 display:contents 래퍼로 감싸도 적용되도록 직계 자식 선택자를 쓰지 않는다 */
+body:not(:has(.explore-root)) .page { flex: 1 0 auto; width: 100%; min-width: 0; }
+body:not(:has(.explore-root)) .site-footer { flex: none; }
 
 /* 3D 도시 작업 터미널: 한 점씩 크게 보는 뷰어 */
 .viewer { display: flex; flex-direction: column; gap: 10px; }
