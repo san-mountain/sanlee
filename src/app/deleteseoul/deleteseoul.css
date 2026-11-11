@@ -131,6 +131,7 @@
 .ending p { font-size: 15px; margin: 0 0 14px; animation: fadeIn 1.4s ease; text-shadow: 0 0 12px #000; }
 .ending p.final { font-size: clamp(18px, 2.6vw, 24px); margin-top: 28px; font-weight: 600; }
 .ending-actions { margin-top: 34px; animation: fadeIn 2s ease; }
+.late-in { animation: fadeIn .4s ease; }
 .ending-actions small { display: block; font-family: var(--mono); color: var(--dim); letter-spacing: .14em; margin-bottom: 12px; }
 .ending-actions div { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .ending-accept .canvas-wrap { filter: saturate(.35) brightness(1.35) blur(1.5px); }
@@ -581,6 +582,7 @@
 
 /* 결말 모음 (첫 화면): 세 칸과 백진성의 수록곡 */
 .intro-gallery { display: inline-block; margin: 2px 0 6px; padding: 0; background: none; border: 0; border-bottom: 1px dashed #ffe14d88; color: #ffe14d; font-family: var(--mono); font-size: 12px; letter-spacing: .1em; cursor: pointer; }
+.ending-actions .ending-gallery { display: block; margin: 0 auto 14px; }
 .intro-gallery:hover, .intro-gallery:focus-visible { color: #fff; border-bottom-color: #fff; }
 /* 첫 화면(z 50)과 설정창(z 60) 어느 쪽에서 열어도 그 위에 */
 .gallery-wrap { z-index: 70; }
