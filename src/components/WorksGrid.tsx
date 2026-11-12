@@ -195,6 +195,9 @@ export default function WorksGrid({ limit }: { limit?: number }) {
   // 사진이 있는 작업은 category(없으면 그림)에 따라 그림·조각 탭에 나뉜다. 첫 화면(limit)에는 둘 다 최근 순으로
   const shown = limit ? images.slice(0, limit) : images.filter((w) => (w.category ?? "painting") === tab);
   const gallery = (!!limit || tab !== "interactive") && shown.length > 0;
+  // 크게 보기에서 넘기는 목록: 첫 화면은 몇 점만 놓지만 넘길 때는 사진이 있는 모든 작업을 돈다(원본은 볼 때만 받는다).
+  // 첫 화면의 그림은 images 앞쪽을 그대로 자른 것이라 번호가 같다
+  const pool = limit ? images : shown;
   const [view, setView] = useState<View>("grid");
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -239,8 +242,8 @@ export default function WorksGrid({ limit }: { limit?: number }) {
   }, []);
 
   const step = useCallback(
-    (d: number) => setOpen((i) => (i === null ? i : (i + d + shown.length) % shown.length)),
-    [shown.length]
+    (d: number) => setOpen((i) => (i === null ? i : (i + d + pool.length) % pool.length)),
+    [pool.length]
   );
 
   useEffect(() => {
@@ -260,7 +263,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
     };
   }, [open, step, close]);
 
-  const cur = open === null ? null : shown[open];
+  const cur = open === null ? null : pool[open];
   const v = limit ? "grid" : view;
 
   return (
@@ -395,7 +398,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
             if (!from) return;
             const dx = e.changedTouches[0].clientX - from.x;
             const dy = e.changedTouches[0].clientY - from.y;
-            if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4 && shown.length > 1) step(dx < 0 ? 1 : -1);
+            if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.4 && pool.length > 1) step(dx < 0 ? 1 : -1);
             else if (dy > 90 && dy > Math.abs(dx) * 1.4) close();
           }}
           // Tab은 창 안의 버튼들만 돈다
@@ -414,7 +417,7 @@ export default function WorksGrid({ limit }: { limit?: number }) {
               <Caption w={cur} />
             </figcaption>
           </figure>
-          {shown.length > 1 && (
+          {pool.length > 1 && (
             <>
               <button type="button" className="lb-nav lb-prev" aria-label={t(ui.prev)} onClick={(e) => { e.stopPropagation(); step(-1); }}>
                 ‹
@@ -428,9 +431,9 @@ export default function WorksGrid({ limit }: { limit?: number }) {
             ×
           </button>
           {/* 다음 그림을 미리 받아 둔다 */}
-          {shown.length > 1 && (
+          {pool.length > 1 && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img className="viewer-preload" src={shown[(open! + 1) % shown.length].image} alt="" aria-hidden />
+            <img className="viewer-preload" src={pool[(open! + 1) % pool.length].image} alt="" aria-hidden />
           )}
         </div>
       )}
