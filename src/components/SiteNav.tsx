@@ -4,7 +4,7 @@ import Han from "./Han";
 import Link from "next/link";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { deleteCrossing } from "./deleteCrossing";
+import { deleteCrossing, warmDeleteSeoul } from "./deleteCrossing";
 import NeonSeal from "./NeonSeal";
 import { profile, sections, ui } from "@/data/site";
 import { LangToggle, useLang } from "./LangProvider";
@@ -37,14 +37,18 @@ export default function SiteNav() {
         {/* 3D 도시 작품 입구: 작품 제목을 네온사인처럼. SEOUL의 O 하나는 고장 난 관처럼 깜빡인다 */}
         <Link
           href="/deleteseoul"
-          // 게임의 스타일·글꼴을 일반 페이지에서 미리 받지 않는다 (들어갈 때 받는다)
+          // 게임은 페이지를 열 때 미리 받지 않고, 간판에 손이 갈 때(올리기·누르기·포커스) 받기 시작한다
           prefetch={false}
+          onPointerEnter={() => warmDeleteSeoul(router)}
+          onPointerDown={() => warmDeleteSeoul(router)}
+          onFocus={() => warmDeleteSeoul(router)}
           className="nav-explore nav-explore-pill"
           aria-label={t(ui.explore)}
           title={t(ui.explore)}
           onClick={(e) => {
             if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
             e.preventDefault();
+            warmDeleteSeoul(router);
             deleteCrossing(() => router.push("/deleteseoul"));
           }}
         >

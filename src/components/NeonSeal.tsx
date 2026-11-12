@@ -3,7 +3,7 @@
 import Han from "./Han";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { deleteCrossing } from "./deleteCrossing";
+import { deleteCrossing, warmDeleteSeoul } from "./deleteCrossing";
 import { ui } from "@/data/site";
 import { useLang } from "./LangProvider";
 
@@ -105,9 +105,12 @@ export default function NeonSeal() {
       onFocus={(e) => e.currentTarget.matches(":focus-visible") && setOpen(true)}
       // 키보드로 다른 곳에 포커스가 옮겨 갈 때만 접는다 (터치로 막을 누를 때 막이 먼저 사라지지 않게)
       onBlur={(e) => e.relatedTarget && setOpen(false)}
+      // 원을 처음 눌러 펼칠 때부터 게임을 받아 두면, 다시 눌러 건너갈 즈음엔 다 받아져 있다
+      onPointerDown={() => warmDeleteSeoul(router)}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
         e.preventDefault();
+        warmDeleteSeoul(router);
         if (!open) return setOpen(true);
         deleteCrossing(() => router.push("/deleteseoul"));
       }}
