@@ -629,6 +629,9 @@ body.restoring:not(.restoring-light) .page img, body.restoring:not(.restoring-li
 html:has(body.restoring-light), body.restoring-light { transition: background-color .9s ease; }
 body.restoring-light .page, body.restoring-light .nav-logo, body.restoring-light .nav-links > a, body.restoring-light .site-footer { transition: color .8s ease; }
 body.restoring-light .page img, body.restoring-light .feature-art { transition: opacity .9s ease .25s; }
+/* 사진 밑에 깔린 평균색 자리도 어두운 동안은 비워 두었다가 그림과 함께 돌아온다 (들어갈 때와 같은 이유) */
+body.restoring:not(.restoring-light) .grid-item { background-color: transparent; }
+body.restoring-light .grid-item { transition: background-color .9s ease .25s; }
 
 /* ---------- 순찰 드론 경고: 대자비(붉은 게이지)와 구별되는 차가운 흰빛, 따라올 때 주황 ---------- */
 
