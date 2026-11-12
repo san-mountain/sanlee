@@ -1,6 +1,25 @@
 [
   {
     "title": {
+      "ko": "황소",
+      "en": "Bull"
+    },
+    "date": "2026. 11.",
+    "medium": {
+      "ko": "종이에 아크릴, 수채화, 오일파스텔",
+      "en": "Acrylic, watercolor and oil pastel on paper"
+    },
+    "size": {
+      "ko": "8절, 39.4 × 27.2 cm",
+      "en": "39.4 × 27.2 cm"
+    },
+    "image": "/works/sanlee_2026_bull.webp",
+    "width": 1018,
+    "height": 1400,
+    "color": "#5b5c4c"
+  },
+  {
+    "title": {
       "ko": "무제",
       "en": "Untitled"
     },
@@ -13,10 +32,10 @@
       "ko": "8절, 39.4 × 27.2 cm",
       "en": "39.4 × 27.2 cm"
     },
-    "image": "/works/sanlee_2026_untitled.webp",
+    "image": "/works/sanlee_2026_untitled-2.webp",
     "width": 953,
     "height": 1400,
-    "color": "#878286"
+    "color": "#888186"
   },
   {
     "title": {
@@ -32,10 +51,10 @@
       "ko": "A4, 29.7 × 21.0 cm",
       "en": "29.7 × 21.0 cm"
     },
-    "image": "/works/sanlee_2026_chick.webp",
+    "image": "/works/sanlee_2026_chick-2.webp",
     "width": 1038,
     "height": 1400,
-    "color": "#9b8480"
+    "color": "#9e8882"
   },
   {
     "title": {
