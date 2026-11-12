@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { deleteCrossing } from "./deleteCrossing";
+import { deleteCrossing, warmDeleteSeoul } from "./deleteCrossing";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { thumbOf, ui, works, type Work } from "@/data/site";
@@ -354,10 +354,14 @@ export default function WorksGrid({ limit }: { limit?: number }) {
               href={w.link ?? "#"}
               prefetch={false}
               className="feature-card"
+              onPointerEnter={() => w.link && warmDeleteSeoul(router, w.link)}
+              onPointerDown={() => w.link && warmDeleteSeoul(router, w.link)}
+              onFocus={() => w.link && warmDeleteSeoul(router, w.link)}
               onClick={(e) => {
                 // 왼쪽 네온사인과 같은 진입: 페이지 글자가 지워지고 어두워진 뒤 들어간다
                 if (!w.link || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
                 e.preventDefault();
+                warmDeleteSeoul(router, w.link);
                 deleteCrossing(() => router.push(w.link!));
               }}
             >
