@@ -412,7 +412,23 @@ export default function WorksGrid({ limit }: { limit?: number }) {
         >
           <figure onClick={(e) => e.stopPropagation()}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img ref={lbImg} src={cur.image} alt={t(cur.title)} width={cur.width} height={cur.height} />
+            {/* 그림마다 새 img를 만든다(key). 같은 img의 src만 바꾸면 느린 망에서 새 사진이 올 때까지 이전 그림이 남아
+                캡션만 바뀐다. 원본이 오기 전에는 평균색 위에 작은 썸네일이 비친다 */}
+            <img
+              key={cur.image}
+              ref={lbImg}
+              src={cur.image}
+              alt={t(cur.title)}
+              width={cur.width}
+              height={cur.height}
+              className={cur.width && cur.height ? "lb-art" : undefined}
+              style={
+                {
+                  ...(cur.width && cur.height ? { aspectRatio: `${cur.width} / ${cur.height}`, "--ar": cur.width / cur.height, "--nw": `${cur.width}px` } : {}),
+                  background: `${cur.color ?? "transparent"} url("${thumbOf(cur.image!)}") center / contain no-repeat`,
+                } as React.CSSProperties
+              }
+            />
             <figcaption>
               <Caption w={cur} />
             </figcaption>
@@ -433,7 +449,11 @@ export default function WorksGrid({ limit }: { limit?: number }) {
           {/* 다음 그림을 미리 받아 둔다 */}
           {pool.length > 1 && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img className="viewer-preload" src={pool[(open! + 1) % pool.length].image} alt="" aria-hidden />
+            <>
+              <img className="viewer-preload" src={pool[(open! + 1) % pool.length].image} alt="" aria-hidden />
+              <img className="viewer-preload" src={thumbOf(pool[(open! + 1) % pool.length].image!)} alt="" aria-hidden />
+              <img className="viewer-preload" src={thumbOf(pool[(open! - 1 + pool.length) % pool.length].image!)} alt="" aria-hidden />
+            </>
           )}
         </div>
       )}
