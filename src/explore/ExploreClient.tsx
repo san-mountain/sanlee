@@ -440,11 +440,11 @@ export default function ExploreClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track]);
   useEffect(() => {
-    window.addEventListener("pointerdown", wakeBgm);
-    window.addEventListener("keydown", wakeBgm);
+    // 휴대폰(특히 아이폰)은 손가락을 댈 때(pointerdown)가 아니라 뗄 때(pointerup·touchend·click)만 소리를 열어 준다
+    const EV = ["pointerdown", "pointerup", "touchend", "click", "keydown"] as const;
+    EV.forEach((e) => window.addEventListener(e, wakeBgm, { capture: true, passive: true }));
     return () => {
-      window.removeEventListener("pointerdown", wakeBgm);
-      window.removeEventListener("keydown", wakeBgm);
+      EV.forEach((e) => window.removeEventListener(e, wakeBgm, { capture: true }));
       playBgm(null);
     };
   }, []);
