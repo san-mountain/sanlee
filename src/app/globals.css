@@ -135,6 +135,8 @@ img { max-width: 100%; height: auto; display: block; }
   align-items: center; justify-content: center; padding: 56px 16px 24px; animation: fadeIn .2s; }
 .lightbox figure { margin: 0; display: flex; flex-direction: column; align-items: center; max-width: 100%; max-height: 100%; }
 .lightbox img { max-width: min(100%, 1400px); max-height: calc(100vh - 160px); max-height: calc(100dvh - 160px); width: auto; height: auto; object-fit: contain; }
+/* 사진이 오기 전에도 자리를 잡아 두도록 크기를 미리 정한다(--ar 가로/세로 비, --nw 원본 폭). 원본보다 키우지는 않는다 */
+.lightbox img.lb-art { --vh: calc(100dvh - 160px); width: min(100vw - 32px, 1400px, var(--nw), var(--vh) * var(--ar)); height: auto; }
 .lightbox figcaption { align-self: stretch; text-align: center; }
 .lb-close, .lb-nav { all: unset; cursor: pointer; position: absolute; font-size: 32px; line-height: 1; color: var(--ink);
   width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
@@ -553,6 +555,7 @@ body:not(:has(.explore-root)) .site-footer { flex: none; }
 @media (max-width: 719px) {
   .lightbox { padding-bottom: 84px; }
   .lightbox img { max-height: calc(100vh - 250px); max-height: calc(100dvh - 250px); }
+  .lightbox img.lb-art { --vh: calc(100dvh - 250px); }
   .lb-nav { top: auto; bottom: max(14px, env(safe-area-inset-bottom)); transform: none; font-size: 36px; }
   .lb-prev { left: 12px; }
   .lb-next { right: 12px; }
