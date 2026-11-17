@@ -8,7 +8,7 @@ import { commit, Conflict, readFile, type Change } from "@/lib/admin/github";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const NAMES: Record<Kind, string> = { poems: "시", diary: "일기", works: "작업" };
+const NAMES: Record<Kind, string> = { poems: "시", works: "작업" };
 const kindOf = (v: unknown) => (KINDS.includes(v as Kind) ? (v as Kind) : null);
 const err = (error: string, status: number) => NextResponse.json({ error }, { status });
 

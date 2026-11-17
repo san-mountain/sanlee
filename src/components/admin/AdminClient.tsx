@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// 사이트 주인용 관리 화면: 시·일기를 쓰고 고치고, 작업 사진을 올린다.
+// 사이트 주인용 관리 화면: 시를 쓰고 고치고, 작업 사진을 올린다.
 // 저장하면 서버가 GitHub 저장소에 커밋하고, Vercel이 사이트를 다시 만들어 1~2분 뒤 반영된다.
 
-type Kind = "poems" | "diary" | "works";
+type Kind = "poems" | "works";
 type L = { ko: string; en: string };
 type Poem = { title: string; date: string; body: string; prose?: boolean };
-type Diary = { hidden?: false; date: string; title?: string; body: string } | { hidden: true; date: string };
 type Work = {
   title: L;
   date: string;
@@ -22,11 +21,10 @@ type Work = {
   width?: number;
   height?: number;
 };
-type Item = Poem | Diary | Work;
+type Item = Poem | Work;
 type Loaded = { items: Item[]; sha: string };
 
 type PoemDraft = { title: string; date: string; prose: boolean; body: string };
-type DiaryDraft = { date: string; title: string; body: string; hidden: boolean };
 type SizeMode = "p8" | "l8" | "cm" | "var" | "free";
 type WorkDraft = {
   titleKo: string;
@@ -51,12 +49,11 @@ type WorkDraft = {
   height: number;
   upload?: { base64: string; preview: string };
 };
-type Draft = PoemDraft | DiaryDraft | WorkDraft;
+type Draft = PoemDraft | WorkDraft;
 type Editing = { index: number | null; draft: Draft; dirty: boolean };
 
 const TABS: { id: Kind; label: string; add: string }[] = [
   { id: "poems", label: "시", add: "새 시 쓰기" },
-  { id: "diary", label: "일기", add: "새 일기 쓰기" },
   { id: "works", label: "작업", add: "새 작업 올리기" },
 ];
 
@@ -84,11 +81,6 @@ function toDraft(kind: Kind, item?: Item): Draft {
   if (kind === "poems") {
     const p = item as Poem | undefined;
     return { title: p?.title ?? "", date: p?.date ?? todayDot(), prose: !!p?.prose, body: p?.body ?? "" };
-  }
-  if (kind === "diary") {
-    const e = item as Diary | undefined;
-    if (e?.hidden) return { date: e.date, title: "", body: "", hidden: true };
-    return { date: e?.date ?? todayDot(), title: e?.title ?? "", body: e?.body ?? "", hidden: false };
   }
   const w = item as Work | undefined;
   const t = today();
@@ -135,11 +127,6 @@ function fromDraft(kind: Kind, d: Draft): Item {
     const p = d as PoemDraft;
     return p.prose ? { title: p.title.trim(), date: p.date.trim(), prose: true, body: p.body } : { title: p.title.trim(), date: p.date.trim(), body: p.body };
   }
-  if (kind === "diary") {
-    const e = d as DiaryDraft;
-    if (e.hidden) return { hidden: true, date: e.date.trim() };
-    return e.title.trim() ? { date: e.date.trim(), title: e.title.trim(), body: e.body } : { date: e.date.trim(), body: e.body };
-  }
   const w = d as WorkDraft;
   const size: L =
     w.sizeMode === "cm"
@@ -165,20 +152,17 @@ function fromDraft(kind: Kind, d: Draft): Item {
   return out;
 }
 
-// 순서: 시·작업은 최근 것이 위, 일기는 오래된 것이 위. 같은 날짜면 새 글이 그 날짜 묶음의 최근 자리로 간다
+// 순서: 시·작업은 최근 것이 위. 같은 날짜면 새 글이 그 날짜 묶음의 최근 자리로 간다
 function sortKey(kind: Kind, it: Item) {
   if (kind === "works") {
     const [y, m] = (it as Work).date.replace(/\.$/, "").split(". ");
     return `${y}.${pad(Number(m))}`;
   }
-  return (it as Poem | Diary).date;
+  return (it as Poem).date;
 }
 function place(kind: Kind, list: Item[], it: Item) {
   const k = sortKey(kind, it);
-  const at =
-    kind === "diary"
-      ? list.findIndex((x) => sortKey(kind, x) > k)
-      : list.findIndex((x) => sortKey(kind, x) <= k);
+  const at = list.findIndex((x) => sortKey(kind, x) <= k);
   const next = [...list];
   next.splice(at === -1 ? next.length : at, 0, it);
   return next;
@@ -186,9 +170,7 @@ function place(kind: Kind, list: Item[], it: Item) {
 
 const name = (kind: Kind, it: Item) => {
   if (kind === "works") return (it as Work).title.ko;
-  if (kind === "poems") return (it as Poem).title;
-  const e = it as Diary;
-  return e.hidden ? `${e.date} (전체 비공개)` : `${e.date}${e.title ? ` ${e.title}` : ""}`;
+  return (it as Poem).title;
 };
 const firstLine = (body: string) =>
   (body.split("\n").find((l) => l.trim() && l.trim() !== "---") ?? "")
@@ -453,7 +435,6 @@ export default function AdminClient() {
         >
           <h2>{editing.index === null ? tab.add : "고치기"}</h2>
           {kind === "poems" && <PoemFields d={editing.draft as PoemDraft} set={set} />}
-          {kind === "diary" && <DiaryFields d={editing.draft as DiaryDraft} set={set} />}
           {kind === "works" && <WorkFields d={editing.draft as WorkDraft} set={set} />}
           {error && (
             <p className="admin-error" role="alert">
@@ -505,7 +486,7 @@ export default function AdminClient() {
           {!items && !loadError && <p className="admin-muted">불러오는 중…</p>}
           {items && (
             <ol className="admin-list">
-              {(kind === "diary" ? items.map((it, i) => ({ it, i })).reverse() : items.map((it, i) => ({ it, i }))).map(({ it, i }) => (
+              {items.map((it, i) => (
                 <li key={i}>
                   <button type="button" onClick={() => open(i)}>
                     <ListRow kind={kind} it={it} />
@@ -528,16 +509,6 @@ function ListRow({ kind, it }: { kind: Kind; it: Item }) {
         <span className="al-date">{p.date}</span>
         <span className="al-title">{p.title}</span>
         <span className="al-sub">{firstLine(p.body)}</span>
-      </>
-    );
-  }
-  if (kind === "diary") {
-    const e = it as Diary;
-    return (
-      <>
-        <span className="al-date">{e.date}</span>
-        <span className="al-title">{e.hidden ? "전체 비공개" : e.title || firstLine(e.body)}</span>
-        {!e.hidden && e.title && <span className="al-sub">{firstLine(e.body)}</span>}
       </>
     );
   }
@@ -587,40 +558,6 @@ function PoemFields({ d, set }: { d: PoemDraft; set: SetFn }) {
       <Field label="본문" hint="연은 빈 줄로 나눠요.">
         <textarea className="af-body af-poem" value={d.body} onChange={(e) => set({ body: e.target.value })} required rows={18} />
       </Field>
-    </>
-  );
-}
-
-function DiaryFields({ d, set }: { d: DiaryDraft; set: SetFn }) {
-  const sealed = (d.body.match(/\{[^]*?\}/g) ?? []).length;
-  return (
-    <>
-      <Field label="날짜" hint="2026.11.09 처럼">
-        <input value={d.date} onChange={(e) => set({ date: e.target.value })} pattern="\d{4}\.\d{2}\.\d{2}" inputMode="numeric" required />
-      </Field>
-      <label className="admin-check">
-        <input type="checkbox" checked={d.hidden} onChange={(e) => set({ hidden: e.target.checked })} /> 전체 비공개(날짜만 남기고 본문은 저장하지 않아요)
-      </label>
-      {!d.hidden && (
-        <>
-          <Field label="제목(없어도 돼요)">
-            <input value={d.title} onChange={(e) => set({ title: e.target.value })} />
-          </Field>
-          <Field
-            label="본문"
-            hint={
-              <>
-                문단은 빈 줄로 나눠요. 남에게 보이고 싶지 않은 곳은 <code>{"{이렇게}"}</code> 중괄호로 감싸면 저장할 때 검은 막대로 바뀌고, 원래 글자는 어디에도 저장되지 않아요.
-                <br />
-                <code>## </code>로 시작하면 소제목, <code>---</code> 한 줄은 구분선, <code>&gt; </code>로 시작하는 문단은 메모예요. <code>⟦120⟧</code>은 이미 가린 곳이에요.
-                {sealed > 0 && <strong> 저장하면 {sealed}곳이 가려져요.</strong>}
-              </>
-            }
-          >
-            <textarea className="af-body" value={d.body} onChange={(e) => set({ body: e.target.value })} required rows={20} />
-          </Field>
-        </>
-      )}
     </>
   );
 }
