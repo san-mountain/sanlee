@@ -1,20 +1,18 @@
-// 관리 화면(/admin)에서 보낸 시·일기·작업 목록을 저장하기 전에 검사하고 다듬는 곳.
+// 관리 화면(/admin)에서 보낸 시·작업 목록을 저장하기 전에 검사하고 다듬는 곳.
 // 브라우저에서 무엇이 오든 이 함수를 거친 값만 저장소에 들어간다. (Next 별칭 없이 써서 node --test로 바로 시험할 수 있다)
 
 import { createHash } from "node:crypto";
 
-export type Kind = "poems" | "diary" | "works";
-export const KINDS: Kind[] = ["poems", "diary", "works"];
+export type Kind = "poems" | "works";
+export const KINDS: Kind[] = ["poems", "works"];
 
 export const FILES: Record<Kind, string> = {
   poems: "src/content/poems.json",
-  diary: "src/content/diary.json",
   works: "src/content/works.json",
 };
 
 type L = { ko: string; en: string };
 type Poem = { title: string; date: string; body: string; prose?: boolean };
-type Diary = { hidden?: false; date: string; title?: string; body: string } | { hidden: true; date: string };
 type Work = {
   title: L;
   date: string;
@@ -61,7 +59,7 @@ const pair = (v: unknown, where: string, required = true): L | undefined => {
   return { ko, en };
 };
 
-// 시·일기 날짜: 2026.10.31
+// 시 날짜: 2026.10.31
 const DAY = /^(\d{4})\.(\d{2})\.(\d{2})$/;
 const day = (v: unknown, where: string) => {
   const s = line(v, where);
@@ -71,29 +69,6 @@ const day = (v: unknown, where: string) => {
 };
 // 작업 날짜: "2026. 10." (달은 한 자리면 한 자리 그대로)
 const MONTH = /^(\d{4})\. (\d{1,2})\.$/;
-
-// 일기에서 {중괄호}로 감싼 곳은 저장하기 전에 ⟦글자 수⟧로 바꾼다. 원래 글자는 저장소 어디에도 남지 않는다.
-// 글자 수는 공백을 뺀 수로 센다(막대 길이에만 쓰인다).
-export function seal(body: string) {
-  let out = "";
-  let depth = 0;
-  let hidden = "";
-  for (const ch of body) {
-    if (ch === "{") {
-      if (depth === 0) hidden = "";
-      else hidden += ch;
-      depth++;
-    } else if (ch === "}" && depth > 0) {
-      depth--;
-      if (depth === 0) out += `⟦${Math.max(1, Array.from(hidden.replace(/\s/g, "")).length)}⟧`;
-      else hidden += ch;
-    } else if (depth > 0) hidden += ch;
-    else out += ch;
-  }
-  // 닫히지 않은 { 는 실수일 가능성이 커서 저장을 멈춘다(그대로 두면 가리려던 글이 공개된다)
-  if (depth > 0) fail("일기 본문: 닫히지 않은 { 가 있어요. 가릴 곳은 {이렇게} 감싸 주세요");
-  return out;
-}
 
 export function cleanPoems(v: unknown): Poem[] {
   if (!Array.isArray(v)) return fail("시 목록 형식이 맞지 않아요");
@@ -110,19 +85,6 @@ export function cleanPoems(v: unknown): Poem[] {
     seen.add(p.title);
     // 화면에 나오는 순서 그대로 키를 적는다(title, date, prose, body)
     return o.prose === true ? { title: p.title, date: p.date, prose: true, body: p.body } : p;
-  });
-}
-
-export function cleanDiary(v: unknown): Diary[] {
-  if (!Array.isArray(v)) return fail("일기 목록 형식이 맞지 않아요");
-  return v.map((raw, i) => {
-    const where = `일기 ${i + 1}번째`;
-    const o = obj(raw, where);
-    const date = day(o.date, `${where} 날짜`);
-    if (o.hidden === true) return { hidden: true, date };
-    const title = line(o.title, `${where} 제목`, { required: false });
-    const body = seal(text(o.body, `${where} 본문`, { max: 100_000 }));
-    return title ? { date, title, body } : { date, body };
   });
 }
 
@@ -168,7 +130,6 @@ export function cleanWorks(v: unknown): Work[] {
 
 export function clean(kind: Kind, items: unknown) {
   if (kind === "poems") return cleanPoems(items);
-  if (kind === "diary") return cleanDiary(items);
   return cleanWorks(items);
 }
 

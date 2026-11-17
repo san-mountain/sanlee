@@ -1,5 +1,5 @@
 /* DELETE SEOUL(/deleteseoul)에서만 쓰는 화면 스타일. 이 주소의 layout.tsx만 불러온다.
-   일반 페이지와 같이 쓰는 것(시·일기·작업 캡션 등)은 globals.css에 있다. 게임 화면에만 있는 class의 규칙은 여기에 적는다. */
+   일반 페이지와 같이 쓰는 것(시·작업 캡션 등)은 globals.css에 있다. 게임 화면에만 있는 class의 규칙은 여기에 적는다. */
 
 .section-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
   padding-top: 0; margin-bottom: var(--s3); }
@@ -373,18 +373,6 @@
 .explore-root.thaw .ending p.final { font-size: clamp(16px, 2vw, 20px); }
 .ending.ending-ghost { align-items: flex-end; padding-bottom: 7vh; }
 .explore-root.thaw .ending, .ending.ending-ghost { background: linear-gradient(0deg, #000000d0 0%, #00000080 30%, transparent 55%); }
-.redact-block .redact-label { position: absolute; right: 0; bottom: -1.5em; font: 10px/1 var(--mono); letter-spacing: .08em; color: var(--muted); font-style: normal; }
-.explore-root .redact, .explore-root .redact-block > span, .explore-root .diary-withheld-bar { background: #000; box-shadow: inset 0 0 0 1px #2d2445; }
-.explore-root .redact::after, .explore-root .redact-block::after { color: var(--bg); background: var(--fg); }
-.explore-root .diary-title, .explore-root .redact-block .redact-label, .explore-root .diary-withheld .meta { color: var(--dim); }
-.explore-root .diary-rule { border-top-color: #2d2445; }
-.explore-root .restore-log { background: #000; border: 1px solid #2d2445; color: var(--fg); }
-.explore-root .restore-result { color: var(--pink); }
-.explore-root .diary-memo { background: #1a1428; color: var(--fg); box-shadow: 0 0 0 1px #2d2445; }
-.explore-root .diary-memo::before { background: rgba(139,132,163,.4); }
-.explore-root .restore-keep { background: var(--fg); color: var(--bg); }
-.explore-root .diary-sort { color: var(--dim); }
-.explore-root .diary-sort:hover { color: var(--fg); }
 .explore-root .poem-seal { border-color: var(--pink); color: var(--pink); }
 .save-toast { position: absolute; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 45; pointer-events: none; text-align: center;
   font-family: var(--mono); background: #04121add; border: 1px solid #22f0ff66; padding: 9px 16px; box-shadow: 0 0 22px #22f0ff33; animation: saveIn 2.6s ease both; }
@@ -403,7 +391,7 @@
 .btn.danger:hover { background: #ff2a3d22; }
 .intro-found, .ending-found { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; color: #ffe14d; }
 .ending-actions small.ending-found { color: #ffe14d; margin-top: -6px; }
-/* 게임 안 패널(어두운 배경)에서 시 / 일기 탭이 묻히지 않도록 */
+/* 게임 안 패널(어두운 배경)에서 Works 탭이 묻히지 않도록 */
 .panel .cat-tabs button { color: #b9aed6; }
 .panel .cat-tabs button:hover, .panel .cat-tabs button.on { color: #fff; border-bottom-color: var(--pink); }
 /* 대자비 소개 팝업 */

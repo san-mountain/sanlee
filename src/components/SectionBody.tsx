@@ -6,7 +6,6 @@ import { about, contact, ui, works, type SectionId, type Work } from "@/data/sit
 import { poems } from "@/data/poems";
 import { useLang } from "./LangProvider";
 import EmailLink from "./EmailLink";
-import Diary from "./Diary";
 import { unfold } from "./unfold";
 
 // 일반 페이지와 3D 도시의 홀로그램 패널이 같이 쓰는 본문
@@ -36,7 +35,7 @@ export default function SectionBody({ id, inExplore = false }: { id: SectionId; 
       </div>
     );
   }
-  if (id === "writing") return <WritingTabs inExplore={inExplore} />;
+  if (id === "writing") return <Poems inExplore={inExplore} />;
   if (id === "works" && inExplore) return <WorksViewer list={works} />;
   if (id === "works") {
     return (
@@ -233,42 +232,4 @@ function Poems({ inExplore }: { inExplore: boolean }) {
         })}
       </div>
     );
-}
-
-const WRITING_TABS = [
-  { id: "poems", label: { ko: "시", en: "Poems" } },
-  { id: "diary", label: { ko: "일기", en: "Diary" } },
-] as const;
-type WritingTab = (typeof WRITING_TABS)[number]["id"];
-
-// Writing 안의 탭: 시 / 일기. 주소 끝 #diary 로 바로 일기 탭을 열 수 있다.
-function WritingTabs({ inExplore }: { inExplore: boolean }) {
-  const { t } = useLang();
-  const [tab, setTab] = useState<WritingTab>("poems");
-  useEffect(() => {
-    if (!inExplore && window.location.hash.startsWith("#diary")) setTab("diary");
-  }, [inExplore]);
-  const select = (id: WritingTab) => {
-    setTab(id);
-    if (!inExplore) history.replaceState(null, "", id === "diary" ? "#diary" : window.location.pathname);
-  };
-  return (
-    <>
-      <div className="cat-tabs" role="tablist" aria-label="Writing">
-        {WRITING_TABS.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === c.id}
-            className={tab === c.id ? "on" : ""}
-            onClick={() => select(c.id)}
-          >
-            {t(c.label)}
-          </button>
-        ))}
-      </div>
-      {tab === "poems" ? <Poems inExplore={inExplore} /> : <Diary inExplore={inExplore} />}
-    </>
-  );
 }
