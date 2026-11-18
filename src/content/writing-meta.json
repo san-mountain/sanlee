@@ -1,0 +1,26 @@
+{
+  "categories": [
+    {
+      "id": "poem",
+      "ko": "시",
+      "en": "Poems",
+      "indent": false,
+      "serial": false
+    },
+    {
+      "id": "essay",
+      "ko": "에세이",
+      "en": "Essays",
+      "indent": true,
+      "serial": false
+    },
+    {
+      "id": "novel",
+      "ko": "소설",
+      "en": "Fiction",
+      "indent": true,
+      "serial": true
+    }
+  ],
+  "series": []
+}

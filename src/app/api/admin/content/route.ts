@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { thumbOf, type Work } from "@/data/site";
 import { isOwner, sameOrigin } from "@/lib/admin/auth";
-import { blobSha, clean, cleanUpload, droppedImages, FILES, Invalid, KINDS, serialize, type Kind } from "@/lib/admin/content";
+import { blobSha, checkUse, clean, cleanMeta, cleanPoems, cleanUpload, droppedImages, FILES, Invalid, KINDS, serialize, type Kind, type Meta } from "@/lib/admin/content";
 import { commit, Conflict, readFile, type Change } from "@/lib/admin/github";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const NAMES: Record<Kind, string> = { poems: "시", works: "작업" };
+const NAMES: Record<Kind, string> = { poems: "글", works: "작업", meta: "글 분류" };
 const kindOf = (v: unknown) => (KINDS.includes(v as Kind) ? (v as Kind) : null);
 const err = (error: string, status: number) => NextResponse.json({ error }, { status });
 
@@ -44,6 +44,25 @@ export async function PUT(req: Request) {
   if (!kind || typeof body.sha !== "string" || typeof body.message !== "string") return err("잘못된 요청이에요", 400);
   try {
     const items = clean(kind, body.items);
+    const guards = [{ path: FILES[kind], sha: body.sha }];
+    const together: Change[] = [];
+    let metaSha: string | undefined;
+    // 글: 분류·연작이 실제로 있는지 확인한다. 새 연작을 만들며 쓴 글이면 분류 파일도 같은 커밋으로 저장한다
+    if (kind === "poems") {
+      let meta: Meta;
+      if (body.meta !== undefined) {
+        if (typeof body.metaSha !== "string") throw new Invalid("잘못된 요청이에요");
+        meta = cleanMeta(body.meta);
+        const metaJson = serialize(meta);
+        together.push({ path: FILES.meta, text: metaJson });
+        guards.push({ path: FILES.meta, sha: body.metaSha });
+        metaSha = blobSha(metaJson);
+      } else meta = cleanMeta(JSON.parse((await readFile(FILES.meta)).text));
+      cleanPoems(items, meta);
+      checkUse(meta, items as ReturnType<typeof cleanPoems>);
+    }
+    // 분류: 지우려는 분류·연작에 아직 글이 있으면 막는다
+    if (kind === "meta") checkUse(items as Meta, cleanPoems(JSON.parse((await readFile(FILES.poems)).text)));
     const uploads = Array.isArray(body.uploads) ? body.uploads.map(cleanUpload) : [];
     if (uploads.length > 1) throw new Invalid("사진은 한 번에 한 장씩 올려 주세요");
     const path = FILES[kind];
@@ -79,10 +98,10 @@ export async function PUT(req: Request) {
       for (const p of droppedImages(before, works)) extra.push({ path: `public${p}`, delete: true }, { path: `public${thumbOf(p)}`, delete: true });
     }
     const json = serialize(items);
-    const changes: Change[] = [{ path, text: json }, ...extra];
+    const changes: Change[] = [{ path, text: json }, ...together, ...extra];
     const note = body.message.replace(/\s+/g, " ").trim().slice(0, 120);
-    const saved = await commit(`${NAMES[kind]}: ${note || "고침"} (관리 화면)`, changes, { path, sha: body.sha });
-    return NextResponse.json({ ok: true, commit: saved.sha, url: saved.url, items, sha: blobSha(json) });
+    const saved = await commit(`${NAMES[kind]}: ${note || "고침"} (관리 화면)`, changes, guards);
+    return NextResponse.json({ ok: true, commit: saved.sha, url: saved.url, items, sha: blobSha(json), meta: metaSha ? JSON.parse(together[0].text!) : undefined, metaSha });
   } catch (e) {
     return failed(e);
   }

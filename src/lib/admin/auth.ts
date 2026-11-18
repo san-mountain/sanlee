@@ -52,3 +52,6 @@ export function sameOrigin(req: Request) {
     return false;
   }
 }
+
+// AI 맞춤법 검사(선택): Vercel 환경 변수 ANTHROPIC_API_KEY 가 있을 때만 켜진다
+export const aiSpellReady = () => !!process.env.ANTHROPIC_API_KEY;

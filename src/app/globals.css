@@ -603,3 +603,23 @@ html[data-lang-wait] body { visibility: hidden; }
   .seal.moving:not(.open) { transform: scale(.7); opacity: .4; animation: none; }
   .seal.moving:not(.open) .seal-ring { animation-play-state: paused; }
 }
+
+/* ---------- 글: 에세이·소설(들여쓰기 분류)과 연작 ---------- */
+.poems .poem.indent .para, .poems .poem.indent .scene-break { font-family: var(--font-brush), var(--font-serif), "Noto Serif KR", serif; }
+.poem.indent .prose-block { margin: 0 0 2em; }
+.poem.indent .para { margin: 0; text-indent: 1em; font-size: 17px; line-height: 2; letter-spacing: .01em;
+  word-break: keep-all; overflow-wrap: break-word; line-break: strict; }
+.poem.indent .scene-break { margin: 1.4em 0; text-align: center; color: var(--muted); letter-spacing: .3em; }
+.poem.indent .poem-body { max-width: 680px; }
+.poem-cat { color: var(--muted); margin-right: .8em; }
+.poem-part { color: var(--muted); margin-right: .6em; font-variant-numeric: tabular-nums; }
+.series { border-top: 1px solid var(--rule); padding-top: var(--s2); }
+.poems > .series:first-child, .poems > .cat-tabs + .series, .poems > .cat-tabs + .poems-note + .series { border-top: 0; }
+.series-head { display: grid; gap: 4px; margin-bottom: var(--s1); }
+.series-title { margin: 0; font: 400 var(--fs-title)/1.4 var(--font-brush), var(--font-serif), "Noto Serif KR", serif; letter-spacing: .02em; }
+.series-head .meta { margin: 0; font-size: var(--fs-meta); color: var(--muted); }
+.series-note { margin: 4px 0 0; font-size: var(--fs-meta); color: var(--muted); max-width: 680px; line-height: 1.7; white-space: pre-line; }
+.series .poem.episode { margin-left: 1.2em; }
+@media (max-width: 719px) { .series .poem.episode { margin-left: .6em; } }
+.poems > .cat-tabs + .poem, .poems > .cat-tabs + .poems-note + .poem { border-top: 0; }
+.poems > .series ~ .poem, .poems > .series ~ .series { border-top: 1px solid var(--rule); }
