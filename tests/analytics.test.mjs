@@ -66,3 +66,21 @@ test("하루치 기록을 모아 합친다", () => {
   assert.equal(s.direct, 2);
   assert.deepEqual(s.countries, [["KR", 4], ["US", 1]]);
 });
+
+test("방문 하나의 기록: 기기·브라우저·도시와 본 페이지 순서", async () => {
+  const { browserOf, osOf, cityOf, hourOf, visitOf } = await import("../src/lib/analytics/visit.ts");
+  const ig = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Instagram 350.0";
+  assert.equal(osOf(ig), "iOS");
+  assert.equal(browserOf(ig), "인스타그램 앱");
+  assert.equal(browserOf("Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/130 Safari/537.36 Edg/130"), "Edge");
+  assert.equal(browserOf("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 SamsungBrowser/26.0 Chrome/122 Mobile Safari/537.36"), "삼성 인터넷");
+  assert.equal(osOf("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", true), "iPadOS");
+  assert.equal(cityOf("Seoul"), "Seoul");
+  assert.equal(cityOf("S%C3%A3o%20Paulo"), "São Paulo");
+  assert.equal(cityOf("%E0%A4%A"), "");
+  assert.equal(hourOf(Date.UTC(2026, 10, 18, 15, 30)), 0);
+  const v = visitOf("abcdefghijklmnop", { t: "1000", e: "90000", city: "Seoul", c: "KR", d: "mobile", r: "google" }, ["/|1000", "/works|20000"]);
+  assert.equal(v.end, 90000);
+  assert.deepEqual(v.pages, [{ path: "/", at: 1000 }, { path: "/works", at: 20000 }]);
+  assert.equal(visitOf("x", {}, []), null);
+});

@@ -109,3 +109,14 @@ fieldset.admin-row legend { float: left; margin-right: var(--s1); }
 .sr-pct { color: var(--muted); display: inline-block; min-width: 3.2em; text-align: right; }
 .stats-rank .af-hint { display: block; margin: var(--s1) 0 0; }
 .stats-foot { margin: 0; }
+.sd-plot.sd-short { grid-template-rows: 100px auto; }
+
+.stats-recent h2 { margin-bottom: var(--s1); }
+.visit-list { list-style: none; margin: 0 0 var(--s2); padding: 0; border-top: 1px solid var(--rule); }
+.visit-list li { border-bottom: 1px solid var(--rule); padding: 10px 4px; display: grid; gap: 2px; font-size: var(--fs-meta); min-width: 0; }
+.vl-head { display: flex; justify-content: space-between; gap: var(--s1); }
+.vl-time { font-weight: 600; font-size: var(--fs-body); font-variant-numeric: tabular-nums; }
+.vl-stay { color: var(--muted); white-space: nowrap; }
+.vl-who { color: var(--ink); overflow-wrap: anywhere; }
+.vl-path { color: var(--muted); overflow-wrap: anywhere; }
+.vl-src { color: var(--ink); }
