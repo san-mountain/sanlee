@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { checkUse, clean, cleanMeta, cleanPoems, cleanWorks, cleanUpload, droppedImages, serialize, FILES, Invalid } from "../src/lib/admin/content.ts";
-import { checkSpelling, locate } from "../src/lib/spell.ts";
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
@@ -68,17 +67,4 @@ test("분류·연작 목록 검사: 글이 있는 분류·연작은 지울 수 �
   assert.throws(() => checkUse({ ...meta, series: [] }, pieces), Invalid);
   assert.throws(() => checkUse({ categories: [meta.categories[0]], series: [] }, pieces), Invalid);
   checkUse(meta, pieces);
-});
-
-test("맞춤법 기본 검사", () => {
-  const found = (t, opts) => checkSpelling(t, opts).map((i) => [i.original, i.suggestion]);
-  assert.deepEqual(found("몇일 뒤에 할께요"), [["몇일", "며칠"], ["할께요", "할게요"]]);
-  assert.deepEqual(found("선생님께 갈께"), [["갈께", "갈게"]]);
-  assert.deepEqual(found("할수있다"), [["할수있", "할 수 있"]]);
-  assert.deepEqual(found("하지안고 안돼"), [["하지안고", "하지 않고"], ["안돼", "안 돼"]]);
-  assert.deepEqual(found("별이 별이", { poem: true }), []); // 시의 되풀이는 그대로
-  assert.deepEqual(found("「닫히지 않음").map((x) => x[0]), ["「"]);
-  // AI가 돌려준 조각의 위치 찾기: 앞말로 같은 말 중 하나를 고른다
-  const t = "가나 다라 가나";
-  assert.equal(locate(t, [{ original: "가나", before: "다라 ", suggestion: "가 나", reason: "" }])[0].from, 6);
 });

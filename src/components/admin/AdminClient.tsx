@@ -250,7 +250,7 @@ const store = {
 
 type Notice = { text: string; commit?: string; url?: string; deploy?: "pending" | "success" | "failure" | "unknown" };
 
-export default function AdminClient({ aiSpell = false }: { aiSpell?: boolean }) {
+export default function AdminClient() {
   const [kind, setKind] = useState<Kind>("poems");
   const [meta, setMeta] = useState<{ value: WritingMeta; sha: string } | null>(null);
   const [filter, setFilter] = useState("");
@@ -486,7 +486,6 @@ export default function AdminClient({ aiSpell = false }: { aiSpell?: boolean }) 
                 meta={meta.value}
                 pieces={(items ?? []) as Poem[]}
                 editingIndex={editing.index}
-                aiSpell={aiSpell}
                 savedAt={savedAt}
                 onLocalSave={() => {
                   store.set(kind, editing);

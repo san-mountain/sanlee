@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import WritingText from "@/components/WritingText";
-import { checkSpelling, type Issue } from "@/lib/spell";
 import { categoryOf, partLabel, stats, type Piece, type WritingMeta } from "@/lib/writing";
 
-// 관리 화면의 글쓰기 칸: 분류·연작 고르기, 도구 막대(되돌리기, 특수 문자, 찾기·바꾸기, 맞춤법, 미리보기, 집중 모드),
-// 글자 수·원고지 매수, 단축키. 본문은 보통 textarea 이고, 그 뒤에 같은 글자를 투명하게 깔아(backdrop) 찾은 곳과 맞춤법 지적에 밑줄을 긋는다.
+// 관리 화면의 글쓰기 칸: 분류·연작 고르기, 도구 막대(되돌리기, 특수 문자, 찾기·바꾸기, 미리보기, 집중 모드),
+// 글자 수·원고지 매수, 단축키. 본문은 보통 textarea 이고, 그 뒤에 같은 글자를 투명하게 깔아(backdrop) 찾은 곳을 칠한다.
 
 export type PieceDraft = {
   title: string;
@@ -26,13 +25,11 @@ type Props = {
   meta: WritingMeta;
   pieces: Piece[];
   editingIndex: number | null;
-  aiSpell: boolean;
   savedAt: number | null;
   onLocalSave: () => void;
 };
 
 const PREFS_KEY = "sanlee-admin-editor";
-const IGNORE_KEY = "sanlee-admin-spell-ignore";
 type Prefs = { size: number; preview: boolean; width: "narrow" | "wide" };
 const DEFAULT_PREFS: Prefs = { size: 18, preview: false, width: "narrow" };
 const readJSON = <T,>(k: string, fallback: T): T => {
@@ -61,26 +58,7 @@ const SINGLES = ["…", "—", "·", "※", "～"];
 
 type Mark = { from: number; to: number; cls: string; cur?: boolean };
 
-// 본문이 바뀐 뒤에도 지적한 말이 아직 있으면 새 위치로 옮기고, 없어졌으면 뺀다
-function relocate(list: Issue[], body: string) {
-  const out: Issue[] = [];
-  for (const it of list) {
-    if (body.slice(it.from, it.to) === it.original) {
-      out.push(it);
-      continue;
-    }
-    let best = -1;
-    let k = body.indexOf(it.original, Math.max(0, it.from - 400));
-    while (k >= 0 && k <= it.from + 400) {
-      if (best < 0 || Math.abs(k - it.from) < Math.abs(best - it.from)) best = k;
-      k = body.indexOf(it.original, k + 1);
-    }
-    if (best >= 0) out.push({ ...it, from: best, to: best + it.original.length });
-  }
-  return out;
-}
-
-export default function WritingEditor({ d, set, meta, pieces, editingIndex, aiSpell, savedAt, onLocalSave }: Props) {
+export default function WritingEditor({ d, set, meta, pieces, editingIndex, savedAt, onLocalSave }: Props) {
   const ta = useRef<HTMLTextAreaElement>(null);
   const back = useRef<HTMLDivElement>(null);
   const findInput = useRef<HTMLInputElement>(null);
@@ -88,16 +66,10 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, aiSp
   const [focus, setFocus] = useState(false);
   const [sel, setSel] = useState<[number, number]>([0, 0]);
   const [find, setFind] = useState({ open: false, q: "", r: "", i: 0 });
-  const [spellOpen, setSpellOpen] = useState(false);
-  const [aiIssues, setAiIssues] = useState<Issue[]>([]);
-  const [aiState, setAiState] = useState<{ busy: boolean; error?: string; done?: boolean }>({ busy: false });
-  const [ignored, setIgnored] = useState<string[]>([]);
-  const [ignoredAlways, setIgnoredAlways] = useState<string[]>([]);
   const [flash, setFlash] = useState("");
 
   useEffect(() => {
     setPrefs(readJSON(PREFS_KEY, DEFAULT_PREFS));
-    setIgnoredAlways(readJSON<{ list: string[] }>(IGNORE_KEY, { list: [] }).list);
   }, []);
   const prefsSet = (p: Partial<Prefs>) =>
     setPrefs((cur) => {
@@ -196,61 +168,15 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, aiSp
     setFlash(`${matches.length}곳을 바꿨어요`);
   };
 
-  // ---------- 맞춤법 ----------
-  const ruleIssues = useMemo(() => (spellOpen ? checkSpelling(d.body, { poem: isPoem }) : []), [spellOpen, d.body, isPoem]);
-  const aiNow = useMemo(() => relocate(aiIssues, d.body), [aiIssues, d.body]);
-  const key = (x: Issue) => `${x.original}\u0000${x.suggestion}`;
-  const issues = useMemo(() => {
-    const all = [...aiNow, ...ruleIssues].filter((x) => !ignored.includes(key(x)) && !ignoredAlways.includes(x.original));
-    // 같은 곳을 둘 다 지적하면 AI 쪽 하나만
-    const sorted = all.sort((a, b) => a.from - b.from || (a.source === "ai" ? -1 : 1));
-    const out: Issue[] = [];
-    for (const x of sorted) if (!out.length || x.from >= out[out.length - 1].to) out.push(x);
-    return out;
-  }, [aiNow, ruleIssues, ignored, ignoredAlways]);
-  const fixable = issues.filter((x) => x.suggestion !== x.original);
-  const fix = (x: Issue) => replaceRange(x.from, x.to, x.suggestion);
-  const fixAll = () => {
-    let out = d.body;
-    for (const x of [...fixable].sort((a, b) => b.from - a.from)) out = out.slice(0, x.from) + x.suggestion + out.slice(x.to);
-    replaceAll(out);
-    setFlash(`${fixable.length}곳을 고쳤어요`);
-  };
-  const ignoreAlways = (x: Issue) => {
-    const list = [...new Set([...ignoredAlways, x.original])];
-    setIgnoredAlways(list);
-    writeJSON(IGNORE_KEY, { list });
-  };
-  const show = (from: number, to: number) => {
-    const el = ta.current;
-    if (!el) return;
-    el.focus({ preventScroll: true });
-    el.setSelectionRange(from, to);
-    requestAnimationFrame(() => back.current?.querySelector(`[data-at="${from}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" }));
-  };
-  const runAI = async () => {
-    setAiState({ busy: true });
-    const res = await fetch("/api/admin/spell", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: d.body, category: cat?.ko }),
-    }).catch(() => null);
-    const j = await res?.json().catch(() => null);
-    if (!res?.ok || !j) return setAiState({ busy: false, error: j?.error ?? "AI 검사를 하지 못했어요" });
-    setAiIssues(j.issues);
-    setAiState({ busy: false, done: true });
-  };
-
   // ---------- 밑줄 ----------
   const marks = useMemo(() => {
     const list: Mark[] = [];
     matches.forEach(([a, b], k) => list.push({ from: a, to: b, cls: "m-find", cur: k === cur }));
-    if (spellOpen) for (const x of issues) list.push({ from: x.from, to: x.to, cls: x.source === "ai" ? "m-ai" : "m-rule" });
     list.sort((a, b) => a.from - b.from);
     const out: Mark[] = [];
     for (const m of list) if (!out.length || m.from >= out[out.length - 1].to) out.push(m);
     return out;
-  }, [matches, cur, spellOpen, issues]);
+  }, [matches, cur]);
   const backdrop = useMemo(() => {
     const parts: React.ReactNode[] = [];
     let last = 0;
@@ -282,9 +208,6 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, aiSp
         e.preventDefault();
         onLocalSave();
         setFlash("이 기기에 저장했어요");
-      } else if (mod && e.shiftKey && e.key.toLowerCase() === "l") {
-        e.preventDefault();
-        setSpellOpen((v) => !v);
       } else if (e.key === "Escape") {
         if (find.open) setFind((f) => ({ ...f, open: false }));
         else if (focus) setFocus(false);
@@ -427,9 +350,6 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, aiSp
             <button type="button" className={find.open ? "on" : ""} title={`찾기·바꾸기 (${mod}F)`} onClick={() => (find.open ? setFind((f) => ({ ...f, open: false })) : openFind())}>
               찾기
             </button>
-            <button type="button" className={spellOpen ? "on" : ""} title={`맞춤법 검사 (${isMac() ? "⌘⇧L" : "Ctrl+Shift+L"})`} onClick={() => setSpellOpen((v) => !v)}>
-              맞춤법
-            </button>
             <button type="button" className={prefs.preview ? "on" : ""} title="사이트에 보일 모습" onClick={() => prefsSet({ preview: !prefs.preview })}>
               미리보기
             </button>
@@ -497,76 +417,6 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, aiSp
           </div>
         )}
 
-        {spellOpen && (
-          <div className="ed-spell">
-            <div className="ed-spell-head">
-              <strong>맞춤법</strong>
-              <span className="admin-muted">
-                {issues.length ? `${issues.length}곳` : aiState.busy ? "" : "찾은 곳이 없어요"}
-                {aiState.done && " · AI 검사 포함"}
-              </span>
-              {aiSpell ? (
-                <button type="button" onClick={runAI} disabled={aiState.busy || !d.body.trim()}>
-                  {aiState.busy ? "AI가 읽는 중…" : aiState.done ? "AI로 다시 검사" : "AI로 꼼꼼히 검사"}
-                </button>
-              ) : (
-                <span className="af-hint">AI 검사는 Vercel에 ANTHROPIC_API_KEY 를 넣으면 켜져요</span>
-              )}
-              {fixable.length > 1 && (
-                <button type="button" onClick={fixAll}>
-                  모두 고치기
-                </button>
-              )}
-              {ignoredAlways.length > 0 && (
-                <button
-                  type="button"
-                  className="admin-link"
-                  title={ignoredAlways.join(", ")}
-                  onClick={() => {
-                    setIgnoredAlways([]);
-                    writeJSON(IGNORE_KEY, { list: [] });
-                  }}
-                >
-                  늘 무시하는 말 {ignoredAlways.length}개 비우기
-                </button>
-              )}
-            </div>
-            {aiState.error && <p className="admin-error">{aiState.error}</p>}
-            {issues.length > 0 && (
-              <ol className="ed-issues">
-                {issues.map((x) => (
-                  <li key={`${x.from}-${x.original}`}>
-                    <button type="button" className="ed-issue" onClick={() => show(x.from, x.to)}>
-                      <span className={`ed-kind ${x.source === "ai" ? "ai" : ""}`}>{x.kind}</span>
-                      <span className="ed-from">{x.original.replace(/ /g, "␣")}</span>
-                      {x.suggestion !== x.original && (
-                        <>
-                          {" → "}
-                          <span className="ed-to">{x.suggestion === "" ? "(지우기)" : x.suggestion.replace(/ /g, "␣")}</span>
-                        </>
-                      )}
-                      <span className="ed-why">{x.reason}</span>
-                    </button>
-                    <span className="ed-issue-acts">
-                      {x.suggestion !== x.original && (
-                        <button type="button" onClick={() => fix(x)}>
-                          고치기
-                        </button>
-                      )}
-                      <button type="button" onClick={() => setIgnored((l) => [...l, key(x)])}>
-                        무시
-                      </button>
-                      <button type="button" title="이 말은 앞으로 검사하지 않아요(이 기기)" onClick={() => ignoreAlways(x)}>
-                        늘 무시
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-        )}
-
         <div className="ed-split">
           <div className="ed-surface">
             <div ref={back} className="ed-back" aria-hidden>
@@ -613,7 +463,7 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, aiSp
           {indent
             ? "문단은 줄을 바꿔 나눠요. 사이트에서 문단 첫머리를 한 칸씩 들여 써요. 빈 줄은 장면이 바뀌는 큰 여백, * * * 한 줄은 장면 전환 표시예요. "
             : "연은 빈 줄로 나눠요. "}
-          단축키: {mod}F 찾기 · {mod}S 이 기기에 저장 · {isMac() ? "⌘⇧L" : "Ctrl+Shift+L"} 맞춤법 · Esc 닫기
+          단축키: {mod}F 찾기 · {mod}S 이 기기에 저장 · Esc 닫기
         </p>
       </div>
     </>

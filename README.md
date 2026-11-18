@@ -30,8 +30,6 @@ Vercel 프로젝트 > Settings > Environment Variables 에 두 값을 넣고(Pro
 
 비밀번호나 토큰을 바꾸면 모든 기기의 로그인이 풀립니다.
 
-글쓰기 칸의 맞춤법 검사는 기본 규칙으로 바로 돌아가요. **AI로 꼼꼼히 검사**까지 쓰려면 같은 곳에 `ANTHROPIC_API_KEY`(Anthropic API 키)를 하나 더 넣고 다시 배포합니다. 검사할 때마다 API 사용료가 조금 나가요.
-
 ## 실행
 
 ```bash

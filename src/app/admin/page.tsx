@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { aiSpellReady, configured, isOwner } from "@/lib/admin/auth";
+import { configured, isOwner } from "@/lib/admin/auth";
 import { brush } from "../fonts-brush";
 import AdminClient from "@/components/admin/AdminClient";
 import AdminLogin from "@/components/admin/AdminLogin";
@@ -12,5 +12,5 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const owner = await isOwner();
   // 글 편집 칸은 사이트의 시와 같은 고운바탕으로 보여 준다
-  return <main className={`admin ${brush.variable}`}>{owner ? <AdminClient aiSpell={aiSpellReady()} /> : <AdminLogin ready={configured()} />}</main>;
+  return <main className={`admin ${brush.variable}`}>{owner ? <AdminClient /> : <AdminLogin ready={configured()} />}</main>;
 }
