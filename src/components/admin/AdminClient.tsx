@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import StatsPanel from "./StatsPanel";
 
-// 사이트 주인용 관리 화면: 시를 쓰고 고치고, 작업 사진을 올린다.
+// 사이트 주인용 관리 화면: 시를 쓰고 고치고, 작업 사진을 올린다. "방문" 탭에서는 방문 기록을 본다.
 // 저장하면 서버가 GitHub 저장소에 커밋하고, Vercel이 사이트를 다시 만들어 1~2분 뒤 반영된다.
 
 type Kind = "poems" | "works";
@@ -236,6 +237,7 @@ type Notice = { text: string; commit?: string; url?: string; deploy?: "pending" 
 
 export default function AdminClient() {
   const [kind, setKind] = useState<Kind>("poems");
+  const [stats, setStats] = useState(false);
   const [data, setData] = useState<Partial<Record<Kind, Loaded>>>({});
   const [loadError, setLoadError] = useState("");
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -291,11 +293,20 @@ export default function AdminClient() {
 
   const leave = () => !editing?.dirty || confirm("저장하지 않은 내용이 있어요. 그래도 나갈까요?");
   const switchTab = (k: Kind) => {
+    if (stats && k === kind) return setStats(false);
     if (k === kind || !leave()) return;
     if (editing?.dirty) store.set(kind, null);
     setEditing(null);
     setError(null);
     setKind(k);
+    setStats(false);
+  };
+  const openStats = () => {
+    if (stats || !leave()) return;
+    if (editing?.dirty) store.set(kind, null);
+    setEditing(null);
+    setError(null);
+    setStats(true);
   };
   const open = (index: number | null) => {
     if (!leave()) return;
@@ -381,7 +392,7 @@ export default function AdminClient() {
       <header className="admin-head">
         <h1>관리</h1>
         <nav>
-          <a href={kind === "works" ? "/works" : "/writing"} target="_blank" rel="noreferrer">
+          <a href={stats ? "/" : kind === "works" ? "/works" : "/writing"} target="_blank" rel="noreferrer">
             사이트 보기 ↗
           </a>
           <button type="button" className="admin-link" onClick={logout}>
@@ -392,108 +403,117 @@ export default function AdminClient() {
 
       <div className="cat-tabs" role="tablist" aria-label="고칠 곳">
         {TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" aria-selected={kind === t.id} className={kind === t.id ? "on" : ""} onClick={() => switchTab(t.id)}>
+          <button key={t.id} type="button" role="tab" aria-selected={!stats && kind === t.id} className={!stats && kind === t.id ? "on" : ""} onClick={() => switchTab(t.id)}>
             {t.label}
           </button>
         ))}
+        <button type="button" role="tab" aria-selected={stats} className={stats ? "on" : ""} onClick={openStats}>
+          방문
+        </button>
       </div>
 
-      {notice && (
-        <p className="admin-notice" role="status">
-          {notice.text}{" "}
-          {notice.deploy === "pending" && "사이트에 반영하는 중이에요(보통 1~2분)…"}
-          {notice.deploy === "success" && "사이트에 반영됐어요."}
-          {notice.deploy === "failure" && "사이트를 다시 만드는 데 실패했어요. Vercel 배포 기록을 확인해 주세요."}
-          {notice.deploy === "unknown" && "보통 1~2분 뒤 사이트에 반영돼요."}{" "}
-          {notice.url && (
-            <a href={notice.url} target="_blank" rel="noreferrer">
-              기록
-            </a>
-          )}
-          <button type="button" className="admin-x" aria-label="닫기" onClick={() => setNotice(null)}>
-            ×
-          </button>
-        </p>
-      )}
-
-      {loadError && (
-        <p className="admin-error">
-          {loadError}{" "}
-          <button type="button" className="admin-link" onClick={() => load(kind)}>
-            다시 시도
-          </button>
-        </p>
-      )}
-
-      {editing ? (
-        <form
-          className="admin-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            save();
-          }}
-        >
-          <h2>{editing.index === null ? tab.add : "고치기"}</h2>
-          {kind === "poems" && <PoemFields d={editing.draft as PoemDraft} set={set} />}
-          {kind === "works" && <WorkFields d={editing.draft as WorkDraft} set={set} />}
-          {error && (
-            <p className="admin-error" role="alert">
-              {error.text}
-              {error.conflict && (
-                <>
-                  {" "}
-                  <button
-                    type="button"
-                    className="admin-link"
-                    onClick={() => {
-                      setError(null);
-                      load(kind);
-                    }}
-                  >
-                    최신 내용 불러오기
-                  </button>
-                  {" "}(쓰던 글은 이 기기에 남아 있어요)
-                </>
-              )}
-            </p>
-          )}
-          <div className="admin-actions">
-            <button type="submit" className="admin-primary" disabled={busy || !data[kind]}>
-              {busy ? "저장하는 중…" : "저장"}
-            </button>
-            <button type="button" onClick={close} disabled={busy}>
-              취소
-            </button>
-            {editing.index !== null && (
-              <button type="button" className="admin-danger" onClick={() => save(true)} disabled={busy}>
-                지우기
-              </button>
-            )}
-          </div>
-        </form>
+      {stats ? (
+        <StatsPanel />
       ) : (
         <>
-          <div className="admin-actions">
-            <button type="button" className="admin-primary" onClick={() => open(null)} disabled={!items}>
-              + {tab.add}
-            </button>
-            {saved && (
-              <button type="button" onClick={resume}>
-                쓰다 만 글 이어 쓰기
+          {notice && (
+            <p className="admin-notice" role="status">
+              {notice.text}{" "}
+              {notice.deploy === "pending" && "사이트에 반영하는 중이에요(보통 1~2분)…"}
+              {notice.deploy === "success" && "사이트에 반영됐어요."}
+              {notice.deploy === "failure" && "사이트를 다시 만드는 데 실패했어요. Vercel 배포 기록을 확인해 주세요."}
+              {notice.deploy === "unknown" && "보통 1~2분 뒤 사이트에 반영돼요."}{" "}
+              {notice.url && (
+                <a href={notice.url} target="_blank" rel="noreferrer">
+                  기록
+                </a>
+              )}
+              <button type="button" className="admin-x" aria-label="닫기" onClick={() => setNotice(null)}>
+                ×
               </button>
-            )}
-          </div>
-          {!items && !loadError && <p className="admin-muted">불러오는 중…</p>}
-          {items && (
-            <ol className="admin-list">
-              {items.map((it, i) => (
-                <li key={i}>
-                  <button type="button" onClick={() => open(i)}>
-                    <ListRow kind={kind} it={it} />
+            </p>
+          )}
+
+          {loadError && (
+            <p className="admin-error">
+              {loadError}{" "}
+              <button type="button" className="admin-link" onClick={() => load(kind)}>
+                다시 시도
+              </button>
+            </p>
+          )}
+
+          {editing ? (
+            <form
+              className="admin-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                save();
+              }}
+            >
+              <h2>{editing.index === null ? tab.add : "고치기"}</h2>
+              {kind === "poems" && <PoemFields d={editing.draft as PoemDraft} set={set} />}
+              {kind === "works" && <WorkFields d={editing.draft as WorkDraft} set={set} />}
+              {error && (
+                <p className="admin-error" role="alert">
+                  {error.text}
+                  {error.conflict && (
+                    <>
+                      {" "}
+                      <button
+                        type="button"
+                        className="admin-link"
+                        onClick={() => {
+                          setError(null);
+                          load(kind);
+                        }}
+                      >
+                        최신 내용 불러오기
+                      </button>
+                      {" "}(쓰던 글은 이 기기에 남아 있어요)
+                    </>
+                  )}
+                </p>
+              )}
+              <div className="admin-actions">
+                <button type="submit" className="admin-primary" disabled={busy || !data[kind]}>
+                  {busy ? "저장하는 중…" : "저장"}
+                </button>
+                <button type="button" onClick={close} disabled={busy}>
+                  취소
+                </button>
+                {editing.index !== null && (
+                  <button type="button" className="admin-danger" onClick={() => save(true)} disabled={busy}>
+                    지우기
                   </button>
-                </li>
-              ))}
-            </ol>
+                )}
+              </div>
+            </form>
+          ) : (
+            <>
+              <div className="admin-actions">
+                <button type="button" className="admin-primary" onClick={() => open(null)} disabled={!items}>
+                  + {tab.add}
+                </button>
+                {saved && (
+                  <button type="button" onClick={resume}>
+                    쓰다 만 글 이어 쓰기
+                  </button>
+                )}
+              </div>
+              {!items && !loadError && <p className="admin-muted">불러오는 중…</p>}
+              {items && (
+                <ol className="admin-list">
+                  {items.map((it, i) => (
+                    <li key={i}>
+                      <button type="button" onClick={() => open(i)}>
+                        <ListRow kind={kind} it={it} />
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </>
           )}
         </>
       )}
