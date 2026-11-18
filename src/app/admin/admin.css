@@ -1,16 +1,16 @@
 /* 관리 화면: 사이트와 같은 종이색·잉크색, 꾸밈 없이 쓰기 편하게 */
-.admin { max-width: 880px; margin: 0 auto; padding: var(--s3) var(--gutter) var(--s4); font-size: var(--fs-body); line-height: 1.6; }
+.admin { width: 100%; box-sizing: border-box; max-width: 960px; margin: 0 auto; padding: var(--s3) var(--gutter) var(--s4); font-size: var(--fs-body); line-height: 1.6; }
 .admin h1 { font-size: var(--fs-title); font-weight: 600; margin: 0; }
 .admin h2 { font-size: var(--fs-body); font-weight: 600; margin: 0 0 var(--s2); }
 .admin button { font: inherit; color: inherit; cursor: pointer; background: none; border: 1px solid var(--rule-head); border-radius: 4px; padding: 6px 14px; }
 .admin button:disabled { opacity: .45; cursor: default; }
-.admin .cat-tabs button { border: 0; border-bottom: 1px solid transparent; border-radius: 0; padding: 0 0 var(--s1); }
 .admin .admin-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .admin .admin-danger { color: #b3261e; border-color: #e3b6b2; margin-left: auto; }
 .admin .admin-link { border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; color: var(--muted); }
 .admin .admin-x { border: 0; padding: 0 4px; margin-left: auto; color: var(--muted); }
 .admin input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .admin select, .admin textarea {
   width: 100%; font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--rule-head); border-radius: 4px; padding: 8px 10px; }
+.admin input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .admin select { min-height: 44px; box-sizing: border-box; }
 .admin input:focus, .admin select:focus, .admin textarea:focus { outline: 2px solid var(--ink); outline-offset: -1px; }
 .admin input:user-invalid { border-color: #b3261e; }
 .admin code { font-family: var(--mono); font-size: .9em; background: #efefea; padding: 0 3px; border-radius: 3px; }
@@ -18,28 +18,63 @@
 .admin-login { max-width: 360px; margin: 18vh auto 0; display: grid; gap: var(--s2); }
 .admin-login label { display: grid; gap: 6px; font-size: var(--fs-meta); color: var(--muted); }
 
-.admin-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); margin-bottom: var(--s3); }
-.admin-head nav { display: flex; gap: var(--s2); font-size: var(--fs-meta); align-items: baseline; }
+/* 맨 위 한 줄: 이름 · 탭 · 링크. 아래 선 하나로 화면 머리를 나눈다 */
+.admin-head { display: grid; grid-template-columns: auto 1fr auto; align-items: end; column-gap: var(--s3);
+  border-bottom: 1px solid var(--rule-head); margin-bottom: var(--s3); }
+.admin-head h1 { line-height: 1.4; padding-bottom: 12px; }
+.admin-tabs { display: flex; gap: var(--s3); min-width: 0; }
+.admin .admin-tabs button { border: 0; border-radius: 0; padding: 0 0 12px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--muted); line-height: 1.4; }
+.admin .admin-tabs button:hover { color: var(--ink); }
+.admin .admin-tabs button.on { color: var(--ink); border-bottom-color: var(--ink); }
+.admin .admin-tabs button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.admin-head-links { display: flex; gap: var(--s2); font-size: var(--fs-meta); align-items: baseline; padding-bottom: 14px; white-space: nowrap; }
+@media (max-width: 719px) {
+  .admin-head { grid-template-columns: 1fr auto; row-gap: var(--s2); }
+  .admin-head h1 { padding-bottom: 0; }
+  .admin-head-links { padding-bottom: 0; }
+  .admin-tabs { grid-column: 1 / -1; grid-row: 2; gap: var(--s3); }
+}
 .admin-muted { color: var(--muted); font-size: var(--fs-meta); }
 .admin-error { color: #b3261e; font-size: var(--fs-meta); margin: 0; }
 .admin-notice { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; background: #eef3ea; border: 1px solid #cfdcc6; border-radius: 4px;
   padding: 10px 12px; font-size: var(--fs-meta); margin: 0 0 var(--s3); }
 
 .admin-actions { display: flex; flex-wrap: wrap; gap: var(--s1); margin: 0 0 var(--s2); }
-.admin-form .admin-actions { margin: var(--s3) 0 0; position: sticky; bottom: 0; background: var(--paper); padding: var(--s2) 0; border-top: 1px solid var(--rule); }
+/* 고치는 화면의 저장 줄: 화면 아래에 붙어 있다 */
+.admin-form .admin-actions { margin: var(--s2) 0 0; position: sticky; bottom: 0; z-index: 6; background: var(--paper);
+  padding: 12px 0; border-top: 1px solid var(--rule-head); }
+.admin-form .admin-actions .admin-primary { min-width: 88px; }
+
+/* 목록 위 한 줄: 거르기(또는 개수) ↔ 할 일 */
+.admin-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px var(--s2); margin: 0 0 var(--s2); }
+.admin-toolbar .admin-filter, .admin-toolbar .admin-actions { margin: 0; }
+.admin-toolbar .admin-actions { margin-left: auto; }
+.admin-count { margin: 0; color: var(--muted); font-size: var(--fs-meta); }
+@media (max-width: 719px) {
+  .admin-toolbar .admin-actions { order: -1; width: 100%; margin-left: 0; }
+  .admin-toolbar .admin-actions .admin-primary { flex: 1; }
+}
+.admin-resume { margin: 0 0 var(--s2); padding: 10px 12px; border: 1px dashed var(--rule-head); border-radius: 4px; font-size: var(--fs-meta); }
+
+/* 고치는 화면 머리: 목록으로 돌아가기 + 지금 고치는 것 */
+.admin-edit-head { display: grid; gap: 4px; min-width: 0; }
+.admin .admin-back { justify-self: start; border: 0; padding: 0; color: var(--muted); font-size: var(--fs-meta); }
+.admin .admin-back:hover { color: var(--ink); }
+.admin-edit-head h2 { font-size: var(--fs-title); margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-edit-head h2 .admin-muted { font-size: inherit; font-weight: 400; margin-right: 4px; }
 
 .admin-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
 .admin-list li { border-bottom: 1px solid var(--rule); }
-.admin .admin-list button { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: grid; grid-template-columns: auto 1fr; column-gap: var(--s2);
-  padding: 12px 4px; }
+.admin .admin-list button { all: unset; box-sizing: border-box; cursor: pointer; width: 100%; display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--s2); align-items: baseline; padding: 14px 8px; }
 .admin .admin-list button:hover { background: #f1f1ed; }
 .admin .admin-list button:focus-visible { outline: 2px solid var(--ink); }
+.al-main { display: grid; gap: 2px; min-width: 0; }
 .al-date { color: var(--muted); font-size: var(--fs-meta); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .al-title { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.al-sub { grid-column: 2; color: var(--muted); font-size: var(--fs-meta); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.admin .admin-list button:has(.al-thumb) { grid-template-columns: 56px auto 1fr; }
-.admin .admin-list button:has(.al-thumb) .al-sub { grid-column: 2 / 4; }
-.al-thumb { grid-row: span 2; width: 56px; height: 56px; object-fit: cover; background: #eee; }
+.al-sub { color: var(--muted); font-size: var(--fs-meta); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin .admin-list.is-works button { grid-template-columns: 56px minmax(0, 1fr) auto; align-items: center; padding: 10px 8px; }
+.al-thumb { width: 56px; height: 56px; object-fit: cover; background: #eee; border-radius: 2px; }
 .al-nothumb { display: grid; place-items: center; color: var(--muted); }
 
 .admin-form { display: grid; gap: var(--s2); }
@@ -47,7 +82,33 @@
 .af-label { font-size: var(--fs-meta); color: var(--muted); }
 .af-hint { font-size: var(--fs-meta); color: var(--muted); line-height: 1.6; }
 .af-body { min-height: 40vh; line-height: 1.9; resize: vertical; font-family: var(--font-brush), var(--font-serif), serif; }
-.af-preview { max-height: 280px; width: auto; border: 1px solid var(--rule); }
+.af-preview { display: block; width: 100%; max-height: 360px; object-fit: contain; background: #fff; border: 1px solid var(--rule); border-radius: 4px; }
+.af-nopreview { aspect-ratio: 3 / 2; display: grid; place-items: center; color: var(--muted); font-size: var(--fs-meta); background: transparent; border-style: dashed; border-color: var(--rule-head); }
+.admin input[type="file"] { font-size: var(--fs-meta); color: var(--muted); max-width: 100%; }
+.admin input[type="file"]::file-selector-button { font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--rule-head); border-radius: 4px;
+  padding: 6px 12px; margin-right: 10px; cursor: pointer; }
+
+/* 작업 고치기: 넓은 화면에서는 왼쪽에 사진, 오른쪽에 글 칸 */
+.wf, .wf-media, .wf-fields { display: grid; gap: var(--s2); min-width: 0; align-content: start; }
+@media (max-width: 899px) { .af-nopreview { aspect-ratio: auto; height: 96px; } }
+@media (min-width: 900px) {
+  .wf { grid-template-columns: 300px minmax(0, 1fr); column-gap: var(--s3); align-items: start; }
+  .wf-media { position: sticky; top: var(--s2); }
+}
+
+/* 글 고치기: 분류·연작·회차·제목·날짜를 한 줄에 */
+.wr-meta { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: start; }
+.wr-meta > * { flex: 1 1 200px; }
+.wr-meta .wr-cat { flex: 0 1 140px; }
+.wr-meta .wr-series { flex: 0 1 220px; }
+.wr-meta .wr-part { flex: 0 0 72px; }
+.wr-meta .wr-title { flex: 1 1 240px; }
+.wr-meta .wr-date { flex: 0 1 150px; }
+@media (max-width: 719px) {
+  .wr-meta .wr-cat, .wr-meta .wr-series, .wr-meta .wr-date { flex: 1 1 120px; }
+  .wr-meta .wr-title { order: 5; flex-basis: 100%; }
+  .wr-meta .wr-date { order: 4; }
+}
 .admin-row { display: grid; gap: var(--s2); grid-template-columns: 1fr; border: 0; padding: 0; margin: 0; min-width: 0; }
 @media (min-width: 720px) { .admin-row { grid-template-columns: 1fr 1fr; } }
 fieldset.admin-row { display: flex; gap: var(--s2); align-items: center; }
@@ -77,8 +138,6 @@ fieldset.admin-row legend { float: left; margin-right: var(--s1); }
   .cm-acts { justify-content: flex-end; }
 }
 .cm-save { margin: var(--s1) 0 0; }
-.admin-row-3 { grid-template-columns: 90px 1fr 1fr !important; }
-@media (max-width: 719px) { .admin-row-3 { grid-template-columns: 70px 1fr !important; } .admin-row-3 > :last-child { grid-column: 1 / -1; } }
 
 /* ---------- 글쓰기 칸 ---------- */
 .admin:has(.ed.with-preview) { max-width: 1320px; }
@@ -212,6 +271,6 @@ fieldset.admin-row legend { float: left; margin-right: var(--s1); }
   .ed-saved { margin-left: 0; flex-basis: 100%; }
   .ed-help { display: none; }
   .ed.focus { padding: 0 var(--s2) var(--s4); }
-  .admin-head { margin-bottom: var(--s2); }
+  .admin-head { margin-bottom: var(--s2); padding-top: 4px; }
 }
 @media (max-width: 719px) { .admin .ed-find input { flex-basis: 100%; } .ed-count { order: 3; } }

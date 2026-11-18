@@ -245,10 +245,38 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, save
   const time = savedAt ? new Date(savedAt).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : "";
   const selected = sel[1] - sel[0];
 
+  const titleDate = (
+    <>
+      {d.series && (
+        <label className="admin-field wr-part">
+          <span className="af-label">회차</span>
+          <input value={d.part} onChange={(e) => set({ part: e.target.value.replace(/\D/g, "") })} inputMode="numeric" pattern="\d+" required />
+        </label>
+      )}
+      <label className="admin-field wr-title">
+        <span className="af-label">{d.series ? "회차 제목" : "제목"}</span>
+        <input value={d.title} onChange={(e) => set({ title: e.target.value })} placeholder={d.series ? `예: ${d.part || 1}화, 또는 이 회의 제목` : ""} required />
+      </label>
+      <label className="admin-field wr-date">
+        <span className="af-label">날짜</span>
+        <input
+          value={d.date}
+          onChange={(e) => set({ date: e.target.value })}
+          pattern="\d{4}\.\d{2}\.\d{2}"
+          inputMode="numeric"
+          placeholder="2026.10.31"
+          title="2026.10.31 처럼 적어 주세요"
+          required
+        />
+      </label>
+    </>
+  );
+
   return (
     <>
-      <div className="admin-row">
-        <label className="admin-field">
+      {/* 분류·연작·회차·제목·날짜를 한 줄에(좁으면 알아서 줄바꿈) */}
+      <div className="wr-meta">
+        <label className="admin-field wr-cat">
           <span className="af-label">분류</span>
           <select
             value={cat?.id}
@@ -265,7 +293,7 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, save
           </select>
         </label>
         {cat?.serial ? (
-          <label className="admin-field">
+          <label className="admin-field wr-series">
             <span className="af-label">연작</span>
             <select value={d.series} onChange={(e) => pickSeries(e.target.value)}>
               <option value="">연작 아님(단편)</option>
@@ -278,9 +306,8 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, save
               <option value={NEW_SERIES}>+ 새 연작 만들기</option>
             </select>
           </label>
-        ) : (
-          <span />
-        )}
+        ) : null}
+        {titleDate}
       </div>
       {d.series === NEW_SERIES && (
         <div className="admin-row">
@@ -294,23 +321,6 @@ export default function WritingEditor({ d, set, meta, pieces, editingIndex, save
           </label>
         </div>
       )}
-      <div className={d.series ? "admin-row admin-row-3" : "admin-row"}>
-        {d.series && (
-          <label className="admin-field">
-            <span className="af-label">회차</span>
-            <input value={d.part} onChange={(e) => set({ part: e.target.value.replace(/\D/g, "") })} inputMode="numeric" pattern="\d+" required />
-          </label>
-        )}
-        <label className="admin-field">
-          <span className="af-label">{d.series ? "회차 제목" : "제목"}</span>
-          <input value={d.title} onChange={(e) => set({ title: e.target.value })} placeholder={d.series ? `예: ${d.part || 1}화, 또는 이 회의 제목` : ""} required />
-        </label>
-        <label className="admin-field">
-          <span className="af-label">날짜</span>
-          <input value={d.date} onChange={(e) => set({ date: e.target.value })} pattern="\d{4}\.\d{2}\.\d{2}" inputMode="numeric" required />
-          <span className="af-hint">2026.10.31 처럼</span>
-        </label>
-      </div>
       {isPoem && (
         <label className="admin-check">
           <input type="checkbox" checked={d.prose} onChange={(e) => set({ prose: e.target.checked })} /> 산문시(줄을 바꾸지 않고 문단으로)

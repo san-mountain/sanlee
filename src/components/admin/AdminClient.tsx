@@ -433,9 +433,20 @@ export default function AdminClient() {
 
   return (
     <div ref={top} className="admin-wrap">
+      {/* 맨 위 한 줄: 이름 · 탭 · 사이트 보기/로그아웃. 휴대폰에서는 탭이 아랫줄로 내려간다 */}
       <header className="admin-head">
         <h1>관리</h1>
-        <nav>
+        <div className="admin-tabs" role="tablist" aria-label="고칠 곳">
+          {TABS.map((t) => (
+            <button key={t.id} type="button" role="tab" aria-selected={!stats && kind === t.id} className={!stats && kind === t.id ? "on" : ""} onClick={() => switchTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
+          <button type="button" role="tab" aria-selected={stats} className={stats ? "on" : ""} onClick={openStats}>
+            방문
+          </button>
+        </div>
+        <nav className="admin-head-links">
           <a href={stats ? "/" : kind === "works" ? "/works" : "/writing"} target="_blank" rel="noreferrer">
             사이트 보기 ↗
           </a>
@@ -444,17 +455,6 @@ export default function AdminClient() {
           </button>
         </nav>
       </header>
-
-      <div className="cat-tabs" role="tablist" aria-label="고칠 곳">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" aria-selected={!stats && kind === t.id} className={!stats && kind === t.id ? "on" : ""} onClick={() => switchTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-        <button type="button" role="tab" aria-selected={stats} className={stats ? "on" : ""} onClick={openStats}>
-          방문
-        </button>
-      </div>
 
       {stats ? (
         <StatsPanel />
@@ -495,7 +495,20 @@ export default function AdminClient() {
             save();
           }}
         >
-          <h2>{editing.index === null ? tab.add : "고치기"}</h2>
+          <div className="admin-edit-head">
+            <button type="button" className="admin-back" onClick={close} disabled={busy}>
+              ← {kind === "works" ? "작업" : "글"} 목록
+            </button>
+            <h2>
+              {editing.index === null || !items?.[editing.index] ? (
+                tab.add
+              ) : (
+                <>
+                  <span className="admin-muted">고치기</span> {name(kind, items[editing.index], meta?.value)}
+                </>
+              )}
+            </h2>
+          </div>
           {kind === "poems" &&
             (meta ? (
               <WritingEditor
@@ -551,21 +564,41 @@ export default function AdminClient() {
         </form>
       ) : (
         <>
-          <div className="admin-actions">
-            <button type="button" className="admin-primary" onClick={() => open(null)} disabled={!items || (kind === "poems" && !meta)}>
-              + {kind === "poems" && filter && meta ? `새 ${meta.value.categories.find((c) => c.id === filter)?.ko ?? "글"} 쓰기` : tab.add}
-            </button>
-            {saved && (
-              <button type="button" onClick={resume}>
-                쓰다 만 글 이어 쓰기
-              </button>
+          {/* 목록 위 한 줄: 왼쪽은 거르기(글) 또는 개수(작업), 오른쪽은 할 일 */}
+          <div className="admin-toolbar">
+            {kind === "poems" && meta && items ? (
+              <div className="admin-filter" role="tablist" aria-label="분류">
+                {[{ id: "", ko: "전체" }, ...meta.value.categories].map((c) => {
+                  const n = c.id ? (items as Poem[]).filter((p) => categoryOf(p) === c.id).length : items.length;
+                  return (
+                    <button key={c.id} type="button" role="tab" aria-selected={filter === c.id} className={filter === c.id ? "on" : ""} onClick={() => setFilter(c.id)}>
+                      {c.ko || "(이름 없음)"} <span className="admin-muted">{n}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="admin-count">{items ? `작업 ${items.length}개` : ""}</p>
             )}
-            {kind === "poems" && meta && (
-              <button type="button" className={managing ? "on" : ""} onClick={() => setManaging((v) => !v)}>
-                분류·연작 관리
+            <div className="admin-actions">
+              {kind === "poems" && meta && (
+                <button type="button" className={managing ? "on" : ""} aria-pressed={managing} onClick={() => setManaging((v) => !v)}>
+                  분류·연작 관리
+                </button>
+              )}
+              <button type="button" className="admin-primary" onClick={() => open(null)} disabled={!items || (kind === "poems" && !meta)}>
+                + {kind === "poems" && filter && meta ? `새 ${meta.value.categories.find((c) => c.id === filter)?.ko ?? "글"} 쓰기` : tab.add}
               </button>
-            )}
+            </div>
           </div>
+          {saved && (
+            <p className="admin-resume">
+              쓰다 만 {kind === "works" ? "작업" : "글"}이 이 기기에 남아 있어요.{" "}
+              <button type="button" className="admin-link" onClick={resume}>
+                이어 쓰기
+              </button>
+            </p>
+          )}
           {kind === "poems" && meta && managing && (
             <CategoryManager
               meta={meta.value}
@@ -580,21 +613,9 @@ export default function AdminClient() {
               }}
             />
           )}
-          {kind === "poems" && meta && items && (
-            <div className="admin-filter" role="tablist" aria-label="분류">
-              {[{ id: "", ko: "전체" }, ...meta.value.categories].map((c) => {
-                const n = c.id ? (items as Poem[]).filter((p) => categoryOf(p) === c.id).length : items.length;
-                return (
-                  <button key={c.id} type="button" role="tab" aria-selected={filter === c.id} className={filter === c.id ? "on" : ""} onClick={() => setFilter(c.id)}>
-                    {c.ko || "(이름 없음)"} <span className="admin-muted">{n}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
           {!items && !loadError && <p className="admin-muted">불러오는 중…</p>}
           {items && (
-            <ol className="admin-list">
+            <ol className={`admin-list ${kind === "works" ? "is-works" : ""}`}>
               {items.map((it, i) =>
                 kind === "poems" && filter && categoryOf(it as Poem) !== filter ? null : (
                   <li key={i}>
@@ -621,14 +642,15 @@ function ListRow({ kind, it, meta }: { kind: Kind; it: Item; meta?: WritingMeta 
     const series = p.series ? meta?.series.find((s) => s.id === p.series) : undefined;
     return (
       <>
+        <span className="al-main">
+          <span className="al-title">
+            <span className="al-cat">{cat?.ko ?? "시"}</span>
+            {series && <span className="al-series">{series.title} · {p.part}화 </span>}
+            {!series || partLabel(p) ? p.title : ""}
+          </span>
+          <span className="al-sub">{pieceFirstLine(p.body).replace(/⟦\d+⟧/g, "▇▇▇")}</span>
+        </span>
         <span className="al-date">{p.date}</span>
-        <span className="al-title">
-          {series && <span className="al-series">{series.title} · {p.part}화 </span>}
-          {!series || partLabel(p) ? p.title : ""}
-        </span>
-        <span className="al-sub">
-          <span className="al-cat">{cat?.ko ?? "시"}</span> {pieceFirstLine(p.body).replace(/⟦\d+⟧/g, "▇▇▇")}
-        </span>
       </>
     );
   }
@@ -641,11 +663,13 @@ function ListRow({ kind, it, meta }: { kind: Kind; it: Item; meta?: WritingMeta 
       ) : (
         <span className="al-thumb al-nothumb">↗</span>
       )}
-      <span className="al-date">{w.date}</span>
-      <span className="al-title">{w.title.ko}</span>
-      <span className="al-sub">
-        {w.image ? (w.category === "sculpture" ? "조각" : "그림") : "인터랙티브"} · {w.medium.ko}
+      <span className="al-main">
+        <span className="al-title">{w.title.ko}</span>
+        <span className="al-sub">
+          {w.image ? (w.category === "sculpture" ? "조각" : "그림") : "인터랙티브"} · {w.medium.ko}
+        </span>
       </span>
+      <span className="al-date">{w.date.replace(/\.$/, "")}</span>
     </>
   );
 }
@@ -679,12 +703,16 @@ function WorkFields({ d, set }: { d: WorkDraft; set: SetFn }) {
     setReading(false);
   };
   const preview = d.upload?.preview ?? (d.image && d.image !== "pending" ? d.image : "");
+  // 넓은 화면: 왼쪽에 사진, 오른쪽에 글 칸. 좁은 화면에서는 위아래로
   return (
-    <>
+    <div className="wf">
+      <div className="wf-media">
       <Field label="사진" hint="고르면 이 기기에서 줄여서 올리고, 사이트에는 긴 변 1400px WebP로 들어가요. 링크만 있는 작업(인터랙티브)은 비워 둬요.">
-        {preview && (
+        {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img className="af-preview" src={preview} alt="" />
+        ) : (
+          <span className="af-preview af-nopreview">사진 없음</span>
         )}
         <input type="file" accept="image/*" onChange={(e) => pick(e.target.files?.[0])} disabled={reading} />
         {reading && <span className="admin-muted">사진을 준비하는 중…</span>}
@@ -700,6 +728,8 @@ function WorkFields({ d, set }: { d: WorkDraft; set: SetFn }) {
           ))}
         </fieldset>
       )}
+      </div>
+      <div className="wf-fields">
       <div className="admin-row">
         <Field label="제목(한국어)">
           <input value={d.titleKo} onChange={(e) => set({ titleKo: e.target.value })} required />
@@ -778,6 +808,7 @@ function WorkFields({ d, set }: { d: WorkDraft; set: SetFn }) {
           <input value={d.creditEn} onChange={(e) => set({ creditEn: e.target.value })} />
         </Field>
       </div>
-    </>
+      </div>
+    </div>
   );
 }
