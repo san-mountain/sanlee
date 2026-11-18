@@ -3,6 +3,7 @@ import { sans, serif } from "./fonts";
 import "./globals.css";
 import { LangProvider } from "@/components/LangProvider";
 import RestoreCrossing from "@/components/RestoreCrossing";
+import VisitBeacon from "@/components/VisitBeacon";
 
 const DESCRIPTION = "이산(San Lee)의 그림, 조각, 시. Paintings, sculpture and poems by San Lee.";
 export const metadata: Metadata = {
@@ -33,6 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <LangProvider>
           {children}
           <RestoreCrossing />
+          <VisitBeacon />
         </LangProvider>
       </body>
     </html>
