@@ -17,22 +17,65 @@ export const input = {
   sens: 1,
   bob: true,
   // 화면 효과 줄이기: 흔들림·번쩍임·글리치를 약하게 (빛에 민감한 사람, 멀미)
+  // 노트북처럼 느린 기기에서는 무거운 화면 효과(빛 번짐 등)도 끄고 해상도를 낮춰 가볍게 그린다
   calm: false,
+  // 방문자가 설정창에서 직접 고른 적이 있는가. 없을 때만 기기 성능을 보고 자동으로 켠다
+  calmSet: false,
+  // 자동으로 켜졌는가 (설정창에 그 사실을 알린다)
+  calmAuto: false,
 };
 
+// 화면 효과 줄이기가 바뀌면 화면(후처리·해상도·비)이 바로 따라오게 알린다
+const calmSubs = new Set<() => void>();
+export function onCalm(f: () => void) {
+  calmSubs.add(f);
+  return () => {
+    calmSubs.delete(f);
+  };
+}
+// by: user = 설정창에서 직접, auto = 느린 기기라 자동으로
+export function setCalm(v: boolean, by: "user" | "auto") {
+  if (by === "auto" && input.calmSet) return;
+  const changed = input.calm !== v;
+  input.calm = v;
+  if (by === "user") {
+    input.calmSet = true;
+    input.calmAuto = false;
+  } else input.calmAuto = v;
+  saveSettings();
+  if (changed) calmSubs.forEach((f) => f());
+}
+
 // 설정은 브라우저에 저장해 둔다
-export function loadSettings() {
+// weak: 이 기기가 힘든 기기인지 (device.ts의 weakDevice). 처음 와서 아직 고른 적이 없을 때 쓴다
+export function loadSettings(weak: () => boolean = () => false) {
   try {
     const v = JSON.parse(localStorage.getItem("neo-settings") || "{}");
     if (typeof v.sens === "number") input.sens = Math.max(0.3, Math.min(2.5, v.sens));
     if (typeof v.bob === "boolean") input.bob = v.bob;
-    if (typeof v.calm === "boolean") input.calm = v.calm;
+    const was = input.calm;
+    input.calmSet = false;
+    input.calmAuto = false;
+    // 예전 저장값의 calm: false는 다른 설정을 바꿀 때 함께 저장된 기본값일 수 있어 고른 것으로 보지 않는다
+    if (v.calmSet === true && typeof v.calm === "boolean") {
+      input.calm = v.calm;
+      input.calmSet = true;
+    } else if (v.calm === true) input.calm = true;
     else if (typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches) input.calm = true;
+    // 이 기기에서 전에 끊겨서 자동으로 켰거나, 처음부터 힘든 기기(내장 그래픽 노트북 등)로 보이면 켠다
+    else if (v.calmAuto === true || weak()) {
+      input.calm = true;
+      input.calmAuto = true;
+    } else input.calm = false;
+    if (was !== input.calm) calmSubs.forEach((f) => f());
   } catch {}
 }
 export function saveSettings() {
   try {
-    localStorage.setItem("neo-settings", JSON.stringify({ sens: input.sens, bob: input.bob, calm: input.calm }));
+    localStorage.setItem(
+      "neo-settings",
+      JSON.stringify({ sens: input.sens, bob: input.bob, calm: input.calm, calmSet: input.calmSet, calmAuto: input.calmAuto })
+    );
   } catch {}
 }
 

@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { input, onCalm } from "./input";
 
 // 화면 효과 단계. 프레임이 떨어지면 Effects의 Governor가 해상도와 함께 단계적으로 낮춘다.
 // mid: 빛 번짐 / low: 효과 없음. 고화질(젖은 도로 반사·4배 안티에일리어싱) 단계는 없앴다: 노트북에서 끊겼다
@@ -58,4 +59,9 @@ export function useRenderScale() {
     () => scale,
     () => 1
   );
+}
+
+// 화면 효과 줄이기(설정창, 또는 느린 기기라 자동으로)가 켜져 있는가. 바뀌면 다시 그린다
+export function useCalm() {
+  return useSyncExternalStore(onCalm, () => input.calm, () => false);
 }

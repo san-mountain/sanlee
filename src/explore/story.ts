@@ -139,7 +139,11 @@ export const pause = {
   sfx: { ko: "효과음", en: "Sound effects" },
   amb: { ko: "주변 소리", en: "Ambience" },
   calm: { ko: "화면 효과 줄이기", en: "Reduce screen effects" },
-  calmNote: { ko: "흔들림, 번쩍임, 화면 찢김을 약하게 합니다.", en: "Softens shaking, flashes and screen tearing." },
+  calmNote: {
+    ko: "흔들림, 번쩍임, 화면 찢김을 약하게 하고, 빛 번짐 같은 무거운 효과를 꺼서 화면을 가볍게 그립니다.",
+    en: "Softens shaking, flashes and screen tearing, and turns off heavy effects like glow so the city runs lighter.",
+  },
+  calmAuto: { ko: "이 기기 성능에 맞춰 자동으로 켰습니다.", en: "Turned on automatically to suit this device." },
   lang: { ko: "언어", en: "Language" },
   humanity: { ko: "인간성", en: "Humanity" },
   humanityNote: { ko: "변경할 수 없습니다.", en: "Cannot be changed." },

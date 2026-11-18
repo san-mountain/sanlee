@@ -11,6 +11,7 @@ import City from "./City";
 import SanNPC, { type SanPath } from "./SanNPC";
 import Labels, { type LabelEls } from "./Labels";
 import Effects from "./Effects";
+import Culler from "./Culler";
 import { useRenderScale } from "./quality";
 import { warm } from "./runtime";
 import { CITY, FROZEN_SAN, ZONES, type Interactable, type Zone } from "./zones";
@@ -103,6 +104,7 @@ export default function World({ zone, lang, visited, onTap, onNear, onTracked, l
   return (
     <Canvas dpr={scale} gl={{ antialias: false, powerPreference: "high-performance" }} camera={{ fov: 66, near: 0.1, far: 600 }}>
       <Player zone={ZONES[zone]} zoneKey={zone} onNear={onNear} arrived={arrived} />
+      <Culler />
       <Suspense fallback={null}>
         {zone === "bunker" ? (
           <Bunker lang={lang} visited={visited} onTap={onTap} secondStatue={secondStatue} awake={awake} face={face} notesRead={notesRead} />

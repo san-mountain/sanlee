@@ -15,7 +15,7 @@ import { towerMaterial } from "./towerMaterial";
 import { useNeoPost } from "./neoPost";
 import { NeonEnvironment, useBeam, useLightPool } from "./atmosphere";
 import { addRim } from "./rim";
-import { lite, useQuality } from "./quality";
+import { lite, useCalm, useQuality } from "./quality";
 import { concreteTexture, glowTexture, signTexture } from "./textures";
 import { Human, Tap, useSign, type TapFn } from "./parts";
 import { player } from "./Player";
@@ -1177,7 +1177,10 @@ function Whisper({ onTap }: { onTap: TapFn }) {
 }
 
 /* ---------- 비 ---------- */
+// 화면 효과 줄이기가 켜져 있으면 빗줄기를 절반으로
 function Rain({ count = lite ? 500 : 1400 }) {
+  const calm = useCalm();
+  if (calm) count = Math.round(count / 2);
   const ref = useRef<THREE.LineSegments>(null);
   const { geo, drops } = useMemo(() => {
     const r = rng(5);
@@ -1242,6 +1245,7 @@ function CookieHolo() {
 // 화면 글자(안내·대사)가 바뀔 때마다 도시 전체(물체 약 2천 개)를 다시 계산하지 않도록 memo로 감싼다
 function City({ lang, onTap, onTracked }: { lang: Lang; onTap: TapFn; onTracked: (v: boolean) => void }) {
   const q = useQuality();
+  const calm = useCalm();
   return (
     <group>
       <fogExp2 attach="fog" args={["#1a0e18", 0.0062]} />
@@ -1294,8 +1298,12 @@ function City({ lang, onTap, onTracked }: { lang: Lang; onTap: TapFn; onTracked:
       <Scopes onTap={onTap} lang={lang} />
       <CookieHolo />
       <Rain />
-      <Sparkles count={40} scale={[4, 3, 4]} position={[-5, 1.2, -20]} size={8} speed={0.4} color="#888" opacity={0.25} />
-      <Sparkles count={40} scale={[4, 3, 4]} position={[5, 1.2, -20]} size={8} speed={0.4} color="#888" opacity={0.25} />
+      {!calm && (
+        <>
+          <Sparkles count={40} scale={[4, 3, 4]} position={[-5, 1.2, -20]} size={8} speed={0.4} color="#888" opacity={0.25} />
+          <Sparkles count={40} scale={[4, 3, 4]} position={[5, 1.2, -20]} size={8} speed={0.4} color="#888" opacity={0.25} />
+        </>
+      )}
     </group>
   );
 }

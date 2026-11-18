@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LangToggle, useLang } from "@/components/LangProvider";
 import { MUSIC_URL, credits, fourthWall, galleryUi, pause } from "./story";
-import { input, saveSettings } from "./input";
+import { input, saveSettings, setCalm as storeCalm } from "./input";
 import { getBackup } from "./backup";
 
 // Esc 설정창. 실제로 쓸 수 있는 설정 몇 개와, 시스템이 방문자에게 직접 말을 거는 문장들.
@@ -128,15 +128,17 @@ export default function PauseMenu({
                   type="button"
                   className={`switch ${calm ? "on" : ""}`}
                   onClick={() => {
-                    input.calm = !calm;
+                    storeCalm(!calm, "user");
                     setCalm(!calm);
-                    saveSettings();
                   }}
                 >
                   {t(calm ? pause.on : pause.off)}
                 </button>
               </div>
-              <p className="pause-note">{t(pause.calmNote)}</p>
+              <p className="pause-note">
+                {t(pause.calmNote)}
+                {calm && input.calmAuto ? <> {t(pause.calmAuto)}</> : null}
+              </p>
 
               <div className="pause-row">
                 <span>{t(pause.lang)}</span>

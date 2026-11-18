@@ -17,6 +17,8 @@ import { sanHold, sanRise, sanWalk, type SanPath } from "./SanNPC";
 import { player, teleport } from "./Player";
 import { JumpButton, Joystick, requestLock, useLookAndKeys } from "./TouchControls";
 import { input, loadSettings, resetInput } from "./input";
+import { useCalm } from "./quality";
+import { weakDevice } from "./device";
 import PauseMenu from "./PauseMenu";
 import Minimap from "./Minimap";
 import QuestArrow, { type QuestTarget } from "./QuestArrow";
@@ -262,6 +264,7 @@ export default function ExploreClient() {
   const [paused, setPaused] = useState(false);
   const [recordsChanged, setRecordsChanged] = useState(false);
   const { setTimeout, clearTimeout, setInterval, clearInterval } = useGameTimers();
+  const calm = useCalm();
   useEffect(() => { runtime.setPaused(paused || recordsChanged); }, [paused, recordsChanged]);
   useEffect(() => {
     runtime.reset();
@@ -487,7 +490,7 @@ export default function ExploreClient() {
   useEffect(() => {
     setWebgl(hasWebGL());
     setTouch(window.matchMedia("(pointer: coarse)").matches);
-    loadSettings();
+    loadSettings(weakDevice);
     try {
       setMet(localStorage.getItem(MET_KEY) === "1");
       setTalked(localStorage.getItem(TALK_KEY) === "1");
@@ -2485,7 +2488,7 @@ export default function ExploreClient() {
     tracked && !ending && !ghost ? "is-tracked" : "",
     leaving ? "logging-out" : "",
     beat === "sit" ? "reunion-sit" : "",
-    input.calm ? "calm-fx" : "",
+    calm ? "calm-fx" : "",
     touch ? "is-touch" : "",
   ].join(" ");
 
