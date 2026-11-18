@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 import { thumbOf, type Work } from "@/data/site";
 import { isOwner, sameOrigin } from "@/lib/admin/auth";
 import { blobSha, checkUse, clean, cleanMeta, cleanPoems, cleanUpload, droppedImages, FILES, Invalid, KINDS, serialize, type Kind, type Meta } from "@/lib/admin/content";
@@ -71,12 +70,14 @@ export async function PUT(req: Request) {
       const works = items as Work[];
       const before: Work[] = JSON.parse((await readFile(path)).text);
       const known = new Set(before.map((w) => w.image));
+      // sharp(사진 처리)는 무거워서 사진을 올릴 때만 불러온다. 맨 위에서 불러오면 목록을 읽을 때도 서버가 매번 이걸 싣느라 느려진다
+      const sharp = uploads.length ? (await import("sharp")).default : null;
       for (const u of uploads) {
         const w = works.find((x) => x.image === u.path);
         if (!w) throw new Invalid("올린 사진이 작업 목록에 없어요");
         if (known.has(u.path)) throw new Invalid("이미 있는 사진 이름이에요");
         // 사진 방향을 바로잡고 긴 변 1400px WebP로 맞춘다(기존 작업 사진과 같은 기준)
-        const out = await sharp(u.bytes)
+        const out = await sharp!(u.bytes)
           .rotate()
           .resize(1400, 1400, { fit: "inside", withoutEnlargement: true })
           .webp({ quality: 86 })
@@ -85,9 +86,9 @@ export async function PUT(req: Request) {
         w.height = out.info.height;
         extra.push({ path: `public${u.path}`, base64: out.data.toString("base64") });
         // 그리드용 작은 사진(폭 600px)과, 사진이 뜨기 전에 깔아 둘 평균색도 같이 만든다
-        const thumb = await sharp(out.data).resize({ width: 600, withoutEnlargement: true }).webp({ quality: 72, effort: 6 }).toBuffer();
+        const thumb = await sharp!(out.data).resize({ width: 600, withoutEnlargement: true }).webp({ quality: 72, effort: 6 }).toBuffer();
         extra.push({ path: `public${thumbOf(u.path)}`, base64: thumb.toString("base64") });
-        const px = await sharp(out.data).resize(1, 1, { fit: "fill" }).removeAlpha().raw().toBuffer();
+        const px = await sharp!(out.data).resize(1, 1, { fit: "fill" }).removeAlpha().raw().toBuffer();
         w.color = "#" + [...px.subarray(0, 3)].map((v) => v.toString(16).padStart(2, "0")).join("");
         known.add(u.path);
       }

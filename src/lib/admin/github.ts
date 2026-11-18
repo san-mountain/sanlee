@@ -35,6 +35,11 @@ export async function readFile(path: string) {
   const head = await gh<Ref>(`/git/ref/heads/${branch()}`);
   return readAt(head.object.sha, path);
 }
+// 여러 파일을 같은 시점(main의 한 커밋)에서 한꺼번에 읽는다: main 위치는 한 번만 묻고 파일들은 동시에 받는다
+export async function readFiles(paths: string[]) {
+  const head = await gh<Ref>(`/git/ref/heads/${branch()}`);
+  return Promise.all(paths.map((p) => readAt(head.object.sha, p)));
+}
 async function readAt(commitSha: string, path: string) {
   const f = await gh<{ sha: string; content: string; encoding: string }>(
     `/contents/${path.split("/").map(encodeURIComponent).join("/")}?ref=${commitSha}`
