@@ -202,3 +202,16 @@ fieldset.admin-row legend { float: left; margin-right: var(--s1); }
 .vl-who { color: var(--ink); overflow-wrap: anywhere; }
 .vl-path { color: var(--muted); overflow-wrap: anywhere; }
 .vl-src { color: var(--ink); }
+
+/* 휴대폰: 도구 막대(가로로 밀어 보는 한 줄)가 칸 전체 폭을 늘리지 않도록 그리드 칸이 줄어들 수 있게 */
+.admin-form > *, .ed, .ed > *, .ed-split > *, .ed-bar > * { min-width: 0; }
+.ed-tools { min-width: 0; }
+@media (max-width: 719px) {
+  .ed-back { min-height: 45vh; }
+  .ed-status { gap: 2px 10px; }
+  .ed-saved { margin-left: 0; flex-basis: 100%; }
+  .ed-help { display: none; }
+  .ed.focus { padding: 0 var(--s2) var(--s4); }
+  .admin-head { margin-bottom: var(--s2); }
+}
+@media (max-width: 719px) { .admin .ed-find input { flex-basis: 100%; } .ed-count { order: 3; } }
