@@ -61,7 +61,7 @@ export function lastDays(n: number, now = Date.now()) {
 }
 
 // 하루치 기록(한 해시)에 들어가는 칸 이름: 종류 한 글자 + ":" + 값
-export const FIELD = { page: "p", source: "r", country: "c", device: "d", lang: "l" } as const;
+export const FIELD = { page: "p", source: "r", country: "c", device: "d", lang: "l", hour: "h" } as const;
 
 export type DayRow = { day: string; visitors: number; views: number };
 export type Stats = {
@@ -75,6 +75,7 @@ export type Stats = {
   countries: [string, number][];
   devices: [string, number][];
   langs: [string, number][];
+  hours: number[];
 };
 
 // 날마다 읽어 온 해시와 방문자 수를 화면에 쓸 모양으로 모은다
@@ -100,5 +101,83 @@ export function summarize(days: string[], hashes: Record<string, number>[], visi
     countries: sum(FIELD.country),
     devices: sum(FIELD.device),
     langs: sum(FIELD.lang),
+    hours: Array.from({ length: 24 }, (_, i) => hashes.reduce((s, h) => s + (h[`${FIELD.hour}:${i}`] ?? 0), 0)),
   };
+}
+
+// ---------- 방문 하나하나의 기록(최근 방문 목록) ----------
+// IP는 남기지 않는다. 도시·기기·브라우저·들어온 곳·본 페이지 순서와 시간만, 90일 동안
+export const LOG_DAYS = 90;
+export const VISIT_ID = /^[A-Za-z0-9_-]{16,32}$/;
+
+export function osOf(ua: string, touch = false) {
+  if (/iPhone|iPod/.test(ua)) return "iOS";
+  if (/iPad/.test(ua) || (touch && /Macintosh/.test(ua))) return "iPadOS";
+  if (/Android/.test(ua)) return "Android";
+  if (/Windows/.test(ua)) return "Windows";
+  if (/CrOS/.test(ua)) return "ChromeOS";
+  if (/Macintosh|Mac OS X/.test(ua)) return "macOS";
+  if (/Linux/.test(ua)) return "Linux";
+  return "";
+}
+
+// 앱 안의 브라우저(인스타그램, 카카오톡, 네이버 등)를 먼저 가린다
+export function browserOf(ua: string) {
+  const rules: [RegExp, string][] = [
+    [/Instagram/, "인스타그램 앱"],
+    [/KAKAOTALK/i, "카카오톡 앱"],
+    [/NAVER\(inapp|NAVER/, "네이버 앱"],
+    [/FBAN|FBAV/, "페이스북 앱"],
+    [/Line\//, "라인 앱"],
+    [/DaumApps/, "다음 앱"],
+    [/SamsungBrowser/, "삼성 인터넷"],
+    [/Whale/, "웨일"],
+    [/Edg\//, "Edge"],
+    [/OPR\/|Opera/, "Opera"],
+    [/Firefox|FxiOS/, "Firefox"],
+    [/CriOS|Chrome/, "Chrome"],
+    [/Safari/, "Safari"],
+  ];
+  return rules.find(([r]) => r.test(ua))?.[1] ?? "";
+}
+
+// 한국 시간으로 몇 시(0~23)
+export const hourOf = (ms: number) => new Date(ms + 9 * 3600e3).getUTCHours();
+
+// Vercel이 주는 도시 이름은 주소 인코딩되어 온다
+export function cityOf(raw: string | null) {
+  if (!raw) return "";
+  try {
+    return decodeURIComponent(raw).slice(0, 60);
+  } catch {
+    return "";
+  }
+}
+
+export type VisitLog = {
+  id: string;
+  start: number;
+  end: number;
+  city: string;
+  country: string;
+  device: string;
+  os: string;
+  browser: string;
+  source: string;
+  lang: string;
+  pages: { path: string; at: number }[];
+};
+
+// HGETALL(visit:id)과 LRANGE(visit:id:p) 결과를 화면용 한 줄로
+export function visitOf(id: string, h: Record<string, string>, pages: string[]): VisitLog | null {
+  const start = Number(h.t);
+  if (!start) return null;
+  const list = pages
+    .map((s) => {
+      const i = s.lastIndexOf("|");
+      return { path: s.slice(0, i), at: Number(s.slice(i + 1)) };
+    })
+    .filter((p) => p.path && p.at);
+  const end = Math.max(start, Number(h.e) || 0, ...list.map((p) => p.at));
+  return { id, start, end, city: h.city ?? "", country: h.c ?? "", device: h.d ?? "", os: h.os ?? "", browser: h.b ?? "", source: h.r ?? "", lang: h.l ?? "", pages: list };
 }

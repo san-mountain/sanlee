@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Stats } from "@/lib/analytics/visit";
+import type { Stats, VisitLog } from "@/lib/analytics/visit";
 
 // 관리 화면의 "방문" 탭: 최근 며칠 동안 누가 얼마나 들어와서 무엇을 봤는지
 type Res = ({ ready: true } & Stats) | { ready: false };
@@ -70,6 +70,7 @@ export default function StatsPanel() {
       {!s && !error && <p className="admin-muted">불러오는 중…</p>}
       {s && !s.ready && <Setup />}
       {s?.ready && <Report s={s} />}
+      {s?.ready && <Recent tick={tick} />}
     </section>
   );
 }
@@ -108,6 +109,7 @@ function Report({ s }: { s: Stats }) {
     <>
       <Tiles s={s} n={n} />
       <Daily rows={s.days} />
+      <Hours hours={s.hours} />
       <div className="stats-grid">
         <Ranked title="많이 본 페이지" unit="번 봄" rows={s.pages} name={(k) => PAGE_NAMES[k] ?? k} />
         <Ranked
@@ -269,4 +271,135 @@ function niceMax(v: number) {
 function labelIdx(n: number) {
   const k = Math.min(n, n <= 7 ? 7 : 5);
   return Array.from(new Set(Array.from({ length: k }, (_, i) => Math.round((i * (n - 1)) / Math.max(1, k - 1)))));
+}
+
+// 몇 시에 많이 오나(한국 시간, 방문을 시작한 시각)
+function Hours({ hours }: { hours: number[] }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const max = Math.max(1, ...hours);
+  const top = niceMax(max);
+  const total = hours.reduce((a, b) => a + b, 0);
+  if (!total) return null;
+  const W = 100 / 24;
+  return (
+    <figure className="stats-daily">
+      <figcaption>
+        <span>시간대별 방문</span>
+        <span className="st-hover" aria-live="polite">
+          {hover !== null ? (
+            <>
+              {hover}시~{hover + 1}시 · <b>{num(hours[hover])}</b>번 방문 ({Math.round((hours[hover] / total) * 100)}%)
+            </>
+          ) : (
+            "한국 시간"
+          )}
+        </span>
+      </figcaption>
+      <div className="sd-plot sd-short" onMouseLeave={() => setHover(null)}>
+        <div className="sd-axis" aria-hidden>
+          <span>{num(top)}</span>
+          <span>{num(top / 2)}</span>
+          <span>0</span>
+        </div>
+        <div className="sd-bars" role="img" aria-label={`시간대별 방문, 가장 많은 때 ${hours.indexOf(Math.max(...hours))}시`}>
+          <span className="sd-grid" style={{ bottom: "50%" }} />
+          <span className="sd-grid" style={{ bottom: "100%" }} />
+          {hours.map((n, i) => (
+            <button
+              key={i}
+              type="button"
+              className={`sd-col${hover === i ? " on" : ""}`}
+              style={{ width: `${W}%` }}
+              onMouseEnter={() => setHover(i)}
+              onFocus={() => setHover(i)}
+              onClick={() => setHover(i)}
+              aria-label={`${i}시 ${n}번`}
+            >
+              <span className="sd-bar" style={{ height: `${(n / top) * 100}%` }} />
+            </button>
+          ))}
+        </div>
+        <div className="sd-x" aria-hidden>
+          {[0, 6, 12, 18, 23].map((i) => (
+            <span key={i} style={{ left: `${(i + 0.5) * W}%` }}>
+              {i}시
+            </span>
+          ))}
+        </div>
+      </div>
+    </figure>
+  );
+}
+
+// 최근 방문: 방문 하나하나를 최근 것부터(90일 동안 남아 있다)
+const timeOf = (ms: number) => {
+  const d = new Date(ms + 9 * 3600e3);
+  const h = d.getUTCHours();
+  const day = d.toISOString().slice(0, 10);
+  return `${md(day)} (${weekday(day)}) ${h < 12 ? "오전" : "오후"} ${h % 12 || 12}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+};
+const stay = (ms: number) => (ms < 10e3 ? "잠깐" : ms < 60e3 ? `${Math.round(ms / 1e3)}초` : ms < 3600e3 ? `${Math.round(ms / 60e3)}분` : `${Math.floor(ms / 3600e3)}시간 ${Math.round((ms % 3600e3) / 60e3)}분`);
+
+function Recent({ tick }: { tick: number }) {
+  const [list, setList] = useState<VisitLog[] | null>(null);
+  const [more, setMore] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const load = async (before?: number) => {
+    setBusy(true);
+    setError("");
+    const r = await fetch(`/api/admin/visits${before ? `?before=${before}` : ""}`, { cache: "no-store" }).catch(() => null);
+    const j = await r?.json().catch(() => null);
+    setBusy(false);
+    if (!r?.ok || !j) return setError(j?.error ?? "최근 방문을 불러오지 못했어요");
+    setList((l) => (before ? [...(l ?? []), ...j.visits] : j.visits));
+    setMore(j.more);
+  };
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tick]);
+  return (
+    <section className="stats-recent">
+      <h2>최근 방문</h2>
+      {error && <p className="admin-error">{error}</p>}
+      {!list && !error && <p className="admin-muted">불러오는 중…</p>}
+      {list && !list.length && <p className="admin-muted">아직 없어요</p>}
+      {list && list.length > 0 && (
+        <ol className="visit-list">
+          {list.map((v) => {
+            const where = [v.city, v.country ? countryName(v.country) : ""].filter(Boolean).join(", ") || "알 수 없는 곳";
+            const what = [DEVICE_NAMES[v.device] ?? v.device, v.os, v.browser].filter(Boolean).join(" · ");
+            return (
+              <li key={v.id}>
+                <div className="vl-head">
+                  <span className="vl-time">{timeOf(v.start)}</span>
+                  <span className="vl-stay">{stay(v.end - v.start)}</span>
+                </div>
+                <div className="vl-who">
+                  {where} · {what}
+                </div>
+                <div className="vl-path">
+                  <span className="vl-src">{v.source ? `${SOURCE_NAMES[v.source] ?? v.source}에서` : "직접"}</span>
+                  {v.pages.filter((p, i) => i === 0 || p.path !== v.pages[i - 1].path).map((p, i) => (
+                    <span key={i}>
+                      {" → "}
+                      {PAGE_NAMES[p.path] ?? p.path}
+                    </span>
+                  ))}
+                  {v.lang && <span className="vl-lang"> · {LANG_NAMES[v.lang] ?? v.lang}</span>}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {more && list && (
+        <button type="button" onClick={() => load(list[list.length - 1].start)} disabled={busy}>
+          {busy ? "불러오는 중…" : "더 보기"}
+        </button>
+      )}
+      <p className="af-hint">방문 하나하나의 기록은 90일 동안 남아요. IP는 저장하지 않고, 도시는 인터넷 회선 위치로 짐작한 거라 실제와 다를 수 있어요.</p>
+    </section>
+  );
 }
