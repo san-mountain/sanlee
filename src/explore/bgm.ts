@@ -78,12 +78,33 @@ function chan(t: Track) {
         if (sfxOn() && t === want) el.play().catch(() => {});
       });
     } else el.loop = true;
+    // 데이터 통신처럼 느리거나 끊기는 연결에서는 곡 파일 받기가 실패하거나 재생 시도가 먼저 끝나 버린다.
+    // 받기에 실패하면 잠시 뒤 다시 받고, 받아지면 지금 장면의 곡일 때 다시 튼다
+    let retry = 0;
+    el.addEventListener("error", () => {
+      if (retry >= 4) return;
+      retry++;
+      setTimeout(() => {
+        if (!chans[t]) return;
+        el.load();
+        if (playing(t)) el.play().catch(() => {});
+      }, 1500 * retry);
+    });
+    el.addEventListener("canplay", () => {
+      retry = 0;
+      if (playing(t) && el.paused) el.play().catch(() => {});
+    });
     const gain = c.createGain();
     gain.gain.value = 0;
     c.createMediaElementSource(el).connect(gain).connect(c.destination);
     ch = chans[t] = { el, gain };
   }
   return ch;
+}
+
+// 지금 소리가 나야 하는 곡인지 (음악 크기가 0이거나 설정창에서 끝까지 낮춘 때는 아니다)
+function playing(t: Track) {
+  return sfxOn() && t === want && duck > 0 && vol.music > 0;
 }
 
 let outFade = FADE;
@@ -155,9 +176,17 @@ export function syncBgm() {
   apply();
 }
 
-// 첫 클릭 전에 만들어진 오디오는 잠겨 있으므로 사용자 입력 때 다시 깨운다
+// 브라우저는 사용자의 입력(누르기·키) 안에서만 소리를 열어 준다. 입력이 있을 때마다
+// 소리 장치를 깨우고, 지금 장면의 곡이 멈춰 있으면(재생 시도가 막혔거나 느린 연결에서 실패했으면) 다시 튼다.
+// 예전에는 소리 장치가 이미 깨어 있으면 곡이 멈춰 있어도 다시 틀지 않아, 한 번 막히면 장면이 바뀔 때까지 조용했다
 export function wakeBgm() {
-  if (!ctx || ctx.state !== "suspended") return;
-  ctx.resume().catch(() => {});
-  if (want && sfxOn()) chans[want]?.el.play().catch(() => {});
+  if (!sfxOn()) return;
+  const c = audio();
+  if (!c || !want) return;
+  if (!chans[want]) return syncBgm();
+  const el = chans[want]!.el;
+  if (!playing(want) || !el.paused) return;
+  // 받기에 실패해 멈춘 곡은 다시 받는다
+  if (el.error) el.load();
+  el.play().catch(() => {});
 }
