@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { categoryOf, firstLine as pieceFirstLine, partLabel, type Piece, type WritingMeta } from "@/lib/writing";
 import CategoryManager from "./CategoryManager";
+import StatsPanel from "./StatsPanel";
 import WritingEditor, { NEW_SERIES, type PieceDraft } from "./WritingEditor";
 
-// 사이트 주인용 관리 화면: 글(시·에세이·소설 …)을 쓰고 고치고, 작업 사진을 올린다.
+// 사이트 주인용 관리 화면: 글(시·에세이·소설 …)을 쓰고 고치고, 작업 사진을 올린다. "방문" 탭에서는 방문 기록을 본다.
 // 저장하면 서버가 GitHub 저장소에 커밋하고, Vercel이 사이트를 다시 만들어 1~2분 뒤 반영된다.
 
 type Kind = "poems" | "works";
@@ -256,6 +257,7 @@ export default function AdminClient() {
   const [filter, setFilter] = useState("");
   const [managing, setManaging] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [stats, setStats] = useState(false);
   const [data, setData] = useState<Partial<Record<Kind, Loaded>>>({});
   const [loadError, setLoadError] = useState("");
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -316,11 +318,20 @@ export default function AdminClient() {
 
   const leave = () => !editing?.dirty || confirm("저장하지 않은 내용이 있어요. 그래도 나갈까요?");
   const switchTab = (k: Kind) => {
+    if (stats && k === kind) return setStats(false);
     if (k === kind || !leave()) return;
     if (editing?.dirty) store.set(kind, null);
     setEditing(null);
     setError(null);
     setKind(k);
+    setStats(false);
+  };
+  const openStats = () => {
+    if (stats || !leave()) return;
+    if (editing?.dirty) store.set(kind, null);
+    setEditing(null);
+    setError(null);
+    setStats(true);
   };
   const open = (index: number | null) => {
     if (!leave()) return;
@@ -425,7 +436,7 @@ export default function AdminClient() {
       <header className="admin-head">
         <h1>관리</h1>
         <nav>
-          <a href={kind === "works" ? "/works" : "/writing"} target="_blank" rel="noreferrer">
+          <a href={stats ? "/" : kind === "works" ? "/works" : "/writing"} target="_blank" rel="noreferrer">
             사이트 보기 ↗
           </a>
           <button type="button" className="admin-link" onClick={logout}>
@@ -436,12 +447,19 @@ export default function AdminClient() {
 
       <div className="cat-tabs" role="tablist" aria-label="고칠 곳">
         {TABS.map((t) => (
-          <button key={t.id} type="button" role="tab" aria-selected={kind === t.id} className={kind === t.id ? "on" : ""} onClick={() => switchTab(t.id)}>
+          <button key={t.id} type="button" role="tab" aria-selected={!stats && kind === t.id} className={!stats && kind === t.id ? "on" : ""} onClick={() => switchTab(t.id)}>
             {t.label}
           </button>
         ))}
+        <button type="button" role="tab" aria-selected={stats} className={stats ? "on" : ""} onClick={openStats}>
+          방문
+        </button>
       </div>
 
+      {stats ? (
+        <StatsPanel />
+      ) : (
+        <>
       {notice && (
         <p className="admin-notice" role="status">
           {notice.text}{" "}
@@ -588,6 +606,8 @@ export default function AdminClient() {
               )}
             </ol>
           )}
+        </>
+      )}
         </>
       )}
     </div>
