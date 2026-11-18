@@ -36,7 +36,6 @@ Vercel 프로젝트 > Settings > Environment Variables 에 두 값을 넣고(Pro
 - 관리 화면에 로그인한 기기의 방문과 검색 로봇은 세지 않아요
 - 기록은 Upstash Redis에 하루 키 두 개로 쌓이고 400일 뒤 지워져요
 - **최근 방문** 목록: 방문 하나하나의 시간, 도시(인터넷 회선 위치로 짐작), 기기·OS·브라우저, 들어온 곳, 본 페이지 순서, 머문 시간. IP 없이 90일 동안만 남아요
-- 사이트 꼬리말에 "방문 통계를 쿠키 없이 모아요" 안내가 한 줄 있어요(`src/components/SiteFooter.tsx`)
 
 설정(한 번만): Vercel 프로젝트 > Storage(또는 Marketplace)에서 **Upstash for Redis** 무료 데이터베이스를 만들어 이 프로젝트에 연결하고 다시 배포합니다.
 `KV_REST_API_URL`, `KV_REST_API_TOKEN` 이 저절로 들어가요(`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` 이름도 받아요).
