@@ -3,16 +3,23 @@
 
 import { createHash } from "node:crypto";
 
-export type Kind = "poems" | "works";
-export const KINDS: Kind[] = ["poems", "works"];
+// poems: 시·에세이·소설 같은 글 전부(파일 이름은 예전 그대로). meta: 글의 분류와 연작(소설 등) 목록
+export type Kind = "poems" | "works" | "meta";
+export const KINDS: Kind[] = ["poems", "works", "meta"];
 
 export const FILES: Record<Kind, string> = {
   poems: "src/content/poems.json",
   works: "src/content/works.json",
+  meta: "src/content/writing-meta.json",
 };
 
 type L = { ko: string; en: string };
-type Poem = { title: string; date: string; body: string; prose?: boolean };
+// category가 없으면 시(poem). 연작의 회차는 series + part
+type Poem = { title: string; date: string; category?: string; series?: string; part?: number; prose?: boolean; body: string };
+export type Category = { id: string; ko: string; en: string; indent: boolean; serial: boolean };
+export type Series = { id: string; category: string; title: string; note?: string; done?: boolean };
+export type Meta = { categories: Category[]; series: Series[] };
+export const DEFAULT_CATEGORY = "poem";
 type Work = {
   title: L;
   date: string;
@@ -70,22 +77,105 @@ const day = (v: unknown, where: string) => {
 // 작업 날짜: "2026. 10." (달은 한 자리면 한 자리 그대로)
 const MONTH = /^(\d{4})\. (\d{1,2})\.$/;
 
-export function cleanPoems(v: unknown): Poem[] {
-  if (!Array.isArray(v)) return fail("시 목록 형식이 맞지 않아요");
-  const seen = new Set<string>();
-  return v.map((raw, i) => {
-    const where = `시 ${i + 1}번째`;
-    const o = obj(raw, where);
-    const p: Poem = {
-      title: line(o.title, `${where} 제목`),
-      date: day(o.date, `${where} 날짜`),
-      body: text(o.body, `${where} 본문`),
-    };
-    if (seen.has(p.title)) fail(`같은 제목의 시가 이미 있어요: ${p.title}`);
-    seen.add(p.title);
-    // 화면에 나오는 순서 그대로 키를 적는다(title, date, prose, body)
-    return o.prose === true ? { title: p.title, date: p.date, prose: true, body: p.body } : p;
+const ID = /^[a-z0-9][a-z0-9-]{0,39}$/;
+const bool = (v: unknown) => v === true;
+
+export function cleanMeta(v: unknown): Meta {
+  const o = obj(v, "분류");
+  if (!Array.isArray(o.categories) || !o.categories.length) return fail("분류가 하나는 있어야 해요");
+  if (o.categories.length > 30) fail("분류가 너무 많아요");
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  const categories = o.categories.map((raw, i) => {
+    const c = obj(raw, `분류 ${i + 1}번째`);
+    const id = line(c.id, `분류 ${i + 1}번째 id`);
+    if (!ID.test(id)) fail(`분류 ${i + 1}번째 id가 맞지 않아요`);
+    if (ids.has(id)) fail(`같은 id의 분류가 이미 있어요: ${id}`);
+    ids.add(id);
+    const ko = line(c.ko, `분류 ${i + 1}번째 이름`, { max: 30 });
+    if (names.has(ko)) fail(`같은 이름의 분류가 이미 있어요: ${ko}`);
+    names.add(ko);
+    return { id, ko, en: line(c.en, `분류 「${ko}」 영어 이름`, { required: false, max: 30 }), indent: bool(c.indent), serial: bool(c.serial) };
   });
+  const series = (Array.isArray(o.series) ? o.series : o.series === undefined ? [] : fail("연작 목록 형식이 맞지 않아요")) as unknown[];
+  const sids = new Set<string>();
+  const titles = new Set<string>();
+  const list = series.map((raw, i) => {
+    const s = obj(raw, `연작 ${i + 1}번째`);
+    const id = line(s.id, `연작 ${i + 1}번째 id`);
+    if (!ID.test(id) || sids.has(id)) fail(`연작 ${i + 1}번째 id가 맞지 않아요`);
+    sids.add(id);
+    const category = line(s.category, `연작 ${i + 1}번째 분류`);
+    const cat = categories.find((c) => c.id === category);
+    if (!cat) fail(`연작 ${i + 1}번째의 분류가 없어요`);
+    const title = line(s.title, `연작 ${i + 1}번째 제목`, { max: 100 });
+    if (!cat!.serial) fail(`「${cat!.ko}」은(는) 연작을 쓰지 않는 분류예요. 연작 「${title}」을(를) 옮기거나 지운 뒤에 꺼 주세요`);
+    if (titles.has(`${category}\0${title}`)) fail(`같은 제목의 연작이 이미 있어요: ${title}`);
+    titles.add(`${category}\0${title}`);
+    const out: Series = { id, category, title };
+    const note = text(s.note, `연작 「${title}」 소개`, { required: false, max: 2000 });
+    if (note) out.note = note;
+    if (s.done === true) out.done = true;
+    return out;
+  });
+  return { categories, series: list };
+}
+
+// 글 목록. meta를 주면 분류·연작이 실제로 있는지도 확인한다
+export function cleanPoems(v: unknown, meta?: Meta): Poem[] {
+  if (!Array.isArray(v)) return fail("글 목록 형식이 맞지 않아요");
+  const seen = new Set<string>();
+  const parts = new Set<string>();
+  return v.map((raw, i) => {
+    const where = `글 ${i + 1}번째`;
+    const o = obj(raw, where);
+    const title = line(o.title, `${where} 제목`);
+    const date = day(o.date, `${where} 날짜`);
+    const body = text(o.body, `${where} 본문`, { max: 200_000 });
+    const category = o.category === undefined || o.category === null || o.category === "" ? DEFAULT_CATEGORY : line(o.category, `${where} 분류`);
+    if (!ID.test(category)) fail(`${where} 분류가 맞지 않아요`);
+    if (meta && !meta.categories.some((c) => c.id === category)) fail(`「${title}」의 분류가 목록에 없어요`);
+    let series: string | undefined;
+    let part: number | undefined;
+    if (o.series !== undefined && o.series !== null && o.series !== "") {
+      series = line(o.series, `${where} 연작`);
+      const s = meta?.series.find((x) => x.id === series);
+      if (meta && !s) fail(`「${title}」의 연작이 목록에 없어요`);
+      if (s && s.category !== category) fail(`「${title}」의 분류와 연작의 분류가 달라요`);
+      part = Number(o.part);
+      if (!Number.isInteger(part) || part < 1 || part > 9999) fail(`「${title}」의 회차는 1 이상의 정수로 적어 주세요`);
+      if (parts.has(`${series}\0${part}`)) fail(`같은 연작에 ${part}회가 이미 있어요`);
+      parts.add(`${series}\0${part}`);
+    }
+    // 같은 분류·같은 연작 안에서만 제목이 겹치지 않으면 된다
+    const key = `${category}\0${series ?? ""}\0${title}`;
+    if (seen.has(key)) fail(`같은 제목의 글이 이미 있어요: ${title}`);
+    seen.add(key);
+    // 키 순서를 일정하게: title, date, category, series, part, prose, body (시는 category를 적지 않는다)
+    const p = { title, date } as Poem;
+    if (category !== DEFAULT_CATEGORY) p.category = category;
+    if (series) {
+      p.series = series;
+      p.part = part;
+    }
+    if (o.prose === true) p.prose = true;
+    p.body = body;
+    return p;
+  });
+}
+
+// 분류를 지우거나 연작을 지울 때, 그 분류·연작에 글이 남아 있으면 막는다
+export function checkUse(meta: Meta, poems: Poem[]) {
+  for (const p of poems) {
+    const cat = p.category ?? DEFAULT_CATEGORY;
+    const c = meta.categories.find((x) => x.id === cat);
+    if (!c) fail(`「${p.title}」이(가) 들어 있는 분류는 지울 수 없어요. 글을 먼저 다른 분류로 옮겨 주세요`);
+    if (p.series) {
+      const s = meta.series.find((x) => x.id === p.series);
+      if (!s) fail(`「${p.title}」이(가) 들어 있는 연작은 지울 수 없어요`);
+      if (s!.category !== cat) fail(`「${p.title}」의 분류와 연작의 분류가 달라요`);
+    }
+  }
 }
 
 const IMAGE = /^\/works\/[a-z0-9][a-z0-9._-]{0,120}\.webp$/;
@@ -130,6 +220,7 @@ export function cleanWorks(v: unknown): Work[] {
 
 export function clean(kind: Kind, items: unknown) {
   if (kind === "poems") return cleanPoems(items);
+  if (kind === "meta") return cleanMeta(items);
   return cleanWorks(items);
 }
 

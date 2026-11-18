@@ -54,6 +54,88 @@ fieldset.admin-row { display: flex; gap: var(--s2); align-items: center; }
 fieldset.admin-row legend { float: left; margin-right: var(--s1); }
 .admin-check { display: flex; gap: 8px; align-items: center; font-size: var(--fs-meta); }
 
+/* ---------- 글 목록: 분류 거르기 ---------- */
+.admin-filter { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 var(--s2); }
+.admin .admin-filter button { padding: 4px 12px; border-radius: 999px; font-size: var(--fs-meta); }
+.admin .admin-filter button.on, .admin .admin-actions button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.admin .admin-filter button.on .admin-muted { color: inherit; opacity: .7; }
+.al-cat { display: inline-block; font-size: 11px; line-height: 1; padding: 3px 6px; border: 1px solid var(--rule-head); border-radius: 3px; margin-right: 4px; vertical-align: 1px; }
+.al-series { color: var(--muted); font-weight: 400; }
+
+/* ---------- 분류·연작 관리 ---------- */
+.cm { border: 1px solid var(--rule-head); border-radius: 6px; padding: var(--s2); margin: 0 0 var(--s3); background: #fff; display: grid; gap: var(--s1); }
+.cm h2 { margin: var(--s1) 0 0; }
+.cm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s1); }
+.cm-row { display: grid; grid-template-columns: 1fr 1fr auto auto auto auto; gap: 8px; align-items: center; }
+.cm-series { grid-template-columns: 110px 1fr 1fr auto auto auto; }
+.cm-acts { display: flex; gap: 4px; }
+.admin .cm-acts button { padding: 4px 9px; }
+.admin .cm-acts .admin-danger { margin-left: 0; }
+.cm-n { white-space: nowrap; }
+@media (max-width: 719px) {
+  .cm-row, .cm-series { grid-template-columns: 1fr 1fr; padding-bottom: var(--s1); border-bottom: 1px solid var(--rule); }
+  .cm-acts { justify-content: flex-end; }
+}
+.cm-save { margin: var(--s1) 0 0; }
+.admin-row-3 { grid-template-columns: 90px 1fr 1fr !important; }
+@media (max-width: 719px) { .admin-row-3 { grid-template-columns: 70px 1fr !important; } .admin-row-3 > :last-child { grid-column: 1 / -1; } }
+
+/* ---------- 글쓰기 칸 ---------- */
+.admin:has(.ed.with-preview) { max-width: 1320px; }
+.ed { --ed-size: 18px; display: grid; gap: var(--s1); }
+.ed-bar { position: sticky; top: 0; z-index: 5; background: var(--paper); padding: 6px 0; border-bottom: 1px solid var(--rule); display: flex; align-items: center; gap: var(--s1); }
+.ed-tools { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.admin .ed-tools button { padding: 3px 9px; font-size: var(--fs-meta); line-height: 1.5; min-height: 30px; }
+.admin .ed-tools button.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.admin .ed-tools .ed-ch { font-family: var(--font-brush), var(--font-serif), serif; padding: 3px 6px; min-width: 30px; }
+.ed-sep { width: 1px; align-self: stretch; background: var(--rule-head); margin: 2px 4px; }
+.ed-flash { margin-left: auto; font-size: var(--fs-meta); color: #2f6b2a; white-space: nowrap; }
+
+.ed-find { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px; background: #fff; border: 1px solid var(--rule-head); border-radius: 4px; }
+.admin .ed-find input { width: auto !important; flex: 1 1 140px; padding: 5px 8px !important; }
+.admin .ed-find button { padding: 4px 10px; font-size: var(--fs-meta); }
+.ed-count { font-size: var(--fs-meta); color: var(--muted); min-width: 3.5em; font-variant-numeric: tabular-nums; }
+
+.ed-split { display: grid; gap: var(--s2); align-items: start; }
+@media (min-width: 1080px) { .ed.with-preview .ed-split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (max-width: 1079px) { .ed.with-preview .ed-surface { display: none; } }
+/* 본문: 뒤에 같은 글자를 투명하게 깔아(.ed-back) 높이를 정하고, 찾은 곳에 색을 칠한다. textarea는 그 위에 겹친다 */
+.ed-surface { position: relative; }
+.ed-back, .admin .ed-text { font-family: var(--font-brush), var(--font-serif), "Noto Serif KR", serif; font-size: var(--ed-size); line-height: 2;
+  letter-spacing: .015em; padding: 18px 20px; border: 1px solid transparent; border-radius: 4px; margin: 0;
+  white-space: pre-wrap; word-break: keep-all; overflow-wrap: break-word; tab-size: 4; }
+.ed-back { color: transparent; background: #fff; border-color: var(--rule-head); min-height: 50vh; pointer-events: none; }
+.ed.is-indent .ed-back, .admin .ed.is-indent .ed-text { line-height: 1.9; }
+.admin .ed-text { position: absolute; inset: 0; width: 100%; height: 100%; resize: none; overflow: hidden; background: transparent; color: var(--ink);
+  caret-color: var(--ink); border-color: transparent; }
+.admin .ed-text:focus { outline: 2px solid var(--ink); outline-offset: -1px; }
+.ed-back mark { color: transparent; border-radius: 2px; }
+.ed-back .m-find { background: #ffe58a; }
+.ed-back .m-find[data-cur] { background: #ffb340; }
+.ed-preview { background: #fff; border: 1px solid var(--rule); border-radius: 4px; padding: 18px 20px; }
+@media (min-width: 1080px) { .ed-preview { position: sticky; top: 52px; max-height: calc(100vh - 140px); overflow: auto; } }
+.ed-preview .poem { border: 0; }
+.ed-preview-title { margin: 0 0 var(--s2); font-size: 18px; }
+.ed-preview .poem-body { padding: 0; }
+.ed-status { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: var(--fs-meta); font-variant-numeric: tabular-nums; }
+.ed-saved { margin-left: auto; color: var(--muted); }
+.ed-help { margin: 0; }
+
+/* 집중 모드: 화면 전체를 종이 한 장처럼 */
+.ed.focus { position: fixed; inset: 0; z-index: 50; background: var(--paper); overflow-y: auto; padding: 0 max(var(--gutter), calc((100% - 820px) / 2)) var(--s4);
+  align-content: start; }
+.ed.focus.with-preview { padding-inline: max(var(--gutter), calc((100% - 1400px) / 2)); }
+.ed.focus .ed-back { background: transparent; border-color: transparent; min-height: 85vh; }
+.ed.focus .ed-help { display: none; }
+.ed { grid-auto-rows: max-content; }
+.admin .ed.focus .ed-text:focus { outline: none; }
+.admin-field { align-content: start; }
+@media (max-width: 719px) {
+  .ed-tools { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .ed-tools::-webkit-scrollbar { display: none; }
+  .admin .ed-tools button { flex: none; }
+  .ed-back, .admin .ed-text { padding: 14px; }
+}
 /* 방문 탭: 숫자 칸, 날마다 막대, 순위 목록. 색은 잉크 한 가지만 */
 .stats { display: grid; gap: var(--s3); }
 .stats-bar { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); }

@@ -3,7 +3,9 @@
 import Han from "./Han";
 import { useEffect, useState } from "react";
 import { about, contact, ui, works, type SectionId, type Work } from "@/data/site";
-import { poems } from "@/data/poems";
+import { poems, writingMeta } from "@/data/poems";
+import { categoryOf, firstLine, partLabel, rows, type Category, type Piece } from "@/lib/writing";
+import WritingText from "./WritingText";
 import { useLang } from "./LangProvider";
 import EmailLink from "./EmailLink";
 import { unfold } from "./unfold";
@@ -182,54 +184,99 @@ function WorksViewer({ list }: { list: Work[] }) {
   );
 }
 
+// 글: 분류 탭(글이 있는 분류가 둘 이상일 때만) 아래에 제목과 첫 줄만 보이고, 제목을 누르면 그 글 하나만 펼쳐진다.
+// 연작(소설 등)은 연작 제목 아래에 회차가 순서대로 모인다.
 function Poems({ inExplore }: { inExplore: boolean }) {
   const { lang } = useLang();
+  const cats = writingMeta.categories.filter((c) => poems.some((p) => categoryOf(p) === c.id));
+  const [tab, setTab] = useState<string>("");
+  const filter = cats.some((c) => c.id === tab) ? tab : "";
+  const name = (c: Category) => (lang === "en" && c.en ? c.en : c.ko);
+  const showCat = cats.length > 1 && !filter;
+  const list = rows(poems, writingMeta, filter || undefined);
+  const piece = (p: Piece, i: number, episode = false) => {
+    const cat = writingMeta.categories.find((c) => c.id === categoryOf(p));
+    const indent = !!cat?.indent;
+    const label = episode ? partLabel(p) : "";
     return (
-      <div className="poems">
-        {lang === "en" && <p className="poems-note">{ui.poemsNote.en}</p>}
-        {/* 제목과 첫 줄만 보이고, 제목을 누르면 그 시 하나만 펼쳐진다 (다른 시는 접힌다) */}
-        {poems.map((p, i) => {
-          const first = p.body.split("\n").find((l) => l.trim()) ?? "";
-          return (
-            <details key={p.title} data-group="poems" id={inExplore ? undefined : `poem-${i}`} className={`poem ${p.prose ? "prose" : ""}`} lang="ko">
-              <summary
-                onClick={(e) => {
-                  e.preventDefault();
-                  const d = e.currentTarget.parentElement as HTMLDetailsElement;
-                  unfold(d, !d.open || d.dataset.closing === "1");
-                }}
-              >
-                <span className="poem-head">
-                  <span className="poem-title">{p.title}</span>
-                  <span className="poem-first">{first.trim()}</span>
-                </span>
-                <span className="meta">{p.date}</span>
-              </summary>
-              <div className="poem-body">
-                {p.body.split("\n\n").map((stanza, j) => (
-                  <p key={j} className="stanza">
-                    {stanza}
-                  </p>
-                ))}
-                <span className="poem-seal" aria-hidden>
-                  <Han ch="山" />
-                </span>
-                <button
-                  type="button"
-                  className="poem-fold"
-                  onClick={(e) => {
-                    const d = e.currentTarget.closest("details");
-                    if (!d) return;
-                    unfold(d, false);
-                    d.querySelector("summary")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-                  }}
-                >
-                  {lang === "ko" ? "↑ 접기" : "↑ Fold"}
-                </button>
-              </div>
-            </details>
-          );
-        })}
-      </div>
+      <details
+        key={i}
+        data-group="poems"
+        id={inExplore ? undefined : `poem-${i}`}
+        className={`poem ${p.prose && !indent ? "prose" : ""} ${indent ? "indent" : ""} ${episode ? "episode" : ""}`}
+        lang="ko"
+      >
+        <summary
+          onClick={(e) => {
+            e.preventDefault();
+            const d = e.currentTarget.parentElement as HTMLDetailsElement;
+            unfold(d, !d.open || d.dataset.closing === "1");
+          }}
+        >
+          <span className="poem-head">
+            <span className="poem-title">
+              {label && <span className="poem-part">{label}</span>}
+              {p.title}
+            </span>
+            <span className="poem-first">{firstLine(p.body)}</span>
+          </span>
+          <span className="meta">
+            {showCat && !episode && cat && <span className="poem-cat">{name(cat)}</span>}
+            {p.date}
+          </span>
+        </summary>
+        <div className="poem-body">
+          <WritingText body={p.body} indent={indent} />
+          <span className="poem-seal" aria-hidden>
+            <Han ch="山" />
+          </span>
+          <button
+            type="button"
+            className="poem-fold"
+            onClick={(e) => {
+              const d = e.currentTarget.closest("details");
+              if (!d) return;
+              unfold(d, false);
+              d.querySelector("summary")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            }}
+          >
+            {lang === "ko" ? "↑ 접기" : "↑ Fold"}
+          </button>
+        </div>
+      </details>
     );
+  };
+  return (
+    <div className="poems">
+      {cats.length > 1 && (
+        <div className="cat-tabs" role="tablist" aria-label={lang === "ko" ? "분류" : "Categories"}>
+          {[{ id: "", label: lang === "ko" ? "전체" : "All" }, ...cats.map((c) => ({ id: c.id, label: name(c) }))].map((c) => (
+            <button key={c.id} type="button" role="tab" aria-selected={filter === c.id} className={filter === c.id ? "on" : ""} onClick={() => setTab(c.id)}>
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {lang === "en" && <p className="poems-note">{ui.poemsNote.en}</p>}
+      {list.map((r) => {
+        if (r.kind === "piece") return piece(r.piece, r.index);
+        const cat = writingMeta.categories.find((c) => c.id === r.series.category);
+        return (
+          <section key={`s-${r.series.id}`} className="series" lang="ko">
+            <header className="series-head">
+              <h2 className="series-title">{r.series.title}</h2>
+              <p className="meta">
+                {showCat && cat && <span className="poem-cat">{name(cat)}</span>}
+                {lang === "ko"
+                  ? `${r.series.done ? "완결" : "연재 중"} · ${r.episodes.length}화`
+                  : `${r.series.done ? "Complete" : "Ongoing"} · ${r.episodes.length} ${r.episodes.length === 1 ? "part" : "parts"}`}
+              </p>
+              {r.series.note && <p className="series-note">{r.series.note}</p>}
+            </header>
+            {r.episodes.map((e) => piece(e.piece, e.index, true))}
+          </section>
+        );
+      })}
+    </div>
+  );
 }

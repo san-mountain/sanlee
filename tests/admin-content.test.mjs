@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { clean, cleanWorks, cleanUpload, droppedImages, serialize, FILES, Invalid } from "../src/lib/admin/content.ts";
+import { checkUse, clean, cleanMeta, cleanPoems, cleanWorks, cleanUpload, droppedImages, serialize, FILES, Invalid } from "../src/lib/admin/content.ts";
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
 test("현재 저장된 시·작업은 검사를 거쳐도 한 글자도 바뀌지 않는다", () => {
-  for (const kind of ["poems", "works"]) {
+  for (const kind of ["poems", "works", "meta"]) {
     const raw = read(FILES[kind]);
     assert.equal(serialize(clean(kind, JSON.parse(raw))), raw, kind);
   }
@@ -35,4 +35,36 @@ test("사진은 JPEG·PNG·WebP만, public/works 아래 .webp 경로로만 받�
 
 test("목록에서 빠진 작업의 사진만 지운다", () => {
   assert.deepEqual(droppedImages([{ image: "/works/a.webp" }, { image: "/works/b.webp" }, { link: "/x" }], [{ image: "/works/b.webp" }]), ["/works/a.webp"]);
+});
+
+const meta = {
+  categories: [
+    { id: "poem", ko: "시", en: "Poems", indent: false, serial: false },
+    { id: "novel", ko: "소설", en: "Fiction", indent: true, serial: true },
+  ],
+  series: [{ id: "s-a", category: "novel", title: "밤의 도시" }],
+};
+
+test("글은 분류·연작이 실제로 있어야 하고, 시는 분류를 적지 않는다", () => {
+  const ep = (part, title = `${part}화`) => ({ title, date: "2026.11.18", category: "novel", series: "s-a", part, body: "본문" });
+  assert.deepEqual(cleanPoems([{ title: "a", date: "2026.11.18", category: "poem", body: "b" }], meta), [{ title: "a", date: "2026.11.18", body: "b" }]);
+  assert.deepEqual(Object.keys(cleanPoems([ep(1)], meta)[0]), ["title", "date", "category", "series", "part", "body"]);
+  // 다른 연작이면 같은 제목도 된다, 같은 연작의 같은 회차는 안 된다
+  assert.equal(cleanPoems([ep(1), { title: "1화", date: "2026.11.18", body: "시" }], meta).length, 2);
+  assert.throws(() => cleanPoems([ep(1), ep(1, "다른 제목")], meta), Invalid);
+  assert.throws(() => cleanPoems([{ ...ep(1), series: "s-x" }], meta), Invalid); // 없는 연작
+  assert.throws(() => cleanPoems([{ ...ep(1), category: "poem" }], meta), Invalid); // 분류가 다름
+  assert.throws(() => cleanPoems([{ ...ep(1), part: 0 }], meta), Invalid);
+  assert.throws(() => cleanPoems([{ title: "a", date: "2026.11.18", category: "essay", body: "b" }], meta), Invalid);
+});
+
+test("분류·연작 목록 검사: 글이 있는 분류·연작은 지울 수 없다", () => {
+  assert.deepEqual(cleanMeta(meta), meta);
+  assert.throws(() => cleanMeta({ ...meta, categories: [] }), Invalid);
+  assert.throws(() => cleanMeta({ ...meta, categories: [meta.categories[0], { ...meta.categories[1], serial: false }] }), Invalid); // 연작이 있는데 연작 끔
+  assert.throws(() => cleanMeta({ ...meta, categories: [meta.categories[0], meta.categories[0]] }), Invalid);
+  const pieces = [{ title: "1화", date: "2026.11.18", category: "novel", series: "s-a", part: 1, body: "b" }];
+  assert.throws(() => checkUse({ ...meta, series: [] }, pieces), Invalid);
+  assert.throws(() => checkUse({ categories: [meta.categories[0]], series: [] }, pieces), Invalid);
+  checkUse(meta, pieces);
 });

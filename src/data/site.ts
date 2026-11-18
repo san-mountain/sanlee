@@ -95,5 +95,5 @@ export const ui = {
     ko: "조각 작업은 지금 정리하고 있어요. 곧 이곳에 올릴게요.",
     en: "Sculpture work is being documented and will appear here soon.",
   },
-  poemsNote: { ko: "", en: "Poems are presented in their original Korean." },
+  poemsNote: { ko: "", en: "Writing is presented in its original Korean." },
 };

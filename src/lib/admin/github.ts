@@ -46,14 +46,16 @@ async function readAt(commitSha: string, path: string) {
 
 export type Change = { path: string; text?: string; base64?: string; delete?: true };
 
-// 여러 파일을 커밋 하나로 저장한다. guard: { path, sha } 를 주면 그 파일이 그 사이 바뀌었을 때 Conflict
-export async function commit(message: string, changes: Change[], guard?: { path: string; sha: string }) {
+type Guard = { path: string; sha: string };
+// 여러 파일을 커밋 하나로 저장한다. guard: { path, sha } (여럿이면 배열)를 주면 그 파일이 그 사이 바뀌었을 때 Conflict
+export async function commit(message: string, changes: Change[], guard?: Guard | Guard[]) {
+  const guards = guard ? (Array.isArray(guard) ? guard : [guard]) : [];
   for (let attempt = 0; attempt < 3; attempt++) {
     const head = await gh<Ref>(`/git/ref/heads/${branch()}`);
     const parent = await gh<Commit>(`/git/commits/${head.object.sha}`);
-    if (guard) {
-      const now = await readAt(head.object.sha, guard.path);
-      if (now.sha !== guard.sha) throw new Conflict("다른 곳에서 먼저 고친 내용이 있어요");
+    for (const g of guards) {
+      const now = await readAt(head.object.sha, g.path);
+      if (now.sha !== g.sha) throw new Conflict("다른 곳에서 먼저 고친 내용이 있어요");
     }
     const tree = await Promise.all(
       changes.map(async (c) => {

@@ -1,14 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { categoryOf, firstLine as pieceFirstLine, partLabel, type Piece, type WritingMeta } from "@/lib/writing";
+import CategoryManager from "./CategoryManager";
 import StatsPanel from "./StatsPanel";
+import WritingEditor, { NEW_SERIES, type PieceDraft } from "./WritingEditor";
 
-// 사이트 주인용 관리 화면: 시를 쓰고 고치고, 작업 사진을 올린다. "방문" 탭에서는 방문 기록을 본다.
+// 사이트 주인용 관리 화면: 글(시·에세이·소설 …)을 쓰고 고치고, 작업 사진을 올린다. "방문" 탭에서는 방문 기록을 본다.
 // 저장하면 서버가 GitHub 저장소에 커밋하고, Vercel이 사이트를 다시 만들어 1~2분 뒤 반영된다.
 
 type Kind = "poems" | "works";
 type L = { ko: string; en: string };
-type Poem = { title: string; date: string; body: string; prose?: boolean };
+type Poem = Piece;
 type Work = {
   title: L;
   date: string;
@@ -25,7 +28,7 @@ type Work = {
 type Item = Poem | Work;
 type Loaded = { items: Item[]; sha: string };
 
-type PoemDraft = { title: string; date: string; prose: boolean; body: string };
+type PoemDraft = PieceDraft;
 type SizeMode = "p8" | "l8" | "cm" | "var" | "free";
 type WorkDraft = {
   titleKo: string;
@@ -54,7 +57,7 @@ type Draft = PoemDraft | WorkDraft;
 type Editing = { index: number | null; draft: Draft; dirty: boolean };
 
 const TABS: { id: Kind; label: string; add: string }[] = [
-  { id: "poems", label: "시", add: "새 시 쓰기" },
+  { id: "poems", label: "글", add: "새 글 쓰기" },
   { id: "works", label: "작업", add: "새 작업 올리기" },
 ];
 
@@ -78,10 +81,18 @@ const todayDot = () => {
 };
 
 // ---------- 목록 ↔ 편집 칸 ----------
-function toDraft(kind: Kind, item?: Item): Draft {
+function toDraft(kind: Kind, item?: Item, category = "poem"): Draft {
   if (kind === "poems") {
     const p = item as Poem | undefined;
-    return { title: p?.title ?? "", date: p?.date ?? todayDot(), prose: !!p?.prose, body: p?.body ?? "" };
+    return {
+      title: p?.title ?? "",
+      date: p?.date ?? todayDot(),
+      category: p ? categoryOf(p) : category,
+      series: p?.series ?? "",
+      part: p?.part ? String(p.part) : "",
+      prose: !!p?.prose,
+      body: p?.body ?? "",
+    };
   }
   const w = item as Work | undefined;
   const t = today();
@@ -126,7 +137,14 @@ function toDraft(kind: Kind, item?: Item): Draft {
 function fromDraft(kind: Kind, d: Draft): Item {
   if (kind === "poems") {
     const p = d as PoemDraft;
-    return p.prose ? { title: p.title.trim(), date: p.date.trim(), prose: true, body: p.body } : { title: p.title.trim(), date: p.date.trim(), body: p.body };
+    const out: Poem = { title: p.title.trim(), date: p.date.trim(), body: p.body };
+    if (p.category && p.category !== "poem") out.category = p.category;
+    if (p.series) {
+      out.series = p.series;
+      out.part = Number(p.part);
+    }
+    if (p.prose) out.prose = true;
+    return out;
   }
   const w = d as WorkDraft;
   const size: L =
@@ -169,15 +187,13 @@ function place(kind: Kind, list: Item[], it: Item) {
   return next;
 }
 
-const name = (kind: Kind, it: Item) => {
+const name = (kind: Kind, it: Item, meta?: WritingMeta) => {
   if (kind === "works") return (it as Work).title.ko;
-  return (it as Poem).title;
+  const p = it as Poem;
+  const s = p.series ? meta?.series.find((x) => x.id === p.series) : undefined;
+  if (s) return partLabel(p) ? `${s.title} ${p.part}화: ${p.title}` : `${s.title} ${p.part}화`;
+  return p.title;
 };
-const firstLine = (body: string) =>
-  (body.split("\n").find((l) => l.trim() && l.trim() !== "---") ?? "")
-    .replace(/⟦\d+⟧/g, "▇▇▇")
-    .replace(/^(## |> )/, "")
-    .trim();
 
 // ---------- 사진: 브라우저에서 줄여(긴 변 2000px JPEG) 보내면 서버가 1400px WebP로 바꾼다 ----------
 async function shrink(file: File) {
@@ -237,6 +253,10 @@ type Notice = { text: string; commit?: string; url?: string; deploy?: "pending" 
 
 export default function AdminClient() {
   const [kind, setKind] = useState<Kind>("poems");
+  const [meta, setMeta] = useState<{ value: WritingMeta; sha: string } | null>(null);
+  const [filter, setFilter] = useState("");
+  const [managing, setManaging] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [stats, setStats] = useState(false);
   const [data, setData] = useState<Partial<Record<Kind, Loaded>>>({});
   const [loadError, setLoadError] = useState("");
@@ -247,23 +267,28 @@ export default function AdminClient() {
   const [notice, setNotice] = useState<Notice | null>(null);
   const top = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async (k: Kind) => {
+  const load = useCallback(async (k: Kind | "meta") => {
     setLoadError("");
     const res = await fetch(`/api/admin/content?kind=${k}`, { cache: "no-store" }).catch(() => null);
     if (res?.status === 401) return location.reload();
     const j = await res?.json().catch(() => null);
     if (!res?.ok || !j) return setLoadError(j?.error ?? "불러오지 못했어요");
-    setData((d) => ({ ...d, [k]: { items: j.items, sha: j.sha } }));
+    if (k === "meta") setMeta({ value: j.items, sha: j.sha });
+    else setData((d) => ({ ...d, [k]: { items: j.items, sha: j.sha } }));
   }, []);
 
   useEffect(() => {
     if (!data[kind]) load(kind);
+    // 글 탭은 분류·연작 목록도 같이 불러온다
+    if (kind === "poems" && !meta) load("meta");
     setSaved(store.get(kind));
-  }, [kind, data, load]);
+  }, [kind, data, meta, load]);
 
   // 쓰던 글은 이 기기에 임시 저장해 둔다(창을 닫아도 다시 불러올 수 있게)
   useEffect(() => {
-    if (editing?.dirty) store.set(kind, editing);
+    if (!editing?.dirty) return;
+    store.set(kind, editing);
+    setSavedAt(Date.now());
   }, [editing, kind]);
   useEffect(() => {
     if (!editing?.dirty) return;
@@ -312,7 +337,8 @@ export default function AdminClient() {
     if (!leave()) return;
     const items = data[kind]?.items ?? [];
     setError(null);
-    setEditing({ index, draft: toDraft(kind, index === null ? undefined : items[index]), dirty: false });
+    setEditing({ index, draft: toDraft(kind, index === null ? undefined : items[index], filter || "poem"), dirty: false });
+    setSavedAt(null);
     top.current?.scrollIntoView({ block: "start" });
   };
   const close = () => {
@@ -336,9 +362,10 @@ export default function AdminClient() {
     if (editing.index !== null) items.splice(editing.index, 1);
     let message: string;
     let uploads: { path: string; base64: string }[] = [];
+    let metaOut: { meta: WritingMeta; metaSha: string } | null = null;
     if (remove) {
-      if (!before || !confirm(`「${name(kind, before)}」을(를) 지울까요? 사이트에서도 사라져요.`)) return;
-      message = `「${name(kind, before)}」 지움`;
+      if (!before || !confirm(`「${name(kind, before, meta?.value)}」을(를) 지울까요? 사이트에서도 사라져요.`)) return;
+      message = `「${name(kind, before, meta?.value)}」 지움`;
     } else {
       let draft = editing.draft;
       if (kind === "works") {
@@ -351,16 +378,32 @@ export default function AdminClient() {
           draft = { ...w, image: path };
         }
       }
+      if (kind === "poems") {
+        const p = draft as PoemDraft;
+        // 새 연작을 만들며 쓴 글: 연작을 분류 목록에 더해 글과 같은 커밋으로 저장한다
+        if (p.series === NEW_SERIES) {
+          if (!meta) return;
+          const title = p.newSeries?.title.trim() ?? "";
+          if (!title) return setError({ text: "새 연작의 제목을 적어 주세요" });
+          const id = `s-${Date.now().toString(36)}`;
+          const note = p.newSeries?.note.trim();
+          metaOut = {
+            meta: { ...meta.value, series: [...meta.value.series, { id, category: p.category, title, ...(note ? { note } : {}) }] },
+            metaSha: meta.sha,
+          };
+          draft = { ...p, series: id, newSeries: undefined };
+        }
+      }
       const item = fromDraft(kind, draft);
       items = place(kind, items, item);
-      message = `「${name(kind, item)}」 ${before ? "고침" : "새로 씀"}`;
+      message = `「${name(kind, item, metaOut?.meta ?? meta?.value)}」 ${before ? "고침" : "새로 씀"}`;
     }
     setBusy(true);
     setError(null);
     const res = await fetch("/api/admin/content", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind, items, sha: cur.sha, message, uploads }),
+      body: JSON.stringify({ kind, items, sha: cur.sha, message, uploads, ...(metaOut ?? {}) }),
     }).catch(() => null);
     setBusy(false);
     if (res?.status === 401) return location.reload();
@@ -370,6 +413,7 @@ export default function AdminClient() {
       return;
     }
     setData((d) => ({ ...d, [kind]: { items: j.items, sha: j.sha } }));
+    if (j.meta && j.metaSha) setMeta({ value: j.meta, sha: j.metaSha });
     store.set(kind, null);
     setEditing(null);
     setNotice({ text: `${message}. 저장했어요.`, commit: j.commit, url: j.url, deploy: "pending" });
@@ -416,119 +460,175 @@ export default function AdminClient() {
         <StatsPanel />
       ) : (
         <>
-          {notice && (
-            <p className="admin-notice" role="status">
-              {notice.text}{" "}
-              {notice.deploy === "pending" && "사이트에 반영하는 중이에요(보통 1~2분)…"}
-              {notice.deploy === "success" && "사이트에 반영됐어요."}
-              {notice.deploy === "failure" && "사이트를 다시 만드는 데 실패했어요. Vercel 배포 기록을 확인해 주세요."}
-              {notice.deploy === "unknown" && "보통 1~2분 뒤 사이트에 반영돼요."}{" "}
-              {notice.url && (
-                <a href={notice.url} target="_blank" rel="noreferrer">
-                  기록
-                </a>
+      {notice && (
+        <p className="admin-notice" role="status">
+          {notice.text}{" "}
+          {notice.deploy === "pending" && "사이트에 반영하는 중이에요(보통 1~2분)…"}
+          {notice.deploy === "success" && "사이트에 반영됐어요."}
+          {notice.deploy === "failure" && "사이트를 다시 만드는 데 실패했어요. Vercel 배포 기록을 확인해 주세요."}
+          {notice.deploy === "unknown" && "보통 1~2분 뒤 사이트에 반영돼요."}{" "}
+          {notice.url && (
+            <a href={notice.url} target="_blank" rel="noreferrer">
+              기록
+            </a>
+          )}
+          <button type="button" className="admin-x" aria-label="닫기" onClick={() => setNotice(null)}>
+            ×
+          </button>
+        </p>
+      )}
+
+      {loadError && (
+        <p className="admin-error">
+          {loadError}{" "}
+          <button type="button" className="admin-link" onClick={() => load(kind)}>
+            다시 시도
+          </button>
+        </p>
+      )}
+
+      {editing ? (
+        <form
+          className="admin-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save();
+          }}
+        >
+          <h2>{editing.index === null ? tab.add : "고치기"}</h2>
+          {kind === "poems" &&
+            (meta ? (
+              <WritingEditor
+                d={editing.draft as PoemDraft}
+                set={set}
+                meta={meta.value}
+                pieces={(items ?? []) as Poem[]}
+                editingIndex={editing.index}
+                savedAt={savedAt}
+                onLocalSave={() => {
+                  store.set(kind, editing);
+                  setSavedAt(Date.now());
+                }}
+              />
+            ) : (
+              <p className="admin-muted">분류를 불러오는 중…</p>
+            ))}
+          {kind === "works" && <WorkFields d={editing.draft as WorkDraft} set={set} />}
+          {error && (
+            <p className="admin-error" role="alert">
+              {error.text}
+              {error.conflict && (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="admin-link"
+                    onClick={() => {
+                      setError(null);
+                      load(kind);
+                    }}
+                  >
+                    최신 내용 불러오기
+                  </button>
+                  {" "}(쓰던 글은 이 기기에 남아 있어요)
+                </>
               )}
-              <button type="button" className="admin-x" aria-label="닫기" onClick={() => setNotice(null)}>
-                ×
-              </button>
             </p>
           )}
-
-          {loadError && (
-            <p className="admin-error">
-              {loadError}{" "}
-              <button type="button" className="admin-link" onClick={() => load(kind)}>
-                다시 시도
+          <div className="admin-actions">
+            <button type="submit" className="admin-primary" disabled={busy || !data[kind]}>
+              {busy ? "저장하는 중…" : "저장"}
+            </button>
+            <button type="button" onClick={close} disabled={busy}>
+              취소
+            </button>
+            {editing.index !== null && (
+              <button type="button" className="admin-danger" onClick={() => save(true)} disabled={busy}>
+                지우기
               </button>
-            </p>
-          )}
-
-          {editing ? (
-            <form
-              className="admin-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                save();
+            )}
+          </div>
+        </form>
+      ) : (
+        <>
+          <div className="admin-actions">
+            <button type="button" className="admin-primary" onClick={() => open(null)} disabled={!items || (kind === "poems" && !meta)}>
+              + {kind === "poems" && filter && meta ? `새 ${meta.value.categories.find((c) => c.id === filter)?.ko ?? "글"} 쓰기` : tab.add}
+            </button>
+            {saved && (
+              <button type="button" onClick={resume}>
+                쓰다 만 글 이어 쓰기
+              </button>
+            )}
+            {kind === "poems" && meta && (
+              <button type="button" className={managing ? "on" : ""} onClick={() => setManaging((v) => !v)}>
+                분류·연작 관리
+              </button>
+            )}
+          </div>
+          {kind === "poems" && meta && managing && (
+            <CategoryManager
+              meta={meta.value}
+              sha={meta.sha}
+              pieces={(items ?? []) as Poem[]}
+              onClose={() => setManaging(false)}
+              onSaved={(value, sha, commit, url) => {
+                setMeta({ value, sha });
+                setManaging(false);
+                if (filter && !value.categories.some((c) => c.id === filter)) setFilter("");
+                setNotice({ text: "분류·연작을 저장했어요.", commit, url, deploy: "pending" });
               }}
-            >
-              <h2>{editing.index === null ? tab.add : "고치기"}</h2>
-              {kind === "poems" && <PoemFields d={editing.draft as PoemDraft} set={set} />}
-              {kind === "works" && <WorkFields d={editing.draft as WorkDraft} set={set} />}
-              {error && (
-                <p className="admin-error" role="alert">
-                  {error.text}
-                  {error.conflict && (
-                    <>
-                      {" "}
-                      <button
-                        type="button"
-                        className="admin-link"
-                        onClick={() => {
-                          setError(null);
-                          load(kind);
-                        }}
-                      >
-                        최신 내용 불러오기
-                      </button>
-                      {" "}(쓰던 글은 이 기기에 남아 있어요)
-                    </>
-                  )}
-                </p>
-              )}
-              <div className="admin-actions">
-                <button type="submit" className="admin-primary" disabled={busy || !data[kind]}>
-                  {busy ? "저장하는 중…" : "저장"}
-                </button>
-                <button type="button" onClick={close} disabled={busy}>
-                  취소
-                </button>
-                {editing.index !== null && (
-                  <button type="button" className="admin-danger" onClick={() => save(true)} disabled={busy}>
-                    지우기
-                  </button>
-                )}
-              </div>
-            </form>
-          ) : (
-            <>
-              <div className="admin-actions">
-                <button type="button" className="admin-primary" onClick={() => open(null)} disabled={!items}>
-                  + {tab.add}
-                </button>
-                {saved && (
-                  <button type="button" onClick={resume}>
-                    쓰다 만 글 이어 쓰기
-                  </button>
-                )}
-              </div>
-              {!items && !loadError && <p className="admin-muted">불러오는 중…</p>}
-              {items && (
-                <ol className="admin-list">
-                  {items.map((it, i) => (
-                    <li key={i}>
-                      <button type="button" onClick={() => open(i)}>
-                        <ListRow kind={kind} it={it} />
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </>
+            />
           )}
+          {kind === "poems" && meta && items && (
+            <div className="admin-filter" role="tablist" aria-label="분류">
+              {[{ id: "", ko: "전체" }, ...meta.value.categories].map((c) => {
+                const n = c.id ? (items as Poem[]).filter((p) => categoryOf(p) === c.id).length : items.length;
+                return (
+                  <button key={c.id} type="button" role="tab" aria-selected={filter === c.id} className={filter === c.id ? "on" : ""} onClick={() => setFilter(c.id)}>
+                    {c.ko || "(이름 없음)"} <span className="admin-muted">{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {!items && !loadError && <p className="admin-muted">불러오는 중…</p>}
+          {items && (
+            <ol className="admin-list">
+              {items.map((it, i) =>
+                kind === "poems" && filter && categoryOf(it as Poem) !== filter ? null : (
+                  <li key={i}>
+                    <button type="button" onClick={() => open(i)}>
+                      <ListRow kind={kind} it={it} meta={meta?.value} />
+                    </button>
+                  </li>
+                )
+              )}
+            </ol>
+          )}
+        </>
+      )}
         </>
       )}
     </div>
   );
 }
 
-function ListRow({ kind, it }: { kind: Kind; it: Item }) {
+function ListRow({ kind, it, meta }: { kind: Kind; it: Item; meta?: WritingMeta }) {
   if (kind === "poems") {
     const p = it as Poem;
+    const cat = meta?.categories.find((c) => c.id === categoryOf(p));
+    const series = p.series ? meta?.series.find((s) => s.id === p.series) : undefined;
     return (
       <>
         <span className="al-date">{p.date}</span>
-        <span className="al-title">{p.title}</span>
-        <span className="al-sub">{firstLine(p.body)}</span>
+        <span className="al-title">
+          {series && <span className="al-series">{series.title} · {p.part}화 </span>}
+          {!series || partLabel(p) ? p.title : ""}
+        </span>
+        <span className="al-sub">
+          <span className="al-cat">{cat?.ko ?? "시"}</span> {pieceFirstLine(p.body).replace(/⟦\d+⟧/g, "▇▇▇")}
+        </span>
       </>
     );
   }
@@ -560,25 +660,6 @@ function Field({ label, hint, children }: { label: string; hint?: React.ReactNod
       {children}
       {hint && <span className="af-hint">{hint}</span>}
     </label>
-  );
-}
-
-function PoemFields({ d, set }: { d: PoemDraft; set: SetFn }) {
-  return (
-    <>
-      <Field label="제목">
-        <input value={d.title} onChange={(e) => set({ title: e.target.value })} required />
-      </Field>
-      <Field label="날짜" hint="2026.10.31 처럼">
-        <input value={d.date} onChange={(e) => set({ date: e.target.value })} pattern="\d{4}\.\d{2}\.\d{2}" inputMode="numeric" required />
-      </Field>
-      <label className="admin-check">
-        <input type="checkbox" checked={d.prose} onChange={(e) => set({ prose: e.target.checked })} /> 산문시(줄을 바꾸지 않고 문단으로)
-      </label>
-      <Field label="본문" hint="연은 빈 줄로 나눠요.">
-        <textarea className="af-body af-poem" value={d.body} onChange={(e) => set({ body: e.target.value })} required rows={18} />
-      </Field>
-    </>
   );
 }
 
