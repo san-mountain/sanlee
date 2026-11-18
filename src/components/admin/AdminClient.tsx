@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { categoryOf, firstLine as pieceFirstLine, partLabel, type Piece, type WritingMeta } from "@/lib/writing";
 import CategoryManager from "./CategoryManager";
-import StatsPanel from "./StatsPanel";
+import dynamic from "next/dynamic";
 import WritingEditor, { NEW_SERIES, type PieceDraft } from "./WritingEditor";
+
+// 방문 탭은 열 때만 불러온다(처음 화면을 가볍게)
+const StatsPanel = dynamic(() => import("./StatsPanel"), { ssr: false, loading: () => <p className="admin-muted">불러오는 중…</p> });
 
 // 사이트 주인용 관리 화면: 글(시·에세이·소설 …)을 쓰고 고치고, 작업 사진을 올린다. "방문" 탭에서는 방문 기록을 본다.
 // 저장하면 서버가 GitHub 저장소에 커밋하고, Vercel이 사이트를 다시 만들어 1~2분 뒤 반영된다.
@@ -27,6 +30,8 @@ type Work = {
 };
 type Item = Poem | Work;
 type Loaded = { items: Item[]; sha: string };
+// 서버가 화면과 함께 미리 읽어 보낸 목록(없으면 화면이 스스로 불러온다)
+export type Initial = Partial<Record<Kind, Loaded>> & { meta?: { value: WritingMeta; sha: string } };
 
 type PoemDraft = PieceDraft;
 type SizeMode = "p8" | "l8" | "cm" | "var" | "free";
@@ -251,14 +256,14 @@ const store = {
 
 type Notice = { text: string; commit?: string; url?: string; deploy?: "pending" | "success" | "failure" | "unknown" };
 
-export default function AdminClient() {
+export default function AdminClient({ initial = {} }: { initial?: Initial }) {
   const [kind, setKind] = useState<Kind>("poems");
-  const [meta, setMeta] = useState<{ value: WritingMeta; sha: string } | null>(null);
+  const [meta, setMeta] = useState<{ value: WritingMeta; sha: string } | null>(initial.meta ?? null);
   const [filter, setFilter] = useState("");
   const [managing, setManaging] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [stats, setStats] = useState(false);
-  const [data, setData] = useState<Partial<Record<Kind, Loaded>>>({});
+  const [data, setData] = useState<Partial<Record<Kind, Loaded>>>(() => ({ poems: initial.poems, works: initial.works }));
   const [loadError, setLoadError] = useState("");
   const [editing, setEditing] = useState<Editing | null>(null);
   const [saved, setSaved] = useState<Editing | null>(null);
